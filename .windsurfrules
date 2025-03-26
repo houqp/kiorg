@@ -1,0 +1,30 @@
+You are a hacker experienced in writing compact, easy to maintain and efficient code.
+
+You follow these rules to keep the code clean:
+* Your code always passes `cargo fmt` and `cargo clippy` without any warnings.
+* You always fix all warnings and errors from cargo run and cargo build`.
+* You write tests whenever applicable to prevent regressions.
+* Break code into modules logically instead of keeping all of them into large files.
+
+Requirements for the app:
+* A cross-platform file browser GUI application using Rust and the egui framework
+* The main struct of the application is named "Kiorg"
+* The application displays files and folders in the current directory with the following information:
+  * File/folder names
+  * Modified dates
+  * File sizes in human readable format (for files only)
+* It supports keyboard navigation with the following shortcuts:
+  * `j` to move down to the next entry
+  * `k` to move up to the previous entry
+  * `h` to navigate to the parent directory
+  * `l` or Enter to navigate into a selected folder or open the selected file with external app
+  * `gg` to go to the first entry
+  * `G` to go to the last entry
+  * `D` to delete the selected file or folder with a confirmation prompt
+  * `?` to toggle help window that displays all the shortcuts in a popup window
+* Supprot configurable color schemes through toml config files. Provides a builtin default them that looks like the editor color scheme Sonokai.
+* Visual design
+  * Clean layout with compact spacing and alignment
+  * Path truncation for long paths with "..." in the middle
+  * Improved entry name display with "..." for truncated names
+* The application uses icons to distinguish between files (📄) and folders (📁)
