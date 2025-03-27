@@ -1,6 +1,3 @@
-#![allow(clippy::cast_possible_truncation)]
-#![allow(clippy::cast_precision_loss)]
-
 use egui::{self, Align2, Color32, Ui};
 use chrono::{DateTime, Local};
 use humansize::{format_size, BINARY};
@@ -82,7 +79,7 @@ pub fn draw_entry_row(
         egui::vec2(name_width, row_height)
     );
     
-    let name_text = truncate_text(ui, &entry.name, name_width);
+    let name_text = truncate_text(&entry.name, name_width);
     let name_color = if entry.is_dir { colors.blue } else { colors.fg };
     ui.painter().with_clip_rect(name_clip_rect).text(
         cursor + egui::vec2(0.0, row_height/2.0),
@@ -120,6 +117,58 @@ pub fn draw_entry_row(
         &size_str,
         egui::FontId::proportional(14.0),
         size_color
+    );
+    
+    response.clicked()
+}
+
+pub fn draw_parent_entry_row(
+    ui: &mut Ui,
+    entry: &DirEntry,
+    is_selected: bool,
+    colors: &AppColors,
+) -> bool {
+    let row_height = 20.0;
+    let (rect, response) = ui.allocate_exact_size(
+        egui::vec2(ui.available_width(), row_height),
+        egui::Sense::click(),
+    );
+    
+    if is_selected {
+        ui.painter().rect_filled(rect, 0.0, colors.selected_bg);
+    }
+    
+    let mut cursor = rect.left_top();
+    
+    let icon_width = 24.0;
+    let name_width = rect.width() - icon_width - 10.0;
+    
+    // Icon
+    let icon = if entry.is_dir { "📁" } else { "📄" };
+    let icon_color = if is_selected { Color32::WHITE } else { colors.gray };
+    ui.painter().text(
+        cursor + egui::vec2(10.0, row_height/2.0),
+        Align2::LEFT_CENTER,
+        icon,
+        egui::FontId::proportional(14.0),
+        icon_color
+    );
+    cursor.x += icon_width + 10.0;
+    
+    // Name with truncation
+    let name_clip_rect = egui::Rect::from_min_size(
+        cursor,
+        egui::vec2(name_width, row_height)
+    );
+    
+    let name_text = truncate_text(&entry.name, name_width);
+    let name_color = if entry.is_dir { colors.blue } else { colors.fg };
+    ui.painter().with_clip_rect(name_clip_rect).text(
+        cursor + egui::vec2(0.0, row_height/2.0),
+        Align2::LEFT_CENTER,
+        &name_text,
+        egui::FontId::proportional(14.0),
+        name_color
     );
     
     response.clicked()

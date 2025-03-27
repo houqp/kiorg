@@ -1,4 +1,3 @@
-use eframe::egui;
 use std::path::PathBuf;
 use std::fs;
 use egui::{RichText, Ui};
@@ -15,14 +14,15 @@ static LAST_G_PRESS: AtomicU64 = AtomicU64::new(0);
 pub struct Kiorg {
     pub current_path: PathBuf,
     pub entries: Vec<DirEntry>,
+    pub parent_entries: Vec<DirEntry>,
     pub selected_index: usize,
+    pub parent_selected_index: usize,
     pub colors: AppColors,
     pub ensure_selected_visible: bool,
     pub show_help: bool,
 }
 
 impl Kiorg {
-    #[must_use]
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         let config = config::load_config();
         let colors = AppColors::from_config(&config.colors);
@@ -46,7 +46,9 @@ impl Kiorg {
         let mut app = Self {
             current_path,
             entries: Vec::new(),
+            parent_entries: Vec::new(),
             selected_index: 0,
+            parent_selected_index: 0,
             colors,
             ensure_selected_visible: false,
             show_help: false,
@@ -60,6 +62,51 @@ impl Kiorg {
         self.selected_index = 0;
         self.ensure_selected_visible = true;
 
+        // Refresh parent directory entries
+        if let Some(parent) = self.current_path.parent() {
+            self.parent_entries.clear();
+            self.parent_selected_index = 0;
+            
+            if let Ok(read_dir) = fs::read_dir(parent) {
+                self.parent_entries = read_dir
+                    .filter_map(|entry| {
+                        let entry = entry.ok()?;
+                        let path = entry.path();
+                        let is_dir = path.is_dir();
+                        let name = entry.file_name().to_string_lossy().into_owned();
+                        
+                        let metadata = entry.metadata().ok()?;
+                        let modified = metadata.modified().unwrap_or(std::time::SystemTime::UNIX_EPOCH);
+                        let size = if is_dir { 0 } else { metadata.len() };
+
+                        Some(DirEntry {
+                            name,
+                            path,
+                            is_dir,
+                            modified,
+                            size,
+                        })
+                    })
+                    .collect();
+            }
+
+            self.parent_entries.sort_by(|a, b| {
+                match (a.is_dir, b.is_dir) {
+                    (true, false) => std::cmp::Ordering::Less,
+                    (false, true) => std::cmp::Ordering::Greater,
+                    _ => a.name.cmp(&b.name),
+                }
+            });
+
+            // Find current directory in parent entries
+            if let Some(pos) = self.parent_entries.iter().position(|e| e.path == self.current_path) {
+                self.parent_selected_index = pos;
+            }
+        } else {
+            self.parent_entries.clear();
+        }
+
+        // Refresh current directory entries
         if let Ok(read_dir) = fs::read_dir(&self.current_path) {
             self.entries = read_dir
                 .filter_map(|entry| {
@@ -134,6 +181,7 @@ impl Kiorg {
             return;
         }
         
+        // Handle navigation in current panel
         if ctx.input(|i| i.key_pressed(egui::Key::J) || i.key_pressed(egui::Key::ArrowDown)) {
             self.move_selection(1);
         } else if ctx.input(|i| i.key_pressed(egui::Key::K) || i.key_pressed(egui::Key::ArrowUp)) {
@@ -247,62 +295,144 @@ impl Kiorg {
 impl eframe::App for Kiorg {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            self.draw_path_navigation(ui);
-            self.handle_key_press(ctx);
+            let total_height = ui.available_height();
             
-            ui.separator();
-            
-            file_list::draw_table_header(ui, &self.colors);
-            
-            let available_height = ui.available_height();
-            let row_height = 20.0;
-            let visible_rows = (available_height / row_height).floor() as usize;
-            
-            let scroll_id = ui.id().with("file_list_scroll");
-            let mut scroll_area = egui::ScrollArea::vertical()
-                .id_salt(scroll_id)
-                .auto_shrink([false; 2])
-                .max_height(available_height);
-
-            if self.ensure_selected_visible && !self.entries.is_empty() && visible_rows > 0 {
-                let total_height = self.entries.len() as f32 * row_height;
-                let selected_y = self.selected_index as f32 * row_height;
-                let ideal_scroll_top = selected_y - (available_height / 2.0) + (row_height / 2.0);
-                let extra_scroll_padding = row_height * 2.0;
-                let max_scroll = (total_height - available_height + extra_scroll_padding).max(0.0);
-                let scroll_top = ideal_scroll_top.clamp(0.0, max_scroll);
+            // Use a vertical layout to properly stack and size components
+            ui.vertical(|ui| {
+                ui.set_min_height(total_height);
                 
-                scroll_area = scroll_area.vertical_scroll_offset(scroll_top);
-                self.ensure_selected_visible = false;
-            }
+                // Path navigation takes fixed height
+                self.draw_path_navigation(ui);
+                ui.separator();
+                
+                // Main content area should take all remaining height
+                let content_height = ui.available_height();
+                
+                // Split the available space into left and right panels
+                let available_width = ui.available_width();
+                let left_panel_width = available_width * 0.20;
+                let right_panel_width = available_width - left_panel_width;
+                
+                ui.horizontal(|ui| {
+                    ui.set_min_height(content_height);
+                    
+                    // Left panel - Parent directory entries
+                    ui.vertical(|ui| {
+                        ui.set_min_width(left_panel_width);
+                        ui.set_max_width(left_panel_width);
+                        ui.set_min_height(content_height);
+                        
+                        ui.label(RichText::new("Parent Directory").color(self.colors.yellow));
+                        ui.separator();
+                        
+                        let panel_height = content_height - 30.0; // Account for header
+                        let row_height = 20.0;
+                        let visible_rows = (panel_height / row_height).floor() as usize;
+                        
+                        let mut scroll_area = egui::ScrollArea::vertical()
+                            .id_salt("parent_list_scroll")
+                            .auto_shrink([false; 2])
+                            .max_height(panel_height)
+                            .min_scrolled_height(0.0);
 
-            scroll_area.show_rows(
-                ui,
-                row_height,
-                self.entries.len() + 3,
-                |ui: &mut Ui, row_range| {
-                    ui.style_mut().spacing.item_spacing.y = 0.0;
-                    
-                    let entries = self.entries.clone();
-                    let mut clicked_path = None;
-                    
-                    for i in row_range {
-                        if i < entries.len() {
-                            let entry = &entries[i];
-                            let is_selected = i == self.selected_index;
-                            if file_list::draw_entry_row(ui, entry, is_selected, &self.colors) {
-                                clicked_path = Some(entry.path.clone());
-                            }
-                        } else {
-                            ui.allocate_space(egui::vec2(ui.available_width(), row_height));
+                        if !self.parent_entries.is_empty() && visible_rows > 0 {
+                            let total_height = self.parent_entries.len() as f32 * row_height;
+                            let selected_y = self.parent_selected_index as f32 * row_height;
+                            let ideal_scroll_top = selected_y - (panel_height / 2.0) + (row_height / 2.0);
+                            let extra_scroll_padding = row_height * 2.0;
+                            let max_scroll = (total_height - panel_height + extra_scroll_padding).max(0.0);
+                            let scroll_top = ideal_scroll_top.clamp(0.0, max_scroll);
+                            scroll_area = scroll_area.vertical_scroll_offset(scroll_top);
                         }
-                    }
+
+                        scroll_area.show_rows(
+                            ui,
+                            row_height,
+                            self.parent_entries.len(),
+                            |ui: &mut Ui, row_range| {
+                                ui.style_mut().spacing.item_spacing.y = 0.0;
+                                
+                                let entries = self.parent_entries.clone();
+                                let mut clicked_path = None;
+                                
+                                for i in row_range {
+                                    if i < entries.len() {
+                                        let entry = &entries[i];
+                                        let is_selected = i == self.parent_selected_index;
+                                        if file_list::draw_parent_entry_row(ui, entry, is_selected, &self.colors) {
+                                            clicked_path = Some(entry.path.clone());
+                                        }
+                                    }
+                                }
+                                
+                                if let Some(path) = clicked_path {
+                                    self.navigate_to(path);
+                                }
+                            }
+                        );
+                    });
                     
-                    if let Some(path) = clicked_path {
-                        self.navigate_to(path);
-                    }
-                }
-            );
+                    ui.separator();
+                    
+                    // Right panel - Current directory entries
+                    ui.vertical(|ui| {
+                        ui.set_min_width(right_panel_width);
+                        ui.set_max_width(right_panel_width);
+                        ui.set_min_height(content_height);
+                        
+                        file_list::draw_table_header(ui, &self.colors);
+                        
+                        let panel_height = content_height - 30.0; // Account for header
+                        let row_height = 20.0;
+                        let visible_rows = (panel_height / row_height).floor() as usize;
+                        
+                        let mut scroll_area = egui::ScrollArea::vertical()
+                            .id_salt("file_list_scroll")
+                            .auto_shrink([false; 2])
+                            .max_height(panel_height);
+
+                        if self.ensure_selected_visible && !self.entries.is_empty() && visible_rows > 0 {
+                            let total_height = self.entries.len() as f32 * row_height;
+                            let selected_y = self.selected_index as f32 * row_height;
+                            let ideal_scroll_top = selected_y - (panel_height / 2.0) + (row_height / 2.0);
+                            let extra_scroll_padding = row_height * 2.0;
+                            let max_scroll = (total_height - panel_height + extra_scroll_padding).max(0.0);
+                            let scroll_top = ideal_scroll_top.clamp(0.0, max_scroll);
+                            
+                            scroll_area = scroll_area.vertical_scroll_offset(scroll_top);
+                            self.ensure_selected_visible = false;
+                        }
+
+                        scroll_area.show_rows(
+                            ui,
+                            row_height,
+                            self.entries.len(),
+                            |ui: &mut Ui, row_range| {
+                                ui.style_mut().spacing.item_spacing.y = 0.0;
+                                
+                                let entries = self.entries.clone();
+                                let mut clicked_path = None;
+                                
+                                for i in row_range {
+                                    if i < entries.len() {
+                                        let entry = &entries[i];
+                                        let is_selected = i == self.selected_index;
+                                        if file_list::draw_entry_row(ui, entry, is_selected, &self.colors) {
+                                            clicked_path = Some(entry.path.clone());
+                                        }
+                                    }
+                                }
+                                
+                                if let Some(path) = clicked_path {
+                                    self.navigate_to(path);
+                                }
+                            }
+                        );
+                    });
+                });
+            });
+            
+            self.handle_key_press(ctx);
         });
         
         help_window::show_help_window(ctx, &mut self.show_help, &self.colors);
