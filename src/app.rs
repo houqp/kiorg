@@ -337,7 +337,7 @@ impl Kiorg {
             let available_height = height - ROW_HEIGHT - VERTICAL_PADDING * 2.0;
             
             egui::ScrollArea::vertical()
-                .id_source("parent_list_scroll")
+                .id_salt("parent_list_scroll")
                 .auto_shrink([false; 2])
                 .max_height(available_height)
                 .show(ui, |ui| {
@@ -393,7 +393,7 @@ impl Kiorg {
             let available_height = height - ROW_HEIGHT - VERTICAL_PADDING * 2.0;
             
             egui::ScrollArea::vertical()
-                .id_source("current_list_scroll")
+                .id_salt("current_list_scroll")
                 .auto_shrink([false; 2])
                 .max_height(available_height)
                 .show(ui, |ui| {

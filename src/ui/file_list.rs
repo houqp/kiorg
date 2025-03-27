@@ -1,7 +1,6 @@
-use egui::{self, Align2, Color32, Ui, RichText};
+use egui::{self, Align2, Color32, Ui};
 use chrono::{DateTime, Local};
 use humansize::{format_size, BINARY};
-use std::path::PathBuf;
 
 use crate::models::dir_entry::DirEntry;
 use crate::config::colors::AppColors;
@@ -190,115 +189,6 @@ fn truncate_text(text: &str, available_width: f32) -> String {
     } else {
         text.to_string()
     }
-}
-
-pub fn draw_file_list(
-    ui: &mut Ui,
-    entries: &[DirEntry],
-    selected_index: usize,
-    colors: &AppColors,
-    ensure_selected_visible: bool,
-    is_parent_list: bool,
-    scroll_id: &str,
-) -> Option<PathBuf> {
-    // Draw header if not parent list
-    if !is_parent_list {
-        ui.label(RichText::new("Current Directory").color(colors.gray));
-        ui.separator();
-        draw_table_header(ui, colors);
-    }
-
-    let available_height = ui.available_height();
-    let panel_height = if is_parent_list {
-        available_height - 30.0 // Account for header
-    } else {
-        available_height - 70.0 // Account for header, title and path navigation
-    };
-    
-    let visible_rows = (panel_height / ROW_HEIGHT).floor() as usize;
-    
-    let mut clicked_path = None;
-
-    if is_parent_list {
-        // For parent list, show all entries without scrolling
-        ui.style_mut().spacing.item_spacing.y = 0.0;
-        
-        // Calculate how many entries we can show
-        let max_entries = visible_rows;
-        let total_entries = entries.len();
-        
-        // If we have more entries than can fit, we need to show a subset
-        if total_entries > max_entries {
-            // Always show the selected entry and some entries before and after
-            let start_idx = selected_index.saturating_sub(max_entries / 2);
-            let end_idx = (start_idx + max_entries).min(total_entries);
-            
-            // If we're near the end, adjust start_idx to show the last max_entries
-            if end_idx == total_entries {
-                let start_idx = total_entries.saturating_sub(max_entries);
-                for i in start_idx..end_idx {
-                    let entry = &entries[i];
-                    let is_selected = i == selected_index;
-                    if draw_parent_entry_row(ui, entry, is_selected, colors) {
-                        clicked_path = Some(entry.path.clone());
-                    }
-                }
-            } else {
-                for i in start_idx..end_idx {
-                    let entry = &entries[i];
-                    let is_selected = i == selected_index;
-                    if draw_parent_entry_row(ui, entry, is_selected, colors) {
-                        clicked_path = Some(entry.path.clone());
-                    }
-                }
-            }
-        } else {
-            // Show all entries if we have enough space
-            for (i, entry) in entries.iter().enumerate() {
-                let is_selected = i == selected_index;
-                if draw_parent_entry_row(ui, entry, is_selected, colors) {
-                    clicked_path = Some(entry.path.clone());
-                }
-            }
-        }
-    } else {
-        // For current directory, use scrolling
-        let mut scroll_area = egui::ScrollArea::vertical()
-            .id_salt(scroll_id)
-            .auto_shrink([false; 2])
-            .max_height(panel_height);
-
-        // Only adjust scroll position when ensure_selected_visible is true
-        if ensure_selected_visible && !entries.is_empty() && visible_rows > 0 {
-            let total_height = entries.len() as f32 * ROW_HEIGHT;
-            let selected_y = selected_index as f32 * ROW_HEIGHT;
-            let ideal_scroll_top = selected_y - (panel_height / 2.0) + (ROW_HEIGHT / 2.0);
-            let max_scroll = (total_height - panel_height).max(0.0);
-            let scroll_top = ideal_scroll_top.clamp(0.0, max_scroll);
-            scroll_area = scroll_area.vertical_scroll_offset(scroll_top);
-        }
-
-        scroll_area.show_rows(
-            ui,
-            ROW_HEIGHT,
-            entries.len(),
-            |ui: &mut Ui, row_range| {
-                ui.style_mut().spacing.item_spacing.y = 0.0;
-                
-                for i in row_range {
-                    if i < entries.len() {
-                        let entry = &entries[i];
-                        let is_selected = i == selected_index;
-                        if draw_entry_row(ui, entry, is_selected, colors) {
-                            clicked_path = Some(entry.path.clone());
-                        }
-                    }
-                }
-            }
-        );
-    }
-
-    clicked_path
 }
 
 #[cfg(test)]
