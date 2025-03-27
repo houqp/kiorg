@@ -20,6 +20,7 @@ pub struct Kiorg {
     pub colors: AppColors,
     pub ensure_selected_visible: bool,
     pub show_help: bool,
+    pub preview_content: String,
 }
 
 impl Kiorg {
@@ -52,6 +53,7 @@ impl Kiorg {
             colors,
             ensure_selected_visible: false,
             show_help: false,
+            preview_content: String::new(),
         };
         app.refresh_entries();
         app
@@ -225,216 +227,230 @@ impl Kiorg {
 
     fn draw_path_navigation(&mut self, ui: &mut Ui) {
         ui.horizontal(|ui| {
-            let path_ui_width = ui.available_width() - 100.0;
-            ui.horizontal(|ui| {
-                ui.set_min_width(path_ui_width);
-                ui.label(RichText::new("$ ").color(self.colors.gray));
-                
-                let mut components = Vec::new();
-                let mut current = PathBuf::new();
-                
-                for component in self.current_path.components() {
-                    let comp_str = component.as_os_str().to_string_lossy().to_string();
-                    if !comp_str.is_empty() {
-                        current.push(&comp_str);
-                        components.push((comp_str, current.clone()));
-                    }
-                }
-                
-                if components.is_empty() {
-                    ui.label(RichText::new("/").color(self.colors.yellow));
-                } else {
-                    let mut path_str = String::new();
-                    for (i, (name, _)) in components.iter().enumerate() {
-                        if i > 1 {
-                            path_str.push('/');
-                        }
-                        path_str.push_str(name);
-                    }
-                    
-                    let estimated_width = path_str.len() as f32 * 7.0;
-                    
-                    if estimated_width > path_ui_width && components.len() > 4 {
-                        if ui.link(RichText::new(&components[0].0).color(self.colors.yellow)).clicked() {
-                            self.navigate_to(components[0].1.clone());
-                        }
-                        
-                        ui.label(RichText::new("/").color(self.colors.gray));
-                        ui.label(RichText::new("...").color(self.colors.gray));
-                        
-                        let start_idx = components.len() - 2;
-                        for component in components.iter().skip(start_idx) {
-                            let (comp_str, path) = component;
-                            ui.label(RichText::new("/").color(self.colors.gray));
-                            if ui.link(RichText::new(comp_str).color(self.colors.yellow)).clicked() {
-                                self.navigate_to(path.clone());
-                            }
-                        }
-                    } else {
-                        for (i, (name, path)) in components.iter().enumerate() {
-                            if i > 1 {
-                                ui.label(RichText::new("/").color(self.colors.gray));
-                            }
-                            
-                            if ui.link(RichText::new(name).color(self.colors.yellow)).clicked() {
-                                self.navigate_to(path.clone());
-                            }
-                        }
-                    }
-                }
-            });
+            ui.label(RichText::new("$ ").color(self.colors.gray));
             
-            ui.horizontal(|ui| {
+            let mut components = Vec::new();
+            let mut current = PathBuf::new();
+            
+            for component in self.current_path.components() {
+                let comp_str = component.as_os_str().to_string_lossy().to_string();
+                if !comp_str.is_empty() {
+                    current.push(&comp_str);
+                    components.push((comp_str, current.clone()));
+                }
+            }
+            
+            if components.is_empty() {
+                ui.label(RichText::new("/").color(self.colors.yellow));
+            } else {
+                let mut path_str = String::new();
+                for (i, (name, _)) in components.iter().enumerate() {
+                    if i > 1 {
+                        path_str.push('/');
+                    }
+                    path_str.push_str(name);
+                }
+                
+                let available_width = ui.available_width() - 100.0; // Reserve space for help text
+                let estimated_width = path_str.len() as f32 * 7.0;
+                
+                if estimated_width > available_width && components.len() > 4 {
+                    if ui.link(RichText::new(&components[0].0).color(self.colors.yellow)).clicked() {
+                        self.navigate_to(components[0].1.clone());
+                    }
+                    
+                    ui.label(RichText::new("/").color(self.colors.gray));
+                    ui.label(RichText::new("...").color(self.colors.gray));
+                    
+                    let start_idx = components.len() - 2;
+                    for component in components.iter().skip(start_idx) {
+                        let (comp_str, path) = component;
+                        ui.label(RichText::new("/").color(self.colors.gray));
+                        if ui.link(RichText::new(comp_str).color(self.colors.yellow)).clicked() {
+                            self.navigate_to(path.clone());
+                        }
+                    }
+                } else {
+                    for (i, (name, path)) in components.iter().enumerate() {
+                        if i > 1 {
+                            ui.label(RichText::new("/").color(self.colors.gray));
+                        }
+                        
+                        if ui.link(RichText::new(name).color(self.colors.yellow)).clicked() {
+                            self.navigate_to(path.clone());
+                        }
+                    }
+                }
+            }
+
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 ui.label(RichText::new("? for help").color(self.colors.gray))
                     .on_hover_text("Show keyboard shortcuts");
             });
         });
+    }
+
+    fn update_preview(&mut self) {
+        if let Some(entry) = self.entries.get(self.selected_index) {
+            if entry.is_dir {
+                self.preview_content = format!("Directory: {}", entry.path.display());
+            } else {
+                match std::fs::read_to_string(&entry.path) {
+                    Ok(content) => {
+                        // Only show first 1000 characters for text files
+                        self.preview_content = content.chars().take(1000).collect();
+                    }
+                    Err(_) => {
+                        // For binary files or files that can't be read
+                        self.preview_content = format!("Binary file: {} bytes", entry.size);
+                    }
+                }
+            }
+        } else {
+            self.preview_content.clear();
+        }
+    }
+
+    fn draw_preview_panel(&mut self, ui: &mut Ui) {
+        ui.label(RichText::new("Preview").size(16.0).strong());
+        ui.separator();
+        let available_height = ui.available_height() - 50.0; // Account for header and spacing
+        egui::ScrollArea::vertical()
+            .id_salt("preview_scroll")
+            .max_height(available_height)
+            .show(ui, |ui| {
+                ui.add(
+                    egui::TextEdit::multiline(&mut self.preview_content)
+                        .desired_width(f32::INFINITY)
+                        .desired_rows(30)
+                        .interactive(false)
+                );
+            });
     }
 }
 
 impl eframe::App for Kiorg {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
+            // Update preview when selection changes
+            self.update_preview();
+
             let total_height = ui.available_height();
             
-            // Use a vertical layout to properly stack and size components
+            // Path navigation at the top
             ui.vertical(|ui| {
-                ui.set_min_height(total_height);
-                
-                // Path navigation takes fixed height
+                ui.add_space(4.0);
                 self.draw_path_navigation(ui);
+                ui.add_space(4.0);
                 ui.separator();
-                
-                // Main content area should take all remaining height
-                let content_height = ui.available_height();
-                
-                // Split the available space into left and right panels
-                let available_width = ui.available_width();
-                let left_panel_width = available_width * 0.20;
-                let right_panel_width = available_width - left_panel_width;
-                
-                ui.horizontal(|ui| {
+            });
+
+            // Main layout with three columns
+            let available_width = ui.available_width();
+            let left_width = (available_width * 0.15).max(150.0); // Minimum width of 150
+            let right_width = (available_width * 0.25).max(200.0); // Minimum width of 200
+            let center_width = available_width - left_width - right_width - 20.0; // Account for spacing
+
+            let content_height = total_height - 50.0; // Account for path navigation
+
+            ui.horizontal(|ui| {
+                ui.spacing_mut().item_spacing.x = 10.0;
+                ui.set_min_height(content_height);
+
+                // Left panel (15% width) - Parent directory
+                ui.vertical(|ui| {
+                    ui.set_min_width(left_width);
+                    ui.set_max_width(left_width);
                     ui.set_min_height(content_height);
-                    
-                    // Left panel - Parent directory entries
-                    ui.vertical(|ui| {
-                        ui.set_min_width(left_panel_width);
-                        ui.set_max_width(left_panel_width);
-                        ui.set_min_height(content_height);
-                        
-                        ui.label(RichText::new("Parent Directory").color(self.colors.yellow));
-                        ui.separator();
-                        
-                        let panel_height = content_height - 30.0; // Account for header
-                        let row_height = 20.0;
-                        let visible_rows = (panel_height / row_height).floor() as usize;
-                        
-                        let mut scroll_area = egui::ScrollArea::vertical()
-                            .id_salt("parent_list_scroll")
-                            .auto_shrink([false; 2])
-                            .max_height(panel_height)
-                            .min_scrolled_height(0.0);
-
-                        if !self.parent_entries.is_empty() && visible_rows > 0 {
-                            let total_height = self.parent_entries.len() as f32 * row_height;
-                            let selected_y = self.parent_selected_index as f32 * row_height;
-                            let ideal_scroll_top = selected_y - (panel_height / 2.0) + (row_height / 2.0);
-                            let extra_scroll_padding = row_height * 2.0;
-                            let max_scroll = (total_height - panel_height + extra_scroll_padding).max(0.0);
-                            let scroll_top = ideal_scroll_top.clamp(0.0, max_scroll);
-                            scroll_area = scroll_area.vertical_scroll_offset(scroll_top);
-                        }
-
-                        scroll_area.show_rows(
-                            ui,
-                            row_height,
-                            self.parent_entries.len(),
-                            |ui: &mut Ui, row_range| {
-                                ui.style_mut().spacing.item_spacing.y = 0.0;
-                                
-                                let entries = self.parent_entries.clone();
-                                let mut clicked_path = None;
-                                
-                                for i in row_range {
-                                    if i < entries.len() {
-                                        let entry = &entries[i];
-                                        let is_selected = i == self.parent_selected_index;
-                                        if file_list::draw_parent_entry_row(ui, entry, is_selected, &self.colors) {
-                                            clicked_path = Some(entry.path.clone());
-                                        }
-                                    }
-                                }
-                                
-                                if let Some(path) = clicked_path {
-                                    self.navigate_to(path);
-                                }
-                            }
-                        );
-                    });
-                    
+                    ui.add_space(4.0);
+                    ui.label(RichText::new("Parent Directory").color(self.colors.gray));
                     ui.separator();
-                    
-                    // Right panel - Current directory entries
-                    ui.vertical(|ui| {
-                        ui.set_min_width(right_panel_width);
-                        ui.set_max_width(right_panel_width);
-                        ui.set_min_height(content_height);
-                        
-                        file_list::draw_table_header(ui, &self.colors);
-                        
-                        let panel_height = content_height - 30.0; // Account for header
-                        let row_height = 20.0;
-                        let visible_rows = (panel_height / row_height).floor() as usize;
-                        
-                        let mut scroll_area = egui::ScrollArea::vertical()
-                            .id_salt("file_list_scroll")
-                            .auto_shrink([false; 2])
-                            .max_height(panel_height);
+                    if let Some(path) = file_list::draw_file_list(
+                        ui,
+                        &self.parent_entries,
+                        self.parent_selected_index,
+                        &self.colors,
+                        self.ensure_selected_visible,
+                        true,
+                        "parent_list_scroll",
+                    ) {
+                        self.navigate_to(path);
+                    }
+                });
 
-                        if self.ensure_selected_visible && !self.entries.is_empty() && visible_rows > 0 {
-                            let total_height = self.entries.len() as f32 * row_height;
-                            let selected_y = self.selected_index as f32 * row_height;
-                            let ideal_scroll_top = selected_y - (panel_height / 2.0) + (row_height / 2.0);
-                            let extra_scroll_padding = row_height * 2.0;
-                            let max_scroll = (total_height - panel_height + extra_scroll_padding).max(0.0);
-                            let scroll_top = ideal_scroll_top.clamp(0.0, max_scroll);
-                            
-                            scroll_area = scroll_area.vertical_scroll_offset(scroll_top);
-                            self.ensure_selected_visible = false;
-                        }
+                // Vertical separator after left panel
+                ui.add_space(5.0);
+                ui.vertical(|ui| {
+                    let rect = ui.available_rect_before_wrap();
+                    ui.painter().vline(
+                        rect.left(),
+                        rect.top()..=rect.bottom(),
+                        ui.visuals().widgets.noninteractive.bg_stroke,
+                    );
+                });
+                ui.add_space(5.0);
 
-                        scroll_area.show_rows(
-                            ui,
-                            row_height,
-                            self.entries.len(),
-                            |ui: &mut Ui, row_range| {
-                                ui.style_mut().spacing.item_spacing.y = 0.0;
-                                
-                                let entries = self.entries.clone();
-                                let mut clicked_path = None;
-                                
-                                for i in row_range {
-                                    if i < entries.len() {
-                                        let entry = &entries[i];
-                                        let is_selected = i == self.selected_index;
-                                        if file_list::draw_entry_row(ui, entry, is_selected, &self.colors) {
-                                            clicked_path = Some(entry.path.clone());
-                                        }
-                                    }
-                                }
-                                
-                                if let Some(path) = clicked_path {
-                                    self.navigate_to(path);
-                                }
-                            }
-                        );
-                    });
+                // Center panel (60% width) - Current directory
+                ui.vertical(|ui| {
+                    ui.set_min_width(center_width);
+                    ui.set_max_width(center_width);
+                    ui.set_min_height(content_height);
+                    ui.add_space(4.0);
+                    if let Some(path) = file_list::draw_file_list(
+                        ui,
+                        &self.entries,
+                        self.selected_index,
+                        &self.colors,
+                        self.ensure_selected_visible,
+                        false,
+                        "current_list_scroll",
+                    ) {
+                        self.navigate_to(path);
+                    }
+                });
+
+                // Vertical separator after center panel
+                ui.add_space(5.0);
+                ui.vertical(|ui| {
+                    let rect = ui.available_rect_before_wrap();
+                    ui.painter().vline(
+                        rect.left(),
+                        rect.top()..=rect.bottom(),
+                        ui.visuals().widgets.noninteractive.bg_stroke,
+                    );
+                });
+                ui.add_space(5.0);
+
+                // Right panel (25% width) - Preview
+                ui.vertical(|ui| {
+                    ui.set_min_width(right_width);
+                    ui.set_max_width(right_width);
+                    ui.set_min_height(content_height);
+                    ui.add_space(4.0);
+                    ui.label(RichText::new("Preview").color(self.colors.gray));
+                    ui.separator();
+                    let available_height = ui.available_height() - 50.0; // Account for header and spacing
+                    egui::ScrollArea::vertical()
+                        .id_salt("preview_scroll")
+                        .max_height(available_height)
+                        .show(ui, |ui| {
+                            ui.add(
+                                egui::TextEdit::multiline(&mut self.preview_content)
+                                    .desired_width(f32::INFINITY)
+                                    .desired_rows(30)
+                                    .interactive(false)
+                            );
+                        });
                 });
             });
-            
-            self.handle_key_press(ctx);
         });
+
+        // Handle keyboard input
+        self.handle_key_press(ctx);
         
-        help_window::show_help_window(ctx, &mut self.show_help, &self.colors);
+        // Show help window if needed
+        if self.show_help {
+            help_window::show_help_window(ctx, &mut self.show_help, &self.colors);
+        }
     }
 }

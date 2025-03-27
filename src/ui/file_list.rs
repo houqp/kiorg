@@ -1,6 +1,7 @@
-use egui::{self, Align2, Color32, Ui};
+use egui::{self, Align2, Color32, Ui, RichText};
 use chrono::{DateTime, Local};
 use humansize::{format_size, BINARY};
+use std::path::PathBuf;
 
 use crate::models::dir_entry::DirEntry;
 use crate::config::colors::AppColors;
@@ -30,7 +31,7 @@ pub fn draw_table_header(ui: &mut Ui, colors: &AppColors) {
             Align2::LEFT_CENTER,
             text,
             egui::FontId::proportional(14.0),
-            colors.yellow
+            colors.gray
         );
         cursor.x += width;
     }
@@ -177,8 +178,8 @@ pub fn draw_parent_entry_row(
 fn truncate_text(text: &str, available_width: f32) -> String {
     let estimated_width = text.len() as f32 * 7.0;
     if estimated_width > available_width {
-        let available_chars = (available_width / 7.0) as usize - 3;
-        if available_chars < text.len() {
+        let available_chars = ((available_width / 7.0) as usize).saturating_sub(3);
+        if available_chars > 0 && available_chars < text.len() {
             let half = available_chars / 2;
             format!("{}...{}", 
                 &text[..half],
@@ -189,6 +190,73 @@ fn truncate_text(text: &str, available_width: f32) -> String {
     } else {
         text.to_string()
     }
+}
+
+pub fn draw_file_list(
+    ui: &mut Ui,
+    entries: &[DirEntry],
+    selected_index: usize,
+    colors: &AppColors,
+    ensure_selected_visible: bool,
+    is_parent_list: bool,
+    scroll_id: &str,
+) -> Option<PathBuf> {
+    // Draw header if not parent list
+    if !is_parent_list {
+        ui.label(RichText::new("Current Directory").color(colors.gray));
+        ui.separator();
+        draw_table_header(ui, colors);
+    }
+
+    let panel_height = if is_parent_list {
+        ui.available_height() - 30.0 // Account for header
+    } else {
+        ui.available_height() - 70.0 // Account for header, title and path navigation
+    };
+    
+    let visible_rows = (panel_height / ROW_HEIGHT).floor() as usize;
+    
+    let mut scroll_area = egui::ScrollArea::vertical()
+        .id_salt(scroll_id)
+        .auto_shrink([false; 2])
+        .max_height(panel_height);
+
+    if ensure_selected_visible && !entries.is_empty() && visible_rows > 0 {
+        let total_height = entries.len() as f32 * ROW_HEIGHT;
+        let selected_y = selected_index as f32 * ROW_HEIGHT;
+        let ideal_scroll_top = selected_y - (panel_height / 2.0) + (ROW_HEIGHT / 2.0);
+        let extra_scroll_padding = ROW_HEIGHT * 2.0;
+        let max_scroll = (total_height - panel_height + extra_scroll_padding).max(0.0);
+        let scroll_top = ideal_scroll_top.clamp(0.0, max_scroll);
+        scroll_area = scroll_area.vertical_scroll_offset(scroll_top);
+    }
+
+    let mut clicked_path = None;
+    scroll_area.show_rows(
+        ui,
+        ROW_HEIGHT,
+        entries.len(),
+        |ui: &mut Ui, row_range| {
+            ui.style_mut().spacing.item_spacing.y = 0.0;
+            
+            for i in row_range {
+                if i < entries.len() {
+                    let entry = &entries[i];
+                    let is_selected = i == selected_index;
+                    let clicked = if is_parent_list {
+                        draw_parent_entry_row(ui, entry, is_selected, colors)
+                    } else {
+                        draw_entry_row(ui, entry, is_selected, colors)
+                    };
+                    
+                    if clicked {
+                        clicked_path = Some(entry.path.clone());
+                    }
+                }
+            }
+        }
+    );
+    clicked_path
 }
 
 #[cfg(test)]
