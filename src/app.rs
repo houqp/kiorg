@@ -429,10 +429,10 @@ impl eframe::App for Kiorg {
                     ui.add_space(4.0);
                     ui.label(RichText::new("Preview").color(self.colors.gray));
                     ui.separator();
-                    let available_height = ui.available_height() - 50.0; // Account for header and spacing
+                    let preview_height = ui.available_height() - 50.0; // Account for header and spacing
                     egui::ScrollArea::vertical()
                         .id_salt("preview_scroll")
-                        .max_height(available_height)
+                        .max_height(preview_height)
                         .show(ui, |ui| {
                             ui.add(
                                 egui::TextEdit::multiline(&mut self.preview_content)
@@ -443,6 +443,9 @@ impl eframe::App for Kiorg {
                         });
                 });
             });
+
+            // Reset ensure_selected_visible flag after drawing
+            self.ensure_selected_visible = false;
         });
 
         // Handle keyboard input
