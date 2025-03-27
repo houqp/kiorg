@@ -10,7 +10,7 @@ use crate::config::colors::AppColors;
 
 const ROW_HEIGHT: f32 = 20.0;
 const ICON_WIDTH: f32 = 24.0;
-const DATE_WIDTH: f32 = 180.0;
+const DATE_WIDTH: f32 = 160.0;
 const SIZE_WIDTH: f32 = 80.0;
 
 pub fn draw_table_header(ui: &mut Ui, colors: &AppColors) {
@@ -82,8 +82,8 @@ pub fn draw_entry_row(
         egui::vec2(name_width, row_height)
     );
     
-    let name_text = truncate_text(&entry.name, name_width);
-    let name_color = if is_selected { Color32::WHITE } else { colors.fg };
+    let name_text = truncate_text(ui, &entry.name, name_width);
+    let name_color = if entry.is_dir { colors.blue } else { colors.fg };
     ui.painter().with_clip_rect(name_clip_rect).text(
         cursor + egui::vec2(0.0, row_height/2.0),
         Align2::LEFT_CENTER,
