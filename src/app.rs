@@ -6,6 +6,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use crate::config::{self, colors::AppColors};
 use crate::models::dir_entry::DirEntry;
 use crate::ui::{help_window, file_list};
+use crate::ui::file_list::ROW_HEIGHT;
 
 // Layout constants
 const PANEL_SPACING: f32 = 10.0;         // Space between panels
@@ -322,13 +323,176 @@ impl Kiorg {
             self.preview_content.clear();
         }
     }
+
+    fn draw_left_panel(&mut self, ui: &mut Ui, width: f32, height: f32) {
+        ui.vertical(|ui| {
+            ui.set_min_width(width);
+            ui.set_max_width(width);
+            ui.set_min_height(height);
+            ui.add_space(VERTICAL_PADDING);
+            ui.label(RichText::new("Parent Directory").color(self.colors.gray));
+            ui.separator();
+
+            // Calculate available height for scroll area
+            let available_height = height - ROW_HEIGHT - VERTICAL_PADDING * 2.0;
+            
+            egui::ScrollArea::vertical()
+                .id_source("parent_list_scroll")
+                .auto_shrink([false; 2])
+                .max_height(available_height)
+                .show(ui, |ui| {
+                    // Set the width of the content area
+                    let scrollbar_width = 6.0;
+                    ui.set_min_width(width - scrollbar_width);
+                    ui.set_max_width(width - scrollbar_width);
+
+                    // Draw all rows
+                    let mut path_to_navigate = None;
+                    for (i, entry) in self.parent_entries.iter().enumerate() {
+                        let clicked = file_list::draw_parent_entry_row(
+                            ui,
+                            entry,
+                            i == self.parent_selected_index,
+                            &self.colors,
+                        );
+                        if clicked {
+                            path_to_navigate = Some(entry.path.clone());
+                            break;
+                        }
+                    }
+
+                    // Handle navigation
+                    if let Some(path) = path_to_navigate {
+                        self.navigate_to(path);
+                    }
+
+                    // Ensure current directory is visible in parent list
+                    if !self.parent_entries.is_empty() {
+                        let selected_pos = self.parent_selected_index as f32 * ROW_HEIGHT;
+                        ui.scroll_to_rect(
+                            egui::Rect::from_min_size(
+                                egui::pos2(0.0, selected_pos),
+                                egui::vec2(width, ROW_HEIGHT)
+                            ),
+                            Some(egui::Align::Center)
+                        );
+                    }
+                });
+        });
+    }
+
+    fn draw_center_panel(&mut self, ui: &mut Ui, width: f32, height: f32) {
+        ui.vertical(|ui| {
+            ui.set_min_width(width);
+            ui.set_max_width(width);
+            ui.set_min_height(height);
+            ui.add_space(VERTICAL_PADDING);
+            file_list::draw_table_header(ui, &self.colors);
+
+            // Calculate available height for scroll area
+            let available_height = height - ROW_HEIGHT - VERTICAL_PADDING * 2.0;
+            
+            egui::ScrollArea::vertical()
+                .id_source("current_list_scroll")
+                .auto_shrink([false; 2])
+                .max_height(available_height)
+                .show(ui, |ui| {
+                    // Set the width of the content area
+                    let scrollbar_width = 6.0; // Standard scrollbar width in egui
+                    ui.set_min_width(width - scrollbar_width);
+                    ui.set_max_width(width - scrollbar_width);
+
+                    // Draw all rows
+                    let mut path_to_navigate = None;
+                    for (i, entry) in self.entries.iter().enumerate() {
+                        let clicked = file_list::draw_entry_row(
+                            ui,
+                            entry,
+                            i == self.selected_index,
+                            &self.colors,
+                        );
+                        if clicked {
+                            path_to_navigate = Some(entry.path.clone());
+                            break;
+                        }
+                    }
+
+                    // Handle navigation
+                    if let Some(path) = path_to_navigate {
+                        self.navigate_to(path);
+                    }
+
+                    // Handle scrolling to selected item
+                    if self.ensure_selected_visible && !self.entries.is_empty() {
+                        let selected_pos = self.selected_index as f32 * ROW_HEIGHT;
+                        ui.scroll_to_rect(
+                            egui::Rect::from_min_size(
+                                egui::pos2(0.0, selected_pos),
+                                egui::vec2(width, ROW_HEIGHT)
+                            ),
+                            Some(egui::Align::Center)
+                        );
+                    }
+                });
+        });
+    }
+
+    fn draw_right_panel(&mut self, ui: &mut Ui, width: f32, height: f32) {
+        ui.vertical(|ui| {
+            ui.set_min_width(width);
+            ui.set_max_width(width);
+            ui.set_min_height(height);
+            ui.add_space(VERTICAL_PADDING);
+            ui.label(RichText::new("Preview").color(self.colors.gray));
+            ui.separator();
+            let preview_height = height - NAV_HEIGHT_RESERVED;
+            egui::ScrollArea::vertical()
+                .id_salt("preview_scroll")
+                .max_height(preview_height)
+                .show(ui, |ui| {
+                    ui.add(
+                        egui::TextEdit::multiline(&mut self.preview_content)
+                            .desired_width(width - PANEL_SPACING)
+                            .desired_rows(30)
+                            .interactive(false)
+                    );
+                });
+        });
+    }
+
+    fn draw_vertical_separator(&mut self, ui: &mut Ui) {
+        ui.add_space(SEPARATOR_PADDING);
+        ui.vertical(|ui| {
+            let rect = ui.available_rect_before_wrap();
+            ui.painter().vline(
+                rect.left(),
+                rect.top()..=rect.bottom(),
+                ui.visuals().widgets.noninteractive.bg_stroke,
+            );
+        });
+        ui.add_space(SEPARATOR_PADDING);
+    }
+
+    fn calculate_panel_widths(&self, available_width: f32) -> (f32, f32, f32) {
+        let total_spacing = (PANEL_SPACING * 2.0) +                    // Space between panels
+                          (SEPARATOR_PADDING * 4.0) +                  // Padding around two separators
+                          PANEL_SPACING +                             // Right margin
+                          8.0;                                        // Margins from both sides
+        
+        let usable_width = available_width - total_spacing;
+        let left_width = (usable_width * LEFT_PANEL_RATIO).max(LEFT_PANEL_MIN_WIDTH);
+        let right_width = (usable_width * RIGHT_PANEL_RATIO).max(RIGHT_PANEL_MIN_WIDTH);
+        let center_width = usable_width - left_width - right_width;
+
+        (left_width, center_width, right_width)
+    }
 }
 
 impl eframe::App for Kiorg {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        egui::CentralPanel::default().show(ctx, |ui| {
-            self.update_preview();
+        self.update_preview();
 
+        egui::CentralPanel::default().show(ctx, |ui| {
             let total_height = ui.available_height();
             
             // Path navigation at the top
@@ -339,111 +503,29 @@ impl eframe::App for Kiorg {
                 ui.separator();
             });
 
-            // Main layout calculations
-            let available_width = ui.available_width();
-            
-            // Calculate total spacing needed
-            let total_spacing = (PANEL_SPACING * 2.0) +                    // Space between panels
-                              (SEPARATOR_PADDING * 4.0) +                  // Padding around two separators
-                              PANEL_SPACING + // Right margin (using PANEL_SPACING for consistency)
-                              8.0;   // taking into acount of margins from both sides?
-            
-            let usable_width = available_width - total_spacing;
-            let left_width = (usable_width * LEFT_PANEL_RATIO).max(LEFT_PANEL_MIN_WIDTH);
-            let right_width = (usable_width * RIGHT_PANEL_RATIO).max(RIGHT_PANEL_MIN_WIDTH);
-            let center_width = usable_width - left_width - right_width;
-
+            // Calculate panel widths
+            let (left_width, center_width, right_width) = self.calculate_panel_widths(ui.available_width());
             let content_height = total_height - NAV_HEIGHT_RESERVED;
 
+            // Main panels layout
             ui.horizontal(|ui| {
                 ui.spacing_mut().item_spacing.x = PANEL_SPACING;
                 ui.set_min_height(content_height);
 
                 // Left panel
-                ui.vertical(|ui| {
-                    ui.set_min_width(left_width);
-                    ui.set_max_width(left_width);
-                    ui.set_min_height(content_height);
-                    ui.add_space(VERTICAL_PADDING);
-                    ui.label(RichText::new("Parent Directory").color(self.colors.gray));
-                    ui.separator();
-                    if let Some(path) = file_list::draw_file_list(
-                        ui,
-                        &self.parent_entries,
-                        self.parent_selected_index,
-                        &self.colors,
-                        self.ensure_selected_visible,
-                        true,
-                        "parent_list_scroll",
-                    ) {
-                        self.navigate_to(path);
-                    }
-                });
+                self.draw_left_panel(ui, left_width, content_height);
 
                 // Vertical separator after left panel
-                ui.add_space(SEPARATOR_PADDING);
-                ui.vertical(|ui| {
-                    let rect = ui.available_rect_before_wrap();
-                    ui.painter().vline(
-                        rect.left(),
-                        rect.top()..=rect.bottom(),
-                        ui.visuals().widgets.noninteractive.bg_stroke,
-                    );
-                });
-                ui.add_space(SEPARATOR_PADDING);
+                self.draw_vertical_separator(ui);
 
                 // Center panel
-                ui.vertical(|ui| {
-                    ui.set_min_width(center_width);
-                    ui.set_max_width(center_width);
-                    ui.set_min_height(content_height);
-                    ui.add_space(VERTICAL_PADDING);
-                    if let Some(path) = file_list::draw_file_list(
-                        ui,
-                        &self.entries,
-                        self.selected_index,
-                        &self.colors,
-                        self.ensure_selected_visible,
-                        false,
-                        "current_list_scroll",
-                    ) {
-                        self.navigate_to(path);
-                    }
-                });
+                self.draw_center_panel(ui, center_width, content_height);
 
                 // Vertical separator after center panel
-                ui.add_space(SEPARATOR_PADDING);
-                ui.vertical(|ui| {
-                    let rect = ui.available_rect_before_wrap();
-                    ui.painter().vline(
-                        rect.left(),
-                        rect.top()..=rect.bottom(),
-                        ui.visuals().widgets.noninteractive.bg_stroke,
-                    );
-                });
-                ui.add_space(SEPARATOR_PADDING);
+                self.draw_vertical_separator(ui);
 
                 // Right panel
-                ui.vertical(|ui| {
-                    ui.set_min_width(right_width);
-                    ui.set_max_width(right_width);
-                    ui.set_min_height(content_height);
-                    ui.add_space(VERTICAL_PADDING);
-                    ui.label(RichText::new("Preview").color(self.colors.gray));
-                    ui.separator();
-                    let preview_height = ui.available_height() - NAV_HEIGHT_RESERVED;
-                    egui::ScrollArea::vertical()
-                        .id_salt("preview_scroll")
-                        .max_height(preview_height)
-                        .show(ui, |ui| {
-                            ui.add(
-                                egui::TextEdit::multiline(&mut self.preview_content)
-                                    .desired_width(right_width - PANEL_SPACING)
-                                    .desired_rows(30)
-                                    .interactive(false)
-                            );
-                        });
-                });
+                self.draw_right_panel(ui, right_width, content_height);
 
                 // Right margin
                 ui.add_space(PANEL_SPACING);

@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use crate::models::dir_entry::DirEntry;
 use crate::config::colors::AppColors;
 
-const ROW_HEIGHT: f32 = 20.0;
+pub const ROW_HEIGHT: f32 = 20.0;
 const ICON_WIDTH: f32 = 24.0;
 const DATE_WIDTH: f32 = 160.0;
 const SIZE_WIDTH: f32 = 80.0;
