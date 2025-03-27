@@ -1,7 +1,9 @@
 use std::path::PathBuf;
 use std::fs;
-use egui::{RichText, Ui};
+use egui::{RichText, Ui, TextureHandle};
 use std::sync::atomic::{AtomicU64, Ordering};
+use image::io::Reader as ImageReader;
+use std::io::Cursor;
 
 use crate::config::{self, colors::AppColors};
 use crate::models::dir_entry::DirEntry;
@@ -23,7 +25,6 @@ const RIGHT_PANEL_MIN_WIDTH: f32 = 200.0;
 // Use atomic for thread-safe last press tracking
 static LAST_G_PRESS: AtomicU64 = AtomicU64::new(0);
 
-#[derive(Debug)]
 pub struct Kiorg {
     pub current_path: PathBuf,
     pub entries: Vec<DirEntry>,
@@ -35,6 +36,7 @@ pub struct Kiorg {
     pub show_help: bool,
     pub preview_content: String,
     pub show_exit_confirm: bool,
+    pub current_image: Option<TextureHandle>,
 }
 
 impl Kiorg {
@@ -69,6 +71,7 @@ impl Kiorg {
             show_help: false,
             preview_content: String::new(),
             show_exit_confirm: false,
+            current_image: None,
         };
         app.refresh_entries();
         app
@@ -319,24 +322,66 @@ impl Kiorg {
         });
     }
 
-    fn update_preview(&mut self) {
+    fn update_preview(&mut self, ctx: &egui::Context) {
         if let Some(entry) = self.entries.get(self.selected_index) {
             if entry.is_dir {
                 self.preview_content = format!("Directory: {}", entry.path.display());
+                self.current_image = None;
             } else {
-                match std::fs::read_to_string(&entry.path) {
-                    Ok(content) => {
-                        // Only show first 1000 characters for text files
-                        self.preview_content = content.chars().take(1000).collect();
+                // Check if it's an image file
+                let extension = entry.path.extension()
+                    .and_then(|e| e.to_str())
+                    .map(|e| e.to_lowercase());
+                
+                if let Some(ext) = extension {
+                    if ["jpg", "jpeg", "png", "gif", "bmp", "webp"].contains(&ext.as_str()) {
+                        if let Ok(bytes) = std::fs::read(&entry.path) {
+                            if let Ok(img) = ImageReader::new(Cursor::new(bytes)).with_guessed_format().unwrap().decode() {
+                                let size = [img.width() as _, img.height() as _];
+                                let image = egui::ColorImage::from_rgba_unmultiplied(
+                                    size,
+                                    img.to_rgba8().as_raw(),
+                                );
+                                self.current_image = Some(ctx.load_texture(
+                                    entry.path.to_string_lossy().to_string(),
+                                    image,
+                                    egui::TextureOptions::default(),
+                                ));
+                                self.preview_content = format!("Image: {}x{}", img.width(), img.height());
+                            }
+                        }
+                    } else {
+                        // Clear image texture for non-image files
+                        self.current_image = None;
+                        match std::fs::read_to_string(&entry.path) {
+                            Ok(content) => {
+                                // Only show first 1000 characters for text files
+                                self.preview_content = content.chars().take(1000).collect();
+                            }
+                            Err(_) => {
+                                // For binary files or files that can't be read
+                                self.preview_content = format!("Binary file: {} bytes", entry.size);
+                            }
+                        }
                     }
-                    Err(_) => {
-                        // For binary files or files that can't be read
-                        self.preview_content = format!("Binary file: {} bytes", entry.size);
+                } else {
+                    // Clear image texture for files without extension
+                    self.current_image = None;
+                    match std::fs::read_to_string(&entry.path) {
+                        Ok(content) => {
+                            // Only show first 1000 characters for text files
+                            self.preview_content = content.chars().take(1000).collect();
+                        }
+                        Err(_) => {
+                            // For binary files or files that can't be read
+                            self.preview_content = format!("Binary file: {} bytes", entry.size);
+                        }
                     }
                 }
             }
         } else {
             self.preview_content.clear();
+            self.current_image = None;
         }
     }
 
@@ -462,17 +507,35 @@ impl Kiorg {
             ui.label(RichText::new("Preview").color(self.colors.gray));
             ui.separator();
             let preview_height = height - NAV_HEIGHT_RESERVED;
-            egui::ScrollArea::vertical()
-                .id_salt("preview_scroll")
-                .max_height(preview_height)
-                .show(ui, |ui| {
-                    ui.add(
-                        egui::TextEdit::multiline(&mut self.preview_content)
-                            .desired_width(width - PANEL_SPACING)
-                            .desired_rows(30)
-                            .interactive(false)
-                    );
-                });
+            
+            if let Some(image) = &self.current_image {
+                egui::ScrollArea::vertical()
+                    .id_salt("preview_scroll")
+                    .max_height(preview_height)
+                    .show(ui, |ui| {
+                        ui.centered_and_justified(|ui| {
+                            let available_width = width - PANEL_SPACING * 2.0;
+                            let available_height = preview_height - PANEL_SPACING * 2.0;
+                            let image_size = image.size_vec2();
+                            let scale = (available_width / image_size.x).min(available_height / image_size.y);
+                            let scaled_size = image_size * scale;
+                            
+                            ui.add(egui::Image::new((image.id(), scaled_size)));
+                        });
+                    });
+            } else {
+                egui::ScrollArea::vertical()
+                    .id_salt("preview_scroll")
+                    .max_height(preview_height)
+                    .show(ui, |ui| {
+                        ui.add(
+                            egui::TextEdit::multiline(&mut self.preview_content)
+                                .desired_width(width - PANEL_SPACING)
+                                .desired_rows(30)
+                                .interactive(false)
+                        );
+                    });
+            }
         });
     }
 
@@ -506,7 +569,7 @@ impl Kiorg {
 
 impl eframe::App for Kiorg {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        self.update_preview();
+        self.update_preview(ctx);
 
         egui::CentralPanel::default().show(ctx, |ui| {
             let total_height = ui.available_height();

@@ -13,3 +13,5 @@ toml = "0.8.8"
 serde = { version = "1.0.193", features = ["derive"] }
 dirs-next = "2.0.0"
 open = "4.0"
+pdfium-render = "0"
+image = "0.24.8"
