@@ -25,6 +25,7 @@ pub fn show_help_window(ctx: &egui::Context, show_help: &mut bool, colors: &AppC
                     ("gg", "Go to first entry"),
                     ("G", "Go to last entry"),
                     ("?", "Toggle this help window"),
+                    ("q", "Exit application"),
                 ];
 
                 for (key, description) in shortcuts {

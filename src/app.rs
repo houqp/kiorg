@@ -34,6 +34,7 @@ pub struct Kiorg {
     pub ensure_selected_visible: bool,
     pub show_help: bool,
     pub preview_content: String,
+    pub show_exit_confirm: bool,
 }
 
 impl Kiorg {
@@ -67,6 +68,7 @@ impl Kiorg {
             ensure_selected_visible: false,
             show_help: false,
             preview_content: String::new(),
+            show_exit_confirm: false,
         };
         app.refresh_entries();
         app
@@ -179,6 +181,15 @@ impl Kiorg {
     }
 
     pub fn handle_key_press(&mut self, ctx: &egui::Context) {
+        if self.show_exit_confirm {
+            if ctx.input(|i| i.key_pressed(egui::Key::Enter)) {
+                std::process::exit(0);
+            } else if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
+                self.show_exit_confirm = false;
+            }
+            return;
+        }
+
         if ctx.input(|i| i.key_pressed(egui::Key::Questionmark)) {
             self.show_help = !self.show_help;
             return;
@@ -193,6 +204,11 @@ impl Kiorg {
         }
         
         if self.show_help {
+            return;
+        }
+
+        if ctx.input(|i| i.key_pressed(egui::Key::Q)) {
+            self.show_exit_confirm = true;
             return;
         }
         
@@ -541,6 +557,22 @@ impl eframe::App for Kiorg {
         // Show help window if needed
         if self.show_help {
             help_window::show_help_window(ctx, &mut self.show_help, &self.colors);
+        }
+
+        // Show exit confirmation window if needed
+        if self.show_exit_confirm {
+            egui::Window::new("Exit Confirmation")
+                .collapsible(false)
+                .resizable(false)
+                .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+                .show(ctx, |ui| {
+                    ui.vertical_centered(|ui| {
+                        ui.add_space(10.0);
+                        ui.label(RichText::new("Press Enter to exit").color(self.colors.yellow));
+                        ui.label(RichText::new("Press Esc to cancel").color(self.colors.gray));
+                        ui.add_space(10.0);
+                    });
+                });
         }
     }
 }
