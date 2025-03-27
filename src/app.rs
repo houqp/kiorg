@@ -7,6 +7,18 @@ use crate::config::{self, colors::AppColors};
 use crate::models::dir_entry::DirEntry;
 use crate::ui::{help_window, file_list};
 
+// Layout constants
+const PANEL_SPACING: f32 = 10.0;         // Space between panels
+const SEPARATOR_PADDING: f32 = 5.0;      // Padding on each side of separator
+const VERTICAL_PADDING: f32 = 4.0;       // Vertical padding in panels
+const NAV_HEIGHT_RESERVED: f32 = 50.0;   // Space reserved for navigation bar
+
+// Panel size ratios (relative to usable width)
+const LEFT_PANEL_RATIO: f32 = 0.15;
+const RIGHT_PANEL_RATIO: f32 = 0.25;
+const LEFT_PANEL_MIN_WIDTH: f32 = 150.0;
+const RIGHT_PANEL_MIN_WIDTH: f32 = 200.0;
+
 // Use atomic for thread-safe last press tracking
 static LAST_G_PRESS: AtomicU64 = AtomicU64::new(0);
 
@@ -310,59 +322,49 @@ impl Kiorg {
             self.preview_content.clear();
         }
     }
-
-    fn draw_preview_panel(&mut self, ui: &mut Ui) {
-        ui.label(RichText::new("Preview").size(16.0).strong());
-        ui.separator();
-        let available_height = ui.available_height() - 50.0; // Account for header and spacing
-        egui::ScrollArea::vertical()
-            .id_salt("preview_scroll")
-            .max_height(available_height)
-            .show(ui, |ui| {
-                ui.add(
-                    egui::TextEdit::multiline(&mut self.preview_content)
-                        .desired_width(f32::INFINITY)
-                        .desired_rows(30)
-                        .interactive(false)
-                );
-            });
-    }
 }
 
 impl eframe::App for Kiorg {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            // Update preview when selection changes
             self.update_preview();
 
             let total_height = ui.available_height();
             
             // Path navigation at the top
             ui.vertical(|ui| {
-                ui.add_space(4.0);
+                ui.add_space(VERTICAL_PADDING);
                 self.draw_path_navigation(ui);
-                ui.add_space(4.0);
+                ui.add_space(VERTICAL_PADDING);
                 ui.separator();
             });
 
-            // Main layout with three columns
+            // Main layout calculations
             let available_width = ui.available_width();
-            let left_width = (available_width * 0.15).max(150.0); // Minimum width of 150
-            let right_width = (available_width * 0.25).max(200.0); // Minimum width of 200
-            let center_width = available_width - left_width - right_width - 20.0; // Account for spacing
+            
+            // Calculate total spacing needed
+            let total_spacing = (PANEL_SPACING * 2.0) +                    // Space between panels
+                              (SEPARATOR_PADDING * 4.0) +                  // Padding around two separators
+                              PANEL_SPACING + // Right margin (using PANEL_SPACING for consistency)
+                              8.0;   // taking into acount of margins from both sides?
+            
+            let usable_width = available_width - total_spacing;
+            let left_width = (usable_width * LEFT_PANEL_RATIO).max(LEFT_PANEL_MIN_WIDTH);
+            let right_width = (usable_width * RIGHT_PANEL_RATIO).max(RIGHT_PANEL_MIN_WIDTH);
+            let center_width = usable_width - left_width - right_width;
 
-            let content_height = total_height - 50.0; // Account for path navigation
+            let content_height = total_height - NAV_HEIGHT_RESERVED;
 
             ui.horizontal(|ui| {
-                ui.spacing_mut().item_spacing.x = 10.0;
+                ui.spacing_mut().item_spacing.x = PANEL_SPACING;
                 ui.set_min_height(content_height);
 
-                // Left panel (15% width) - Parent directory
+                // Left panel
                 ui.vertical(|ui| {
                     ui.set_min_width(left_width);
                     ui.set_max_width(left_width);
                     ui.set_min_height(content_height);
-                    ui.add_space(4.0);
+                    ui.add_space(VERTICAL_PADDING);
                     ui.label(RichText::new("Parent Directory").color(self.colors.gray));
                     ui.separator();
                     if let Some(path) = file_list::draw_file_list(
@@ -379,7 +381,7 @@ impl eframe::App for Kiorg {
                 });
 
                 // Vertical separator after left panel
-                ui.add_space(5.0);
+                ui.add_space(SEPARATOR_PADDING);
                 ui.vertical(|ui| {
                     let rect = ui.available_rect_before_wrap();
                     ui.painter().vline(
@@ -388,14 +390,14 @@ impl eframe::App for Kiorg {
                         ui.visuals().widgets.noninteractive.bg_stroke,
                     );
                 });
-                ui.add_space(5.0);
+                ui.add_space(SEPARATOR_PADDING);
 
-                // Center panel (60% width) - Current directory
+                // Center panel
                 ui.vertical(|ui| {
                     ui.set_min_width(center_width);
                     ui.set_max_width(center_width);
                     ui.set_min_height(content_height);
-                    ui.add_space(4.0);
+                    ui.add_space(VERTICAL_PADDING);
                     if let Some(path) = file_list::draw_file_list(
                         ui,
                         &self.entries,
@@ -410,7 +412,7 @@ impl eframe::App for Kiorg {
                 });
 
                 // Vertical separator after center panel
-                ui.add_space(5.0);
+                ui.add_space(SEPARATOR_PADDING);
                 ui.vertical(|ui| {
                     let rect = ui.available_rect_before_wrap();
                     ui.painter().vline(
@@ -419,29 +421,32 @@ impl eframe::App for Kiorg {
                         ui.visuals().widgets.noninteractive.bg_stroke,
                     );
                 });
-                ui.add_space(5.0);
+                ui.add_space(SEPARATOR_PADDING);
 
-                // Right panel (25% width) - Preview
+                // Right panel
                 ui.vertical(|ui| {
                     ui.set_min_width(right_width);
                     ui.set_max_width(right_width);
                     ui.set_min_height(content_height);
-                    ui.add_space(4.0);
+                    ui.add_space(VERTICAL_PADDING);
                     ui.label(RichText::new("Preview").color(self.colors.gray));
                     ui.separator();
-                    let preview_height = ui.available_height() - 50.0; // Account for header and spacing
+                    let preview_height = ui.available_height() - NAV_HEIGHT_RESERVED;
                     egui::ScrollArea::vertical()
                         .id_salt("preview_scroll")
                         .max_height(preview_height)
                         .show(ui, |ui| {
                             ui.add(
                                 egui::TextEdit::multiline(&mut self.preview_content)
-                                    .desired_width(f32::INFINITY)
+                                    .desired_width(right_width - PANEL_SPACING)
                                     .desired_rows(30)
                                     .interactive(false)
                             );
                         });
                 });
+
+                // Right margin
+                ui.add_space(PANEL_SPACING);
             });
 
             // Reset ensure_selected_visible flag after drawing
