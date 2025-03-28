@@ -24,6 +24,7 @@ pub fn show_help_window(ctx: &egui::Context, show_help: &mut bool, colors: &AppC
                     ("l / → / Enter", "Open directory or file"),
                     ("gg", "Go to first entry"),
                     ("G", "Go to last entry"),
+                    ("r", "Rename selected file/directory"),
                     ("?", "Toggle this help window"),
                     ("q", "Exit application"),
                 ];

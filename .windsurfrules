@@ -21,6 +21,7 @@ Requirements for the app:
   * `gg` to go to the first entry
   * `G` to go to the last entry
   * `D` to delete the selected file or folder with a confirmation prompt
+  * `r` to rename a file or directory
   * `q` to exit the application with a confirmation popup that confirms the exit through enter
   * `?` to toggle help window that displays all the shortcuts in a popup window
 * Supprot configurable color schemes through toml config files. Provides a builtin default them that looks like the editor color scheme Sonokai.

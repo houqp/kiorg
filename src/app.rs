@@ -37,6 +37,9 @@ pub struct Kiorg {
     pub preview_content: String,
     pub show_exit_confirm: bool,
     pub current_image: Option<TextureHandle>,
+    pub rename_mode: bool,
+    pub new_name: String,
+    pub rename_focus: bool,
 }
 
 impl Kiorg {
@@ -72,6 +75,9 @@ impl Kiorg {
             preview_content: String::new(),
             show_exit_confirm: false,
             current_image: None,
+            rename_mode: false,
+            new_name: String::new(),
+            rename_focus: false,
         };
         app.refresh_entries();
         app
@@ -193,6 +199,29 @@ impl Kiorg {
             return;
         }
 
+        if self.rename_mode {
+            if ctx.input(|i| i.key_pressed(egui::Key::Enter)) {
+                if let Some(entry) = self.entries.get(self.selected_index) {
+                    let parent = entry.path.parent().unwrap_or(&self.current_path);
+                    let new_path = parent.join(&self.new_name);
+                    
+                    if let Err(e) = std::fs::rename(&entry.path, &new_path) {
+                        eprintln!("Failed to rename: {e}");
+                    } else {
+                        self.refresh_entries();
+                    }
+                }
+                self.rename_mode = false;
+                self.new_name.clear();
+                self.rename_focus = false;
+            } else if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
+                self.rename_mode = false;
+                self.new_name.clear();
+                self.rename_focus = false;
+            }
+            return;
+        }
+
         if ctx.input(|i| i.key_pressed(egui::Key::Questionmark)) {
             self.show_help = !self.show_help;
             return;
@@ -212,6 +241,15 @@ impl Kiorg {
 
         if ctx.input(|i| i.key_pressed(egui::Key::Q)) {
             self.show_exit_confirm = true;
+            return;
+        }
+
+        if ctx.input(|i| i.key_pressed(egui::Key::R)) {
+            if let Some(entry) = self.entries.get(self.selected_index) {
+                self.new_name = entry.name.clone();
+                self.rename_mode = true;
+                self.rename_focus = true;
+            }
             return;
         }
         
@@ -471,6 +509,9 @@ impl Kiorg {
                             entry,
                             i == self.selected_index,
                             &self.colors,
+                            self.rename_mode,
+                            &mut self.new_name,
+                            self.rename_focus,
                         );
                         if clicked {
                             path_to_navigate = Some(entry.path.clone());
@@ -631,8 +672,12 @@ impl eframe::App for Kiorg {
                 .show(ctx, |ui| {
                     ui.vertical_centered(|ui| {
                         ui.add_space(10.0);
-                        ui.label(RichText::new("Press Enter to exit").color(self.colors.yellow));
-                        ui.label(RichText::new("Press Esc to cancel").color(self.colors.gray));
+                        if ui.link(RichText::new("Press Enter to exit").color(self.colors.yellow)).clicked() {
+                            std::process::exit(0);
+                        }
+                        if ui.link(RichText::new("Press Esc to cancel").color(self.colors.gray)).clicked() {
+                            self.show_exit_confirm = false;
+                        }
                         ui.add_space(10.0);
                     });
                 });

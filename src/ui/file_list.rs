@@ -43,6 +43,9 @@ pub fn draw_entry_row(
     entry: &DirEntry,
     is_selected: bool,
     colors: &AppColors,
+    rename_mode: bool,
+    new_name: &mut String,
+    rename_focus: bool,
 ) -> bool {
     let row_height = 20.0;
     let (rect, response) = ui.allocate_exact_size(
@@ -73,21 +76,52 @@ pub fn draw_entry_row(
     );
     cursor.x += icon_width + 10.0;
 
-    // Name with truncation
+    // Name with truncation or rename input
     let name_clip_rect = egui::Rect::from_min_size(
         cursor,
         egui::vec2(name_width, row_height)
     );
 
-    let name_text = truncate_text(&entry.name, name_width);
-    let name_color = if entry.is_dir { colors.blue } else { colors.fg };
-    ui.painter().with_clip_rect(name_clip_rect).text(
-        cursor + egui::vec2(0.0, row_height/2.0),
-        Align2::LEFT_CENTER,
-        &name_text,
-        egui::FontId::proportional(14.0),
-        name_color
-    );
+    if rename_mode && is_selected {
+        ui.painter().with_clip_rect(name_clip_rect).text(
+            cursor + egui::vec2(0.0, row_height/2.0),
+            Align2::LEFT_CENTER,
+            "> ",
+            egui::FontId::proportional(14.0),
+            colors.yellow
+        );
+        cursor.x += 14.0; // Width of "> " prefix
+        
+        let text_edit = egui::TextEdit::singleline(new_name)
+            .desired_width(name_width - 14.0)
+            .font(egui::FontId::proportional(14.0))
+            .text_color(colors.yellow)
+            .frame(false);
+        
+        let text_edit_response = ui.allocate_ui_with_layout(
+            egui::vec2(name_width - 14.0, row_height),
+            egui::Layout::left_to_right(egui::Align::Center),
+            |ui| {
+                ui.add(text_edit)
+            }
+        );
+        
+        if rename_focus {
+            ui.ctx().memory_mut(|mem| {
+                mem.request_focus(text_edit_response.inner.id);
+            });
+        }
+    } else {
+        let name_text = truncate_text(&entry.name, name_width);
+        let name_color = if entry.is_dir { colors.blue } else { colors.fg };
+        ui.painter().with_clip_rect(name_clip_rect).text(
+            cursor + egui::vec2(0.0, row_height/2.0),
+            Align2::LEFT_CENTER,
+            &name_text,
+            egui::FontId::proportional(14.0),
+            name_color
+        );
+    }
     cursor.x += name_width;
 
     // Modified date
