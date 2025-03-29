@@ -47,7 +47,7 @@ pub struct Kiorg {
 }
 
 impl Kiorg {
-    pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
+    pub fn new(cc: &eframe::CreationContext<'_>, initial_dir: PathBuf) -> Self {
         let config = config::load_config();
         let colors = AppColors::from_config(&config.colors);
         
@@ -66,7 +66,7 @@ impl Kiorg {
         
         cc.egui_ctx.set_visuals(visuals);
         
-        let current_path = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+        let current_path = initial_dir;
         let mut app = Self {
             current_path,
             entries: Vec::new(),
