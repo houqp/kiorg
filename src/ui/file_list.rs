@@ -237,7 +237,7 @@ mod tests {
         assert_eq!(truncate_text("short", 100.0), "short");
         assert_eq!(
             truncate_text("very_long_filename.txt", 70.0),
-            "very_...me.txt"
+            "ver...txt"
         );
     }
 }

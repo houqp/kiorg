@@ -50,7 +50,7 @@ impl Kiorg {
     pub fn new(cc: &eframe::CreationContext<'_>, initial_dir: PathBuf) -> Self {
         let config = config::load_config();
         let colors = AppColors::from_config(&config.colors);
-        
+
         let mut visuals = egui::Visuals::dark();
         visuals.override_text_color = Some(colors.fg);
         visuals.widgets.noninteractive.bg_fill = colors.bg;
@@ -63,9 +63,9 @@ impl Kiorg {
         visuals.widgets.active.fg_stroke.color = colors.fg;
         visuals.window_fill = colors.bg;
         visuals.panel_fill = colors.bg;
-        
+
         cc.egui_ctx.set_visuals(visuals);
-        
+
         let current_path = initial_dir;
         let mut app = Self {
             current_path,
@@ -100,7 +100,7 @@ impl Kiorg {
         if let Some(parent) = self.current_path.parent() {
             self.parent_entries.clear();
             self.parent_selected_index = 0;
-            
+
             if let Ok(read_dir) = fs::read_dir(parent) {
                 self.parent_entries = read_dir
                     .filter_map(|entry| {
@@ -108,7 +108,7 @@ impl Kiorg {
                         let path = entry.path();
                         let is_dir = path.is_dir();
                         let name = entry.file_name().to_string_lossy().into_owned();
-                        
+
                         let metadata = entry.metadata().ok()?;
                         let modified = metadata.modified().unwrap_or(std::time::SystemTime::UNIX_EPOCH);
                         let size = if is_dir { 0 } else { metadata.len() };
@@ -148,7 +148,7 @@ impl Kiorg {
                     let path = entry.path();
                     let is_dir = path.is_dir();
                     let name = entry.file_name().to_string_lossy().into_owned();
-                    
+
                     let metadata = entry.metadata().ok()?;
                     let modified = metadata.modified().unwrap_or(std::time::SystemTime::UNIX_EPOCH);
                     let size = if is_dir { 0 } else { metadata.len() };
@@ -177,7 +177,7 @@ impl Kiorg {
         if self.entries.is_empty() {
             return;
         }
-        
+
         let new_index = self.selected_index as isize + delta;
         if new_index >= 0 && new_index < self.entries.len() as isize {
             self.selected_index = new_index as usize;
@@ -221,7 +221,7 @@ impl Kiorg {
                 if let Some(entry) = self.entries.get(self.selected_index) {
                     let parent = entry.path.parent().unwrap_or(&self.current_path);
                     let new_path = parent.join(&self.new_name);
-                    
+
                     if let Err(e) = std::fs::rename(&entry.path, &new_path) {
                         eprintln!("Failed to rename: {e}");
                     } else {
@@ -243,7 +243,7 @@ impl Kiorg {
             self.show_help = !self.show_help;
             return;
         }
-        
+
         if self.show_help && (
             ctx.input(|i| i.key_pressed(egui::Key::Enter))
             || ctx.input(|i| i.key_pressed(egui::Key::Questionmark))
@@ -251,7 +251,7 @@ impl Kiorg {
             self.show_help = false;
             return;
         }
-        
+
         if self.show_help {
             return;
         }
@@ -310,7 +310,7 @@ impl Kiorg {
                         .and_then(|n| n.to_str())
                         .unwrap_or_default();
                     let mut new_path = self.current_path.join(name);
-                    
+
                     // Handle duplicate names
                     let mut counter = 1;
                     while new_path.exists() {
@@ -357,9 +357,9 @@ impl Kiorg {
             if let Some(parent) = self.current_path.parent() {
                 self.navigate_to(parent.to_path_buf());
             }
-        } else if ctx.input(|i| 
-            i.key_pressed(egui::Key::L) 
-            || i.key_pressed(egui::Key::ArrowRight) 
+        } else if ctx.input(|i|
+            i.key_pressed(egui::Key::L)
+            || i.key_pressed(egui::Key::ArrowRight)
             || i.key_pressed(egui::Key::Enter)
         ) {
             if self.selected_index < self.entries.len() {
@@ -375,7 +375,7 @@ impl Kiorg {
                     .duration_since(std::time::UNIX_EPOCH)
                     .unwrap_or_default()
                     .as_millis() as u64;
-                
+
                 let last = LAST_G_PRESS.load(Ordering::Relaxed);
                 if last > 0 && now - last < 500 {
                     self.selected_index = 0;
@@ -399,10 +399,10 @@ impl Kiorg {
     fn draw_path_navigation(&mut self, ui: &mut Ui) {
         ui.horizontal(|ui| {
             ui.label(RichText::new("$ ").color(self.colors.gray));
-            
+
             let mut components = Vec::new();
             let mut current = PathBuf::new();
-            
+
             for component in self.current_path.components() {
                 let comp_str = component.as_os_str().to_string_lossy().to_string();
                 if !comp_str.is_empty() {
@@ -410,29 +410,29 @@ impl Kiorg {
                     components.push((comp_str, current.clone()));
                 }
             }
-            
+
             if components.is_empty() {
                 ui.label(RichText::new("/").color(self.colors.yellow));
             } else {
                 let mut path_str = String::new();
                 for (i, (name, _)) in components.iter().enumerate() {
-                    if i > 1 {
+                    if i > 0 {
                         path_str.push('/');
                     }
                     path_str.push_str(name);
                 }
-                
+
                 let available_width = ui.available_width() - 100.0; // Reserve space for help text
                 let estimated_width = path_str.len() as f32 * 7.0;
-                
+
                 if estimated_width > available_width && components.len() > 4 {
                     if ui.link(RichText::new(&components[0].0).color(self.colors.yellow)).clicked() {
                         self.navigate_to(components[0].1.clone());
                     }
-                    
+
                     ui.label(RichText::new("/").color(self.colors.gray));
                     ui.label(RichText::new("...").color(self.colors.gray));
-                    
+
                     let start_idx = components.len() - 2;
                     for component in components.iter().skip(start_idx) {
                         let (comp_str, path) = component;
@@ -443,10 +443,10 @@ impl Kiorg {
                     }
                 } else {
                     for (i, (name, path)) in components.iter().enumerate() {
-                        if i > 1 {
+                        if (i > 1) || (i == 1 && components[0].0 != "/") {
                             ui.label(RichText::new("/").color(self.colors.gray));
                         }
-                        
+
                         if ui.link(RichText::new(name).color(self.colors.yellow)).clicked() {
                             self.navigate_to(path.clone());
                         }
@@ -471,7 +471,7 @@ impl Kiorg {
                 let extension = entry.path.extension()
                     .and_then(|e| e.to_str())
                     .map(|e| e.to_lowercase());
-                
+
                 if let Some(ext) = extension {
                     if ["jpg", "jpeg", "png", "gif", "bmp", "webp"].contains(&ext.as_str()) {
                         if let Ok(bytes) = std::fs::read(&entry.path) {
@@ -535,7 +535,7 @@ impl Kiorg {
 
             // Calculate available height for scroll area
             let available_height = height - ROW_HEIGHT - VERTICAL_PADDING * 2.0;
-            
+
             egui::ScrollArea::vertical()
                 .id_salt("parent_list_scroll")
                 .auto_shrink([false; 2])
@@ -591,7 +591,7 @@ impl Kiorg {
 
             // Calculate available height for scroll area
             let available_height = height - ROW_HEIGHT - VERTICAL_PADDING * 2.0;
-            
+
             egui::ScrollArea::vertical()
                 .id_salt("current_list_scroll")
                 .auto_shrink([false; 2])
@@ -652,7 +652,7 @@ impl Kiorg {
             ui.label(RichText::new("Preview").color(self.colors.gray));
             ui.separator();
             let preview_height = height - NAV_HEIGHT_RESERVED;
-            
+
             if let Some(image) = &self.current_image {
                 egui::ScrollArea::vertical()
                     .id_salt("preview_scroll")
@@ -664,7 +664,7 @@ impl Kiorg {
                             let image_size = image.size_vec2();
                             let scale = (available_width / image_size.x).min(available_height / image_size.y);
                             let scaled_size = image_size * scale;
-                            
+
                             ui.add(egui::Image::new((image.id(), scaled_size)));
                         });
                     });
@@ -702,7 +702,7 @@ impl Kiorg {
                           (SEPARATOR_PADDING * 4.0) +                  // Padding around two separators
                           PANEL_SPACING +                             // Right margin
                           8.0;                                        // Margins from both sides
-        
+
         let usable_width = available_width - total_spacing;
         let left_width = (usable_width * LEFT_PANEL_RATIO).max(LEFT_PANEL_MIN_WIDTH);
         let right_width = (usable_width * RIGHT_PANEL_RATIO).max(RIGHT_PANEL_MIN_WIDTH);
@@ -768,7 +768,7 @@ impl eframe::App for Kiorg {
 
         egui::CentralPanel::default().show(ctx, |ui| {
             let total_height = ui.available_height();
-            
+
             // Path navigation at the top
             ui.vertical(|ui| {
                 ui.add_space(VERTICAL_PADDING);
@@ -811,7 +811,7 @@ impl eframe::App for Kiorg {
 
         // Handle keyboard input
         self.handle_key_press(ctx);
-        
+
         // Show help window if needed
         if self.show_help {
             help_window::show_help_window(ctx, &mut self.show_help, &self.colors);
