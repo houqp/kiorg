@@ -42,6 +42,8 @@ pub struct Kiorg {
     pub rename_focus: bool,
     pub selected_entries: std::collections::HashSet<PathBuf>,
     pub clipboard: Option<(Vec<PathBuf>, bool)>, // (paths, is_cut)
+    pub show_delete_confirm: bool,
+    pub entry_to_delete: Option<PathBuf>,
 }
 
 impl Kiorg {
@@ -82,6 +84,8 @@ impl Kiorg {
             rename_focus: false,
             selected_entries: std::collections::HashSet::new(),
             clipboard: None,
+            show_delete_confirm: false,
+            entry_to_delete: None,
         };
         app.refresh_entries();
         app
@@ -199,6 +203,15 @@ impl Kiorg {
                 std::process::exit(0);
             } else if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
                 self.show_exit_confirm = false;
+            }
+            return;
+        }
+
+        if self.show_delete_confirm {
+            if ctx.input(|i| i.key_pressed(egui::Key::Enter)) {
+                self.confirm_delete();
+            } else if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
+                self.cancel_delete();
             }
             return;
         }
@@ -326,7 +339,15 @@ impl Kiorg {
             }
             return;
         }
-        
+
+        if ctx.input(|i| i.key_pressed(egui::Key::D)) {
+            if let Some(entry) = self.entries.get(self.selected_index) {
+                self.entry_to_delete = Some(entry.path.clone());
+                self.show_delete_confirm = true;
+            }
+            return;
+        }
+
         // Handle navigation in current panel
         if ctx.input(|i| i.key_pressed(egui::Key::J) || i.key_pressed(egui::Key::ArrowDown)) {
             self.move_selection(1);
@@ -689,6 +710,56 @@ impl Kiorg {
 
         (left_width, center_width, right_width)
     }
+
+    fn confirm_delete(&mut self) {
+        if let Some(path) = self.entry_to_delete.take() {
+            if let Err(e) = if path.is_dir() {
+                std::fs::remove_dir_all(&path)
+            } else {
+                std::fs::remove_file(&path)
+            } {
+                eprintln!("Failed to delete: {e}");
+            } else {
+                self.refresh_entries();
+            }
+        }
+        self.show_delete_confirm = false;
+    }
+
+    fn cancel_delete(&mut self) {
+        self.show_delete_confirm = false;
+        self.entry_to_delete = None;
+    }
+
+    fn handle_delete_confirmation(&mut self, ctx: &egui::Context) {
+        if self.show_delete_confirm {
+            if let Some(path) = self.entry_to_delete.clone() {
+                self.show_delete_dialog(ctx, &path);
+            }
+        }
+    }
+
+    fn show_delete_dialog(&mut self, ctx: &egui::Context, path: &PathBuf) {
+        egui::Window::new("Delete Confirmation")
+            .collapsible(false)
+            .resizable(false)
+            .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+            .show(ctx, |ui| {
+                ui.vertical_centered(|ui| {
+                    ui.add_space(10.0);
+                    ui.label(format!("Delete {}?", path.display()));
+                    let confirm_clicked = ui.link(RichText::new("Press Enter to confirm").color(self.colors.yellow)).clicked();
+                    let cancel_clicked = ui.link(RichText::new("Press Esc to cancel").color(self.colors.gray)).clicked();
+                    ui.add_space(10.0);
+
+                    if confirm_clicked {
+                        self.confirm_delete();
+                    } else if cancel_clicked {
+                        self.cancel_delete();
+                    }
+                });
+            });
+    }
 }
 
 impl eframe::App for Kiorg {
@@ -765,5 +836,8 @@ impl eframe::App for Kiorg {
                     });
                 });
         }
+
+        // Show delete confirmation if needed
+        self.handle_delete_confirmation(ctx);
     }
 }
