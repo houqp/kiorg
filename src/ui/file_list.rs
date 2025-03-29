@@ -46,6 +46,7 @@ pub fn draw_entry_row(
     rename_mode: bool,
     new_name: &mut String,
     rename_focus: bool,
+    is_marked: bool,
 ) -> bool {
     let row_height = 20.0;
     let (rect, response) = ui.allocate_exact_size(
@@ -53,7 +54,9 @@ pub fn draw_entry_row(
         egui::Sense::click(),
     );
 
-    if is_selected {
+    if is_marked {
+        ui.painter().rect_filled(rect, 0.0, colors.bg_light);
+    } else if is_selected {
         ui.painter().rect_filled(rect, 0.0, colors.selected_bg);
     }
 

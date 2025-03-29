@@ -40,6 +40,7 @@ pub struct Kiorg {
     pub rename_mode: bool,
     pub new_name: String,
     pub rename_focus: bool,
+    pub selected_entries: std::collections::HashSet<PathBuf>,
 }
 
 impl Kiorg {
@@ -78,6 +79,7 @@ impl Kiorg {
             rename_mode: false,
             new_name: String::new(),
             rename_focus: false,
+            selected_entries: std::collections::HashSet::new(),
         };
         app.refresh_entries();
         app
@@ -272,11 +274,9 @@ impl Kiorg {
                 self.navigate_to(selected_path);
             }
         } else if ctx.input(|i| i.key_pressed(egui::Key::G)) {
-            if ctx.input(|i| i.modifiers.shift) {
-                if !self.entries.is_empty() {
-                    self.selected_index = self.entries.len() - 1;
-                    self.ensure_selected_visible = true;
-                }
+            if !self.entries.is_empty() {
+                self.selected_index = self.entries.len() - 1;
+                self.ensure_selected_visible = true;
             } else {
                 let now = std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
@@ -290,6 +290,14 @@ impl Kiorg {
                     LAST_G_PRESS.store(0, Ordering::Relaxed);
                 } else {
                     LAST_G_PRESS.store(now, Ordering::Relaxed);
+                }
+            }
+        } else if ctx.input(|i| i.key_pressed(egui::Key::Space)) {
+            if let Some(entry) = self.entries.get(self.selected_index) {
+                if self.selected_entries.contains(&entry.path) {
+                    self.selected_entries.remove(&entry.path);
+                } else {
+                    self.selected_entries.insert(entry.path.clone());
                 }
             }
         }
@@ -504,14 +512,17 @@ impl Kiorg {
                     // Draw all rows
                     let mut path_to_navigate = None;
                     for (i, entry) in self.entries.iter().enumerate() {
+                        let is_selected = i == self.selected_index;
+                        let is_marked = self.selected_entries.contains(&entry.path);
                         let clicked = file_list::draw_entry_row(
                             ui,
                             entry,
-                            i == self.selected_index,
+                            is_selected,
                             &self.colors,
-                            self.rename_mode,
+                            self.rename_mode && is_selected,
                             &mut self.new_name,
-                            self.rename_focus,
+                            self.rename_focus && is_selected,
+                            is_marked,
                         );
                         if clicked {
                             path_to_navigate = Some(entry.path.clone());
