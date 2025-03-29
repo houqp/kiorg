@@ -26,6 +26,9 @@ pub fn show_help_window(ctx: &egui::Context, show_help: &mut bool, colors: &AppC
                     ("G", "Go to last entry"),
                     ("r", "Rename selected file/directory"),
                     ("space", "Select/deselect entry"),
+                    ("y", "Copy selected entry"),
+                    ("x", "Cut selected entry"),
+                    ("p", "Paste copied/cut entries"),
                     ("?", "Toggle this help window"),
                     ("q", "Exit application"),
                 ];

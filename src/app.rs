@@ -41,6 +41,7 @@ pub struct Kiorg {
     pub new_name: String,
     pub rename_focus: bool,
     pub selected_entries: std::collections::HashSet<PathBuf>,
+    pub clipboard: Option<(Vec<PathBuf>, bool)>, // (paths, is_cut)
 }
 
 impl Kiorg {
@@ -80,6 +81,7 @@ impl Kiorg {
             new_name: String::new(),
             rename_focus: false,
             selected_entries: std::collections::HashSet::new(),
+            clipboard: None,
         };
         app.refresh_entries();
         app
@@ -251,6 +253,76 @@ impl Kiorg {
                 self.new_name = entry.name.clone();
                 self.rename_mode = true;
                 self.rename_focus = true;
+            }
+            return;
+        }
+
+        // Handle copy/cut/paste
+        if ctx.input(|i| i.key_pressed(egui::Key::Y)) {
+            let paths: Vec<PathBuf> = if self.selected_entries.is_empty() {
+                if let Some(entry) = self.entries.get(self.selected_index) {
+                    vec![entry.path.clone()]
+                } else {
+                    vec![]
+                }
+            } else {
+                self.selected_entries.iter().cloned().collect()
+            };
+            if !paths.is_empty() {
+                self.clipboard = Some((paths, false));
+            }
+            return;
+        }
+
+        if ctx.input(|i| i.key_pressed(egui::Key::X)) {
+            let paths: Vec<PathBuf> = if self.selected_entries.is_empty() {
+                if let Some(entry) = self.entries.get(self.selected_index) {
+                    vec![entry.path.clone()]
+                } else {
+                    vec![]
+                }
+            } else {
+                self.selected_entries.iter().cloned().collect()
+            };
+            if !paths.is_empty() {
+                self.clipboard = Some((paths, true));
+            }
+            return;
+        }
+
+        if ctx.input(|i| i.key_pressed(egui::Key::P)) {
+            if let Some((paths, is_cut)) = self.clipboard.take() {
+                for path in paths {
+                    let name = path.file_name()
+                        .and_then(|n| n.to_str())
+                        .unwrap_or_default();
+                    let mut new_path = self.current_path.join(name);
+                    
+                    // Handle duplicate names
+                    let mut counter = 1;
+                    while new_path.exists() {
+                        let stem = path.file_stem()
+                            .and_then(|s| s.to_str())
+                            .unwrap_or_default();
+                        let ext = path.extension()
+                            .and_then(|e| e.to_str())
+                            .map(|e| format!(".{}", e))
+                            .unwrap_or_default();
+                        new_path = self.current_path.join(format!("{}_{}{}", stem, counter, ext));
+                        counter += 1;
+                    }
+
+                    if is_cut {
+                        if let Err(e) = std::fs::rename(&path, &new_path) {
+                            eprintln!("Failed to move: {e}");
+                        }
+                    } else {
+                        if let Err(e) = std::fs::copy(&path, &new_path) {
+                            eprintln!("Failed to copy: {e}");
+                        }
+                    }
+                }
+                self.refresh_entries();
             }
             return;
         }
