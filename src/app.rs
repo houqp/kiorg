@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::fs;
 use egui::{RichText, Ui, TextureHandle};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -9,6 +9,7 @@ use crate::config::{self, colors::AppColors};
 use crate::models::dir_entry::DirEntry;
 use crate::ui::{help_window, file_list};
 use crate::ui::file_list::ROW_HEIGHT;
+use crate::ui::path_nav;
 
 // Layout constants
 const PANEL_SPACING: f32 = 10.0;         // Space between panels
@@ -328,11 +329,11 @@ impl Kiorg {
                     if is_cut {
                         if let Err(e) = std::fs::rename(&path, &new_path) {
                             eprintln!("Failed to move: {e}");
-                        }
-                    } else {
-                        if let Err(e) = std::fs::copy(&path, &new_path) {
+                        } else if let Err(e) = std::fs::copy(&path, &new_path) {
                             eprintln!("Failed to copy: {e}");
                         }
+                    } else if let Err(e) = std::fs::copy(&path, &new_path) {
+                        eprintln!("Failed to copy: {e}");
                     }
                 }
                 self.refresh_entries();
@@ -397,68 +398,13 @@ impl Kiorg {
     }
 
     fn draw_path_navigation(&mut self, ui: &mut Ui) {
-        ui.horizontal(|ui| {
-            ui.label(RichText::new("$ ").color(self.colors.gray));
-
-            let mut components = Vec::new();
-            let mut current = PathBuf::new();
-
-            for component in self.current_path.components() {
-                let comp_str = component.as_os_str().to_string_lossy().to_string();
-                if !comp_str.is_empty() {
-                    current.push(&comp_str);
-                    components.push((comp_str, current.clone()));
+        if let Some(message) = path_nav::draw_path_navigation(ui, &self.current_path, &self.colors) {
+            match message {
+                path_nav::PathNavMessage::Navigate(path) => {
+                    self.navigate_to(path);
                 }
             }
-
-            if components.is_empty() {
-                ui.label(RichText::new("/").color(self.colors.yellow));
-            } else {
-                let mut path_str = String::new();
-                for (i, (name, _)) in components.iter().enumerate() {
-                    if i > 0 {
-                        path_str.push('/');
-                    }
-                    path_str.push_str(name);
-                }
-
-                let available_width = ui.available_width() - 100.0; // Reserve space for help text
-                let estimated_width = path_str.len() as f32 * 7.0;
-
-                if estimated_width > available_width && components.len() > 4 {
-                    if ui.link(RichText::new(&components[0].0).color(self.colors.yellow)).clicked() {
-                        self.navigate_to(components[0].1.clone());
-                    }
-
-                    ui.label(RichText::new("/").color(self.colors.gray));
-                    ui.label(RichText::new("...").color(self.colors.gray));
-
-                    let start_idx = components.len() - 2;
-                    for component in components.iter().skip(start_idx) {
-                        let (comp_str, path) = component;
-                        ui.label(RichText::new("/").color(self.colors.gray));
-                        if ui.link(RichText::new(comp_str).color(self.colors.yellow)).clicked() {
-                            self.navigate_to(path.clone());
-                        }
-                    }
-                } else {
-                    for (i, (name, path)) in components.iter().enumerate() {
-                        if (i > 1) || (i == 1 && components[0].0 != "/") {
-                            ui.label(RichText::new("/").color(self.colors.gray));
-                        }
-
-                        if ui.link(RichText::new(name).color(self.colors.yellow)).clicked() {
-                            self.navigate_to(path.clone());
-                        }
-                    }
-                }
-            }
-
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                ui.label(RichText::new("? for help").color(self.colors.gray))
-                    .on_hover_text("Show keyboard shortcuts");
-            });
-        });
+        }
     }
 
     fn update_preview(&mut self, ctx: &egui::Context) {
@@ -609,13 +555,15 @@ impl Kiorg {
                         let is_marked = self.selected_entries.contains(&entry.path);
                         let clicked = file_list::draw_entry_row(
                             ui,
-                            entry,
-                            is_selected,
-                            &self.colors,
-                            self.rename_mode && is_selected,
-                            &mut self.new_name,
-                            self.rename_focus && is_selected,
-                            is_marked,
+                            file_list::EntryRowParams {
+                                entry,
+                                is_selected,
+                                colors: &self.colors,
+                                rename_mode: self.rename_mode && is_selected,
+                                new_name: &mut self.new_name,
+                                rename_focus: self.rename_focus && is_selected,
+                                is_marked,
+                            },
                         );
                         if clicked {
                             path_to_navigate = Some(entry.path.clone());
@@ -739,7 +687,7 @@ impl Kiorg {
         }
     }
 
-    fn show_delete_dialog(&mut self, ctx: &egui::Context, path: &PathBuf) {
+    fn show_delete_dialog(&mut self, ctx: &egui::Context, path: &Path) {
         egui::Window::new("Delete Confirmation")
             .collapsible(false)
             .resizable(false)

@@ -1,14 +1,25 @@
-use egui::{self, Align2, Color32, Ui};
 use chrono::{DateTime, Local};
+use egui::{Align2, Color32, Ui};
 use humansize::{format_size, BINARY};
 
-use crate::models::dir_entry::DirEntry;
 use crate::config::colors::AppColors;
+use crate::models::dir_entry::DirEntry;
 
 pub const ROW_HEIGHT: f32 = 16.0;
 const ICON_WIDTH: f32 = 24.0;
 const DATE_WIDTH: f32 = 160.0;
 const SIZE_WIDTH: f32 = 80.0;
+
+#[derive(Debug)]
+pub struct EntryRowParams<'a> {
+    pub entry: &'a DirEntry,
+    pub is_selected: bool,
+    pub colors: &'a AppColors,
+    pub rename_mode: bool,
+    pub new_name: &'a mut String,
+    pub rename_focus: bool,
+    pub is_marked: bool,
+}
 
 pub fn draw_table_header(ui: &mut Ui, colors: &AppColors) {
     ui.style_mut().spacing.item_spacing.y = 2.0;
@@ -40,14 +51,18 @@ pub fn draw_table_header(ui: &mut Ui, colors: &AppColors) {
 
 pub fn draw_entry_row(
     ui: &mut Ui,
-    entry: &DirEntry,
-    is_selected: bool,
-    colors: &AppColors,
-    rename_mode: bool,
-    new_name: &mut String,
-    rename_focus: bool,
-    is_marked: bool,
+    params: EntryRowParams<'_>,
 ) -> bool {
+    let EntryRowParams {
+        entry,
+        is_selected,
+        colors,
+        rename_mode,
+        new_name,
+        rename_focus,
+        is_marked,
+    } = params;
+
     let row_height = 20.0;
     let (rect, response) = ui.allocate_exact_size(
         egui::vec2(ui.available_width(), row_height),
