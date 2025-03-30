@@ -3,6 +3,8 @@ use std::fs;
 use egui::{RichText, Ui, TextureHandle};
 use image::io::Reader as ImageReader;
 use std::io::Cursor;
+use std::sync::atomic::{AtomicU64};
+use std::sync::atomic::Ordering::Relaxed;
 
 use crate::config::{self, colors::AppColors};
 use crate::models::dir_entry::DirEntry;
@@ -10,6 +12,9 @@ use crate::models::tab::TabManager;
 use crate::ui::{help_window, file_list};
 use crate::ui::file_list::ROW_HEIGHT;
 use crate::ui::path_nav;
+
+// Static variable for tracking key press times
+static LAST_LOWERCASE_G_PRESS: AtomicU64 = AtomicU64::new(0);
 
 // Layout constants
 const PANEL_SPACING: f32 = 10.0;         // Space between panels
@@ -383,6 +388,36 @@ impl Kiorg {
             if tab.selected_index < tab.entries.len() {
                 let selected_path = tab.entries[tab.selected_index].path.clone();
                 self.navigate_to(selected_path);
+            }
+        } else if ctx.input(|i| i.key_pressed(egui::Key::G) && i.modifiers.shift) {
+            let tab = self.tab_manager.current_tab();
+            if !tab.entries.is_empty() {
+                tab.selected_index = tab.entries.len() - 1;
+                self.ensure_selected_visible = true;
+            }
+        } else if ctx.input(|i| i.key_pressed(egui::Key::G) && !i.modifiers.shift) {
+            let tab = self.tab_manager.current_tab();
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis() as u64;
+
+            let last = LAST_LOWERCASE_G_PRESS.load(Relaxed);
+            if last > 0 && now - last < 500 {
+                tab.selected_index = 0;
+                self.ensure_selected_visible = true;
+                LAST_LOWERCASE_G_PRESS.store(0, Relaxed);
+            } else {
+                LAST_LOWERCASE_G_PRESS.store(now, Relaxed);
+            }
+        } else if ctx.input(|i| i.key_pressed(egui::Key::Space)) {
+            let tab = self.tab_manager.current_tab();
+            if let Some(entry) = tab.entries.get(tab.selected_index) {
+                if tab.selected_entries.contains(&entry.path) {
+                    tab.selected_entries.remove(&entry.path);
+                } else {
+                    tab.selected_entries.insert(entry.path.clone());
+                }
             }
         }
     }
