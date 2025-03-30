@@ -3,7 +3,7 @@ use egui::{RichText, Ui};
 
 #[derive(Debug)]
 pub enum PathNavMessage {
-    Navigate(PathBuf),
+    Navigate(()),
 }
 
 pub fn draw_path_navigation(
@@ -28,12 +28,12 @@ pub fn draw_path_navigation(
                 path_str.push_str(name);
             }
 
-            let available_width = ui.available_width() - 100.0; // Reserve space for help text
+            let available_width = ui.available_width();
             let estimated_width = path_str.len() as f32 * 7.0;
 
             if estimated_width > available_width && components.len() > 4 {
                 if ui.link(RichText::new(&components[0].0).color(colors.yellow)).clicked() {
-                    message = Some(PathNavMessage::Navigate(components[0].1.clone()));
+                    message = Some(PathNavMessage::Navigate(()));
                 }
 
                 ui.label(RichText::new("/").color(colors.gray));
@@ -41,29 +41,24 @@ pub fn draw_path_navigation(
 
                 let start_idx = components.len() - 2;
                 for component in components.iter().skip(start_idx) {
-                    let (comp_str, path) = component;
+                    let (comp_str, _path) = component;
                     ui.label(RichText::new("/").color(colors.gray));
                     if ui.link(RichText::new(comp_str).color(colors.yellow)).clicked() {
-                        message = Some(PathNavMessage::Navigate(path.clone()));
+                        message = Some(PathNavMessage::Navigate(()));
                     }
                 }
             } else {
-                for (i, (name, path)) in components.iter().enumerate() {
+                for (i, (name, _path)) in components.iter().enumerate() {
                     if (i > 1) || (i == 1 && components[0].0 != "/") {
                         ui.label(RichText::new("/").color(colors.gray));
                     }
 
                     if ui.link(RichText::new(name).color(colors.yellow)).clicked() {
-                        message = Some(PathNavMessage::Navigate(path.clone()));
+                        message = Some(PathNavMessage::Navigate(()));
                     }
                 }
             }
         }
-
-        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            ui.label(RichText::new("? for help").color(colors.gray))
-                .on_hover_text("Show keyboard shortcuts");
-        });
     });
 
     message

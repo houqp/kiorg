@@ -43,12 +43,33 @@ pub fn show_help_window(ctx: &egui::Context, show_help: &mut bool, colors: &AppC
             
             ui.separator();
             
-            ui.horizontal(|ui| {
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if ui.button(RichText::new("Close").color(colors.fg)).clicked() {
-                        *show_help = false;
-                    }
-                });
+            ui.heading(RichText::new("Tabs").color(colors.yellow));
+            
+            let table = egui::Grid::new("tab_help_grid");
+            table.show(ui, |ui| {
+                let shortcuts = [
+                    ("t", "Create new tab"),
+                    ("1-9", "Switch to tab number"),
+                ];
+
+                for (key, description) in shortcuts {
+                    ui.label(RichText::new(key).color(colors.yellow));
+                    ui.label(description);
+                    ui.end_row();
+                }
+            });
+            
+            ui.separator();
+            
+            ui.vertical_centered(|ui| {
+                ui.add_space(10.0);
+                if ui.link(RichText::new("Press Enter to close").color(colors.yellow)).clicked() {
+                    *show_help = false;
+                }
+                if ui.link(RichText::new("Press ? to close").color(colors.gray)).clicked() {
+                    *show_help = false;
+                }
+                ui.add_space(10.0);
             });
         });
 } 

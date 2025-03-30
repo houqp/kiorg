@@ -20,7 +20,7 @@ fn create_test_files(paths: &[PathBuf]) -> Vec<PathBuf> {
     paths.to_vec()
 }
 
-fn create_harness<'a, 'b>(temp_dir: &'b tempfile::TempDir) -> Harness<'a, Kiorg> {
+fn create_harness<'a>(temp_dir: &tempfile::TempDir) -> Harness<'a, Kiorg> {
     // Create a new egui context
     let ctx = egui::Context::default();
     let cc = CreationContext::_new_kittest(ctx.clone());
