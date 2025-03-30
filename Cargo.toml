@@ -4,6 +4,10 @@ version = "0.1.0"
 edition = "2021"
 authors = ["houqp"]
 
+[lib]
+name = "kiorg"
+path = "src/lib.rs"
+
 [dependencies]
 eframe = "0.31.1"
 egui = "0.31.1"
@@ -16,3 +20,7 @@ open = "4.0"
 pdfium-render = "0"
 image = "0.24.8"
 clap = { version = "4.5.1", features = ["derive"] }
+
+[dev-dependencies]
+egui_kittest = { version = "0.31.1", features = ["eframe"] }
+tempfile = "3.8"

@@ -3,13 +3,7 @@ use std::path::PathBuf;
 use clap::Parser;
 use std::fs;
 
-mod app;
-mod config;
-mod models;
-mod ui;
-mod utils;
-
-use app::Kiorg;
+use kiorg::Kiorg;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
