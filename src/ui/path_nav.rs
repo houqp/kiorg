@@ -3,7 +3,7 @@ use egui::{RichText, Ui};
 
 #[derive(Debug)]
 pub enum PathNavMessage {
-    Navigate(()),
+    Navigate(PathBuf),
 }
 
 pub fn draw_path_navigation(
@@ -33,7 +33,7 @@ pub fn draw_path_navigation(
 
             if estimated_width > available_width && components.len() > 4 {
                 if ui.link(RichText::new(&components[0].0).color(colors.yellow)).clicked() {
-                    message = Some(PathNavMessage::Navigate(()));
+                    message = Some(PathNavMessage::Navigate(components[0].1.clone()));
                 }
 
                 ui.label(RichText::new("/").color(colors.gray));
@@ -41,20 +41,20 @@ pub fn draw_path_navigation(
 
                 let start_idx = components.len() - 2;
                 for component in components.iter().skip(start_idx) {
-                    let (comp_str, _path) = component;
+                    let (comp_str, path) = component;
                     ui.label(RichText::new("/").color(colors.gray));
                     if ui.link(RichText::new(comp_str).color(colors.yellow)).clicked() {
-                        message = Some(PathNavMessage::Navigate(()));
+                        message = Some(PathNavMessage::Navigate(path.clone()));
                     }
                 }
             } else {
-                for (i, (name, _path)) in components.iter().enumerate() {
+                for (i, (name, path)) in components.iter().enumerate() {
                     if (i > 1) || (i == 1 && components[0].0 != "/") {
                         ui.label(RichText::new("/").color(colors.gray));
                     }
 
                     if ui.link(RichText::new(name).color(colors.yellow)).clicked() {
-                        message = Some(PathNavMessage::Navigate(()));
+                        message = Some(PathNavMessage::Navigate(path.clone()));
                     }
                 }
             }
@@ -133,13 +133,43 @@ pub fn get_path_components(path: &Path) -> Vec<(String, PathBuf)> {
         }
     }
 
-    components
+    // Normalize the path by removing redundant components
+    let mut normalized: Vec<(String, PathBuf)> = Vec::new();
+    for (name, path) in components {
+        if name == ".." {
+            if let Some((_, parent_path)) = normalized.last() {
+                if parent_path.as_os_str() != "/" {
+                    normalized.pop();
+                    continue;
+                }
+            }
+        }
+        normalized.push((name, path));
+    }
+
+    normalized
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::path::PathBuf;
+    use egui_kittest::Harness;
+    use eframe::App;
+
+    struct TestApp {
+        path: PathBuf,
+        colors: crate::config::colors::AppColors,
+        message: Option<PathNavMessage>,
+    }
+
+    impl App for TestApp {
+        fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+            egui::CentralPanel::default().show(ctx, |ui| {
+                self.message = draw_path_navigation(ui, &self.path, &self.colors);
+            });
+        }
+    }
 
     #[test]
     fn test_path_components() {
@@ -243,5 +273,46 @@ mod tests {
         let path = PathBuf::from("../home/user");
         let components = get_path_components(&path);
         assert_eq!(components.len(), 3);
+        assert_eq!(components[0].0, "..");
+        assert_eq!(components[1].0, "home");
+        assert_eq!(components[2].0, "user");
+        assert_eq!(components[0].1, PathBuf::from(".."));
+        assert_eq!(components[1].1, PathBuf::from("../home"));
+        assert_eq!(components[2].1, PathBuf::from("../home/user"));
+    }
+
+    #[test]
+    fn test_path_navigation_message() {
+        let mut harness = Harness::builder()
+            .with_size(egui::Vec2::new(800.0, 600.0))
+            .with_max_steps(20)
+            .build_eframe(|_cc| TestApp {
+                path: PathBuf::from("/"),
+                colors: crate::config::colors::AppColors::default(),
+                message: None,
+            });
+
+        // Test root path navigation
+        harness.step();
+        assert!(harness.input().events.is_empty());
+
+        // Test simple path navigation
+        harness.input_mut().events.push(egui::Event::PointerButton {
+            pos: egui::pos2(100.0, 100.0),
+            button: egui::PointerButton::Primary,
+            pressed: true,
+            modifiers: egui::Modifiers::default(),
+        });
+        harness.step();
+        assert!(harness.input().events.is_empty());
+
+        // Test path with parent directory
+        let path = PathBuf::from("/home/user/..");
+        let components = get_path_components(&path);
+        assert_eq!(components.len(), 2);
+        assert_eq!(components[0].0, "/");
+        assert_eq!(components[1].0, "home");
+        assert_eq!(components[0].1, PathBuf::from("/"));
+        assert_eq!(components[1].1, PathBuf::from("/home"));
     }
 } 

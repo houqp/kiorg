@@ -1,10 +1,10 @@
+use eframe::CreationContext;
+use egui::{Key, Modifiers};
+use egui_kittest::Harness;
+use kiorg::Kiorg;
 use std::fs::File;
 use std::path::PathBuf;
 use tempfile::tempdir;
-use egui_kittest::Harness;
-use kiorg::Kiorg;
-use eframe::CreationContext;
-use egui::Key;
 
 /// Create files and directories from a list of paths.
 /// Returns the created paths.
@@ -39,8 +39,6 @@ fn create_harness<'a>(temp_dir: &tempfile::TempDir) -> Harness<'a, Kiorg> {
 fn test_delete_shortcut() {
     // Create a temporary directory for testing
     let temp_dir = tempdir().unwrap();
-
-    // Create multiple test files and directories
     let test_files = create_test_files(&[
         temp_dir.path().join("dir1"),
         temp_dir.path().join("dir2"),
@@ -132,7 +130,10 @@ fn test_rename_shortcut() {
     }
 
     // Clear any existing text and simulate text input for the new name
-    harness.input_mut().events.push(egui::Event::Text("_renamed.txt".to_string()));
+    harness
+        .input_mut()
+        .events
+        .push(egui::Event::Text("_renamed.txt".to_string()));
     harness.step();
 
     // Press Enter to confirm rename
@@ -142,7 +143,10 @@ fn test_rename_shortcut() {
     // Verify the file was renamed
     assert!(test_files[0].exists(), "test1.txt should still exist");
     assert!(!test_files[1].exists(), "test2.txt should no longer exist");
-    assert!(temp_dir.path().join("test2_renamed.txt").exists(), "renamed.txt should exist");
+    assert!(
+        temp_dir.path().join("test2_renamed.txt").exists(),
+        "renamed.txt should exist"
+    );
 }
 
 #[test]
@@ -183,8 +187,14 @@ fn test_copy_paste_shortcuts() {
     harness.step();
 
     // Verify the file was copied to dir2 while original remains
-    assert!(test_files[2].exists(), "test1.txt should still exist in original location");
-    assert!(test_files[1].join("test1.txt").exists(), "test1.txt should be copied to dir2");
+    assert!(
+        test_files[2].exists(),
+        "test1.txt should still exist in original location"
+    );
+    assert!(
+        test_files[1].join("test1.txt").exists(),
+        "test1.txt should be copied to dir2"
+    );
 }
 
 #[test]
@@ -214,7 +224,10 @@ fn test_copy_paste_same_directory() {
 
     // Check for the copied file with a new suffix
     let copied_file = temp_dir.path().join("test1_1.txt");
-    assert!(copied_file.exists(), "test1.txt should be copied with suffix `_1`");
+    assert!(
+        copied_file.exists(),
+        "test1.txt should be copied with suffix `_1`"
+    );
 }
 
 #[test]
@@ -243,7 +256,10 @@ fn test_cut_paste_shortcuts() {
     harness.step();
 
     // Verify the file still exists in the original location
-    assert!(test_files[2].exists(), "test1.txt should still exist after cutting");
+    assert!(
+        test_files[2].exists(),
+        "test1.txt should still exist after cutting"
+    );
 
     // Move up to select dir2
     harness.press_key(Key::K);
@@ -258,6 +274,90 @@ fn test_cut_paste_shortcuts() {
     harness.step();
 
     // Verify the file was moved to dir2
-    assert!(!test_files[2].exists(), "test1.txt should be moved from original location");
-    assert!(test_files[1].join("test1.txt").exists(), "test1.txt should exist in dir2");
+    assert!(
+        !test_files[2].exists(),
+        "test1.txt should be moved from original location"
+    );
+    assert!(
+        test_files[1].join("test1.txt").exists(),
+        "test1.txt should exist in dir2"
+    );
+}
+
+#[test]
+fn test_g_shortcuts() {
+    // Create test files and directories
+    let temp_dir = tempdir().unwrap();
+    create_test_files(&[
+        temp_dir.path().join("dir1"),
+        temp_dir.path().join("dir2"),
+        temp_dir.path().join("test1.txt"),
+        temp_dir.path().join("test2.txt"),
+    ]);
+    let mut harness = create_harness(&temp_dir);
+
+    let tab = harness.state().tab_manager.current_tab_ref();
+    assert_eq!(tab.selected_index, 0);
+
+    // Test G shortcut (go to last entry)
+    {
+        let mut modifiers = Modifiers::default();
+        modifiers.shift = true;
+        harness.press_key_modifiers(modifiers, Key::G);
+        harness.step();
+        let tab = harness.state().tab_manager.current_tab_ref();
+        assert_eq!(tab.selected_index, tab.entries.len() - 1);
+    }
+
+    // a single g press doesn't move selection
+    {
+        harness.press_key(Key::G);
+        harness.step();
+        let tab = harness.state().tab_manager.current_tab_ref();
+        assert_eq!(tab.selected_index, tab.entries.len() - 1);
+    }
+
+    // Test gg shortcut (go to first entry)
+    {
+        // First g press
+        harness.press_key(Key::G);
+        // Second g press should go back to the top
+        harness.press_key(Key::G);
+        harness.step();
+        let tab = harness.state().tab_manager.current_tab_ref();
+        assert_eq!(tab.selected_index, 0);
+    }
+}
+
+#[test]
+fn test_g_shortcuts_empty_list() {
+    let temp_dir = tempdir().unwrap();
+    let mut harness = create_harness(&temp_dir);
+
+    // Clear entries
+    {
+        let tab = harness.state_mut().tab_manager.current_tab();
+        tab.entries.clear();
+    }
+
+    // Test G shortcut with empty list
+    {
+        let mut modifiers = Modifiers::default();
+        modifiers.shift = true;
+        harness.press_key_modifiers(modifiers, Key::G);
+        harness.step();
+        let tab = harness.state().tab_manager.current_tab_ref();
+        assert_eq!(tab.selected_index, 0); // Should stay at 0
+    }
+
+    // Test gg shortcut with empty list
+    {
+        // First g press
+        harness.press_key(Key::G);
+        // Second g press
+        harness.press_key(Key::G);
+        harness.step();
+        let tab = harness.state().tab_manager.current_tab_ref();
+        assert_eq!(tab.selected_index, 0); // Should stay at 0
+    }
 }

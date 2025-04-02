@@ -1,26 +1,26 @@
-use std::path::{Path, PathBuf};
-use std::fs;
-use egui::{RichText, Ui, TextureHandle};
+use egui::{RichText, TextureHandle, Ui};
 use image::io::Reader as ImageReader;
+use std::fs;
 use std::io::Cursor;
-use std::sync::atomic::{AtomicU64};
+use std::path::{Path, PathBuf};
+use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering::Relaxed;
 
 use crate::config::{self, colors::AppColors};
 use crate::models::dir_entry::DirEntry;
 use crate::models::tab::TabManager;
-use crate::ui::{help_window, file_list};
 use crate::ui::file_list::ROW_HEIGHT;
 use crate::ui::path_nav;
+use crate::ui::{file_list, help_window};
 
 // Static variable for tracking key press times
 static LAST_LOWERCASE_G_PRESS: AtomicU64 = AtomicU64::new(0);
 
 // Layout constants
-const PANEL_SPACING: f32 = 10.0;         // Space between panels
-const SEPARATOR_PADDING: f32 = 5.0;      // Padding on each side of separator
-const VERTICAL_PADDING: f32 = 4.0;       // Vertical padding in panels
-const NAV_HEIGHT_RESERVED: f32 = 50.0;   // Space reserved for navigation bar
+const PANEL_SPACING: f32 = 10.0; // Space between panels
+const SEPARATOR_PADDING: f32 = 5.0; // Padding on each side of separator
+const VERTICAL_PADDING: f32 = 4.0; // Vertical padding in panels
+const NAV_HEIGHT_RESERVED: f32 = 50.0; // Space reserved for navigation bar
 
 // Panel size ratios (relative to usable width)
 const LEFT_PANEL_RATIO: f32 = 0.15;
@@ -104,7 +104,9 @@ impl Kiorg {
                         let name = entry.file_name().to_string_lossy().into_owned();
 
                         let metadata = entry.metadata().ok()?;
-                        let modified = metadata.modified().unwrap_or(std::time::SystemTime::UNIX_EPOCH);
+                        let modified = metadata
+                            .modified()
+                            .unwrap_or(std::time::SystemTime::UNIX_EPOCH);
                         let size = if is_dir { 0 } else { metadata.len() };
 
                         Some(DirEntry {
@@ -118,16 +120,19 @@ impl Kiorg {
                     .collect();
             }
 
-            tab.parent_entries.sort_by(|a, b| {
-                match (a.is_dir, b.is_dir) {
+            tab.parent_entries
+                .sort_by(|a, b| match (a.is_dir, b.is_dir) {
                     (true, false) => std::cmp::Ordering::Less,
                     (false, true) => std::cmp::Ordering::Greater,
                     _ => a.name.cmp(&b.name),
-                }
-            });
+                });
 
             // Find current directory in parent entries
-            if let Some(pos) = tab.parent_entries.iter().position(|e| e.path == tab.current_path) {
+            if let Some(pos) = tab
+                .parent_entries
+                .iter()
+                .position(|e| e.path == tab.current_path)
+            {
                 tab.parent_selected_index = pos;
             }
         } else {
@@ -144,7 +149,9 @@ impl Kiorg {
                     let name = entry.file_name().to_string_lossy().into_owned();
 
                     let metadata = entry.metadata().ok()?;
-                    let modified = metadata.modified().unwrap_or(std::time::SystemTime::UNIX_EPOCH);
+                    let modified = metadata
+                        .modified()
+                        .unwrap_or(std::time::SystemTime::UNIX_EPOCH);
                     let size = if is_dir { 0 } else { metadata.len() };
 
                     Some(DirEntry {
@@ -158,12 +165,10 @@ impl Kiorg {
                 .collect();
         }
 
-        tab.entries.sort_by(|a, b| {
-            match (a.is_dir, b.is_dir) {
-                (true, false) => std::cmp::Ordering::Less,
-                (false, true) => std::cmp::Ordering::Greater,
-                _ => a.name.cmp(&b.name),
-            }
+        tab.entries.sort_by(|a, b| match (a.is_dir, b.is_dir) {
+            (true, false) => std::cmp::Ordering::Less,
+            (false, true) => std::cmp::Ordering::Greater,
+            _ => a.name.cmp(&b.name),
         });
     }
 
@@ -241,10 +246,10 @@ impl Kiorg {
             return;
         }
 
-        if self.show_help && (
-            ctx.input(|i| i.key_pressed(egui::Key::Enter))
-            || ctx.input(|i| i.key_pressed(egui::Key::Questionmark))
-        ) {
+        if self.show_help
+            && (ctx.input(|i| i.key_pressed(egui::Key::Enter))
+                || ctx.input(|i| i.key_pressed(egui::Key::Questionmark)))
+        {
             self.show_help = false;
             return;
         }
@@ -264,7 +269,7 @@ impl Kiorg {
                 self.new_name = entry.name.clone();
                 self.rename_mode = true;
                 self.rename_focus = true;
-            }
+            j j
             return;
         }
 
@@ -307,7 +312,8 @@ impl Kiorg {
             if let Some((paths, is_cut)) = self.clipboard.take() {
                 let tab = self.tab_manager.current_tab();
                 for path in paths {
-                    let name = path.file_name()
+                    let name = path
+                        .file_name()
                         .and_then(|n| n.to_str())
                         .unwrap_or_default();
                     let mut new_path = tab.current_path.join(name);
@@ -315,14 +321,18 @@ impl Kiorg {
                     // Handle duplicate names
                     let mut counter = 1;
                     while new_path.exists() {
-                        let stem = path.file_stem()
+                        let stem = path
+                            .file_stem()
                             .and_then(|s| s.to_str())
                             .unwrap_or_default();
-                        let ext = path.extension()
+                        let ext = path
+                            .extension()
                             .and_then(|e| e.to_str())
                             .map(|e| format!(".{}", e))
                             .unwrap_or_default();
-                        new_path = tab.current_path.join(format!("{}_{}{}", stem, counter, ext));
+                        new_path = tab
+                            .current_path
+                            .join(format!("{}_{}{}", stem, counter, ext));
                         counter += 1;
                     }
 
@@ -359,31 +369,73 @@ impl Kiorg {
         }
 
         // Handle tab switching with number keys
-        if ctx.input(|i| i.key_pressed(egui::Key::Num1)) { self.tab_manager.switch_to_tab(0); self.refresh_entries(); return; }
-        if ctx.input(|i| i.key_pressed(egui::Key::Num2)) { self.tab_manager.switch_to_tab(1); self.refresh_entries(); return; }
-        if ctx.input(|i| i.key_pressed(egui::Key::Num3)) { self.tab_manager.switch_to_tab(2); self.refresh_entries(); return; }
-        if ctx.input(|i| i.key_pressed(egui::Key::Num4)) { self.tab_manager.switch_to_tab(3); self.refresh_entries(); return; }
-        if ctx.input(|i| i.key_pressed(egui::Key::Num5)) { self.tab_manager.switch_to_tab(4); self.refresh_entries(); return; }
-        if ctx.input(|i| i.key_pressed(egui::Key::Num6)) { self.tab_manager.switch_to_tab(5); self.refresh_entries(); return; }
-        if ctx.input(|i| i.key_pressed(egui::Key::Num7)) { self.tab_manager.switch_to_tab(6); self.refresh_entries(); return; }
-        if ctx.input(|i| i.key_pressed(egui::Key::Num8)) { self.tab_manager.switch_to_tab(7); self.refresh_entries(); return; }
-        if ctx.input(|i| i.key_pressed(egui::Key::Num9)) { self.tab_manager.switch_to_tab(8); self.refresh_entries(); return; }
+        if ctx.input(|i| i.key_pressed(egui::Key::Num1)) {
+            self.tab_manager.switch_to_tab(0);
+            self.refresh_entries();
+            return;
+        }
+        if ctx.input(|i| i.key_pressed(egui::Key::Num2)) {
+            self.tab_manager.switch_to_tab(1);
+            self.refresh_entries();
+            return;
+        }
+        if ctx.input(|i| i.key_pressed(egui::Key::Num3)) {
+            self.tab_manager.switch_to_tab(2);
+            self.refresh_entries();
+            return;
+        }
+        if ctx.input(|i| i.key_pressed(egui::Key::Num4)) {
+            self.tab_manager.switch_to_tab(3);
+            self.refresh_entries();
+            return;
+        }
+        if ctx.input(|i| i.key_pressed(egui::Key::Num5)) {
+            self.tab_manager.switch_to_tab(4);
+            self.refresh_entries();
+            return;
+        }
+        if ctx.input(|i| i.key_pressed(egui::Key::Num6)) {
+            self.tab_manager.switch_to_tab(5);
+            self.refresh_entries();
+            return;
+        }
+        if ctx.input(|i| i.key_pressed(egui::Key::Num7)) {
+            self.tab_manager.switch_to_tab(6);
+            self.refresh_entries();
+            return;
+        }
+        if ctx.input(|i| i.key_pressed(egui::Key::Num8)) {
+            self.tab_manager.switch_to_tab(7);
+            self.refresh_entries();
+            return;
+        }
+        if ctx.input(|i| i.key_pressed(egui::Key::Num9)) {
+            self.tab_manager.switch_to_tab(8);
+            self.refresh_entries();
+            return;
+        }
 
         // Handle navigation in current panel
         if ctx.input(|i| i.key_pressed(egui::Key::J) || i.key_pressed(egui::Key::ArrowDown)) {
             self.move_selection(1);
         } else if ctx.input(|i| i.key_pressed(egui::Key::K) || i.key_pressed(egui::Key::ArrowUp)) {
             self.move_selection(-1);
-        } else if ctx.input(|i| i.key_pressed(egui::Key::H) || i.key_pressed(egui::Key::ArrowLeft)) {
-            let parent_path = self.tab_manager.current_tab_ref().current_path.parent().map(|p| p.to_path_buf());
+        } else if ctx.input(|i| i.key_pressed(egui::Key::H) || i.key_pressed(egui::Key::ArrowLeft))
+        {
+            let parent_path = self
+                .tab_manager
+                .current_tab_ref()
+                .current_path
+                .parent()
+                .map(|p| p.to_path_buf());
             if let Some(parent) = parent_path {
                 self.navigate_to(parent);
             }
-        } else if ctx.input(|i|
+        } else if ctx.input(|i| {
             i.key_pressed(egui::Key::L)
-            || i.key_pressed(egui::Key::ArrowRight)
-            || i.key_pressed(egui::Key::Enter)
-        ) {
+                || i.key_pressed(egui::Key::ArrowRight)
+                || i.key_pressed(egui::Key::Enter)
+        }) {
             let tab = self.tab_manager.current_tab_ref();
             if tab.selected_index < tab.entries.len() {
                 let selected_path = tab.entries[tab.selected_index].path.clone();
@@ -471,9 +523,9 @@ impl Kiorg {
                         ui.scroll_to_rect(
                             egui::Rect::from_min_size(
                                 egui::pos2(0.0, selected_pos),
-                                egui::vec2(width, ROW_HEIGHT)
+                                egui::vec2(width, ROW_HEIGHT),
                             ),
-                            Some(egui::Align::Center)
+                            Some(egui::Align::Center),
                         );
                     }
                 });
@@ -496,6 +548,7 @@ impl Kiorg {
         let rename_focus = self.rename_focus;
 
         let mut path_to_navigate = None;
+        let mut entry_to_rename = None;
 
         ui.vertical(|ui| {
             ui.set_min_width(width);
@@ -513,15 +566,16 @@ impl Kiorg {
                 .max_height(available_height)
                 .show(ui, |ui| {
                     // Set the width of the content area
-                    let scrollbar_width = 6.0; // Standard scrollbar width in egui
+                    let scrollbar_width = 6.0;
                     ui.set_min_width(width - scrollbar_width);
                     ui.set_max_width(width - scrollbar_width);
 
-                    // Draw all rows
+                    // Draw entries
                     for (i, entry) in entries.iter().enumerate() {
                         let is_selected = i == selected_index;
-                        let is_marked = selected_entries.contains(&entry.path);
-                        let clicked = file_list::draw_entry_row(
+                        let is_in_selection = selected_entries.contains(&entry.path);
+
+                        if file_list::draw_entry_row(
                             ui,
                             file_list::EntryRowParams {
                                 entry,
@@ -530,12 +584,14 @@ impl Kiorg {
                                 rename_mode: rename_mode && is_selected,
                                 new_name,
                                 rename_focus: rename_focus && is_selected,
-                                is_marked,
+                                is_marked: is_in_selection,
                             },
-                        );
-                        if clicked {
-                            path_to_navigate = Some(entry.path.clone());
-                            break;
+                        ) {
+                            if rename_mode {
+                                entry_to_rename = Some((entry.path.clone(), new_name.clone()));
+                            } else {
+                                path_to_navigate = Some(entry.path.clone());
+                            }
                         }
                     }
 
@@ -545,9 +601,9 @@ impl Kiorg {
                         ui.scroll_to_rect(
                             egui::Rect::from_min_size(
                                 egui::pos2(0.0, selected_pos),
-                                egui::vec2(width, ROW_HEIGHT)
+                                egui::vec2(width, ROW_HEIGHT),
                             ),
-                            Some(egui::Align::Center)
+                            Some(egui::Align::Center),
                         );
                     }
                 });
@@ -556,6 +612,21 @@ impl Kiorg {
         // Handle navigation outside the closure
         if let Some(path) = path_to_navigate {
             self.navigate_to(path);
+        }
+
+        // Handle rename outside the closure
+        if let Some((old_path, new_name)) = entry_to_rename {
+            if let Some(parent) = old_path.parent() {
+                let new_path = parent.join(new_name);
+                if let Err(e) = std::fs::rename(&old_path, &new_path) {
+                    eprintln!("Failed to rename: {e}");
+                } else {
+                    self.refresh_entries();
+                }
+            }
+            self.rename_mode = false;
+            self.new_name.clear();
+            self.rename_focus = false;
         }
     }
 
@@ -594,7 +665,8 @@ impl Kiorg {
                                 let available_width = width - PANEL_SPACING * 2.0;
                                 let available_height = available_height - PANEL_SPACING * 2.0;
                                 let image_size = image.size_vec2();
-                                let scale = (available_width / image_size.x).min(available_height / image_size.y);
+                                let scale = (available_width / image_size.x)
+                                    .min(available_height / image_size.y);
                                 let scaled_size = image_size * scale;
 
                                 ui.add(egui::Image::new((image.id(), scaled_size)));
@@ -604,7 +676,7 @@ impl Kiorg {
                                 egui::TextEdit::multiline(&mut String::from(&preview_content))
                                     .desired_width(width - PANEL_SPACING)
                                     .desired_rows(30)
-                                    .interactive(false)
+                                    .interactive(false),
                             );
                         }
                     }
@@ -620,7 +692,13 @@ impl Kiorg {
 
     fn draw_path_navigation(&mut self, ui: &mut Ui) {
         let tab = self.tab_manager.current_tab();
-        path_nav::draw_path_navigation(ui, &tab.current_path, &self.colors);
+        if let Some(message) = path_nav::draw_path_navigation(ui, &tab.current_path, &self.colors) {
+            match message {
+                path_nav::PathNavMessage::Navigate(path) => {
+                    self.navigate_to(path);
+                }
+            }
+        }
     }
 
     fn draw_vertical_separator(&mut self, ui: &mut Ui) {
@@ -635,7 +713,7 @@ impl Kiorg {
         let total_spacing = (PANEL_SPACING * 2.0) +                    // Space between panels
                           (SEPARATOR_PADDING * 4.0) +                  // Padding around two separators
                           PANEL_SPACING +                             // Right margin
-                          8.0;                                        // Margins from both sides
+                          8.0; // Margins from both sides
 
         let usable_width = available_width - total_spacing;
         let left_width = (usable_width * LEFT_PANEL_RATIO).max(LEFT_PANEL_MIN_WIDTH);
@@ -682,8 +760,12 @@ impl Kiorg {
                 ui.vertical_centered(|ui| {
                     ui.add_space(10.0);
                     ui.label(format!("Delete {}?", path.display()));
-                    let confirm_clicked = ui.link(RichText::new("Press Enter to confirm").color(self.colors.yellow)).clicked();
-                    let cancel_clicked = ui.link(RichText::new("Press Esc to cancel").color(self.colors.gray)).clicked();
+                    let confirm_clicked = ui
+                        .link(RichText::new("Press Enter to confirm").color(self.colors.yellow))
+                        .clicked();
+                    let cancel_clicked = ui
+                        .link(RichText::new("Press Esc to cancel").color(self.colors.gray))
+                        .clicked();
                     ui.add_space(10.0);
 
                     if confirm_clicked {
@@ -703,14 +785,20 @@ impl Kiorg {
                 self.current_image = None;
             } else {
                 // Check if it's an image file
-                let extension = entry.path.extension()
+                let extension = entry
+                    .path
+                    .extension()
                     .and_then(|e| e.to_str())
                     .map(|e| e.to_lowercase());
 
                 if let Some(ext) = extension {
                     if ["jpg", "jpeg", "png", "gif", "bmp", "webp"].contains(&ext.as_str()) {
                         if let Ok(bytes) = std::fs::read(&entry.path) {
-                            if let Ok(img) = ImageReader::new(Cursor::new(bytes)).with_guessed_format().unwrap().decode() {
+                            if let Ok(img) = ImageReader::new(Cursor::new(bytes))
+                                .with_guessed_format()
+                                .unwrap()
+                                .decode()
+                            {
                                 let size = [img.width() as _, img.height() as _];
                                 let image = egui::ColorImage::from_rgba_unmultiplied(
                                     size,
@@ -721,7 +809,8 @@ impl Kiorg {
                                     image,
                                     egui::TextureOptions::default(),
                                 ));
-                                self.preview_content = format!("Image: {}x{}", img.width(), img.height());
+                                self.preview_content =
+                                    format!("Image: {}x{}", img.width(), img.height());
                             }
                         }
                     } else {
@@ -767,10 +856,16 @@ impl Kiorg {
             .show(ctx, |ui| {
                 ui.vertical_centered(|ui| {
                     ui.add_space(10.0);
-                    if ui.link(RichText::new("Press Enter to exit").color(self.colors.yellow)).clicked() {
+                    if ui
+                        .link(RichText::new("Press Enter to exit").color(self.colors.yellow))
+                        .clicked()
+                    {
                         std::process::exit(0);
                     }
-                    if ui.link(RichText::new("Press Esc to cancel").color(self.colors.gray)).clicked() {
+                    if ui
+                        .link(RichText::new("Press Esc to cancel").color(self.colors.gray))
+                        .clicked()
+                    {
                         self.show_exit_confirm = false;
                     }
                     ui.add_space(10.0);
@@ -800,7 +895,11 @@ impl eframe::App for Kiorg {
                         for i in (0..self.tab_manager.tabs.len()).rev() {
                             let is_current = i == self.tab_manager.current_tab_index;
                             let text = format!("{}", i + 1);
-                            let color = if is_current { self.colors.yellow } else { self.colors.gray };
+                            let color = if is_current {
+                                self.colors.yellow
+                            } else {
+                                self.colors.gray
+                            };
                             if ui.link(RichText::new(text).color(color)).clicked() {
                                 self.tab_manager.switch_to_tab(i);
                             }
@@ -812,7 +911,8 @@ impl eframe::App for Kiorg {
             });
 
             // Calculate panel widths
-            let (left_width, center_width, right_width) = self.calculate_panel_widths(ui.available_width());
+            let (left_width, center_width, right_width) =
+                self.calculate_panel_widths(ui.available_width());
             let content_height = total_height - NAV_HEIGHT_RESERVED;
 
             // Main panels layout

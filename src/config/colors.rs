@@ -67,6 +67,12 @@ impl AppColors {
     }
 }
 
+impl Default for AppColors {
+    fn default() -> Self {
+        Self::from_config(&ColorScheme::default())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
