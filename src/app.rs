@@ -1,7 +1,9 @@
+use dirs_next as dirs;
 use egui::{RichText, TextureHandle, Ui};
 use image::io::Reader as ImageReader;
+use std::error::Error;
 use std::fs;
-use std::io::Cursor;
+use std::io::{BufRead, BufReader, Cursor, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering::Relaxed;
@@ -42,10 +44,76 @@ pub struct Kiorg {
     pub clipboard: Option<(Vec<PathBuf>, bool)>, // (paths, is_cut)
     pub show_delete_confirm: bool,
     pub entry_to_delete: Option<PathBuf>,
+    pub bookmarks: Vec<PathBuf>,
+    pub show_bookmarks: bool,
+    pub config_dir_override: Option<PathBuf>, // Optional override for config directory path
 }
 
 impl Kiorg {
+    // Get the path to the bookmarks file
+    fn get_config_dir(&self) -> PathBuf {
+        match &self.config_dir_override {
+            Some(dir) => dir.clone(),
+            None => {
+                let mut dir = dirs::config_dir().unwrap_or_else(|| PathBuf::from("."));
+                dir.push("kiorg");
+                dir
+            }
+        }
+    }
+
+    fn get_bookmarks_file_path(&self) -> PathBuf {
+        let mut config_dir = self.get_config_dir();
+        
+        if !config_dir.exists() {
+            let _ = fs::create_dir_all(&config_dir);
+        }
+        config_dir.push("bookmarks.txt");
+        config_dir
+    }
+
+    // Save bookmarks to the config file
+    fn save_bookmarks(&self) -> Result<(), Box<dyn Error>> {
+        let bookmarks_file = self.get_bookmarks_file_path();
+        let mut file = fs::File::create(bookmarks_file)?;
+
+        for bookmark in &self.bookmarks {
+            writeln!(file, "{}", bookmark.to_string_lossy())?;
+        }
+
+        Ok(())
+    }
+
+    // Load bookmarks from the config file
+    fn load_bookmarks(&self) -> Vec<PathBuf> {
+        let bookmarks_file = self.get_bookmarks_file_path();
+        if !bookmarks_file.exists() {
+            return Vec::new();
+        }
+
+        match fs::File::open(&bookmarks_file) {
+            Ok(file) => {
+                let reader = BufReader::new(file);
+                reader
+                    .lines()
+                    .map_while(Result::ok)
+                    .filter(|line| !line.trim().is_empty())
+                    .map(|line| PathBuf::from(line.trim()))
+                    .collect()
+            }
+            Err(_) => Vec::new(),
+        }
+    }
+
     pub fn new(cc: &eframe::CreationContext<'_>, initial_dir: PathBuf) -> Self {
+        Self::new_with_config_dir(cc, initial_dir, None)
+    }
+
+    pub fn new_with_config_dir(
+        cc: &eframe::CreationContext<'_>, 
+        initial_dir: PathBuf,
+        config_dir_override: Option<PathBuf>
+    ) -> Self {
         let config = config::load_config();
         let colors = AppColors::from_config(&config.colors);
 
@@ -65,6 +133,7 @@ impl Kiorg {
         cc.egui_ctx.set_visuals(visuals);
 
         let tab_manager = TabManager::new(initial_dir);
+        
         let mut app = Self {
             tab_manager,
             colors,
@@ -79,7 +148,15 @@ impl Kiorg {
             clipboard: None,
             show_delete_confirm: false,
             entry_to_delete: None,
+            bookmarks: Vec::new(),
+            show_bookmarks: false,
+            config_dir_override,
         };
+        
+        // Load bookmarks after initializing the app with the config directory
+        app.bookmarks = app.load_bookmarks();
+
+
         app.refresh_entries();
         app
     }
@@ -199,10 +276,15 @@ impl Kiorg {
     }
 
     pub fn handle_key_press(&mut self, ctx: &egui::Context) {
+        // Don't process keyboard input if the bookmark popup is active
+        if self.show_bookmarks {
+            return;
+        }
+
         if self.show_exit_confirm {
             if ctx.input(|i| i.key_pressed(egui::Key::Enter)) {
                 std::process::exit(0);
-            } else if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
+            } else if ctx.input(|i| i.key_pressed(egui::Key::Escape) || i.key_pressed(egui::Key::Q)) {
                 self.show_exit_confirm = false;
             }
             return;
@@ -269,7 +351,7 @@ impl Kiorg {
                 self.new_name = entry.name.clone();
                 self.rename_mode = true;
                 self.rename_focus = true;
-            j j
+            }
             return;
         }
 
@@ -471,6 +553,50 @@ impl Kiorg {
                     tab.selected_entries.insert(entry.path.clone());
                 }
             }
+        } else if ctx.input(|i| i.key_pressed(egui::Key::B)) {
+            if ctx.input(|i| i.modifiers.shift) {
+                // Toggle bookmark popup visibility
+                self.show_bookmarks = !self.show_bookmarks;
+                // If we're showing the popup, return immediately to avoid processing other shortcuts
+                if self.show_bookmarks {
+                    return;
+                }
+            } else {
+                let tab = self.tab_manager.current_tab();
+                if tab.selected_index < tab.entries.len() {
+                    let selected_entry = &tab.entries[tab.selected_index];
+
+                    // Only allow bookmarking directories, not files
+                    if selected_entry.is_dir {
+                        let path = selected_entry.path.clone();
+
+                        // Toggle bookmark status
+                        if self.bookmarks.contains(&path) {
+                            self.bookmarks.retain(|p| p != &path);
+                        } else {
+                            self.bookmarks.push(path);
+                        }
+
+                        // Save bookmarks to config file
+                        if let Err(e) = self.save_bookmarks() {
+                            eprintln!("Failed to save bookmarks: {}", e);
+                        }
+                    }
+                } else {
+                    // Bookmark/unbookmark current directory if no entry is selected
+                    let current_path = tab.current_path.clone();
+                    if self.bookmarks.contains(&current_path) {
+                        self.bookmarks.retain(|p| p != &current_path);
+                    } else {
+                        self.bookmarks.push(current_path);
+                    }
+
+                    // Save bookmarks to config file
+                    if let Err(e) = self.save_bookmarks() {
+                        eprintln!("Failed to save bookmarks: {}", e);
+                    }
+                }
+            }
         }
     }
 
@@ -505,11 +631,13 @@ impl Kiorg {
 
                     // Draw all rows
                     for (i, entry) in parent_entries.iter().enumerate() {
+                        let is_bookmarked = self.bookmarks.contains(&entry.path);
                         let clicked = file_list::draw_parent_entry_row(
                             ui,
                             entry,
                             i == parent_selected_index,
                             &colors,
+                            is_bookmarked,
                         );
                         if clicked {
                             path_to_navigate = Some(entry.path.clone());
@@ -585,6 +713,7 @@ impl Kiorg {
                                 new_name,
                                 rename_focus: rename_focus && is_selected,
                                 is_marked: is_in_selection,
+                                is_bookmarked: self.bookmarks.contains(&entry.path),
                             },
                         ) {
                             if rename_mode {
@@ -752,10 +881,12 @@ impl Kiorg {
     }
 
     fn show_delete_dialog(&mut self, ctx: &egui::Context, path: &Path) {
-        egui::Window::new("Delete Confirmation")
+        let mut show_popup = self.show_delete_confirm;
+        if let Some(response) = egui::Window::new("Delete Confirmation")
             .collapsible(false)
             .resizable(false)
             .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+            .open(&mut show_popup)
             .show(ctx, |ui| {
                 ui.vertical_centered(|ui| {
                     ui.add_space(10.0);
@@ -774,7 +905,10 @@ impl Kiorg {
                         self.cancel_delete();
                     }
                 });
-            });
+            })
+        {
+            self.show_delete_confirm = !response.response.clicked_elsewhere();
+        }
     }
 
     fn update_preview(&mut self, ctx: &egui::Context) {
@@ -849,10 +983,12 @@ impl Kiorg {
     }
 
     fn show_exit_dialog(&mut self, ctx: &egui::Context) {
-        egui::Window::new("Exit Confirmation")
+        let mut show_popup = self.show_exit_confirm;
+        if let Some(response) = egui::Window::new("Exit Confirmation")
             .collapsible(false)
             .resizable(false)
             .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+            .open(&mut show_popup)
             .show(ctx, |ui| {
                 ui.vertical_centered(|ui| {
                     ui.add_space(10.0);
@@ -863,20 +999,169 @@ impl Kiorg {
                         std::process::exit(0);
                     }
                     if ui
-                        .link(RichText::new("Press Esc to cancel").color(self.colors.gray))
+                        .link(RichText::new("Press Esc or q to cancel").color(self.colors.gray))
                         .clicked()
                     {
                         self.show_exit_confirm = false;
                     }
                     ui.add_space(10.0);
                 });
-            });
+            })
+        {
+            self.show_exit_confirm = !response.response.clicked_elsewhere();
+        }
+    }
+
+    fn show_bookmark_popup(&mut self, ctx: &egui::Context) {
+        if !self.show_bookmarks {
+            return;
+        }
+
+        let mut show_popup = self.show_bookmarks;
+        let bookmarks = self.bookmarks.to_vec();
+
+        // Initialize a static bookmark index to preserve selection state between frames
+        static mut BOOKMARK_SELECTED_INDEX: usize = 0;
+        let mut selected_index = unsafe { BOOKMARK_SELECTED_INDEX };
+
+        // Ensure index is valid
+        if !bookmarks.is_empty() {
+            selected_index = selected_index.min(bookmarks.len() - 1);
+        } else {
+            selected_index = 0;
+        }
+
+        // Track if we need to navigate to a bookmark or remove a bookmark
+        let mut navigate_to_path = None;
+        let mut remove_bookmark_path = None;
+
+        // Handle keyboard navigation for closing the popup
+        if ctx.input(|i| i.key_pressed(egui::Key::Q) || i.key_pressed(egui::Key::Escape)) {
+            show_popup = false;
+        }
+
+        // Handle keyboard shortcut for deleting bookmarks
+        if ctx.input(|i| i.key_pressed(egui::Key::D)) && !bookmarks.is_empty() {
+            remove_bookmark_path = Some(bookmarks[selected_index].clone());
+        }
+
+        if let Some(response) = egui::Window::new("Bookmarks")
+            .resizable(true)
+            .default_width(500.0) // Wider window for two columns
+            .pivot(egui::Align2::CENTER_CENTER) // Center the window
+            .default_pos(ctx.screen_rect().center()) // Position at screen center
+            .open(&mut show_popup)
+            .show(ctx, |ui| {
+                if bookmarks.is_empty() {
+                    ui.label("No bookmarks yet. Use 'b' to bookmark folders.");
+                    return;
+                }
+
+                // Handle keyboard navigation
+                if ctx.input(|i| i.key_pressed(egui::Key::J) || i.key_pressed(egui::Key::ArrowDown))
+                {
+                    if !bookmarks.is_empty() {
+                        selected_index = (selected_index + 1).min(bookmarks.len() - 1);
+                        unsafe {
+                            BOOKMARK_SELECTED_INDEX = selected_index;
+                        }
+                    }
+                } else if ctx
+                    .input(|i| i.key_pressed(egui::Key::K) || i.key_pressed(egui::Key::ArrowUp))
+                {
+                    selected_index = selected_index.saturating_sub(1);
+                    unsafe {
+                        BOOKMARK_SELECTED_INDEX = selected_index;
+                    }
+                } else if ctx
+                    .input(|i| i.key_pressed(egui::Key::Enter) || i.key_pressed(egui::Key::L))
+                    && !bookmarks.is_empty()
+                {
+                    navigate_to_path = Some(bookmarks[selected_index].clone());
+                }
+
+                // Display bookmarks in a two-column layout with proper alignment
+                egui::ScrollArea::vertical().show(ui, |ui| {
+                    // Create a grid layout for consistent column alignment
+                    egui::Grid::new("bookmarks_grid")
+                        .num_columns(2)
+                        .spacing([20.0, 6.0]) // Space between columns and rows
+                        .striped(true) // Alternate row background for better readability
+                        .show(ui, |ui| {
+                            for (i, bookmark) in bookmarks.iter().enumerate() {
+                                // Extract folder name and parent path
+                                let folder_name = bookmark
+                                    .file_name()
+                                    .map(|n| n.to_string_lossy().to_string())
+                                    .unwrap_or_default();
+
+                                let parent_path = bookmark
+                                    .parent()
+                                    .map(|p| p.to_string_lossy().to_string())
+                                    .unwrap_or_default();
+
+                                // First column: Folder name with selectable label
+                                let folder_response = ui.add(egui::SelectableLabel::new(
+                                    i == selected_index,
+                                    folder_name,
+                                ));
+
+                                // Second column: Parent path
+                                let path_color = if i == selected_index {
+                                    ui.visuals().strong_text_color()
+                                } else {
+                                    ui.visuals().weak_text_color()
+                                };
+                                let path_response = ui.colored_label(path_color, parent_path);
+                                ui.end_row();
+
+                                // Combined response for click handling
+                                let response = folder_response.union(path_response);
+
+                                if response.clicked() {
+                                    navigate_to_path = Some(bookmark.clone());
+                                }
+
+                                // Right-click context menu for removing bookmarks
+                                response.context_menu(|ui| {
+                                    if ui.button("Remove bookmark").clicked() {
+                                        remove_bookmark_path = Some(bookmark.clone());
+                                        ui.close_menu();
+                                    }
+                                });
+                            }
+                        });
+                });
+            })
+        {
+            // If we need to navigate, do it now
+            if let Some(path) = navigate_to_path {
+                self.navigate_to(path);
+                show_popup = false;
+            }
+
+            // If we need to remove a bookmark, do it now
+            if let Some(path) = remove_bookmark_path {
+                self.bookmarks.retain(|p| p != &path);
+
+                // Save bookmarks to config file after removal
+                if let Err(e) = self.save_bookmarks() {
+                    eprintln!("Failed to save bookmarks: {}", e);
+                }
+            }
+
+            self.show_bookmarks = show_popup && !response.response.clicked_elsewhere();
+        } else {
+            self.show_bookmarks = show_popup;
+        }
     }
 }
 
 impl eframe::App for Kiorg {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.update_preview(ctx);
+        self.handle_key_press(ctx);
+        self.show_bookmark_popup(ctx);
 
         egui::CentralPanel::default().show(ctx, |ui| {
             let total_height = ui.available_height();
@@ -942,9 +1227,6 @@ impl eframe::App for Kiorg {
             // Reset ensure_selected_visible flag after drawing
             self.ensure_selected_visible = false;
         });
-
-        // Handle keyboard input
-        self.handle_key_press(ctx);
 
         // Show help window if needed
         if self.show_help {

@@ -1,7 +1,7 @@
 You are a hacker experienced in writing compact, easy to maintain and efficient code.
 
 You follow these rules to keep the code clean:
-* You always run `cargo fmt` and `cargo clippy` on your changes to make sure there is no warning.
+* You always run `cargo clippy` on every change to make sure there is no warning.
 * You always fix all warnings and errors from cargo run and cargo build`.
 * You write tests whenever applicable to prevent regressions.
 * Break code into modules logically instead of keeping all of them into large files.
@@ -28,6 +28,15 @@ Requirements for the app:
   * `x` to cut an entry
   * `p` to paste an entry
   * `q` to exit the application with a confirmation popup that confirms the exit through enter
+  * `b` to add/remove the current entry to bookmark
+  * `B` to toggle the bookmark popup
+    - The bookmark menu should be centered to the screen, when it's active, it consumes all the input.
+      * User should be able to navigate within the bookmark menu using keyboards.
+      * `q` and `Esc` to exit the bookmark popup
+      * `d` to delete a bookmark
+    - Selecting a bookmark will jump directly to the bookmarked directory
+    - Only allow bookmarking directory, not files
+    - Bookmarks will be saved to `.config/kiorg/bookmarks.txt`
   * `t` to create a new tab in the file browser
     - users can use number key `1`, `2`, `3`, etc to switch between tabs
     - tab numbers are displayed in right side of the top nav banner, with the current tab highlighted
@@ -37,4 +46,7 @@ Requirements for the app:
   * Clean layout with compact spacing and alignment
   * Path truncation for long paths with "..." in the middle
   * Improved entry name display with "..." for truncated names
+  * Bookmarked entries in the left and middle panel should be highlighted with bookmark icons
 * The application uses icons to distinguish between files (📄) and folders (📁)
+
+

@@ -1,4 +1,3 @@
-use eframe::CreationContext;
 use egui::{Key, Modifiers};
 use egui_kittest::Harness;
 use kiorg::Kiorg;
@@ -20,11 +19,24 @@ fn create_test_files(paths: &[PathBuf]) -> Vec<PathBuf> {
     paths.to_vec()
 }
 
-fn create_harness<'a>(temp_dir: &tempfile::TempDir) -> Harness<'a, Kiorg> {
+// Wrapper to hold both the harness and the config temp directory to prevent premature cleanup
+struct TestHarness<'a> {
+    harness: Harness<'a, Kiorg>,
+    _config_temp_dir: tempfile::TempDir, // Prefixed with _ to indicate it's only kept for its Drop behavior
+}
+
+fn create_harness<'a>(temp_dir: &tempfile::TempDir) -> TestHarness<'a> {
+    // Create a separate temporary directory for config files
+    let config_temp_dir = tempdir().unwrap();
+    let test_config_dir = config_temp_dir.path().to_path_buf();
+    std::fs::create_dir_all(&test_config_dir).unwrap();
+
     // Create a new egui context
     let ctx = egui::Context::default();
-    let cc = CreationContext::_new_kittest(ctx.clone());
-    let app = Kiorg::new(&cc, temp_dir.path().to_path_buf());
+    let cc = eframe::CreationContext::_new_kittest(ctx.clone());
+
+    // Create the app with the test config directory override
+    let app = Kiorg::new_with_config_dir(&cc, temp_dir.path().to_path_buf(), Some(test_config_dir));
 
     // Create a test harness with more steps to ensure all events are processed
     let harness = Harness::builder()
@@ -32,7 +44,29 @@ fn create_harness<'a>(temp_dir: &tempfile::TempDir) -> Harness<'a, Kiorg> {
         .with_max_steps(20)
         .build_eframe(|_cc| app);
 
-    harness
+    // Run one step to initialize the app
+    let mut harness = harness;
+    harness.step();
+
+    TestHarness {
+        harness,
+        _config_temp_dir: config_temp_dir,
+    }
+}
+
+// Add methods to TestHarness to delegate to the inner harness
+impl<'a> std::ops::Deref for TestHarness<'a> {
+    type Target = Harness<'a, Kiorg>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.harness
+    }
+}
+
+impl<'a> std::ops::DerefMut for TestHarness<'a> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.harness
+    }
 }
 
 #[test]
@@ -360,4 +394,117 @@ fn test_g_shortcuts_empty_list() {
         let tab = harness.state().tab_manager.current_tab_ref();
         assert_eq!(tab.selected_index, 0); // Should stay at 0
     }
+}
+
+#[test]
+fn test_bookmark_feature() {
+    // Create a temporary directory for testing
+    let temp_dir = tempdir().unwrap();
+
+    // Create test directories and files
+    create_test_files(&[
+        temp_dir.path().join("dir1"),
+        temp_dir.path().join("dir2"),
+        temp_dir.path().join("test1.txt"),
+    ]);
+
+    let mut harness = create_harness(&temp_dir);
+
+    // Check initial state - no bookmarks
+    harness.step();
+    assert!(harness.state().bookmarks.is_empty());
+    assert!(!harness.state().show_bookmarks);
+
+    // Select the first directory
+    {
+        let tab = harness.state_mut().tab_manager.current_tab();
+        tab.selected_index = 0; // Select dir1
+    }
+    harness.step();
+
+    // Bookmark the directory with 'b'
+    harness.press_key(Key::B);
+    harness.step();
+
+    // Verify bookmark was added
+    {
+        let app = harness.state();
+        assert_eq!(app.bookmarks.len(), 1);
+        assert!(app.bookmarks[0].ends_with("dir1"));
+    }
+
+    // Open bookmark popup with 'B' (shift+b)
+    {
+        let mut modifiers = Modifiers::default();
+        modifiers.shift = true;
+        harness.press_key_modifiers(modifiers, Key::B);
+        harness.step();
+    }
+
+    // Verify bookmark popup is shown
+    assert!(harness.state().show_bookmarks);
+
+    // Close bookmark popup with 'q'
+    {
+        harness.press_key(Key::Q);
+        harness.step();
+    }
+
+    // Verify bookmark popup is closed
+    assert!(!harness.state().show_bookmarks);
+
+    // Select the second directory
+    {
+        let tab = harness.state_mut().tab_manager.current_tab();
+        tab.selected_index = 1; // Select dir2
+    }
+    harness.step();
+
+    // Bookmark the second directory
+    harness.press_key(Key::B);
+    harness.step();
+
+    // Verify second bookmark was added
+    {
+        let app = harness.state();
+        assert_eq!(app.bookmarks.len(), 2);
+        assert!(app.bookmarks[1].ends_with("dir2"));
+    }
+
+    // Try to bookmark a file (should not work)
+    {
+        let tab = harness.state_mut().tab_manager.current_tab();
+        tab.selected_index = 2; // Select test1.txt
+    }
+    harness.press_key(Key::B);
+    harness.step();
+
+    // Verify no new bookmark was added (still 2)
+    assert_eq!(harness.state().bookmarks.len(), 2);
+
+    // Open bookmark popup again
+    {
+        let mut modifiers = Modifiers::default();
+        modifiers.shift = true;
+        harness.press_key_modifiers(modifiers, Key::B);
+        harness.step();
+    }
+
+    // Delete the first bookmark with 'd'
+    harness.press_key(Key::D);
+    harness.step();
+
+    // Verify bookmark was removed
+    {
+        let app = harness.state();
+        assert_eq!(app.bookmarks.len(), 1);
+        assert!(app.bookmarks[0].ends_with("dir2")); // Only dir2 remains
+    }
+
+    // Close bookmark popup with 'q'
+    harness.press_key(Key::Q);
+    harness.step();
+
+    // Verify bookmark popup is closed
+    assert!(!harness.state().show_bookmarks);
 }
