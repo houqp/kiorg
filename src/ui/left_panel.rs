@@ -4,9 +4,9 @@ use std::path::PathBuf;
 use crate::config::colors::AppColors;
 use crate::models::tab::Tab;
 use crate::ui::file_list;
+use crate::ui::style::VERTICAL_PADDING;
 
 const ROW_HEIGHT: f32 = 24.0;
-const VERTICAL_PADDING: f32 = 8.0;
 
 pub struct LeftPanel {
     width: f32,

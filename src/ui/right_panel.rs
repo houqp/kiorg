@@ -5,8 +5,8 @@ use std::io::Cursor;
 use crate::config::colors::AppColors;
 use crate::models::tab::Tab;
 use crate::ui::file_list::ROW_HEIGHT;
+use crate::ui::style::VERTICAL_PADDING;
 
-const VERTICAL_PADDING: f32 = 8.0;
 const PANEL_SPACING: f32 = 10.0;
 
 pub struct RightPanel {

@@ -1,4 +1,4 @@
-use egui::{RichText, TextureHandle, Ui};
+use egui::{TextureHandle, Ui};
 use std::fs;
 use std::path::PathBuf;
 use std::sync::atomic::AtomicU64;
@@ -11,8 +11,8 @@ use crate::ui::center_panel::{CenterPanel, CenterPanelDrawParams};
 use crate::ui::delete_dialog::DeleteDialog;
 use crate::ui::dialogs::Dialogs;
 use crate::ui::left_panel::LeftPanel;
-use crate::ui::path_nav;
 use crate::ui::right_panel::{RightPanel, update_preview};
+use crate::ui::top_banner::TopBanner;
 use crate::ui::{bookmark_popup, help_window};
 
 // Static variable for tracking key press times
@@ -21,7 +21,6 @@ static LAST_LOWERCASE_G_PRESS: AtomicU64 = AtomicU64::new(0);
 // Layout constants
 const PANEL_SPACING: f32 = 10.0; // Space between panels
 const SEPARATOR_PADDING: f32 = 5.0; // Padding on each side of separator
-const VERTICAL_PADDING: f32 = 4.0; // Vertical padding in panels
 const NAV_HEIGHT_RESERVED: f32 = 50.0; // Space reserved for navigation bar
 
 // Panel size ratios (relative to usable width)
@@ -589,17 +588,6 @@ impl Kiorg {
         }
     }
 
-    fn draw_path_navigation(&mut self, ui: &mut Ui) {
-        let tab = self.tab_manager.current_tab();
-        if let Some(message) = path_nav::draw_path_navigation(ui, &tab.current_path, &self.colors) {
-            match message {
-                path_nav::PathNavMessage::Navigate(path) => {
-                    self.navigate_to(path);
-                }
-            }
-        }
-    }
-
     fn draw_vertical_separator(&mut self, ui: &mut Ui) {
         ui.vertical(|ui| {
             ui.set_min_width(SEPARATOR_PADDING);
@@ -695,33 +683,7 @@ impl eframe::App for Kiorg {
             let total_height = ui.available_height();
 
             // Path navigation at the top
-            ui.vertical(|ui| {
-                ui.add_space(VERTICAL_PADDING);
-                ui.horizontal(|ui| {
-                    // Path navigation on the left
-                    ui.with_layout(egui::Layout::left_to_right(egui::Align::LEFT), |ui| {
-                        self.draw_path_navigation(ui);
-                    });
-
-                    // Tab numbers on the right
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::RIGHT), |ui| {
-                        for i in (0..self.tab_manager.tabs.len()).rev() {
-                            let is_current = i == self.tab_manager.current_tab_index;
-                            let text = format!("{}", i + 1);
-                            let color = if is_current {
-                                self.colors.yellow
-                            } else {
-                                self.colors.gray
-                            };
-                            if ui.link(RichText::new(text).color(color)).clicked() {
-                                self.tab_manager.switch_to_tab(i);
-                            }
-                        }
-                    });
-                });
-                ui.add_space(VERTICAL_PADDING);
-                ui.separator();
-            });
+            TopBanner::new(self).draw(ui);
 
             // Calculate panel widths
             let (left_width, center_width, right_width) =
