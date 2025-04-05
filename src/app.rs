@@ -551,15 +551,6 @@ impl Kiorg {
         }
     }
 
-    fn draw_left_panel(&mut self, ui: &mut Ui, width: f32, height: f32) {
-        let tab = self.tab_manager.current_tab_ref();
-        let left_panel = LeftPanel::new(width, height);
-
-        if let Some(path) = left_panel.draw(ui, tab, &self.bookmarks, &self.colors) {
-            self.navigate_to(path);
-        }
-    }
-
     fn draw_center_panel(&mut self, ui: &mut Ui, width: f32, height: f32) {
         let tab = self.tab_manager.current_tab_ref();
         let center_panel = CenterPanel::new(width, height);
@@ -596,19 +587,6 @@ impl Kiorg {
             self.new_name.clear();
             self.rename_focus = false;
         }
-    }
-
-    fn draw_right_panel(&mut self, ui: &mut Ui, width: f32, height: f32) {
-        let tab = self.tab_manager.current_tab_ref();
-        let right_panel = RightPanel::new(width, height);
-
-        right_panel.draw(
-            ui,
-            tab,
-            &self.colors,
-            &self.preview_content,
-            &self.current_image,
-        );
     }
 
     fn draw_path_navigation(&mut self, ui: &mut Ui) {
@@ -756,7 +734,14 @@ impl eframe::App for Kiorg {
                 ui.set_min_height(content_height);
 
                 // Left panel
-                self.draw_left_panel(ui, left_width, content_height);
+                if let Some(path) = LeftPanel::new(left_width, content_height).draw(
+                    ui,
+                    self.tab_manager.current_tab_ref(),
+                    &self.bookmarks,
+                    &self.colors,
+                ) {
+                    self.navigate_to(path);
+                }
 
                 // Vertical separator after left panel
                 self.draw_vertical_separator(ui);
@@ -768,7 +753,13 @@ impl eframe::App for Kiorg {
                 self.draw_vertical_separator(ui);
 
                 // Right panel
-                self.draw_right_panel(ui, right_width, content_height);
+                RightPanel::new(right_width, content_height).draw(
+                    ui,
+                    self.tab_manager.current_tab_ref(),
+                    &self.colors,
+                    &self.preview_content,
+                    &self.current_image,
+                );
 
                 // Right margin
                 ui.add_space(PANEL_SPACING);
