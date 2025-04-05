@@ -2,7 +2,7 @@ use egui::{RichText, TextureHandle, Ui};
 use image::io::Reader as ImageReader;
 use std::fs;
 use std::io::Cursor; // Removed unused BufRead, BufReader, Write
-use std::path::{Path, PathBuf}; // Removed unused Error
+use std::path::PathBuf; // Removed unused Error
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering::Relaxed;
 // Removed unused dirs_next
@@ -11,6 +11,7 @@ use crate::config::{self, colors::AppColors};
 use crate::models::dir_entry::DirEntry;
 use crate::models::tab::TabManager;
 use crate::ui::center_panel::{CenterPanel, CenterPanelDrawParams}; // Import the new struct
+use crate::ui::delete_dialog::DeleteDialog; // Import the new DeleteDialog module
 use crate::ui::dialogs::Dialogs; // Add import for Dialogs
 use crate::ui::left_panel::LeftPanel;
 use crate::ui::path_nav;
@@ -647,18 +648,13 @@ impl Kiorg {
     }
 
     fn confirm_delete(&mut self) {
-        if let Some(path) = self.entry_to_delete.take() {
-            if let Err(e) = if path.is_dir() {
-                std::fs::remove_dir_all(&path)
-            } else {
-                std::fs::remove_file(&path)
-            } {
-                eprintln!("Failed to delete: {e}");
-            } else {
+        if let Some(path) = self.entry_to_delete.clone() {
+            DeleteDialog::perform_delete(&path, || {
                 self.refresh_entries();
-            }
+            });
         }
         self.show_delete_confirm = false;
+        self.entry_to_delete = None;
     }
 
     fn cancel_delete(&mut self) {
@@ -667,43 +663,26 @@ impl Kiorg {
     }
 
     fn handle_delete_confirmation(&mut self, ctx: &egui::Context) {
-        if self.show_delete_confirm {
-            if let Some(path) = self.entry_to_delete.clone() {
-                self.show_delete_dialog(ctx, &path);
-            }
+        let mut should_confirm = false;
+        let mut should_cancel = false;
+        
+        DeleteDialog::handle_delete_confirmation(
+            ctx,
+            &mut self.show_delete_confirm,
+            &self.entry_to_delete,
+            &self.colors,
+            || should_confirm = true,
+            || should_cancel = true,
+        );
+
+        if should_confirm {
+            self.confirm_delete();
+        } else if should_cancel {
+            self.cancel_delete();
         }
     }
 
-    fn show_delete_dialog(&mut self, ctx: &egui::Context, path: &Path) {
-        let mut show_popup = self.show_delete_confirm;
-        if let Some(response) = egui::Window::new("Delete Confirmation")
-            .collapsible(false)
-            .resizable(false)
-            .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
-            .open(&mut show_popup)
-            .show(ctx, |ui| {
-                ui.vertical_centered(|ui| {
-                    ui.add_space(10.0);
-                    ui.label(format!("Delete {}?", path.display()));
-                    let confirm_clicked = ui
-                        .link(RichText::new("Press Enter to confirm").color(self.colors.yellow))
-                        .clicked();
-                    let cancel_clicked = ui
-                        .link(RichText::new("Press Esc to cancel").color(self.colors.gray))
-                        .clicked();
-                    ui.add_space(10.0);
-
-                    if confirm_clicked {
-                        self.confirm_delete();
-                    } else if cancel_clicked {
-                        self.cancel_delete();
-                    }
-                });
-            })
-        {
-            self.show_delete_confirm = !response.response.clicked_elsewhere();
-        }
-    }
+    // The show_delete_dialog function has been refactored into the DeleteDialog module
 
     fn update_preview(&mut self, ctx: &egui::Context) {
         let tab = self.tab_manager.current_tab();

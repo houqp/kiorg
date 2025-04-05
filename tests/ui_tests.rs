@@ -1,4 +1,4 @@
-use egui::{Key, Modifiers};
+use egui::Key;
 use egui_kittest::Harness;
 use kiorg::Kiorg;
 use std::fs::File;
