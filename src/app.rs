@@ -1,19 +1,21 @@
-use dirs_next as dirs;
 use egui::{RichText, TextureHandle, Ui};
 use image::io::Reader as ImageReader;
-use std::error::Error;
 use std::fs;
-use std::io::{BufRead, BufReader, Cursor, Write};
-use std::path::{Path, PathBuf};
+use std::io::Cursor; // Removed unused BufRead, BufReader, Write
+use std::path::{Path, PathBuf}; // Removed unused Error
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering::Relaxed;
+// Removed unused dirs_next
 
 use crate::config::{self, colors::AppColors};
 use crate::models::dir_entry::DirEntry;
 use crate::models::tab::TabManager;
-use crate::ui::file_list::ROW_HEIGHT;
+use crate::ui::center_panel::{CenterPanel, CenterPanelDrawParams}; // Import the new struct
+use crate::ui::dialogs::Dialogs; // Add import for Dialogs
+use crate::ui::left_panel::LeftPanel;
 use crate::ui::path_nav;
-use crate::ui::{file_list, help_window};
+use crate::ui::right_panel::RightPanel;
+use crate::ui::{bookmark_popup, help_window};
 
 // Static variable for tracking key press times
 static LAST_LOWERCASE_G_PRESS: AtomicU64 = AtomicU64::new(0);
@@ -50,69 +52,14 @@ pub struct Kiorg {
 }
 
 impl Kiorg {
-    // Get the path to the bookmarks file
-    fn get_config_dir(&self) -> PathBuf {
-        match &self.config_dir_override {
-            Some(dir) => dir.clone(),
-            None => {
-                let mut dir = dirs::config_dir().unwrap_or_else(|| PathBuf::from("."));
-                dir.push("kiorg");
-                dir
-            }
-        }
-    }
-
-    fn get_bookmarks_file_path(&self) -> PathBuf {
-        let mut config_dir = self.get_config_dir();
-        
-        if !config_dir.exists() {
-            let _ = fs::create_dir_all(&config_dir);
-        }
-        config_dir.push("bookmarks.txt");
-        config_dir
-    }
-
-    // Save bookmarks to the config file
-    fn save_bookmarks(&self) -> Result<(), Box<dyn Error>> {
-        let bookmarks_file = self.get_bookmarks_file_path();
-        let mut file = fs::File::create(bookmarks_file)?;
-
-        for bookmark in &self.bookmarks {
-            writeln!(file, "{}", bookmark.to_string_lossy())?;
-        }
-
-        Ok(())
-    }
-
-    // Load bookmarks from the config file
-    fn load_bookmarks(&self) -> Vec<PathBuf> {
-        let bookmarks_file = self.get_bookmarks_file_path();
-        if !bookmarks_file.exists() {
-            return Vec::new();
-        }
-
-        match fs::File::open(&bookmarks_file) {
-            Ok(file) => {
-                let reader = BufReader::new(file);
-                reader
-                    .lines()
-                    .map_while(Result::ok)
-                    .filter(|line| !line.trim().is_empty())
-                    .map(|line| PathBuf::from(line.trim()))
-                    .collect()
-            }
-            Err(_) => Vec::new(),
-        }
-    }
-
     pub fn new(cc: &eframe::CreationContext<'_>, initial_dir: PathBuf) -> Self {
         Self::new_with_config_dir(cc, initial_dir, None)
     }
 
     pub fn new_with_config_dir(
-        cc: &eframe::CreationContext<'_>, 
+        cc: &eframe::CreationContext<'_>,
         initial_dir: PathBuf,
-        config_dir_override: Option<PathBuf>
+        config_dir_override: Option<PathBuf>,
     ) -> Self {
         let config = config::load_config();
         let colors = AppColors::from_config(&config.colors);
@@ -133,7 +80,7 @@ impl Kiorg {
         cc.egui_ctx.set_visuals(visuals);
 
         let tab_manager = TabManager::new(initial_dir);
-        
+
         let mut app = Self {
             tab_manager,
             colors,
@@ -152,10 +99,9 @@ impl Kiorg {
             show_bookmarks: false,
             config_dir_override,
         };
-        
-        // Load bookmarks after initializing the app with the config directory
-        app.bookmarks = app.load_bookmarks();
 
+        // Load bookmarks after initializing the app with the config directory
+        app.bookmarks = bookmark_popup::load_bookmarks(app.config_dir_override.as_ref());
 
         app.refresh_entries();
         app
@@ -284,7 +230,8 @@ impl Kiorg {
         if self.show_exit_confirm {
             if ctx.input(|i| i.key_pressed(egui::Key::Enter)) {
                 std::process::exit(0);
-            } else if ctx.input(|i| i.key_pressed(egui::Key::Escape) || i.key_pressed(egui::Key::Q)) {
+            } else if ctx.input(|i| i.key_pressed(egui::Key::Escape) || i.key_pressed(egui::Key::Q))
+            {
                 self.show_exit_confirm = false;
             }
             return;
@@ -578,7 +525,10 @@ impl Kiorg {
                         }
 
                         // Save bookmarks to config file
-                        if let Err(e) = self.save_bookmarks() {
+                        if let Err(e) = bookmark_popup::save_bookmarks(
+                            &self.bookmarks,
+                            self.config_dir_override.as_ref(),
+                        ) {
                             eprintln!("Failed to save bookmarks: {}", e);
                         }
                     }
@@ -592,7 +542,10 @@ impl Kiorg {
                     }
 
                     // Save bookmarks to config file
-                    if let Err(e) = self.save_bookmarks() {
+                    if let Err(e) = bookmark_popup::save_bookmarks(
+                        &self.bookmarks,
+                        self.config_dir_override.as_ref(),
+                    ) {
                         eprintln!("Failed to save bookmarks: {}", e);
                     }
                 }
@@ -602,149 +555,37 @@ impl Kiorg {
 
     fn draw_left_panel(&mut self, ui: &mut Ui, width: f32, height: f32) {
         let tab = self.tab_manager.current_tab_ref();
-        let parent_entries = tab.parent_entries.clone();
-        let parent_selected_index = tab.parent_selected_index;
-        let colors = self.colors.clone();
+        let left_panel = LeftPanel::new(width, height);
 
-        let mut path_to_navigate = None;
-
-        ui.vertical(|ui| {
-            ui.set_min_width(width);
-            ui.set_max_width(width);
-            ui.set_min_height(height);
-            ui.add_space(VERTICAL_PADDING);
-            ui.label(RichText::new("Parent Directory").color(colors.gray));
-            ui.separator();
-
-            // Calculate available height for scroll area
-            let available_height = height - ROW_HEIGHT - VERTICAL_PADDING * 2.0;
-
-            egui::ScrollArea::vertical()
-                .id_salt("parent_list_scroll")
-                .auto_shrink([false; 2])
-                .max_height(available_height)
-                .show(ui, |ui| {
-                    // Set the width of the content area
-                    let scrollbar_width = 6.0;
-                    ui.set_min_width(width - scrollbar_width);
-                    ui.set_max_width(width - scrollbar_width);
-
-                    // Draw all rows
-                    for (i, entry) in parent_entries.iter().enumerate() {
-                        let is_bookmarked = self.bookmarks.contains(&entry.path);
-                        let clicked = file_list::draw_parent_entry_row(
-                            ui,
-                            entry,
-                            i == parent_selected_index,
-                            &colors,
-                            is_bookmarked,
-                        );
-                        if clicked {
-                            path_to_navigate = Some(entry.path.clone());
-                            break;
-                        }
-                    }
-
-                    // Ensure current directory is visible in parent list
-                    if !parent_entries.is_empty() {
-                        let selected_pos = parent_selected_index as f32 * ROW_HEIGHT;
-                        ui.scroll_to_rect(
-                            egui::Rect::from_min_size(
-                                egui::pos2(0.0, selected_pos),
-                                egui::vec2(width, ROW_HEIGHT),
-                            ),
-                            Some(egui::Align::Center),
-                        );
-                    }
-                });
-        });
-
-        // Handle navigation outside the closure
-        if let Some(path) = path_to_navigate {
+        if let Some(path) = left_panel.draw(ui, tab, &self.bookmarks, &self.colors) {
             self.navigate_to(path);
         }
     }
 
     fn draw_center_panel(&mut self, ui: &mut Ui, width: f32, height: f32) {
         let tab = self.tab_manager.current_tab_ref();
-        let entries = tab.entries.clone();
-        let selected_index = tab.selected_index;
-        let selected_entries = tab.selected_entries.clone();
-        let colors = self.colors.clone();
-        let rename_mode = self.rename_mode;
-        let new_name = &mut self.new_name;
-        let rename_focus = self.rename_focus;
+        let center_panel = CenterPanel::new(width, height);
 
-        let mut path_to_navigate = None;
-        let mut entry_to_rename = None;
+        let result = center_panel.draw(
+            ui,
+            CenterPanelDrawParams {
+                tab,
+                bookmarks: &self.bookmarks,
+                colors: &self.colors,
+                rename_mode: self.rename_mode,
+                new_name: &mut self.new_name,
+                rename_focus: self.rename_focus,
+                ensure_selected_visible: self.ensure_selected_visible,
+            },
+        );
 
-        ui.vertical(|ui| {
-            ui.set_min_width(width);
-            ui.set_max_width(width);
-            ui.set_min_height(height);
-            ui.add_space(VERTICAL_PADDING);
-            file_list::draw_table_header(ui, &colors);
-
-            // Calculate available height for scroll area
-            let available_height = height - ROW_HEIGHT - VERTICAL_PADDING * 2.0;
-
-            egui::ScrollArea::vertical()
-                .id_salt("current_list_scroll")
-                .auto_shrink([false; 2])
-                .max_height(available_height)
-                .show(ui, |ui| {
-                    // Set the width of the content area
-                    let scrollbar_width = 6.0;
-                    ui.set_min_width(width - scrollbar_width);
-                    ui.set_max_width(width - scrollbar_width);
-
-                    // Draw entries
-                    for (i, entry) in entries.iter().enumerate() {
-                        let is_selected = i == selected_index;
-                        let is_in_selection = selected_entries.contains(&entry.path);
-
-                        if file_list::draw_entry_row(
-                            ui,
-                            file_list::EntryRowParams {
-                                entry,
-                                is_selected,
-                                colors: &colors,
-                                rename_mode: rename_mode && is_selected,
-                                new_name,
-                                rename_focus: rename_focus && is_selected,
-                                is_marked: is_in_selection,
-                                is_bookmarked: self.bookmarks.contains(&entry.path),
-                            },
-                        ) {
-                            if rename_mode {
-                                entry_to_rename = Some((entry.path.clone(), new_name.clone()));
-                            } else {
-                                path_to_navigate = Some(entry.path.clone());
-                            }
-                        }
-                    }
-
-                    // Handle scrolling to selected item
-                    if self.ensure_selected_visible && !entries.is_empty() {
-                        let selected_pos = selected_index as f32 * ROW_HEIGHT;
-                        ui.scroll_to_rect(
-                            egui::Rect::from_min_size(
-                                egui::pos2(0.0, selected_pos),
-                                egui::vec2(width, ROW_HEIGHT),
-                            ),
-                            Some(egui::Align::Center),
-                        );
-                    }
-                });
-        });
-
-        // Handle navigation outside the closure
-        if let Some(path) = path_to_navigate {
+        // Handle navigation
+        if let Some(path) = result.path_to_navigate {
             self.navigate_to(path);
         }
 
-        // Handle rename outside the closure
-        if let Some((old_path, new_name)) = entry_to_rename {
+        // Handle rename
+        if let Some((old_path, new_name)) = result.entry_to_rename {
             if let Some(parent) = old_path.parent() {
                 let new_path = parent.join(new_name);
                 if let Err(e) = std::fs::rename(&old_path, &new_path) {
@@ -761,62 +602,15 @@ impl Kiorg {
 
     fn draw_right_panel(&mut self, ui: &mut Ui, width: f32, height: f32) {
         let tab = self.tab_manager.current_tab_ref();
-        let colors = self.colors.clone();
-        let preview_content = self.preview_content.clone();
+        let right_panel = RightPanel::new(width, height);
 
-        ui.vertical(|ui| {
-            ui.set_min_width(width);
-            ui.set_max_width(width);
-            ui.set_min_height(height);
-            ui.add_space(VERTICAL_PADDING);
-            ui.label(RichText::new("Preview").color(colors.gray));
-            ui.separator();
-
-            // Calculate available height for scroll area
-            let available_height = height - ROW_HEIGHT - VERTICAL_PADDING * 4.0;
-
-            egui::ScrollArea::vertical()
-                .id_salt("preview_scroll")
-                .auto_shrink([false; 2])
-                .max_height(available_height)
-                .show(ui, |ui| {
-                    // Set the width of the content area
-                    let scrollbar_width = 6.0;
-                    ui.set_min_width(width - scrollbar_width);
-                    ui.set_max_width(width - scrollbar_width);
-
-                    // Draw preview content
-                    if let Some(entry) = tab.entries.get(tab.selected_index) {
-                        if entry.is_dir {
-                            ui.label(RichText::new("Directory").color(colors.gray));
-                        } else if let Some(image) = &self.current_image {
-                            ui.centered_and_justified(|ui| {
-                                let available_width = width - PANEL_SPACING * 2.0;
-                                let available_height = available_height - PANEL_SPACING * 2.0;
-                                let image_size = image.size_vec2();
-                                let scale = (available_width / image_size.x)
-                                    .min(available_height / image_size.y);
-                                let scaled_size = image_size * scale;
-
-                                ui.add(egui::Image::new((image.id(), scaled_size)));
-                            });
-                        } else {
-                            ui.add(
-                                egui::TextEdit::multiline(&mut String::from(&preview_content))
-                                    .desired_width(width - PANEL_SPACING)
-                                    .desired_rows(30)
-                                    .interactive(false),
-                            );
-                        }
-                    }
-                });
-
-            // Draw help text in its own row at the bottom
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::BOTTOM), |ui| {
-                ui.label(RichText::new("? for help").color(colors.gray));
-            });
-            ui.add_space(VERTICAL_PADDING);
-        });
+        right_panel.draw(
+            ui,
+            tab,
+            &self.colors,
+            &self.preview_content,
+            &self.current_image,
+        );
     }
 
     fn draw_path_navigation(&mut self, ui: &mut Ui) {
@@ -981,187 +775,31 @@ impl Kiorg {
             self.current_image = None;
         }
     }
-
-    fn show_exit_dialog(&mut self, ctx: &egui::Context) {
-        let mut show_popup = self.show_exit_confirm;
-        if let Some(response) = egui::Window::new("Exit Confirmation")
-            .collapsible(false)
-            .resizable(false)
-            .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
-            .open(&mut show_popup)
-            .show(ctx, |ui| {
-                ui.vertical_centered(|ui| {
-                    ui.add_space(10.0);
-                    if ui
-                        .link(RichText::new("Press Enter to exit").color(self.colors.yellow))
-                        .clicked()
-                    {
-                        std::process::exit(0);
-                    }
-                    if ui
-                        .link(RichText::new("Press Esc or q to cancel").color(self.colors.gray))
-                        .clicked()
-                    {
-                        self.show_exit_confirm = false;
-                    }
-                    ui.add_space(10.0);
-                });
-            })
-        {
-            self.show_exit_confirm = !response.response.clicked_elsewhere();
-        }
-    }
-
-    fn show_bookmark_popup(&mut self, ctx: &egui::Context) {
-        if !self.show_bookmarks {
-            return;
-        }
-
-        let mut show_popup = self.show_bookmarks;
-        let bookmarks = self.bookmarks.to_vec();
-
-        // Initialize a static bookmark index to preserve selection state between frames
-        static mut BOOKMARK_SELECTED_INDEX: usize = 0;
-        let mut selected_index = unsafe { BOOKMARK_SELECTED_INDEX };
-
-        // Ensure index is valid
-        if !bookmarks.is_empty() {
-            selected_index = selected_index.min(bookmarks.len() - 1);
-        } else {
-            selected_index = 0;
-        }
-
-        // Track if we need to navigate to a bookmark or remove a bookmark
-        let mut navigate_to_path = None;
-        let mut remove_bookmark_path = None;
-
-        // Handle keyboard navigation for closing the popup
-        if ctx.input(|i| i.key_pressed(egui::Key::Q) || i.key_pressed(egui::Key::Escape)) {
-            show_popup = false;
-        }
-
-        // Handle keyboard shortcut for deleting bookmarks
-        if ctx.input(|i| i.key_pressed(egui::Key::D)) && !bookmarks.is_empty() {
-            remove_bookmark_path = Some(bookmarks[selected_index].clone());
-        }
-
-        if let Some(response) = egui::Window::new("Bookmarks")
-            .resizable(true)
-            .default_width(500.0) // Wider window for two columns
-            .pivot(egui::Align2::CENTER_CENTER) // Center the window
-            .default_pos(ctx.screen_rect().center()) // Position at screen center
-            .open(&mut show_popup)
-            .show(ctx, |ui| {
-                if bookmarks.is_empty() {
-                    ui.label("No bookmarks yet. Use 'b' to bookmark folders.");
-                    return;
-                }
-
-                // Handle keyboard navigation
-                if ctx.input(|i| i.key_pressed(egui::Key::J) || i.key_pressed(egui::Key::ArrowDown))
-                {
-                    if !bookmarks.is_empty() {
-                        selected_index = (selected_index + 1).min(bookmarks.len() - 1);
-                        unsafe {
-                            BOOKMARK_SELECTED_INDEX = selected_index;
-                        }
-                    }
-                } else if ctx
-                    .input(|i| i.key_pressed(egui::Key::K) || i.key_pressed(egui::Key::ArrowUp))
-                {
-                    selected_index = selected_index.saturating_sub(1);
-                    unsafe {
-                        BOOKMARK_SELECTED_INDEX = selected_index;
-                    }
-                } else if ctx
-                    .input(|i| i.key_pressed(egui::Key::Enter) || i.key_pressed(egui::Key::L))
-                    && !bookmarks.is_empty()
-                {
-                    navigate_to_path = Some(bookmarks[selected_index].clone());
-                }
-
-                // Display bookmarks in a two-column layout with proper alignment
-                egui::ScrollArea::vertical().show(ui, |ui| {
-                    // Create a grid layout for consistent column alignment
-                    egui::Grid::new("bookmarks_grid")
-                        .num_columns(2)
-                        .spacing([20.0, 6.0]) // Space between columns and rows
-                        .striped(true) // Alternate row background for better readability
-                        .show(ui, |ui| {
-                            for (i, bookmark) in bookmarks.iter().enumerate() {
-                                // Extract folder name and parent path
-                                let folder_name = bookmark
-                                    .file_name()
-                                    .map(|n| n.to_string_lossy().to_string())
-                                    .unwrap_or_default();
-
-                                let parent_path = bookmark
-                                    .parent()
-                                    .map(|p| p.to_string_lossy().to_string())
-                                    .unwrap_or_default();
-
-                                // First column: Folder name with selectable label
-                                let folder_response = ui.add(egui::SelectableLabel::new(
-                                    i == selected_index,
-                                    folder_name,
-                                ));
-
-                                // Second column: Parent path
-                                let path_color = if i == selected_index {
-                                    ui.visuals().strong_text_color()
-                                } else {
-                                    ui.visuals().weak_text_color()
-                                };
-                                let path_response = ui.colored_label(path_color, parent_path);
-                                ui.end_row();
-
-                                // Combined response for click handling
-                                let response = folder_response.union(path_response);
-
-                                if response.clicked() {
-                                    navigate_to_path = Some(bookmark.clone());
-                                }
-
-                                // Right-click context menu for removing bookmarks
-                                response.context_menu(|ui| {
-                                    if ui.button("Remove bookmark").clicked() {
-                                        remove_bookmark_path = Some(bookmark.clone());
-                                        ui.close_menu();
-                                    }
-                                });
-                            }
-                        });
-                });
-            })
-        {
-            // If we need to navigate, do it now
-            if let Some(path) = navigate_to_path {
-                self.navigate_to(path);
-                show_popup = false;
-            }
-
-            // If we need to remove a bookmark, do it now
-            if let Some(path) = remove_bookmark_path {
-                self.bookmarks.retain(|p| p != &path);
-
-                // Save bookmarks to config file after removal
-                if let Err(e) = self.save_bookmarks() {
-                    eprintln!("Failed to save bookmarks: {}", e);
-                }
-            }
-
-            self.show_bookmarks = show_popup && !response.response.clicked_elsewhere();
-        } else {
-            self.show_bookmarks = show_popup;
-        }
-    }
 }
 
 impl eframe::App for Kiorg {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.update_preview(ctx);
         self.handle_key_press(ctx);
-        self.show_bookmark_popup(ctx);
+
+        // Handle bookmark popup with the new approach
+        let bookmark_action =
+            bookmark_popup::show_bookmark_popup(ctx, &mut self.show_bookmarks, &mut self.bookmarks);
+
+        // Process the bookmark action
+        match bookmark_action {
+            bookmark_popup::BookmarkAction::Navigate(path) => self.navigate_to(path),
+            bookmark_popup::BookmarkAction::SaveBookmarks => {
+                // Save bookmarks when the popup signals a change (e.g., deletion)
+                if let Err(e) = bookmark_popup::save_bookmarks(
+                    &self.bookmarks,
+                    self.config_dir_override.as_ref(),
+                ) {
+                    eprintln!("Failed to save bookmarks: {}", e);
+                }
+            }
+            bookmark_popup::BookmarkAction::None => {}
+        };
 
         egui::CentralPanel::default().show(ctx, |ui| {
             let total_height = ui.available_height();
@@ -1235,7 +873,8 @@ impl eframe::App for Kiorg {
 
         // Show exit confirmation window if needed
         if self.show_exit_confirm {
-            self.show_exit_dialog(ctx);
+            // Call the refactored dialog function
+            Dialogs::show_exit_dialog(ctx, &mut self.show_exit_confirm, &self.colors);
         }
 
         // Show delete confirmation window if needed

@@ -5,6 +5,7 @@ You follow these rules to keep the code clean:
 * You always fix all warnings and errors from cargo run and cargo build`.
 * You write tests whenever applicable to prevent regressions.
 * Break code into modules logically instead of keeping all of them into large files.
+* Avoid deeply nested code structure by breaking up implementation into pure functions.
 
 Requirements for the app:
 * A cross-platform file browser GUI application using Rust and the egui framework
@@ -28,6 +29,7 @@ Requirements for the app:
   * `x` to cut an entry
   * `p` to paste an entry
   * `q` to exit the application with a confirmation popup that confirms the exit through enter
+    - All popups in the app can be closed by pressing `q`, including the exit confirmation popup
   * `b` to add/remove the current entry to bookmark
   * `B` to toggle the bookmark popup
     - The bookmark menu should be centered to the screen, when it's active, it consumes all the input.

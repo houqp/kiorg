@@ -63,7 +63,7 @@ impl<'a> std::ops::Deref for TestHarness<'a> {
     }
 }
 
-impl<'a> std::ops::DerefMut for TestHarness<'a> {
+impl std::ops::DerefMut for TestHarness<'_> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.harness
     }
@@ -158,7 +158,7 @@ fn test_rename_shortcut() {
     harness.step();
 
     // Press 'delete' to clear any existing text
-    for _ in 0..".text".len() {
+    for _ in 0..".txt".len() {
         harness.press_key(Key::Backspace);
         harness.step();
     }
@@ -179,7 +179,7 @@ fn test_rename_shortcut() {
     assert!(!test_files[1].exists(), "test2.txt should no longer exist");
     assert!(
         temp_dir.path().join("test2_renamed.txt").exists(),
-        "renamed.txt should exist"
+        "test2_renamed.txt should exist"
     );
 }
 
@@ -335,8 +335,10 @@ fn test_g_shortcuts() {
 
     // Test G shortcut (go to last entry)
     {
-        let mut modifiers = Modifiers::default();
-        modifiers.shift = true;
+        let modifiers = egui::Modifiers {
+            shift: true,
+            ..Default::default()
+        };
         harness.press_key_modifiers(modifiers, Key::G);
         harness.step();
         let tab = harness.state().tab_manager.current_tab_ref();
@@ -376,8 +378,10 @@ fn test_g_shortcuts_empty_list() {
 
     // Test G shortcut with empty list
     {
-        let mut modifiers = Modifiers::default();
-        modifiers.shift = true;
+        let modifiers = egui::Modifiers {
+            shift: true,
+            ..Default::default()
+        };
         harness.press_key_modifiers(modifiers, Key::G);
         harness.step();
         let tab = harness.state().tab_manager.current_tab_ref();
@@ -435,8 +439,10 @@ fn test_bookmark_feature() {
 
     // Open bookmark popup with 'B' (shift+b)
     {
-        let mut modifiers = Modifiers::default();
-        modifiers.shift = true;
+        let modifiers = egui::Modifiers {
+            shift: true,
+            ..Default::default()
+        };
         harness.press_key_modifiers(modifiers, Key::B);
         harness.step();
     }
@@ -484,8 +490,10 @@ fn test_bookmark_feature() {
 
     // Open bookmark popup again
     {
-        let mut modifiers = Modifiers::default();
-        modifiers.shift = true;
+        let modifiers = egui::Modifiers {
+            shift: true,
+            ..Default::default()
+        };
         harness.press_key_modifiers(modifiers, Key::B);
         harness.step();
     }
