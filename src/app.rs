@@ -1,21 +1,18 @@
 use egui::{RichText, TextureHandle, Ui};
-use image::io::Reader as ImageReader;
 use std::fs;
-use std::io::Cursor; // Removed unused BufRead, BufReader, Write
-use std::path::PathBuf; // Removed unused Error
+use std::path::PathBuf;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering::Relaxed;
-// Removed unused dirs_next
 
 use crate::config::{self, colors::AppColors};
 use crate::models::dir_entry::DirEntry;
 use crate::models::tab::TabManager;
-use crate::ui::center_panel::{CenterPanel, CenterPanelDrawParams}; // Import the new struct
-use crate::ui::delete_dialog::DeleteDialog; // Import the new DeleteDialog module
-use crate::ui::dialogs::Dialogs; // Add import for Dialogs
+use crate::ui::center_panel::{CenterPanel, CenterPanelDrawParams};
+use crate::ui::delete_dialog::DeleteDialog;
+use crate::ui::dialogs::Dialogs;
 use crate::ui::left_panel::LeftPanel;
 use crate::ui::path_nav;
-use crate::ui::right_panel::RightPanel;
+use crate::ui::right_panel::{RightPanel, update_preview};
 use crate::ui::{bookmark_popup, help_window};
 
 // Static variable for tracking key press times
@@ -683,82 +680,18 @@ impl Kiorg {
     }
 
     // The show_delete_dialog function has been refactored into the DeleteDialog module
-
-    fn update_preview(&mut self, ctx: &egui::Context) {
-        let tab = self.tab_manager.current_tab();
-        if let Some(entry) = tab.entries.get(tab.selected_index) {
-            if entry.is_dir {
-                self.preview_content = format!("Directory: {}", entry.path.display());
-                self.current_image = None;
-            } else {
-                // Check if it's an image file
-                let extension = entry
-                    .path
-                    .extension()
-                    .and_then(|e| e.to_str())
-                    .map(|e| e.to_lowercase());
-
-                if let Some(ext) = extension {
-                    if ["jpg", "jpeg", "png", "gif", "bmp", "webp"].contains(&ext.as_str()) {
-                        if let Ok(bytes) = std::fs::read(&entry.path) {
-                            if let Ok(img) = ImageReader::new(Cursor::new(bytes))
-                                .with_guessed_format()
-                                .unwrap()
-                                .decode()
-                            {
-                                let size = [img.width() as _, img.height() as _];
-                                let image = egui::ColorImage::from_rgba_unmultiplied(
-                                    size,
-                                    img.to_rgba8().as_raw(),
-                                );
-                                self.current_image = Some(ctx.load_texture(
-                                    entry.path.to_string_lossy().to_string(),
-                                    image,
-                                    egui::TextureOptions::default(),
-                                ));
-                                self.preview_content =
-                                    format!("Image: {}x{}", img.width(), img.height());
-                            }
-                        }
-                    } else {
-                        // Clear image texture for non-image files
-                        self.current_image = None;
-                        match std::fs::read_to_string(&entry.path) {
-                            Ok(content) => {
-                                // Only show first 1000 characters for text files
-                                self.preview_content = content.chars().take(1000).collect();
-                            }
-                            Err(_) => {
-                                // For binary files or files that can't be read
-                                self.preview_content = format!("Binary file: {} bytes", entry.size);
-                            }
-                        }
-                    }
-                } else {
-                    // Clear image texture for files without extension
-                    self.current_image = None;
-                    match std::fs::read_to_string(&entry.path) {
-                        Ok(content) => {
-                            // Only show first 1000 characters for text files
-                            self.preview_content = content.chars().take(1000).collect();
-                        }
-                        Err(_) => {
-                            // For binary files or files that can't be read
-                            self.preview_content = format!("Binary file: {} bytes", entry.size);
-                        }
-                    }
-                }
-            }
-        } else {
-            self.preview_content.clear();
-            self.current_image = None;
-        }
-    }
 }
 
 impl eframe::App for Kiorg {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        self.update_preview(ctx);
+        // Update preview using the new module
+        update_preview(
+            self.tab_manager.current_tab_ref(),
+            ctx,
+            &mut self.preview_content,
+            &mut self.current_image,
+        );
+        
         self.handle_key_press(ctx);
 
         // Handle bookmark popup with the new approach

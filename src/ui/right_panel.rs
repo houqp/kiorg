@@ -1,4 +1,6 @@
 use egui::{RichText, TextureHandle, Ui};
+use image::io::Reader as ImageReader;
+use std::io::Cursor;
 
 use crate::config::colors::AppColors;
 use crate::models::tab::Tab;
@@ -49,26 +51,29 @@ impl RightPanel {
                     // Draw preview content
                     if let Some(entry) = tab.entries.get(tab.selected_index) {
                         if entry.is_dir {
-                            ui.label(RichText::new("Directory").color(colors.gray));
-                        } else if let Some(image) = current_image {
-                            ui.centered_and_justified(|ui| {
-                                let available_width = self.width - PANEL_SPACING * 2.0;
-                                let available_height = available_height - PANEL_SPACING * 2.0;
-                                let image_size = image.size_vec2();
-                                let scale = (available_width / image_size.x)
-                                    .min(available_height / image_size.y);
-                                let scaled_size = image_size * scale;
-
-                                ui.add(egui::Image::new((image.id(), scaled_size)));
-                            });
+                            ui.label(RichText::new(format!("Directory: {}", entry.path.display())).color(colors.fg));
                         } else {
-                            ui.add(
-                                egui::TextEdit::multiline(&mut String::from(preview_content))
-                                    .desired_width(self.width - PANEL_SPACING)
-                                    .desired_rows(30)
-                                    .interactive(false),
-                            );
+                            // Show image preview if available
+                            if let Some(texture) = current_image {
+                                ui.centered_and_justified(|ui| {
+                                    let available_width = self.width - PANEL_SPACING * 2.0;
+                                    let available_height = available_height - PANEL_SPACING * 2.0;
+                                    let image_size = texture.size_vec2();
+                                    let scale = (available_width / image_size.x)
+                                        .min(available_height / image_size.y);
+                                    let scaled_size = image_size * scale;
+
+                                    ui.add(egui::Image::new((texture.id(), scaled_size)));
+                                });
+                            }
+                            
+                            // Show text preview
+                            if !preview_content.is_empty() {
+                                ui.label(RichText::new(preview_content).color(colors.fg));
+                            }
                         }
+                    } else {
+                        ui.label(RichText::new("No file selected").color(colors.fg));
                     }
                 });
 
@@ -78,5 +83,68 @@ impl RightPanel {
             });
             ui.add_space(VERTICAL_PADDING);
         });
+    }
+}
+
+pub fn update_preview(
+    tab: &Tab,
+    ctx: &egui::Context,
+    preview_content: &mut String,
+    current_image: &mut Option<TextureHandle>,
+) {
+    if let Some(entry) = tab.entries.get(tab.selected_index) {
+        if entry.is_dir {
+            *preview_content = format!("Directory: {}", entry.path.display());
+            *current_image = None;
+        } else {
+            // Check if it's an image file
+            let is_image = entry
+                .path
+                .extension()
+                .and_then(|e| e.to_str())
+                .map(|e| e.to_lowercase())
+                .is_some_and(|ext| {
+                    ["jpg", "jpeg", "png", "gif", "bmp", "webp"].contains(&ext.as_str())
+                });
+
+            if is_image {
+                if let Ok(bytes) = std::fs::read(&entry.path) {
+                    if let Ok(img) = ImageReader::new(Cursor::new(bytes))
+                        .with_guessed_format()
+                        .unwrap()
+                        .decode()
+                    {
+                        let size = [img.width() as _, img.height() as _];
+                        let image = egui::ColorImage::from_rgba_unmultiplied(
+                            size,
+                            img.to_rgba8().as_raw(),
+                        );
+                        *current_image = Some(ctx.load_texture(
+                            entry.path.to_string_lossy().to_string(),
+                            image,
+                            egui::TextureOptions::default(),
+                        ));
+                        *preview_content = format!("Image: {}x{}", img.width(), img.height());
+                        return;
+                    }
+                }
+            }
+
+            // Clear image texture for non-image files
+            *current_image = None;
+            match std::fs::read_to_string(&entry.path) {
+                Ok(content) => {
+                    // Only show first 1000 characters for text files
+                    *preview_content = content.chars().take(1000).collect();
+                }
+                Err(_) => {
+                    // For binary files or files that can't be read
+                    *preview_content = format!("Binary file: {} bytes", entry.size);
+                }
+            }
+        }
+    } else {
+        preview_content.clear();
+        *current_image = None;
     }
 }
