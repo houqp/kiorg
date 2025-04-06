@@ -1,7 +1,8 @@
-use std::path::PathBuf;
+use crate::config::Config;
 use crate::models::dir_entry::DirEntry;
+use std::path::PathBuf;
 
-#[derive(Clone, PartialEq, Debug, Hash, Eq)]
+#[derive(Clone, PartialEq, Debug, Hash, Eq, serde::Serialize, serde::Deserialize)]
 pub enum SortColumn {
     Name,
     Modified,
@@ -9,7 +10,7 @@ pub enum SortColumn {
     None,
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
 pub enum SortOrder {
     Ascending,
     Descending,
@@ -28,7 +29,13 @@ pub struct Tab {
 }
 
 impl Tab {
-    pub fn new(path: PathBuf) -> Self {
+    pub fn new(path: PathBuf, sort_preference: Option<&crate::config::SortPreference>) -> Self {
+        let (sort_column, sort_order) = if let Some(pref) = sort_preference {
+            (pref.column.clone(), pref.order.clone())
+        } else {
+            (SortColumn::None, SortOrder::Ascending)
+        };
+
         Self {
             current_path: path,
             entries: Vec::new(),
@@ -36,8 +43,8 @@ impl Tab {
             selected_index: 0,
             parent_selected_index: 0,
             selected_entries: std::collections::HashSet::new(),
-            sort_column: SortColumn::None,
-            sort_order: SortOrder::Ascending,
+            sort_column,
+            sort_order,
         }
     }
 
@@ -95,14 +102,24 @@ pub struct TabManager {
 
 impl TabManager {
     pub fn new(initial_path: PathBuf) -> Self {
+        Self::new_with_config(initial_path, None)
+    }
+
+    pub fn new_with_config(initial_path: PathBuf, config: Option<&Config>) -> Self {
+        let sort_preference = config.and_then(|c| c.sort_preference.as_ref());
         Self {
-            tabs: vec![Tab::new(initial_path)],
+            tabs: vec![Tab::new(initial_path, sort_preference)],
             current_tab_index: 0,
         }
     }
 
     pub fn add_tab(&mut self, path: PathBuf) {
-        self.tabs.push(Tab::new(path));
+        self.add_tab_with_config(path, None);
+    }
+
+    pub fn add_tab_with_config(&mut self, path: PathBuf, config: Option<&Config>) {
+        let sort_preference = config.and_then(|c| c.sort_preference.as_ref());
+        self.tabs.push(Tab::new(path, sort_preference));
         self.current_tab_index = self.tabs.len() - 1;
     }
 
@@ -119,4 +136,4 @@ impl TabManager {
     pub fn current_tab_ref(&self) -> &Tab {
         &self.tabs[self.current_tab_index]
     }
-} 
+}

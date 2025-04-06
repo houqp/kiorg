@@ -1,7 +1,8 @@
 use egui::Ui;
 use std::path::PathBuf;
 
-use crate::config::colors::AppColors;
+use crate::config;
+use crate::config::{colors::AppColors, SortPreference};
 use crate::models::tab::Tab;
 use crate::ui::file_list::{self, TableHeaderParams, ROW_HEIGHT};
 
@@ -103,6 +104,16 @@ impl CenterPanel {
                 on_sort: &mut |column| {
                     params.tab.toggle_sort(column);
                     params.tab.sort_entries();
+                    
+                    // Save sort preferences to config
+                    let mut config = config::load_config();
+                    config.sort_preference = Some(SortPreference {
+                        column: params.tab.sort_column.clone(),
+                        order: params.tab.sort_order.clone(),
+                    });
+                    if let Err(e) = config::save_config(&config) {
+                        eprintln!("Failed to save sort preferences: {}", e);
+                    }
                 },
             };
             file_list::draw_table_header(ui, &mut header_params);

@@ -76,7 +76,7 @@ impl Kiorg {
 
         cc.egui_ctx.set_visuals(visuals);
 
-        let tab_manager = TabManager::new(initial_dir);
+        let tab_manager = TabManager::new_with_config(initial_dir, Some(&config));
 
         let mut app = Self {
             tab_manager,
