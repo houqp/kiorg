@@ -7,5 +7,6 @@ pub mod help_window;
 pub mod left_panel;
 pub mod path_nav;
 pub mod right_panel;
+pub mod separator;
 pub mod top_banner;
 mod style;

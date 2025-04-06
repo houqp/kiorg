@@ -12,6 +12,7 @@ use crate::ui::delete_dialog::DeleteDialog;
 use crate::ui::dialogs::Dialogs;
 use crate::ui::left_panel::LeftPanel;
 use crate::ui::right_panel::{RightPanel, update_preview};
+use crate::ui::separator::{self, SEPARATOR_PADDING};
 use crate::ui::top_banner::TopBanner;
 use crate::ui::{bookmark_popup, help_window};
 
@@ -20,7 +21,6 @@ static LAST_LOWERCASE_G_PRESS: AtomicU64 = AtomicU64::new(0);
 
 // Layout constants
 const PANEL_SPACING: f32 = 10.0; // Space between panels
-const SEPARATOR_PADDING: f32 = 5.0; // Padding on each side of separator
 
 // Panel size ratios (relative to usable width)
 const LEFT_PANEL_RATIO: f32 = 0.15;
@@ -547,14 +547,6 @@ impl Kiorg {
         }
     }
 
-    fn draw_vertical_separator(&mut self, ui: &mut Ui) {
-        ui.vertical(|ui| {
-            ui.set_min_width(SEPARATOR_PADDING);
-            ui.set_max_width(SEPARATOR_PADDING);
-            ui.separator();
-        });
-    }
-
     fn calculate_panel_widths(&self, available_width: f32) -> (f32, f32, f32) {
         let total_spacing = (PANEL_SPACING * 2.0) +                    // Space between panels
                           (SEPARATOR_PADDING * 4.0) +                  // Padding around two separators
@@ -667,9 +659,9 @@ impl eframe::App for Kiorg {
                 ) {
                     self.navigate_to(path);
                 }
-                self.draw_vertical_separator(ui);
+                separator::draw_vertical_separator(ui);
                 self.draw_center_panel(ui, center_width, content_height);
-                self.draw_vertical_separator(ui);
+                separator::draw_vertical_separator(ui);
                 RightPanel::new(right_width, content_height).draw(
                     ui,
                     self.tab_manager.current_tab_ref(),
