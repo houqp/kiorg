@@ -25,6 +25,7 @@ pub struct CenterPanelDrawParams<'a> {
     pub new_name: &'a mut String,
     pub rename_focus: bool,
     pub ensure_selected_visible: bool,
+    pub config_dir_override: Option<&'a PathBuf>,
 }
 
 impl CenterPanel {
@@ -105,13 +106,13 @@ impl CenterPanel {
                     params.tab.toggle_sort(column);
                     params.tab.sort_entries();
                     
-                    // Save sort preferences to config
-                    let mut config = config::load_config();
+                    // Save sort preferences to config with override support
+                    let mut config = config::load_config_with_override(params.config_dir_override);
                     config.sort_preference = Some(SortPreference {
                         column: params.tab.sort_column.clone(),
                         order: params.tab.sort_order.clone(),
                     });
-                    if let Err(e) = config::save_config(&config) {
+                    if let Err(e) = config::save_config_with_override(&config, params.config_dir_override) {
                         eprintln!("Failed to save sort preferences: {}", e);
                     }
                 },

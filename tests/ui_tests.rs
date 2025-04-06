@@ -244,13 +244,17 @@ fn test_copy_paste_same_directory() {
 
     let mut harness = create_harness(&temp_dir);
 
+    // Make sure we're selecting the first file (test1.txt)
+    let tab = harness.state_mut().tab_manager.current_tab();
+    tab.selected_index = 0;
+
     // Copy test1.txt
     harness.press_key(Key::Y);
-    harness.step(); // Run 5 steps to handle repainting
+    harness.step();
 
     // Paste in the same directory
     harness.press_key(Key::P);
-    harness.step(); // Run 5 steps to handle repainting
+    harness.step();
 
     // Verify the file was copied with a new suffix
     assert!(test_files[0].exists(), "test1.txt should still exist");
@@ -555,8 +559,7 @@ fn test_parent_directory_selection() {
     // Verify that dir2 is still selected
     let tab = harness.state().tab_manager.current_tab_ref();
     assert_eq!(
-        tab.entries[tab.selected_index].path,
-        test_files[1],
+        tab.entries[tab.selected_index].path, test_files[1],
         "dir2 should be selected after navigating to parent directory"
     );
 }

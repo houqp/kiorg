@@ -11,7 +11,7 @@ use crate::ui::center_panel::{CenterPanel, CenterPanelDrawParams};
 use crate::ui::delete_dialog::DeleteDialog;
 use crate::ui::dialogs::Dialogs;
 use crate::ui::left_panel::LeftPanel;
-use crate::ui::right_panel::{RightPanel, update_preview};
+use crate::ui::right_panel::{update_preview, RightPanel};
 use crate::ui::separator::{self, SEPARATOR_PADDING};
 use crate::ui::top_banner::TopBanner;
 use crate::ui::{bookmark_popup, help_window};
@@ -45,7 +45,7 @@ pub struct Kiorg {
     pub bookmarks: Vec<PathBuf>,
     pub show_bookmarks: bool,
     pub config_dir_override: Option<PathBuf>, // Optional override for config directory path
-    pub prev_path: Option<PathBuf>, // Previous path for selection preservation
+    pub prev_path: Option<PathBuf>,           // Previous path for selection preservation
 }
 
 impl Kiorg {
@@ -58,7 +58,7 @@ impl Kiorg {
         initial_dir: PathBuf,
         config_dir_override: Option<PathBuf>,
     ) -> Self {
-        let config = config::load_config();
+        let config = config::load_config_with_override(config_dir_override.as_ref());
         let colors = AppColors::from_config(&config.colors);
 
         let mut visuals = egui::Visuals::dark();
@@ -329,7 +329,7 @@ impl Kiorg {
         }
 
         if ctx.input(|i| i.key_pressed(egui::Key::P)) {
-                let tab = self.tab_manager.current_tab();
+            let tab = self.tab_manager.current_tab();
             if CenterPanel::handle_clipboard_operations(&mut self.clipboard, &tab.current_path) {
                 self.refresh_entries();
             }
@@ -523,6 +523,7 @@ impl Kiorg {
                 new_name: &mut self.new_name,
                 rename_focus: self.rename_focus,
                 ensure_selected_visible: self.ensure_selected_visible,
+                config_dir_override: self.config_dir_override.as_ref(),
             },
         );
 
@@ -579,7 +580,7 @@ impl Kiorg {
     fn handle_delete_confirmation(&mut self, ctx: &egui::Context) {
         let mut should_confirm = false;
         let mut should_cancel = false;
-        
+
         DeleteDialog::handle_delete_confirmation(
             ctx,
             &mut self.show_delete_confirm,
@@ -608,7 +609,7 @@ impl eframe::App for Kiorg {
             &mut self.preview_content,
             &mut self.current_image,
         );
-        
+
         self.handle_key_press(ctx);
 
         // Handle bookmark popup with the new approach
@@ -635,14 +636,14 @@ impl eframe::App for Kiorg {
 
             // Draw top banner and measure its height
             let top_banner_response = ui.scope(|ui| {
-                 TopBanner::new(self).draw(ui);
+                TopBanner::new(self).draw(ui);
             });
             let top_banner_height = top_banner_response.response.rect.height();
 
             // Calculate panel widths
             let (left_width, center_width, right_width) =
                 self.calculate_panel_widths(ui.available_width());
-            
+
             // Calculate content height based on actual top banner height
             let content_height = total_available_height - top_banner_height;
 
