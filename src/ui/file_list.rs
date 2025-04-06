@@ -125,7 +125,7 @@ pub struct EntryRowParams<'a> {
     pub is_bookmarked: bool,
 }
 
-fn draw_icon(ui: &mut Ui, cursor: egui::Pos2, is_dir: bool, is_selected: bool, colors: &AppColors, is_bookmarked: bool) -> f32{
+fn draw_icon(ui: &mut Ui, cursor: egui::Pos2, is_dir: bool, is_selected: bool, colors: &AppColors, is_bookmarked: bool) -> f32 {
     // Draw the base icon (folder or file)
     let base_icon = if is_dir { "📁" } else { "📄" };
     let icon_color = if is_selected {

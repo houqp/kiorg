@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use crate::config::colors::AppColors;
 use crate::models::tab::Tab;
 use crate::ui::file_list::{self, ROW_HEIGHT};
-use crate::ui::style::HEADER_FONT_SIZE;
+use crate::ui::style::{HEADER_ROW_HEIGHT, HEADER_FONT_SIZE};
 
 pub struct LeftPanel {
     width: f32,
@@ -36,7 +36,7 @@ impl LeftPanel {
             ui.separator();
 
             // Calculate available height for scroll area
-            let available_height = self.height - ROW_HEIGHT;
+            let available_height = self.height - HEADER_ROW_HEIGHT;
 
             egui::ScrollArea::vertical()
                 .id_salt("parent_list_scroll")
