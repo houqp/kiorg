@@ -106,64 +106,9 @@ impl Kiorg {
         app
     }
 
-    pub fn refresh_entries(&mut self) {
-        let tab = self.tab_manager.current_tab();
-        tab.entries.clear();
-        tab.selected_index = 0;
-        self.ensure_selected_visible = true;
-
-        // Refresh parent directory entries
-        if let Some(parent) = tab.current_path.parent() {
-            tab.parent_entries.clear();
-            tab.parent_selected_index = 0;
-
-            if let Ok(read_dir) = fs::read_dir(parent) {
-                tab.parent_entries = read_dir
-                    .filter_map(|entry| {
-                        let entry = entry.ok()?;
-                        let path = entry.path();
-                        let is_dir = path.is_dir();
-                        let name = entry.file_name().to_string_lossy().into_owned();
-
-                        let metadata = entry.metadata().ok()?;
-                        let modified = metadata
-                            .modified()
-                            .unwrap_or(std::time::SystemTime::UNIX_EPOCH);
-                        let size = if is_dir { 0 } else { metadata.len() };
-
-                        Some(DirEntry {
-                            name,
-                            path,
-                            is_dir,
-                            modified,
-                            size,
-                        })
-                    })
-                    .collect();
-            }
-
-            tab.parent_entries
-                .sort_by(|a, b| match (a.is_dir, b.is_dir) {
-                    (true, false) => std::cmp::Ordering::Less,
-                    (false, true) => std::cmp::Ordering::Greater,
-                    _ => a.name.cmp(&b.name),
-                });
-
-            // Find current directory in parent entries
-            if let Some(pos) = tab
-                .parent_entries
-                .iter()
-                .position(|e| e.path == tab.current_path)
-            {
-                tab.parent_selected_index = pos;
-            }
-        } else {
-            tab.parent_entries.clear();
-        }
-
-        // Refresh current directory entries
-        if let Ok(read_dir) = fs::read_dir(&tab.current_path) {
-            tab.entries = read_dir
+    fn read_dir_entries(path: &PathBuf) -> Vec<DirEntry> {
+        if let Ok(read_dir) = fs::read_dir(path) {
+            read_dir
                 .filter_map(|entry| {
                     let entry = entry.ok()?;
                     let path = entry.path();
@@ -184,14 +129,49 @@ impl Kiorg {
                         size,
                     })
                 })
-                .collect();
+                .collect()
+        } else {
+            Vec::new()
         }
+    }
 
-        tab.entries.sort_by(|a, b| match (a.is_dir, b.is_dir) {
+    fn sort_entries(entries: &mut Vec<DirEntry>) {
+        entries.sort_by(|a, b| match (a.is_dir, b.is_dir) {
             (true, false) => std::cmp::Ordering::Less,
             (false, true) => std::cmp::Ordering::Greater,
             _ => a.name.cmp(&b.name),
         });
+    }
+
+    pub fn refresh_entries(&mut self) {
+        let tab = self.tab_manager.current_tab();
+        tab.entries.clear();
+        tab.selected_index = 0;
+        self.ensure_selected_visible = true;
+
+        // Refresh parent directory entries
+        if let Some(parent) = tab.current_path.parent() {
+            tab.parent_entries.clear();
+            tab.parent_selected_index = 0;
+
+            tab.parent_entries = Self::read_dir_entries(&parent.to_path_buf());
+            Self::sort_entries(&mut tab.parent_entries);
+
+            // Find current directory in parent entries
+            if let Some(pos) = tab
+                .parent_entries
+                .iter()
+                .position(|e| e.path == tab.current_path)
+            {
+                tab.parent_selected_index = pos;
+            }
+        } else {
+            tab.parent_entries.clear();
+        }
+
+        // Refresh current directory entries
+        tab.entries = Self::read_dir_entries(&tab.current_path);
+        Self::sort_entries(&mut tab.entries);
 
         // If we have a prev_path and it's a child of the current path, select it
         if let Some(prev_path) = &self.prev_path {
