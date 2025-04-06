@@ -46,6 +46,7 @@ pub struct Kiorg {
     pub bookmarks: Vec<PathBuf>,
     pub show_bookmarks: bool,
     pub config_dir_override: Option<PathBuf>, // Optional override for config directory path
+    pub prev_path: Option<PathBuf>, // Previous path for selection preservation
 }
 
 impl Kiorg {
@@ -95,6 +96,7 @@ impl Kiorg {
             bookmarks: Vec::new(),
             show_bookmarks: false,
             config_dir_override,
+            prev_path: None,
         };
 
         // Load bookmarks after initializing the app with the config directory
@@ -190,6 +192,17 @@ impl Kiorg {
             (false, true) => std::cmp::Ordering::Greater,
             _ => a.name.cmp(&b.name),
         });
+
+        // If we have a prev_path and it's a child of the current path, select it
+        if let Some(prev_path) = &self.prev_path {
+            if prev_path.parent().map_or(false, |p| p == tab.current_path) {
+                if let Some(pos) = tab.entries.iter().position(|e| e.path == *prev_path) {
+                    tab.selected_index = pos;
+                }
+            }
+            // Clear prev_path after using it
+            self.prev_path = None;
+        }
     }
 
     pub fn move_selection(&mut self, delta: isize) {
@@ -205,11 +218,12 @@ impl Kiorg {
         }
     }
 
-    pub fn navigate_to(&mut self, path: PathBuf) {
+    pub fn navigate_to(&mut self, mut path: PathBuf) {
         if path.is_dir() {
             let tab = self.tab_manager.current_tab();
-            tab.current_path = path;
-            tab.selected_index = 0;
+            // Swap current_path with path and store the swapped path as prev_path
+            std::mem::swap(&mut tab.current_path, &mut path);
+            self.prev_path = Some(path);
             self.refresh_entries();
         } else if path.is_file() {
             if let Err(e) = open::that(&path) {
