@@ -14,6 +14,7 @@
 *   Tab creation and switching (t, 1, 2, 3, etc.)
 *   Help window (?)
 *   Configurable color schemes
+*   Column sort order persistence between sessions
 
 ### What's left to build
 *   PDF preview
@@ -28,4 +29,4 @@ The application is in a functional state with core file management features impl
 
 ### Evolution of project decisions
 *   The project initially started as a simple file manager but has evolved to include more advanced features such as bookmark management and tab creation.
-*   The choice of egui was driven by the need for rapid UI development, but it may be necessary to explore other UI frameworks in the future to address limitations or bugs.
+*   Configuration management has been expanded to store more user preferences beyond just color schemes.

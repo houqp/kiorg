@@ -12,6 +12,7 @@
 ### Technical constraints
 *   egui is a relatively new UI framework, so there may be limitations or bugs.
 *   Cross-platform compatibility may require platform-specific code.
+*   Configuration files need to maintain backward compatibility as new preferences are added.
 
 ### Dependencies
 *   eframe = "0.31.1"
@@ -33,3 +34,4 @@
 *   `cargo run` to run the application.
 *   `cargo test` to run the tests.
 *   `cargo clippy` to check for code style issues.
+*   Always run `cargo clippy` after making changes to ensure code quality and adherence to Rust best practices.
