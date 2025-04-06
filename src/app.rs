@@ -21,7 +21,6 @@ static LAST_LOWERCASE_G_PRESS: AtomicU64 = AtomicU64::new(0);
 // Layout constants
 const PANEL_SPACING: f32 = 10.0; // Space between panels
 const SEPARATOR_PADDING: f32 = 5.0; // Padding on each side of separator
-const NAV_HEIGHT_RESERVED: f32 = 50.0; // Space reserved for navigation bar
 
 // Panel size ratios (relative to usable width)
 const LEFT_PANEL_RATIO: f32 = 0.15;
@@ -135,7 +134,7 @@ impl Kiorg {
         }
     }
 
-    fn sort_entries(entries: &mut Vec<DirEntry>) {
+    fn sort_entries(entries: &mut [DirEntry]) {
         entries.sort_by(|a, b| match (a.is_dir, b.is_dir) {
             (true, false) => std::cmp::Ordering::Less,
             (false, true) => std::cmp::Ordering::Greater,
@@ -175,7 +174,7 @@ impl Kiorg {
 
         // If we have a prev_path and it's a child of the current path, select it
         if let Some(prev_path) = &self.prev_path {
-            if prev_path.parent().map_or(false, |p| p == tab.current_path) {
+            if prev_path.parent().is_some_and(|p| p == tab.current_path) {
                 if let Some(pos) = tab.entries.iter().position(|e| e.path == *prev_path) {
                     tab.selected_index = pos;
                 }
@@ -511,7 +510,7 @@ impl Kiorg {
     }
 
     fn draw_center_panel(&mut self, ui: &mut Ui, width: f32, height: f32) {
-        let tab = self.tab_manager.current_tab_ref();
+        let tab = self.tab_manager.current_tab();
         let center_panel = CenterPanel::new(width, height);
 
         let result = center_panel.draw(
@@ -640,15 +639,20 @@ impl eframe::App for Kiorg {
         };
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            let total_height = ui.available_height();
+            let total_available_height = ui.available_height();
 
-            // Path navigation at the top
-            TopBanner::new(self).draw(ui);
+            // Draw top banner and measure its height
+            let top_banner_response = ui.scope(|ui| {
+                 TopBanner::new(self).draw(ui);
+            });
+            let top_banner_height = top_banner_response.response.rect.height();
 
             // Calculate panel widths
             let (left_width, center_width, right_width) =
                 self.calculate_panel_widths(ui.available_width());
-            let content_height = total_height - NAV_HEIGHT_RESERVED;
+            
+            // Calculate content height based on actual top banner height
+            let content_height = total_available_height - top_banner_height;
 
             // Main panels layout
             ui.horizontal(|ui| {
@@ -663,7 +667,6 @@ impl eframe::App for Kiorg {
                 ) {
                     self.navigate_to(path);
                 }
-                // Vertical separator after left panel
                 self.draw_vertical_separator(ui);
                 self.draw_center_panel(ui, center_width, content_height);
                 self.draw_vertical_separator(ui);

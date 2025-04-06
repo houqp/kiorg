@@ -3,10 +3,8 @@ use std::path::PathBuf;
 
 use crate::config::colors::AppColors;
 use crate::models::tab::Tab;
-use crate::ui::file_list;
-use crate::ui::style::VERTICAL_PADDING;
-
-const ROW_HEIGHT: f32 = 24.0;
+use crate::ui::file_list::{self, ROW_HEIGHT};
+use crate::ui::style::HEADER_FONT_SIZE;
 
 pub struct LeftPanel {
     width: f32,
@@ -34,12 +32,11 @@ impl LeftPanel {
             ui.set_min_width(self.width);
             ui.set_max_width(self.width);
             ui.set_min_height(self.height);
-            ui.add_space(VERTICAL_PADDING);
-            ui.label(RichText::new("Parent Directory").color(colors.gray));
+            ui.label(RichText::new("Parent Directory").color(colors.gray).font(egui::FontId::proportional(HEADER_FONT_SIZE)));
             ui.separator();
 
             // Calculate available height for scroll area
-            let available_height = self.height - ROW_HEIGHT - VERTICAL_PADDING * 2.0;
+            let available_height = self.height - ROW_HEIGHT;
 
             egui::ScrollArea::vertical()
                 .id_salt("parent_list_scroll")

@@ -4,8 +4,7 @@ use std::io::Cursor;
 
 use crate::config::colors::AppColors;
 use crate::models::tab::Tab;
-use crate::ui::file_list::ROW_HEIGHT;
-use crate::ui::style::VERTICAL_PADDING;
+use crate::ui::style::{HEADER_ROW_HEIGHT, HEADER_FONT_SIZE};
 
 const PANEL_SPACING: f32 = 10.0;
 
@@ -31,12 +30,11 @@ impl RightPanel {
             ui.set_min_width(self.width);
             ui.set_max_width(self.width);
             ui.set_min_height(self.height);
-            ui.add_space(VERTICAL_PADDING);
-            ui.label(RichText::new("Preview").color(colors.gray));
+            ui.label(RichText::new("Preview").color(colors.gray).font(egui::FontId::proportional(HEADER_FONT_SIZE)));
             ui.separator();
 
             // Calculate available height for scroll area
-            let available_height = self.height - ROW_HEIGHT - VERTICAL_PADDING * 4.0;
+            let available_height = self.height - HEADER_ROW_HEIGHT;
 
             egui::ScrollArea::vertical()
                 .id_salt("preview_scroll")
@@ -81,7 +79,6 @@ impl RightPanel {
             ui.with_layout(egui::Layout::right_to_left(egui::Align::BOTTOM), |ui| {
                 ui.label(RichText::new("? for help").color(colors.gray));
             });
-            ui.add_space(VERTICAL_PADDING);
         });
     }
 }

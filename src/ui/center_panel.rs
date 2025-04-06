@@ -3,10 +3,7 @@ use std::path::PathBuf;
 
 use crate::config::colors::AppColors;
 use crate::models::tab::Tab;
-use crate::ui::file_list;
-use crate::ui::style::VERTICAL_PADDING;
-
-const ROW_HEIGHT: f32 = 24.0;
+use crate::ui::file_list::{self, TableHeaderParams, ROW_HEIGHT};
 
 pub struct CenterPanel {
     width: f32,
@@ -20,7 +17,7 @@ pub struct CenterPanelResult {
 
 // Group parameters for the draw function to avoid too many arguments warning
 pub struct CenterPanelDrawParams<'a> {
-    pub tab: &'a Tab,
+    pub tab: &'a mut Tab,
     pub bookmarks: &'a [PathBuf],
     pub colors: &'a AppColors,
     pub rename_mode: bool,
@@ -79,9 +76,14 @@ impl CenterPanel {
     }
 
     pub fn draw(&self, ui: &mut Ui, params: CenterPanelDrawParams) -> CenterPanelResult {
+        // Sort entries before cloning them
+        params.tab.sort_entries();
+
         let entries = params.tab.entries.clone();
         let selected_index = params.tab.selected_index;
         let selected_entries = params.tab.selected_entries.clone();
+        let sort_column = params.tab.sort_column.clone();
+        let sort_order = params.tab.sort_order.clone();
 
         let mut result = CenterPanelResult {
             path_to_navigate: None,
@@ -92,11 +94,21 @@ impl CenterPanel {
             ui.set_min_width(self.width);
             ui.set_max_width(self.width);
             ui.set_min_height(self.height);
-            ui.add_space(VERTICAL_PADDING);
-            file_list::draw_table_header(ui, params.colors);
+
+            // Draw table header with sorting
+            let mut header_params = TableHeaderParams {
+                colors: params.colors,
+                sort_column: &sort_column,
+                sort_order: &sort_order,
+                on_sort: &mut |column| {
+                    params.tab.toggle_sort(column);
+                    params.tab.sort_entries();
+                },
+            };
+            file_list::draw_table_header(ui, &mut header_params);
 
             // Calculate available height for scroll area
-            let available_height = self.height - ROW_HEIGHT - VERTICAL_PADDING * 2.0;
+            let available_height = self.height - ROW_HEIGHT;
 
             egui::ScrollArea::vertical()
                 .id_salt("current_list_scroll")
