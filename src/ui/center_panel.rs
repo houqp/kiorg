@@ -38,7 +38,7 @@ impl CenterPanel {
     /// Returns true if any operation was performed
     pub fn handle_clipboard_operations(
         clipboard: &mut Option<(Vec<PathBuf>, bool)>,
-        current_path: &PathBuf,
+        current_path: &std::path::Path,
     ) -> bool {
         if let Some((paths, is_cut)) = clipboard.take() {
             for path in paths {

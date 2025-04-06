@@ -336,11 +336,9 @@ impl Kiorg {
         }
 
         if ctx.input(|i| i.key_pressed(egui::Key::P)) {
-            if let Some((paths, is_cut)) = self.clipboard.take() {
                 let tab = self.tab_manager.current_tab();
-                if CenterPanel::handle_clipboard_operations(&mut self.clipboard, &tab.current_path) {
-                    self.refresh_entries();
-                }
+            if CenterPanel::handle_clipboard_operations(&mut self.clipboard, &tab.current_path) {
+                self.refresh_entries();
             }
             return;
         }
@@ -663,7 +661,6 @@ impl eframe::App for Kiorg {
                 ui.spacing_mut().item_spacing.x = PANEL_SPACING;
                 ui.set_min_height(content_height);
 
-                // Left panel
                 if let Some(path) = LeftPanel::new(left_width, content_height).draw(
                     ui,
                     self.tab_manager.current_tab_ref(),
@@ -672,17 +669,10 @@ impl eframe::App for Kiorg {
                 ) {
                     self.navigate_to(path);
                 }
-
                 // Vertical separator after left panel
                 self.draw_vertical_separator(ui);
-
-                // Center panel
                 self.draw_center_panel(ui, center_width, content_height);
-
-                // Vertical separator after center panel
                 self.draw_vertical_separator(ui);
-
-                // Right panel
                 RightPanel::new(right_width, content_height).draw(
                     ui,
                     self.tab_manager.current_tab_ref(),
@@ -690,8 +680,6 @@ impl eframe::App for Kiorg {
                     &self.preview_content,
                     &self.current_image,
                 );
-
-                // Right margin
                 ui.add_space(PANEL_SPACING);
             });
 
