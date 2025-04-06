@@ -34,6 +34,50 @@ impl CenterPanel {
         Self { width, height }
     }
 
+    /// Handles clipboard paste operations (copy/cut)
+    /// Returns true if any operation was performed
+    pub fn handle_clipboard_operations(
+        clipboard: &mut Option<(Vec<PathBuf>, bool)>,
+        current_path: &PathBuf,
+    ) -> bool {
+        if let Some((paths, is_cut)) = clipboard.take() {
+            for path in paths {
+                let name = path
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or_default();
+                let mut new_path = current_path.join(name);
+
+                // Handle duplicate names
+                let mut counter = 1;
+                while new_path.exists() {
+                    let stem = path
+                        .file_stem()
+                        .and_then(|s| s.to_str())
+                        .unwrap_or_default();
+                    let ext = path
+                        .extension()
+                        .and_then(|e| e.to_str())
+                        .map(|e| format!(".{}", e))
+                        .unwrap_or_default();
+                    new_path = current_path.join(format!("{}_{}{}", stem, counter, ext));
+                    counter += 1;
+                }
+
+                if is_cut {
+                    if let Err(e) = std::fs::rename(&path, &new_path) {
+                        eprintln!("Failed to move: {e}");
+                    }
+                } else if let Err(e) = std::fs::copy(&path, &new_path) {
+                    eprintln!("Failed to copy: {e}");
+                }
+            }
+            true
+        } else {
+            false
+        }
+    }
+
     pub fn draw(&self, ui: &mut Ui, params: CenterPanelDrawParams) -> CenterPanelResult {
         let entries = params.tab.entries.clone();
         let selected_index = params.tab.selected_index;

@@ -274,7 +274,8 @@ impl Kiorg {
 
         if self.show_help
             && (ctx.input(|i| i.key_pressed(egui::Key::Enter))
-                || ctx.input(|i| i.key_pressed(egui::Key::Questionmark)))
+                || ctx.input(|i| i.key_pressed(egui::Key::Questionmark))
+                || ctx.input(|i| i.key_pressed(egui::Key::Q)))
         {
             self.show_help = false;
             return;
@@ -337,42 +338,9 @@ impl Kiorg {
         if ctx.input(|i| i.key_pressed(egui::Key::P)) {
             if let Some((paths, is_cut)) = self.clipboard.take() {
                 let tab = self.tab_manager.current_tab();
-                for path in paths {
-                    let name = path
-                        .file_name()
-                        .and_then(|n| n.to_str())
-                        .unwrap_or_default();
-                    let mut new_path = tab.current_path.join(name);
-
-                    // Handle duplicate names
-                    let mut counter = 1;
-                    while new_path.exists() {
-                        let stem = path
-                            .file_stem()
-                            .and_then(|s| s.to_str())
-                            .unwrap_or_default();
-                        let ext = path
-                            .extension()
-                            .and_then(|e| e.to_str())
-                            .map(|e| format!(".{}", e))
-                            .unwrap_or_default();
-                        new_path = tab
-                            .current_path
-                            .join(format!("{}_{}{}", stem, counter, ext));
-                        counter += 1;
-                    }
-
-                    if is_cut {
-                        if let Err(e) = std::fs::rename(&path, &new_path) {
-                            eprintln!("Failed to move: {e}");
-                        } else if let Err(e) = std::fs::copy(&path, &new_path) {
-                            eprintln!("Failed to copy: {e}");
-                        }
-                    } else if let Err(e) = std::fs::copy(&path, &new_path) {
-                        eprintln!("Failed to copy: {e}");
-                    }
+                if CenterPanel::handle_clipboard_operations(&mut self.clipboard, &tab.current_path) {
+                    self.refresh_entries();
                 }
-                self.refresh_entries();
             }
             return;
         }
