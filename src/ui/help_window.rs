@@ -18,10 +18,10 @@ pub fn show_help_window(ctx: &egui::Context, show_help: &mut bool, colors: &AppC
             let table = egui::Grid::new("help_grid");
             table.show(ui, |ui| {
                 let shortcuts = [
-                    ("j / ↓", "Move down"),
-                    ("k / ↑", "Move up"),
-                    ("h / ←", "Go to parent directory"),
-                    ("l / → / Enter", "Open directory or file"),
+                    ("j / ⬇", "Move down"),
+                    ("k / ⬆", "Move up"),
+                    ("h / ⬅", "Go to parent directory"),
+                    ("l / ➡ / Enter", "Open directory or file"),
                     ("gg", "Go to first entry"),
                     ("G", "Go to last entry"),
                     ("D", "Delete selected file/directory"),
