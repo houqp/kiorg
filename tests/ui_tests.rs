@@ -563,3 +563,66 @@ fn test_parent_directory_selection() {
         "dir2 should be selected after navigating to parent directory"
     );
 }
+
+#[test]
+fn test_prev_path_selection_with_sort() {
+    // Create a temporary directory for testing
+    let temp_dir = tempdir().unwrap();
+
+    // Create test directories (order matters for initial selection)
+    let test_dirs = create_test_files(&[
+        temp_dir.path().join("aaa"), // index 0
+        temp_dir.path().join("bbb"), // index 1
+        temp_dir.path().join("ccc"), // index 2
+    ]);
+
+    // Start the harness in the parent directory
+    let mut harness = create_harness(&temp_dir);
+
+    // Initial state: aaa, bbb, ccc (default sort)
+    // Select ccc (index 2)
+    harness.press_key(Key::J);
+    harness.step();
+    harness.press_key(Key::J);
+    harness.step();
+    assert_eq!(harness.state().tab_manager.current_tab_ref().selected_index, 2);
+
+    // Navigate into bbb
+    harness.press_key(Key::L);
+    harness.step();
+    assert!(harness.state().tab_manager.current_tab_ref().current_path.ends_with("ccc"));
+
+    // Manually set sort order to Descending Name *while inside bbb*
+    // (Simulating header click is complex, direct state change is acceptable here)
+    {
+        let tab = harness.state_mut().tab_manager.current_tab();
+        tab.toggle_sort(kiorg::models::tab::SortColumn::Name); // Sets Name/Descending
+        assert_eq!(tab.sort_column, kiorg::models::tab::SortColumn::Name);
+        assert_eq!(tab.sort_order, kiorg::models::tab::SortOrder::Descending);
+    }
+    harness.step(); // Allow state update propagation if needed
+
+    // Navigate back up to the parent directory
+    harness.press_key(Key::H);
+    harness.step();
+
+    // Now in the parent directory, refresh_entries should have run:
+    // 1. Entries read: [aaa, bbb, ccc]
+    // 2. Sort applied (Name/Descending): [ccc, bbb, aaa]
+    // 3. prev_path (bbb) searched in sorted list
+    // 4. selected_index should be 1 (pointing to bbb)
+
+    // Verify the state in the parent directory
+    let tab = harness.state().tab_manager.current_tab_ref();
+    assert_eq!(tab.current_path, temp_dir.path(), "Current path should be the parent");
+    assert_eq!(tab.entries.len(), 3, "Should have 3 entries");
+
+    // Check sorted order
+    assert_eq!(tab.entries[0].name, "ccc", "First entry should be ccc");
+    assert_eq!(tab.entries[1].name, "bbb", "Second entry should be bbb");
+    assert_eq!(tab.entries[2].name, "aaa", "Third entry should be aaa");
+
+    // Check selected index based on prev_path (bbb)
+    assert_eq!(tab.selected_index, 0, "Selected index should point to ccc");
+    assert_eq!(tab.entries[tab.selected_index].path, test_dirs[2], "Selected entry should be ccc");
+}

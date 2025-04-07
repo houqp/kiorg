@@ -28,6 +28,37 @@ pub struct Tab {
     pub sort_order: SortOrder,
 }
 
+// Private helper function for sorting DirEntry slices
+fn sort_entries_by(entries: &mut [DirEntry], sort_column: &SortColumn, sort_order: &SortOrder) {
+    entries.sort_by(|a, b| {
+        // Always keep folders first regardless of sort column
+        if a.is_dir != b.is_dir {
+            return if a.is_dir {
+                std::cmp::Ordering::Less
+            } else {
+                std::cmp::Ordering::Greater
+            };
+        }
+
+        // If no sort column is selected, sort by name ascending
+        if *sort_column == SortColumn::None {
+            return a.name.cmp(&b.name);
+        }
+
+        let primary_order = match *sort_column {
+            SortColumn::Name => a.name.cmp(&b.name),
+            SortColumn::Modified => a.modified.cmp(&b.modified),
+            SortColumn::Size => a.size.cmp(&b.size),
+            SortColumn::None => unreachable!(), // Already handled above
+        };
+
+        match *sort_order {
+            SortOrder::Ascending => primary_order,
+            SortOrder::Descending => primary_order.reverse(),
+        }
+    });
+}
+
 impl Tab {
     pub fn new(path: PathBuf, sort_preference: Option<&crate::config::SortPreference>) -> Self {
         let (sort_column, sort_order) = if let Some(pref) = sort_preference {
@@ -65,33 +96,11 @@ impl Tab {
     }
 
     pub fn sort_entries(&mut self) {
-        self.entries.sort_by(|a, b| {
-            // Always keep folders first regardless of sort column
-            if a.is_dir != b.is_dir {
-                return if a.is_dir {
-                    std::cmp::Ordering::Less
-                } else {
-                    std::cmp::Ordering::Greater
-                };
-            }
+        sort_entries_by(&mut self.entries, &self.sort_column, &self.sort_order);
+    }
 
-            // If no sort column is selected, sort by name ascending
-            if self.sort_column == SortColumn::None {
-                return a.name.cmp(&b.name);
-            }
-
-            let primary_order = match self.sort_column {
-                SortColumn::Name => a.name.cmp(&b.name),
-                SortColumn::Modified => a.modified.cmp(&b.modified),
-                SortColumn::Size => a.size.cmp(&b.size),
-                SortColumn::None => unreachable!(), // Already handled above
-            };
-
-            match self.sort_order {
-                SortOrder::Ascending => primary_order,
-                SortOrder::Descending => primary_order.reverse(),
-            }
-        });
+    pub fn sort_parent_entries(&mut self) {
+        sort_entries_by(&mut self.parent_entries, &self.sort_column, &self.sort_order);
     }
 }
 

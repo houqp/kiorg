@@ -134,14 +134,6 @@ impl Kiorg {
         }
     }
 
-    fn sort_entries(entries: &mut [DirEntry]) {
-        entries.sort_by(|a, b| match (a.is_dir, b.is_dir) {
-            (true, false) => std::cmp::Ordering::Less,
-            (false, true) => std::cmp::Ordering::Greater,
-            _ => a.name.cmp(&b.name),
-        });
-    }
-
     pub fn refresh_entries(&mut self) {
         let tab = self.tab_manager.current_tab();
         tab.entries.clear();
@@ -154,7 +146,8 @@ impl Kiorg {
             tab.parent_selected_index = 0;
 
             tab.parent_entries = Self::read_dir_entries(&parent.to_path_buf());
-            Self::sort_entries(&mut tab.parent_entries);
+            // Sort parent entries using the tab's sort settings
+            tab.sort_parent_entries();
 
             // Find current directory in parent entries
             if let Some(pos) = tab
@@ -170,11 +163,13 @@ impl Kiorg {
 
         // Refresh current directory entries
         tab.entries = Self::read_dir_entries(&tab.current_path);
-        Self::sort_entries(&mut tab.entries);
+        // Apply the tab's specific sort order (column and direction)
+        tab.sort_entries();
 
         // If we have a prev_path and it's a child of the current path, select it
         if let Some(prev_path) = &self.prev_path {
             if prev_path.parent().is_some_and(|p| p == tab.current_path) {
+                // Find the position *after* applying the correct sort
                 if let Some(pos) = tab.entries.iter().position(|e| e.path == *prev_path) {
                     tab.selected_index = pos;
                 }
