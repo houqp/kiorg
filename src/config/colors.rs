@@ -48,6 +48,7 @@ pub struct AppColors {
     pub gray: Color32,
     pub yellow: Color32,
     pub blue: Color32,
+    pub orange: Color32,
 }
 
 impl AppColors {
@@ -63,6 +64,7 @@ impl AppColors {
             gray: hex_to_color32(&config.gray),
             yellow: hex_to_color32(&config.yellow),
             blue: hex_to_color32(&config.blue),
+            orange: hex_to_color32(&config.orange),
         }
     }
 }

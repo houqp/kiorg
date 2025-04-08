@@ -16,6 +16,10 @@ It is built using Rust with the egui framework.
 * `y` to copy an entry
 * `x` to cut an entry
 * `p` to paste an entry
+* `/` to enter search filter mode
+  - Type keywords to filter the list in real-time
+  - Press Enter to confirm the filter and interact with the results
+  - Press Esc to cancel or clear the filter
 * `q` to exit the application with a confirmation popup that confirms the exit through enter
   - All popups in the app can be closed by pressing `q`, including the exit confirmation popup
 * `b` to add/remove the current entry to bookmark

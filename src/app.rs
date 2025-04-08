@@ -46,6 +46,9 @@ pub struct Kiorg {
     pub prev_path: Option<PathBuf>,           // Previous path for selection preservation
     pub cached_preview_path: Option<PathBuf>,
     pub selection_changed: bool, // Flag to track if selection changed
+    pub search_mode: bool,
+    pub search_query: String,
+    pub search_focus: bool,
 }
 
 impl Kiorg {
@@ -98,6 +101,9 @@ impl Kiorg {
             prev_path: None,
             cached_preview_path: None,
             selection_changed: true, // Initialize flag to true
+            search_mode: false,
+            search_query: String::new(),
+            search_focus: false,
         };
 
         // Load bookmarks after initializing the app with the config directory
@@ -209,15 +215,36 @@ impl Kiorg {
 
     pub fn move_selection(&mut self, delta: isize) {
         let tab = self.tab_manager.current_tab();
-        if tab.entries.is_empty() {
+        let entries = tab.get_filtered_entries_with_indices(); // Get filtered entries with original indices
+
+        if entries.is_empty() {
             return;
         }
 
-        let new_index = tab.selected_index as isize + delta;
-        if new_index >= 0 && new_index < tab.entries.len() as isize {
-            tab.update_selection(new_index as usize);
-            self.ensure_selected_visible = true;
-            self.selection_changed = true;
+        // Find the current position in the *filtered* list
+        let current_filtered_index = entries
+            .iter()
+            .position(|(_, original_index)| *original_index == tab.selected_index);
+
+        if let Some(current_idx) = current_filtered_index {
+            let new_filtered_index = current_idx as isize + delta;
+
+            // Clamp the new index to the bounds of the filtered list
+            if new_filtered_index >= 0 && new_filtered_index < entries.len() as isize {
+                // Get the original index from the new position in the filtered list
+                let new_original_index = entries[new_filtered_index as usize].1;
+                tab.update_selection(new_original_index);
+                self.ensure_selected_visible = true;
+                self.selection_changed = true;
+            }
+        } else {
+            // If the current selection is not in the filtered list (e.g., after filter change),
+            // select the first item in the filtered list.
+            if let Some((_, first_original_index)) = entries.first() {
+                tab.update_selection(*first_original_index);
+                self.ensure_selected_visible = true;
+                self.selection_changed = true;
+            }
         }
     }
 
@@ -236,7 +263,46 @@ impl Kiorg {
     }
 
     pub fn handle_key_press(&mut self, ctx: &egui::Context) {
-        // Don't process keyboard input if the bookmark popup is active
+        // --- START: Prioritize Search Mode Input ---
+        if self.search_mode && self.search_focus {
+            // Process Enter key even when search bar has focus
+            if ctx.input(|i| i.key_pressed(egui::Key::Enter)) {
+                // Keep search mode active if there's a non-empty search query
+                if self.search_query.is_empty() {
+                    self.search_mode = false;
+                    let tab = &mut self.tab_manager.tabs[self.tab_manager.current_tab_index];
+                    tab.search_active = false;
+                    tab.search_query.clear();
+                } else {
+                    // Select the first matched entry
+                    let tab = self.tab_manager.current_tab();
+                    if let Some(first_filtered_index) = tab.get_first_filtered_entry_index() {
+                        tab.update_selection(first_filtered_index);
+                        self.ensure_selected_visible = true;
+                        self.selection_changed = true;
+                    }
+                }
+                // Unfocus the search bar
+                self.search_focus = false;
+                return; // Consume Enter key
+            }
+            
+            // Process Escape key
+            if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
+                self.search_mode = false;
+                self.search_query.clear();
+                let tab = &mut self.tab_manager.tabs[self.tab_manager.current_tab_index];
+                tab.search_active = false;
+                tab.search_query.clear();
+                return; // Consume Escape key
+            }
+            
+            // Block all other keyboard inputs when search bar has focus
+            return;
+        }
+        // --- END: Prioritize Search Mode Input ---
+
+        // Don't process other keyboard input if the bookmark popup is active
         if self.show_bookmarks {
             return;
         }
@@ -446,9 +512,13 @@ impl Kiorg {
                 || i.key_pressed(egui::Key::Enter)
         }) {
             let tab = self.tab_manager.current_tab_ref();
-            if tab.selected_index < tab.entries.len() {
-                let selected_path = tab.entries[tab.selected_index].path.clone();
-                self.navigate_to(selected_path);
+            // Get the entry corresponding to the current `selected_index`.
+            // This index always refers to the original `entries` list.
+            if let Some(selected_entry) = tab.entries.get(tab.selected_index) {
+                // Check if this entry is visible in the current filter
+                if tab.is_entry_visible(selected_entry) {
+                    self.navigate_to(selected_entry.path.clone());
+                }
             }
         } else if ctx.input(|i| i.key_pressed(egui::Key::G) && i.modifiers.shift) {
             let tab = self.tab_manager.current_tab();
@@ -532,6 +602,17 @@ impl Kiorg {
                     }
                 }
             }
+        }
+
+        // Handle search activation
+        if ctx.input(|i| i.key_pressed(egui::Key::Slash)) {
+            self.search_mode = true;
+            self.search_focus = true;
+            // Only clear the search query if there isn't an active filter
+            if !self.tab_manager.current_tab().search_active {
+                self.search_query.clear();
+            }
+            // Don't return here, let the search overlay appear immediately
         }
     }
 
@@ -650,6 +731,55 @@ impl eframe::App for Kiorg {
             // Reset ensure_selected_visible flag after drawing
             self.ensure_selected_visible = false;
         });
+
+        // --- Search Overlay ---
+        if self.search_mode {
+            egui::Area::new(egui::Id::new("search_overlay"))
+                .anchor(egui::Align2::CENTER_TOP, egui::vec2(0.0, 10.0)) // Center-top with offset
+                .interactable(true)
+                .movable(false)
+                .show(ctx, |ui| {
+                    ui.visuals_mut().widgets.noninteractive.bg_fill = self.colors.bg_light;
+                    egui::Frame::default().fill(self.colors.bg_light).inner_margin(5.0).show(ui, |ui| {
+                        ui.set_max_width(ctx.available_rect().width() * 0.6); // Limit width
+
+                        ui.horizontal(|ui| {
+                            // Search input
+                            let text_edit = egui::TextEdit::singleline(&mut self.search_query)
+                                .hint_text("Search...")
+                                .desired_width(f32::INFINITY) // Take available width
+                                .frame(false);
+                            let response = ui.add(text_edit);
+
+                            // Set focus when search mode is first activated
+                            if self.search_focus {
+                                response.request_focus();
+                                self.search_focus = false;
+                            }
+
+                            // Update focus state based on whether the text edit has focus
+                            self.search_focus = response.has_focus();
+
+                            // Update tab search query directly when it changes
+                            if response.changed() {
+                                let tab = self.tab_manager.current_tab();
+                                tab.search_query = self.search_query.clone();
+                                tab.search_active = !tab.search_query.is_empty();
+                            }
+
+                            // Close button
+                            if ui.button("×").clicked() {
+                                self.search_mode = false;
+                                self.search_query.clear();
+                                let tab = &mut self.tab_manager.tabs[self.tab_manager.current_tab_index];
+                                tab.search_active = false;
+                                tab.search_query.clear();
+                            }
+                        });
+                    });
+                });
+        }
+        // --- End Search Overlay ---
 
         // Show help window if needed
         if self.show_help {

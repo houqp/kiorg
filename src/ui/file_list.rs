@@ -123,6 +123,8 @@ pub struct EntryRowParams<'a> {
     pub rename_focus: bool,
     pub is_marked: bool,
     pub is_bookmarked: bool,
+    pub search_query: &'a str,
+    pub search_active: bool,
 }
 
 fn draw_icon(ui: &mut Ui, cursor: egui::Pos2, is_dir: bool, is_selected: bool, colors: &AppColors, is_bookmarked: bool) -> f32 {
@@ -170,6 +172,8 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> bool {
         rename_focus,
         is_marked,
         is_bookmarked,
+        search_query,
+        search_active,
     } = params;
 
     let (rect, response) = ui.allocate_exact_size(
@@ -231,13 +235,41 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> bool {
     } else {
         let name_text = truncate_text(&entry.name, name_width);
         let name_color = if entry.is_dir { colors.blue } else { colors.fg };
-        ui.painter().with_clip_rect(name_clip_rect).text(
-            cursor + egui::vec2(0.0, ROW_HEIGHT / 2.0),
-            Align2::LEFT_CENTER,
-            &name_text,
-            egui::FontId::proportional(14.0),
-            name_color,
-        );
+
+        let mut job = egui::text::LayoutJob::default();
+        job.text = name_text.clone();
+
+        if search_active && !search_query.is_empty() && !name_text.is_empty() {
+            let highlight_color = colors.yellow; // Use theme yellow for highlighting
+            let mut last_match_end = 0;
+            
+            for (start, matched_part) in name_text.match_indices(search_query) {
+                let end = start + matched_part.len();
+                // Add non-matching part before the match
+                if start > last_match_end {
+                    job.append(&name_text[last_match_end..start], 0.0, egui::TextFormat { color: name_color, ..Default::default() });
+                }
+                // Add matching part
+                job.append(&name_text[start..end], 0.0, egui::TextFormat { color: highlight_color, ..Default::default() });
+                last_match_end = end;
+            }
+            // Add remaining non-matching part after the last match
+            if last_match_end < name_text.len() {
+                job.append(&name_text[last_match_end..], 0.0, egui::TextFormat { color: name_color, ..Default::default() });
+            }
+            // If no matches were found, just add the whole text with normal color
+            if job.sections.is_empty() {
+                 job.append(&name_text, 0.0, egui::TextFormat { color: colors.gray, ..Default::default() }); // Show non-matches in gray
+            }
+        } else {
+            // No search active, just add the whole text with normal color
+            job.append(&name_text, 0.0, egui::TextFormat { color: name_color, ..Default::default() });
+        }
+
+        let galley = ui.fonts(|f| f.layout_job(job));
+        let galley_pos = cursor + egui::vec2(0.0, ROW_HEIGHT / 2.0 - galley.size().y / 2.0); // Center vertically
+
+        ui.painter().with_clip_rect(name_clip_rect).galley(galley_pos, galley, name_color);
     }
     cursor.x += name_width + INTER_COLUMN_PADDING; // Advance cursor including padding
 

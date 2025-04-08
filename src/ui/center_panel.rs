@@ -52,47 +52,56 @@ pub fn handle_clipboard_operations(
 
 /// Draws the center panel content.
 pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
-    let tab = app.tab_manager.current_tab();
+    let tab_index = app.tab_manager.current_tab_index;
 
-    // Sort entries before cloning them
-    tab.sort_entries();
+    // --- Search Filter Logic ---
+    if app.search_mode {
+        let tab = &mut app.tab_manager.tabs[tab_index];
+        tab.search_active = true; // Mark search as active when in search mode
+        tab.search_query = app.search_query.clone(); // Update tab's query from app state
+    } else {
+        let tab = &mut app.tab_manager.tabs[tab_index];
+        // Keep search active if query is not empty (filter persists after Enter)
+        if tab.search_query.is_empty() {
+            tab.search_active = false;
+        }
+    }
 
-    // Clone necessary data or access directly if borrowing allows
-    let entries = tab.entries.clone();
-    let selected_index = tab.selected_index;
-    let selected_entries = tab.selected_entries.clone();
-    let sort_column = tab.sort_column.clone();
-    let sort_order = tab.sort_order.clone();
+    // Get filtered entries and other data before any closures
+    let filtered_entries = app.tab_manager.tabs[tab_index].get_filtered_entries();
+    let sort_column = app.tab_manager.tabs[tab_index].sort_column.clone();
+    let sort_order = app.tab_manager.tabs[tab_index].sort_order.clone();
+    let selected_entries = app.tab_manager.tabs[tab_index].selected_entries.clone();
+    let entries_clone = app.tab_manager.tabs[tab_index].entries.clone();
+    let selected_index = app.tab_manager.tabs[tab_index].selected_index;
+    let colors = app.colors.clone();
+    let config_dir_override = app.config_dir_override.clone();
+    let bookmarks = app.bookmarks.clone();
+    let rename_mode = app.rename_mode;
+    let rename_focus = app.rename_focus;
+    let mut new_name = app.new_name.clone();
+    let ensure_selected_visible = app.ensure_selected_visible;
 
     let mut path_to_navigate = None;
     let mut entry_to_rename = None;
+    let search_query_changed = false; // Flag to track search query changes
+    let mut sort_requested = None;
 
     ui.vertical(|ui| {
         ui.set_min_width(width);
         ui.set_max_width(width);
         ui.set_min_height(height);
 
-        // Draw table header with sorting
+        // Draw table header
         let mut header_params = TableHeaderParams {
-            colors: &app.colors,
+            colors: &colors,
             sort_column: &sort_column,
             sort_order: &sort_order,
             on_sort: &mut |column| {
-                let tab = app.tab_manager.current_tab(); // Get mutable tab again
-                tab.toggle_sort(column);
-                tab.sort_entries();
-
-                // Save sort preferences to config with override support
-                let mut config = config::load_config_with_override(app.config_dir_override.as_ref());
-                config.sort_preference = Some(SortPreference {
-                    column: tab.sort_column.clone(), // Use tab's current state
-                    order: tab.sort_order.clone(),
-                });
-                if let Err(e) = config::save_config_with_override(&config, app.config_dir_override.as_ref()) {
-                    eprintln!("Failed to save sort preferences: {}", e);
-                }
+                sort_requested = Some(column);
             },
         };
+        // Draw the header
         file_list::draw_table_header(ui, &mut header_params);
 
         // Calculate available height for scroll area
@@ -108,52 +117,96 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                 ui.set_min_width(width - scrollbar_width);
                 ui.set_max_width(width - scrollbar_width);
 
-                // Draw entries
-                for (i, entry) in entries.iter().enumerate() {
-                    let is_selected = i == selected_index;
-                    let is_in_selection = selected_entries.contains(&entry.path);
+                // --- Draw Filtered Entries ---
+                if filtered_entries.is_empty() {
+                    ui.label("No matching entries found.");
+                } else {
+                    for entry in filtered_entries.iter() {
+                        // Find the original index in the full `entries` list for selection checks
+                        let original_index = entries_clone.iter()
+                            .position(|e| e.path == entry.path)
+                            .unwrap_or(usize::MAX); // Should always find it
 
-                    let response = file_list::draw_entry_row(
-                        ui,
-                        file_list::EntryRowParams {
-                            entry,
-                            is_selected,
-                            colors: &app.colors,
-                            rename_mode: app.rename_mode && is_selected,
-                            new_name: &mut app.new_name, // Pass directly from app
-                            rename_focus: app.rename_focus && is_selected,
-                            is_marked: is_in_selection,
-                            is_bookmarked: app.bookmarks.contains(&entry.path),
-                        },
-                    );
+                        let is_selected = original_index == selected_index;
+                        let is_in_selection = selected_entries.contains(&entry.path);
 
-                    // Check for clicks/activation after drawing
-                    if response {
-                        if app.rename_mode && is_selected { // Check rename_mode state from app
-                            // Store rename info, handle outside the draw loop
-                            entry_to_rename = Some((entry.path.clone(), app.new_name.clone()));
-                        } else {
-                            // Store navigation info, handle outside the draw loop
-                            path_to_navigate = Some(entry.path.clone());
+                        let response = file_list::draw_entry_row(
+                            ui,
+                            file_list::EntryRowParams {
+                                entry, // Use the filtered entry
+                                is_selected,
+                                colors: &colors,
+                                rename_mode: rename_mode && is_selected,
+                                new_name: &mut new_name,
+                                rename_focus: rename_focus && is_selected,
+                                is_marked: is_in_selection,
+                                is_bookmarked: bookmarks.contains(&entry.path),
+                                search_query: &app.tab_manager.tabs[tab_index].search_query,
+                                search_active: app.tab_manager.tabs[tab_index].search_active,
+                            },
+                        );
+
+                        // Check for clicks/activation after drawing
+                        if response {
+                            if rename_mode && is_selected {
+                                entry_to_rename = Some((entry.path.clone(), new_name.clone()));
+                            } else {
+                                path_to_navigate = Some(entry.path.clone());
+                            }
                         }
                     }
                 }
 
                 // Handle scrolling to selected item
-                if app.ensure_selected_visible && !entries.is_empty() {
-                    let selected_pos = selected_index as f32 * ROW_HEIGHT;
-                    ui.scroll_to_rect(
-                        egui::Rect::from_min_size(
-                            egui::pos2(0.0, selected_pos),
-                            egui::vec2(width, ROW_HEIGHT), // Use full width for scroll target
-                        ),
-                        Some(egui::Align::Center),
-                    );
+                if ensure_selected_visible && !filtered_entries.is_empty() {
+                    // Find the position of the selected item *within the filtered list*
+                    if let Some(filtered_selected_index) = filtered_entries.iter().position(|e| {
+                        entries_clone.get(selected_index).is_some_and(|selected_entry| selected_entry.path == e.path)
+                    }) {
+                        let selected_pos = filtered_selected_index as f32 * ROW_HEIGHT;
+                        ui.scroll_to_rect(
+                            egui::Rect::from_min_size(
+                                egui::pos2(0.0, selected_pos),
+                                egui::vec2(width, ROW_HEIGHT),
+                            ),
+                            Some(egui::Align::Center),
+                        );
+                        app.ensure_selected_visible = false; // Reset flag after scrolling
+                    }
                 }
+                // --- End Filtered Entries ---
             });
     });
 
+    // Update app state with any changes
+    app.new_name = new_name;
+
+    // Handle sort request after UI is drawn
+    if let Some(column) = sort_requested {
+        let tab = app.tab_manager.current_tab();
+        tab.toggle_sort(column);
+        tab.sort_entries();
+
+        // Save sort preferences after sorting
+        let mut config = config::load_config_with_override(config_dir_override.as_ref());
+        config.sort_preference = Some(SortPreference {
+            column: tab.sort_column.clone(),
+            order: tab.sort_order.clone(),
+        });
+        if let Err(e) = config::save_config_with_override(&config, config_dir_override.as_ref()) {
+            eprintln!("Failed to save sort preferences: {}", e);
+        }
+    }
+
     // --- Handle actions after UI drawing ---
+
+    // Update tab search query if it changed
+    if search_query_changed {
+        let tab = &mut app.tab_manager.tabs[tab_index];
+        tab.search_query = app.search_query.clone();
+        // Since the query changed, the filter is active
+        tab.search_active = !tab.search_query.is_empty(); 
+    }
 
     // Handle navigation
     if let Some(path) = path_to_navigate {

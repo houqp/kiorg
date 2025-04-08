@@ -15,19 +15,25 @@
 *   Help window (?)
 *   Configurable color schemes
 *   Column sort order persistence between sessions
+*   Search filter with visual highlighting (`/`, Enter, Esc)
+    - Real-time filtering as you type
+    - Orange highlighting of matching text
+    - Search state persists after Enter
+    - Clear filter with Esc
 
 ### What's left to build
 *   PDF preview
 *   cache directory list
-*   Shortcut to search
 *   Shortcut to create new file
 *   Shortcut to create new folder
 *   Shortcut to toggle sort
 *   Fuzzy directory jump
 *   Optimize performance for large directory
+*   Case-sensitive/insensitive search toggle
+*   Regular expression search support
 
 ### Current status
-The application is in a functional state with core file management features implemented.
+The application is in a functional state with core file management features implemented. Recent improvements to the search functionality make it more user-friendly with visual feedback through text highlighting.
 
 ### Known issues
 *   PDF preview is not yet implemented.
