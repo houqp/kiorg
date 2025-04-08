@@ -119,7 +119,11 @@ fn test_delete_shortcut() {
     assert!(test_files[3].exists(), "test2.txt should still exist");
 
     // Test recursive directory deletion
-    // First entry should be dir1
+    // First entry should be dir1, move 2 entries up
+    harness.press_key(Key::K);
+    harness.step();
+    harness.press_key(Key::K);
+    harness.step();
     // Delete dir1 (directory with nested files and subdirectory)
     harness.press_key(Key::D);
     harness.step();

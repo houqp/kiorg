@@ -26,6 +26,7 @@ pub struct Tab {
     pub selected_entries: std::collections::HashSet<PathBuf>,
     pub sort_column: SortColumn,
     pub sort_order: SortOrder,
+    pub last_refreshed_path: Option<PathBuf>,
 }
 
 // Private helper function for sorting DirEntry slices
@@ -76,6 +77,7 @@ impl Tab {
             selected_entries: std::collections::HashSet::new(),
             sort_column,
             sort_order,
+            last_refreshed_path: None,
         }
     }
 
@@ -101,6 +103,12 @@ impl Tab {
 
     pub fn sort_parent_entries(&mut self) {
         sort_entries_by(&mut self.parent_entries, &self.sort_column, &self.sort_order);
+    }
+
+    pub fn update_selection(&mut self, new_index: usize) {
+        if new_index < self.entries.len() {
+            self.selected_index = new_index;
+        }
     }
 }
 

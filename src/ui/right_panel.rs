@@ -1,10 +1,12 @@
 use egui::{RichText, TextureHandle, Ui};
 use image::io::Reader as ImageReader;
 use std::io::Cursor;
+use std::fs;
 
 use crate::config::colors::AppColors;
 use crate::models::tab::Tab;
 use crate::ui::style::{HEADER_ROW_HEIGHT, HEADER_FONT_SIZE};
+use crate::app::Kiorg;
 
 const PANEL_SPACING: f32 = 10.0;
 
@@ -15,7 +17,10 @@ pub struct RightPanel {
 
 impl RightPanel {
     pub fn new(width: f32, height: f32) -> Self {
-        Self { width, height }
+        Self { 
+            width, 
+            height, 
+        }
     }
 
     pub fn draw(
@@ -83,16 +88,31 @@ impl RightPanel {
     }
 }
 
-pub fn update_preview(
-    tab: &Tab,
-    ctx: &egui::Context,
-    preview_content: &mut String,
-    current_image: &mut Option<TextureHandle>,
-) {
-    if let Some(entry) = tab.entries.get(tab.selected_index) {
+pub fn update_preview_cache(app: &mut Kiorg, ctx: &egui::Context) {
+    let tab = app.tab_manager.current_tab_ref();
+    let selected_path = tab
+        .entries
+        .get(tab.selected_index)
+        .map(|e| e.path.clone());
+
+    // Check if the selected file is the same as the cached one in app
+    if selected_path.as_ref() == app.cached_preview_path.as_ref() {
+        return; // Cache hit, no need to update
+    }
+
+    // Cache miss, update the preview content in app
+    let maybe_entry = selected_path.as_ref().and_then(|p| {
+        tab.entries
+            .iter()
+            .find(|entry| &entry.path == p)
+            .cloned() // Clone the entry data if found
+    });
+    app.cached_preview_path = selected_path; // Update the cached path in app regardless
+
+    if let Some(entry) = maybe_entry {
         if entry.is_dir {
-            *preview_content = format!("Directory: {}", entry.path.display());
-            *current_image = None;
+            app.preview_content = format!("Directory: {}", entry.path.display());
+            app.current_image = None;
         } else {
             // Check if it's an image file
             let is_image = entry
@@ -105,43 +125,64 @@ pub fn update_preview(
                 });
 
             if is_image {
-                if let Ok(bytes) = std::fs::read(&entry.path) {
-                    if let Ok(img) = ImageReader::new(Cursor::new(bytes))
-                        .with_guessed_format()
-                        .unwrap()
-                        .decode()
-                    {
-                        let size = [img.width() as _, img.height() as _];
-                        let image = egui::ColorImage::from_rgba_unmultiplied(
-                            size,
-                            img.to_rgba8().as_raw(),
-                        );
-                        *current_image = Some(ctx.load_texture(
-                            entry.path.to_string_lossy().to_string(),
-                            image,
-                            egui::TextureOptions::default(),
-                        ));
-                        *preview_content = format!("Image: {}x{}", img.width(), img.height());
-                        return;
+                match fs::read(&entry.path) {
+                    Ok(bytes) => {
+                        match ImageReader::new(Cursor::new(bytes))
+                            .with_guessed_format()
+                        {
+                            Ok(reader) => match reader.decode() {
+                                Ok(img) => {
+                                    let size = [img.width() as _, img.height() as _];
+                                    let image_buffer = img.to_rgba8();
+                                    let egui_image = egui::ColorImage::from_rgba_unmultiplied(
+                                        size,
+                                        image_buffer.as_raw(),
+                                    );
+                                    app.current_image = Some(ctx.load_texture(
+                                        entry.path.to_string_lossy().to_string(),
+                                        egui_image,
+                                        egui::TextureOptions::default(),
+                                    ));
+                                    app.preview_content =
+                                        format!("Image: {}x{}", img.width(), img.height());
+                                }
+                                Err(e) => {
+                                    eprintln!("Failed to decode image {:?}: {}", entry.path, e);
+                                    app.preview_content = format!("Failed to decode image: {}", e);
+                                    app.current_image = None;
+                                }
+                            },
+                            Err(e) => {
+                                eprintln!("Failed guess image format {:?}: {}", entry.path, e);
+                                app.preview_content = format!("Failed guess image format: {}", e);
+                                app.current_image = None;
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to read image file {:?}: {}", entry.path, e);
+                        app.preview_content = format!("Failed to read file: {}", e);
+                        app.current_image = None;
                     }
                 }
-            }
-
-            // Clear image texture for non-image files
-            *current_image = None;
-            match std::fs::read_to_string(&entry.path) {
-                Ok(content) => {
-                    // Only show first 1000 characters for text files
-                    *preview_content = content.chars().take(1000).collect();
-                }
-                Err(_) => {
-                    // For binary files or files that can't be read
-                    *preview_content = format!("Binary file: {} bytes", entry.size);
+            } else {
+                // Clear image texture for non-image files
+                app.current_image = None;
+                match std::fs::read_to_string(&entry.path) {
+                    Ok(content) => {
+                        // Only show first 1000 characters for text files
+                        app.preview_content = content.chars().take(1000).collect();
+                    }
+                    Err(_) => {
+                        // For binary files or files that can't be read
+                        app.preview_content = format!("Binary file: {} bytes", entry.size);
+                    }
                 }
             }
         }
     } else {
-        preview_content.clear();
-        *current_image = None;
+        app.preview_content.clear();
+        app.current_image = None;
+        app.cached_preview_path = None; // Clear cache in app if no file is selected
     }
 }

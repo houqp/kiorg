@@ -18,7 +18,13 @@
 
 ### What's left to build
 *   PDF preview
-*   Image preview
+*   cache directory list
+*   Shortcut to search
+*   Shortcut to create new file
+*   Shortcut to create new folder
+*   Shortcut to toggle sort
+*   Fuzzy directory jump
+*   Optimize performance for large directory
 
 ### Current status
 The application is in a functional state with core file management features implemented.

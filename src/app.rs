@@ -11,8 +11,9 @@ use crate::ui::center_panel::{CenterPanel, CenterPanelDrawParams};
 use crate::ui::delete_dialog::DeleteDialog;
 use crate::ui::dialogs::Dialogs;
 use crate::ui::left_panel::LeftPanel;
-use crate::ui::right_panel::{update_preview, RightPanel};
-use crate::ui::separator::{self, SEPARATOR_PADDING};
+use crate::ui::right_panel::{RightPanel, update_preview_cache};
+use crate::ui::separator;
+use crate::ui::separator::SEPARATOR_PADDING;
 use crate::ui::top_banner::TopBanner;
 use crate::ui::{bookmark_popup, help_window};
 
@@ -20,7 +21,7 @@ use crate::ui::{bookmark_popup, help_window};
 static LAST_LOWERCASE_G_PRESS: AtomicU64 = AtomicU64::new(0);
 
 // Layout constants
-const PANEL_SPACING: f32 = 10.0; // Space between panels
+const PANEL_SPACING: f32 = 5.0; // Space between panels
 
 // Panel size ratios (relative to usable width)
 const LEFT_PANEL_RATIO: f32 = 0.15;
@@ -46,6 +47,8 @@ pub struct Kiorg {
     pub show_bookmarks: bool,
     pub config_dir_override: Option<PathBuf>, // Optional override for config directory path
     pub prev_path: Option<PathBuf>,           // Previous path for selection preservation
+    pub cached_preview_path: Option<PathBuf>,
+    pub selection_changed: bool, // Flag to track if selection changed
 }
 
 impl Kiorg {
@@ -96,6 +99,8 @@ impl Kiorg {
             show_bookmarks: false,
             config_dir_override,
             prev_path: None,
+            cached_preview_path: None,
+            selection_changed: true, // Initialize flag to true
         };
 
         // Load bookmarks after initializing the app with the config directory
@@ -135,47 +140,73 @@ impl Kiorg {
     }
 
     pub fn refresh_entries(&mut self) {
-        let tab = self.tab_manager.current_tab();
-        tab.entries.clear();
-        tab.selected_index = 0;
-        self.ensure_selected_visible = true;
+        let tab_index = self.tab_manager.current_tab_index;
 
-        // Refresh parent directory entries
-        if let Some(parent) = tab.current_path.parent() {
-            tab.parent_entries.clear();
-            tab.parent_selected_index = 0;
+        // Get mutable access safely
+        if let Some(tab) = self.tab_manager.tabs.get_mut(tab_index) {
+            let current_path = tab.current_path.clone(); // Get current path from the tab
 
-            tab.parent_entries = Self::read_dir_entries(&parent.to_path_buf());
-            // Sort parent entries using the tab's sort settings
-            tab.sort_parent_entries();
+            // --- Start: Optimization Check --- 
+            // Only refresh fully if the path has changed
+            if tab.last_refreshed_path.as_ref() != Some(&current_path) {
+                // Path changed or first load, perform full refresh
+                // --- Start: Parent Directory Logic --- 
+                tab.parent_entries.clear();
+                tab.parent_selected_index = 0; // Default selection
 
-            // Find current directory in parent entries
-            if let Some(pos) = tab
-                .parent_entries
-                .iter()
-                .position(|e| e.path == tab.current_path)
-            {
-                tab.parent_selected_index = pos;
-            }
-        } else {
-            tab.parent_entries.clear();
-        }
+                if let Some(parent) = current_path.parent() {
+                    tab.parent_entries = Self::read_dir_entries(&parent.to_path_buf());
+                    tab.sort_parent_entries(); // Sort parent entries
 
-        // Refresh current directory entries
-        tab.entries = Self::read_dir_entries(&tab.current_path);
-        // Apply the tab's specific sort order (column and direction)
-        tab.sort_entries();
+                    // Find current directory in parent entries after sorting
+                    if let Some(pos) = tab
+                        .parent_entries
+                        .iter()
+                        .position(|e| e.path == current_path)
+                    {
+                        tab.parent_selected_index = pos;
+                    }
+                } // else: No parent (e.g., root), parent_entries remains empty
+                // --- End: Parent Directory Logic ---
 
-        // If we have a prev_path and it's a child of the current path, select it
-        if let Some(prev_path) = &self.prev_path {
-            if prev_path.parent().is_some_and(|p| p == tab.current_path) {
-                // Find the position *after* applying the correct sort
-                if let Some(pos) = tab.entries.iter().position(|e| e.path == *prev_path) {
-                    tab.selected_index = pos;
+                // --- Start: Current Directory Logic --- 
+                tab.entries = Self::read_dir_entries(&current_path); // Read entries for the current path
+                tab.sort_entries(); // Apply the tab's sort order
+                // --- End: Current Directory Logic ---
+
+                // --- Start: Restore Selection Preservation (Post-Sort) --- 
+                let mut selection_restored = false;
+                if let Some(prev_path) = &self.prev_path {
+                    // Check if prev_path is a direct child of the current_path using is_some_and
+                    if prev_path.parent().is_some_and(|p| p == current_path) {
+                        // Find the position *after* applying the correct sort
+                        if let Some(pos) = tab.entries.iter().position(|e| e.path == *prev_path) {
+                            tab.update_selection(pos);
+                            self.ensure_selected_visible = true;
+                            self.selection_changed = true;
+                            selection_restored = true;
+                        }
+                    }
                 }
-            }
-            // Clear prev_path after using it
-            self.prev_path = None;
+
+                if !selection_restored {
+                    // Default to the first item if selection wasn't restored
+                    tab.update_selection(0);
+                    self.ensure_selected_visible = true;
+                    self.selection_changed = true;
+                }
+                // Clear prev_path after attempting to use it
+                self.prev_path = None;
+                // --- End: Restore Selection Preservation (Post-Sort) ---
+
+                // Update the last refreshed path
+                tab.last_refreshed_path = Some(current_path);
+            } 
+            // --- End: Optimization Check --- 
+
+            // Always ensure selection is visible and invalidate preview cache
+            self.ensure_selected_visible = true; 
+            self.cached_preview_path = None; // Invalidate preview cache
         }
     }
 
@@ -187,8 +218,9 @@ impl Kiorg {
 
         let new_index = tab.selected_index as isize + delta;
         if new_index >= 0 && new_index < tab.entries.len() as isize {
-            tab.selected_index = new_index as usize;
+            tab.update_selection(new_index as usize);
             self.ensure_selected_visible = true;
+            self.selection_changed = true;
         }
     }
 
@@ -424,8 +456,9 @@ impl Kiorg {
         } else if ctx.input(|i| i.key_pressed(egui::Key::G) && i.modifiers.shift) {
             let tab = self.tab_manager.current_tab();
             if !tab.entries.is_empty() {
-                tab.selected_index = tab.entries.len() - 1;
+                tab.update_selection(tab.entries.len() - 1);
                 self.ensure_selected_visible = true;
+                self.selection_changed = true;
             }
         } else if ctx.input(|i| i.key_pressed(egui::Key::G) && !i.modifiers.shift) {
             let tab = self.tab_manager.current_tab();
@@ -436,8 +469,9 @@ impl Kiorg {
 
             let last = LAST_LOWERCASE_G_PRESS.load(Relaxed);
             if last > 0 && now - last < 500 {
-                tab.selected_index = 0;
+                tab.update_selection(0);
                 self.ensure_selected_visible = true;
+                self.selection_changed = true;
                 LAST_LOWERCASE_G_PRESS.store(0, Relaxed);
             } else {
                 LAST_LOWERCASE_G_PRESS.store(now, Relaxed);
@@ -591,20 +625,16 @@ impl Kiorg {
             self.cancel_delete();
         }
     }
-
-    // The show_delete_dialog function has been refactored into the DeleteDialog module
 }
 
 impl eframe::App for Kiorg {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // Update preview using the new module
-        update_preview(
-            self.tab_manager.current_tab_ref(),
-            ctx,
-            &mut self.preview_content,
-            &mut self.current_image,
-        );
-
+        // Update preview cache only if selection changed
+        if self.selection_changed {
+            update_preview_cache(self, ctx);
+            self.selection_changed = false; // Reset flag after update
+        }
+        
         self.handle_key_press(ctx);
 
         // Handle bookmark popup with the new approach
@@ -658,12 +688,15 @@ impl eframe::App for Kiorg {
                 separator::draw_vertical_separator(ui);
                 self.draw_center_panel(ui, center_width, content_height);
                 separator::draw_vertical_separator(ui);
-                RightPanel::new(right_width, content_height).draw(
-                    ui,
-                    self.tab_manager.current_tab_ref(),
+                // Create RightPanel without state
+                let right_panel = RightPanel::new(right_width, content_height);
+                // Draw RightPanel, passing required state from Kiorg
+                right_panel.draw(
+                    ui, 
+                    self.tab_manager.current_tab_ref(), 
                     &self.colors,
-                    &self.preview_content,
-                    &self.current_image,
+                    &self.preview_content,     // Pass preview content
+                    &self.current_image,       // Pass current image
                 );
                 ui.add_space(PANEL_SPACING);
             });
