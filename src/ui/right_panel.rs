@@ -1,91 +1,81 @@
-use egui::{RichText, TextureHandle, Ui};
+use egui::{RichText, Ui};
 use image::io::Reader as ImageReader;
 use std::io::Cursor;
 use std::fs;
 
-use crate::config::colors::AppColors;
-use crate::models::tab::Tab;
 use crate::ui::style::{HEADER_ROW_HEIGHT, HEADER_FONT_SIZE};
 use crate::app::Kiorg;
 
 const PANEL_SPACING: f32 = 10.0;
 
-pub struct RightPanel {
-    width: f32,
-    height: f32,
-}
+/// Draws the right panel (preview).
+pub fn draw(app: &Kiorg, ui: &mut Ui, width: f32, height: f32) {
+    let tab = app.tab_manager.current_tab_ref();
+    let colors = &app.colors;
+    let preview_content = &app.preview_content;
+    let current_image = &app.current_image;
 
-impl RightPanel {
-    pub fn new(width: f32, height: f32) -> Self {
-        Self { 
-            width, 
-            height, 
-        }
-    }
+    ui.vertical(|ui| {
+        ui.set_min_width(width);
+        ui.set_max_width(width);
+        ui.set_min_height(height);
+        ui.label(
+            RichText::new("Preview")
+                .color(colors.gray)
+                .font(egui::FontId::proportional(HEADER_FONT_SIZE)),
+        );
+        ui.separator();
 
-    pub fn draw(
-        &self,
-        ui: &mut Ui,
-        tab: &Tab,
-        colors: &AppColors,
-        preview_content: &str,
-        current_image: &Option<TextureHandle>,
-    ) {
-        ui.vertical(|ui| {
-            ui.set_min_width(self.width);
-            ui.set_max_width(self.width);
-            ui.set_min_height(self.height);
-            ui.label(RichText::new("Preview").color(colors.gray).font(egui::FontId::proportional(HEADER_FONT_SIZE)));
-            ui.separator();
+        // Calculate available height for scroll area
+        let available_height = height - HEADER_ROW_HEIGHT;
 
-            // Calculate available height for scroll area
-            let available_height = self.height - HEADER_ROW_HEIGHT;
+        egui::ScrollArea::vertical()
+            .id_salt("preview_scroll")
+            .auto_shrink([false; 2])
+            .max_height(available_height)
+            .show(ui, |ui| {
+                // Set the width of the content area
+                let scrollbar_width = 6.0;
+                ui.set_min_width(width - scrollbar_width);
+                ui.set_max_width(width - scrollbar_width);
 
-            egui::ScrollArea::vertical()
-                .id_salt("preview_scroll")
-                .auto_shrink([false; 2])
-                .max_height(available_height)
-                .show(ui, |ui| {
-                    // Set the width of the content area
-                    let scrollbar_width = 6.0;
-                    ui.set_min_width(self.width - scrollbar_width);
-                    ui.set_max_width(self.width - scrollbar_width);
-
-                    // Draw preview content
-                    if let Some(entry) = tab.entries.get(tab.selected_index) {
-                        if entry.is_dir {
-                            ui.label(RichText::new(format!("Directory: {}", entry.path.display())).color(colors.fg));
-                        } else {
-                            // Show image preview if available
-                            if let Some(texture) = current_image {
-                                ui.centered_and_justified(|ui| {
-                                    let available_width = self.width - PANEL_SPACING * 2.0;
-                                    let available_height = available_height - PANEL_SPACING * 2.0;
-                                    let image_size = texture.size_vec2();
-                                    let scale = (available_width / image_size.x)
-                                        .min(available_height / image_size.y);
-                                    let scaled_size = image_size * scale;
-
-                                    ui.add(egui::Image::new((texture.id(), scaled_size)));
-                                });
-                            }
-                            
-                            // Show text preview
-                            if !preview_content.is_empty() {
-                                ui.label(RichText::new(preview_content).color(colors.fg));
-                            }
-                        }
+                // Draw preview content
+                if let Some(entry) = tab.entries.get(tab.selected_index) {
+                    if entry.is_dir {
+                        ui.label(
+                            RichText::new(format!("Directory: {}", entry.path.display()))
+                                .color(colors.fg),
+                        );
                     } else {
-                        ui.label(RichText::new("No file selected").color(colors.fg));
-                    }
-                });
+                        // Show image preview if available
+                        if let Some(texture) = current_image {
+                            ui.centered_and_justified(|ui| {
+                                let available_width = width - PANEL_SPACING * 2.0;
+                                let available_height = available_height - PANEL_SPACING * 2.0;
+                                let image_size = texture.size_vec2();
+                                let scale = (available_width / image_size.x)
+                                    .min(available_height / image_size.y);
+                                let scaled_size = image_size * scale;
 
-            // Draw help text in its own row at the bottom
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::BOTTOM), |ui| {
-                ui.label(RichText::new("? for help").color(colors.gray));
+                                ui.add(egui::Image::new((texture.id(), scaled_size)));
+                            });
+                        }
+
+                        // Show text preview
+                        if !preview_content.is_empty() {
+                            ui.label(RichText::new(preview_content).color(colors.fg));
+                        }
+                    }
+                } else {
+                    ui.label(RichText::new("No file selected").color(colors.fg));
+                }
             });
+
+        // Draw help text in its own row at the bottom
+        ui.with_layout(egui::Layout::right_to_left(egui::Align::BOTTOM), |ui| {
+            ui.label(RichText::new("? for help").color(colors.gray));
         });
-    }
+    });
 }
 
 pub fn update_preview_cache(app: &mut Kiorg, ctx: &egui::Context) {

@@ -1,4 +1,4 @@
-use egui::{TextureHandle, Ui};
+use egui::TextureHandle;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::atomic::AtomicU64;
@@ -7,15 +7,12 @@ use std::sync::atomic::Ordering::Relaxed;
 use crate::config::{self, colors::AppColors};
 use crate::models::dir_entry::DirEntry;
 use crate::models::tab::TabManager;
-use crate::ui::center_panel::{CenterPanel, CenterPanelDrawParams};
 use crate::ui::delete_dialog::DeleteDialog;
 use crate::ui::dialogs::Dialogs;
-use crate::ui::left_panel::LeftPanel;
-use crate::ui::right_panel::{RightPanel, update_preview_cache};
 use crate::ui::separator;
 use crate::ui::separator::SEPARATOR_PADDING;
 use crate::ui::top_banner::TopBanner;
-use crate::ui::{bookmark_popup, help_window};
+use crate::ui::{bookmark_popup, center_panel, help_window, left_panel, right_panel};
 
 // Static variable for tracking key press times
 static LAST_LOWERCASE_G_PRESS: AtomicU64 = AtomicU64::new(0);
@@ -357,7 +354,7 @@ impl Kiorg {
 
         if ctx.input(|i| i.key_pressed(egui::Key::P)) {
             let tab = self.tab_manager.current_tab();
-            if CenterPanel::handle_clipboard_operations(&mut self.clipboard, &tab.current_path) {
+            if center_panel::handle_clipboard_operations(&mut self.clipboard, &tab.current_path) {
                 self.refresh_entries();
             }
             return;
@@ -538,45 +535,6 @@ impl Kiorg {
         }
     }
 
-    fn draw_center_panel(&mut self, ui: &mut Ui, width: f32, height: f32) {
-        let tab = self.tab_manager.current_tab();
-        let center_panel = CenterPanel::new(width, height);
-
-        let result = center_panel.draw(
-            ui,
-            CenterPanelDrawParams {
-                tab,
-                bookmarks: &self.bookmarks,
-                colors: &self.colors,
-                rename_mode: self.rename_mode,
-                new_name: &mut self.new_name,
-                rename_focus: self.rename_focus,
-                ensure_selected_visible: self.ensure_selected_visible,
-                config_dir_override: self.config_dir_override.as_ref(),
-            },
-        );
-
-        // Handle navigation
-        if let Some(path) = result.path_to_navigate {
-            self.navigate_to(path);
-        }
-
-        // Handle rename
-        if let Some((old_path, new_name)) = result.entry_to_rename {
-            if let Some(parent) = old_path.parent() {
-                let new_path = parent.join(new_name);
-                if let Err(e) = std::fs::rename(&old_path, &new_path) {
-                    eprintln!("Failed to rename: {e}");
-                } else {
-                    self.refresh_entries();
-                }
-            }
-            self.rename_mode = false;
-            self.new_name.clear();
-            self.rename_focus = false;
-        }
-    }
-
     fn calculate_panel_widths(&self, available_width: f32) -> (f32, f32, f32) {
         let total_spacing = (PANEL_SPACING * 2.0) +                    // Space between panels
                           (SEPARATOR_PADDING * 4.0) +                  // Padding around two separators
@@ -631,7 +589,7 @@ impl eframe::App for Kiorg {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // Update preview cache only if selection changed
         if self.selection_changed {
-            update_preview_cache(self, ctx);
+            right_panel::update_preview_cache(self, ctx);
             self.selection_changed = false; // Reset flag after update
         }
         
@@ -677,27 +635,15 @@ impl eframe::App for Kiorg {
                 ui.spacing_mut().item_spacing.x = PANEL_SPACING;
                 ui.set_min_height(content_height);
 
-                if let Some(path) = LeftPanel::new(left_width, content_height).draw(
-                    ui,
-                    self.tab_manager.current_tab_ref(),
-                    &self.bookmarks,
-                    &self.colors,
-                ) {
+                // Call the new left_panel::draw function directly
+                if let Some(path) = left_panel::draw(self, ui, left_width, content_height) {
                     self.navigate_to(path);
                 }
                 separator::draw_vertical_separator(ui);
-                self.draw_center_panel(ui, center_width, content_height);
+                center_panel::draw(self, ui, center_width, content_height);
                 separator::draw_vertical_separator(ui);
-                // Create RightPanel without state
-                let right_panel = RightPanel::new(right_width, content_height);
-                // Draw RightPanel, passing required state from Kiorg
-                right_panel.draw(
-                    ui, 
-                    self.tab_manager.current_tab_ref(), 
-                    &self.colors,
-                    &self.preview_content,     // Pass preview content
-                    &self.current_image,       // Pass current image
-                );
+                // Call the new right_panel::draw function directly
+                right_panel::draw(self, ui, right_width, content_height);
                 ui.add_space(PANEL_SPACING);
             });
 
