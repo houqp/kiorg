@@ -2,7 +2,7 @@ use crate::config::Config;
 use crate::models::dir_entry::DirEntry;
 use std::path::PathBuf;
 
-#[derive(Clone, PartialEq, Debug, Hash, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, PartialEq, Debug, Hash, Eq, serde::Serialize, serde::Deserialize, Copy)]
 pub enum SortColumn {
     Name,
     Modified,
@@ -10,7 +10,7 @@ pub enum SortColumn {
     None,
 }
 
-#[derive(Clone, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, PartialEq, Debug, serde::Serialize, serde::Deserialize, Copy)]
 pub enum SortOrder {
     Ascending,
     Descending,
@@ -30,34 +30,39 @@ pub struct Tab {
 }
 
 // Private helper function for sorting DirEntry slices
-fn sort_entries_by(entries: &mut [DirEntry], sort_column: &SortColumn, sort_order: &SortOrder) {
-    entries.sort_by(|a, b| {
-        // Always keep folders first regardless of sort column
-        if a.is_dir != b.is_dir {
-            return if a.is_dir {
-                std::cmp::Ordering::Less
-            } else {
-                std::cmp::Ordering::Greater
-            };
+fn sort_entries_by(entries: &mut [DirEntry], sort_column: SortColumn, sort_order: SortOrder) {
+    let primary_order_fn = match sort_column {
+        SortColumn::Name => |a: &DirEntry, b: &DirEntry| a.name.cmp(&b.name),
+        SortColumn::Modified => |a: &DirEntry, b: &DirEntry| a.modified.cmp(&b.modified),
+        SortColumn::Size => |a: &DirEntry, b: &DirEntry| a.size.cmp(&b.size),
+        SortColumn::None => {
+            return;
         }
-
-        // If no sort column is selected, sort by name ascending
-        if *sort_column == SortColumn::None {
-            return a.name.cmp(&b.name);
-        }
-
-        let primary_order = match *sort_column {
-            SortColumn::Name => a.name.cmp(&b.name),
-            SortColumn::Modified => a.modified.cmp(&b.modified),
-            SortColumn::Size => a.size.cmp(&b.size),
-            SortColumn::None => unreachable!(), // Already handled above
-        };
-
-        match *sort_order {
-            SortOrder::Ascending => primary_order,
-            SortOrder::Descending => primary_order.reverse(),
-        }
-    });
+    };
+    match sort_order {
+        SortOrder::Ascending => entries.sort_by(|a, b| {
+            // Always keep folders first regardless of sort column
+            if a.is_dir != b.is_dir {
+                return if a.is_dir {
+                    std::cmp::Ordering::Less
+                } else {
+                    std::cmp::Ordering::Greater
+                };
+            }
+            primary_order_fn(a, b)
+        }),
+        SortOrder::Descending => entries.sort_by(|a, b| {
+            // Always keep folders first regardless of sort column
+            if a.is_dir != b.is_dir {
+                return if a.is_dir {
+                    std::cmp::Ordering::Less
+                } else {
+                    std::cmp::Ordering::Greater
+                };
+            }
+            primary_order_fn(b, a)
+        }),
+    };
 }
 
 impl Tab {
@@ -98,15 +103,11 @@ impl Tab {
     }
 
     pub fn sort_entries(&mut self) {
-        sort_entries_by(&mut self.entries, &self.sort_column, &self.sort_order);
+        sort_entries_by(&mut self.entries, self.sort_column, self.sort_order);
     }
 
     pub fn sort_parent_entries(&mut self) {
-        sort_entries_by(
-            &mut self.parent_entries,
-            &self.sort_column,
-            &self.sort_order,
-        );
+        sort_entries_by(&mut self.parent_entries, self.sort_column, self.sort_order);
     }
 
     pub fn update_selection(&mut self, new_index: usize) {
@@ -207,5 +208,224 @@ impl TabManager {
 
     pub fn current_tab_ref(&self) -> &Tab {
         &self.tabs[self.current_tab_index]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+    use std::time::{Duration, SystemTime};
+
+    // Helper to create DirEntry instances for testing
+    fn create_entry(name: &str, is_dir: bool, modified_secs_ago: u64, size: u64) -> DirEntry {
+        let modified = SystemTime::now() - Duration::from_secs(modified_secs_ago);
+        DirEntry {
+            path: PathBuf::from(name),
+            name: name.to_string(),
+            is_dir,
+            modified,                            // Use the calculated SystemTime directly
+            size: if is_dir { 0 } else { size }, // Use 0 for dirs, provided size for files
+        }
+    }
+
+    // Helper to extract names for assertion
+    fn get_names(entries: &[DirEntry]) -> Vec<String> {
+        entries.iter().map(|e| e.name.clone()).collect()
+    }
+
+    #[test]
+    fn test_sort_empty() {
+        let mut entries: Vec<DirEntry> = vec![];
+        sort_entries_by(&mut entries, SortColumn::Name, SortOrder::Ascending);
+        assert!(entries.is_empty());
+        sort_entries_by(&mut entries, SortColumn::Name, SortOrder::Descending);
+        assert!(entries.is_empty());
+        sort_entries_by(&mut entries, SortColumn::None, SortOrder::Ascending);
+        assert!(entries.is_empty());
+    }
+
+    #[test]
+    fn test_sort_none() {
+        let mut entries = vec![
+            create_entry("b", false, 10, 100),
+            create_entry("a", true, 20, 0),
+            create_entry("c", false, 5, 50),
+        ];
+        let initial_names = get_names(&entries);
+        sort_entries_by(&mut entries, SortColumn::None, SortOrder::Ascending);
+        assert_eq!(get_names(&entries), initial_names);
+        sort_entries_by(&mut entries, SortColumn::None, SortOrder::Descending);
+        assert_eq!(get_names(&entries), initial_names);
+    }
+
+    #[test]
+    fn test_sort_name_ascending() {
+        let mut entries = vec![
+            create_entry("file_b", false, 10, 100),
+            create_entry("dir_a", true, 20, 0),
+            create_entry("file_c", false, 5, 50),
+            create_entry("dir_z", true, 15, 0),
+        ];
+        sort_entries_by(&mut entries, SortColumn::Name, SortOrder::Ascending);
+        // Dirs first, sorted by name, then files sorted by name
+        assert_eq!(
+            get_names(&entries),
+            vec!["dir_a", "dir_z", "file_b", "file_c"]
+        );
+    }
+
+    #[test]
+    fn test_sort_name_descending() {
+        let mut entries = vec![
+            create_entry("file_b", false, 10, 100),
+            create_entry("dir_a", true, 20, 0),
+            create_entry("file_c", false, 5, 50),
+            create_entry("dir_z", true, 15, 0),
+        ];
+        sort_entries_by(&mut entries, SortColumn::Name, SortOrder::Descending);
+        // Dirs first, sorted by name descending, then files sorted by name descending
+        assert_eq!(
+            get_names(&entries),
+            vec!["dir_z", "dir_a", "file_c", "file_b"]
+        );
+    }
+
+    #[test]
+    fn test_sort_modified_ascending() {
+        let mut entries = vec![
+            create_entry("newest_file", false, 5, 100), // 5 secs ago
+            create_entry("old_dir", true, 20, 0),       // 20 secs ago
+            create_entry("mid_file", false, 10, 50),    // 10 secs ago
+            create_entry("new_dir", true, 2, 0),        // 2 secs ago
+        ];
+        sort_entries_by(&mut entries, SortColumn::Modified, SortOrder::Ascending);
+        // Dirs first (oldest to newest), then files (oldest to newest)
+        assert_eq!(
+            get_names(&entries),
+            vec!["old_dir", "new_dir", "mid_file", "newest_file"]
+        );
+    }
+
+    #[test]
+    fn test_sort_modified_descending() {
+        let mut entries = vec![
+            create_entry("newest_file", false, 5, 100), // 5 secs ago
+            create_entry("old_dir", true, 20, 0),       // 20 secs ago
+            create_entry("mid_file", false, 10, 50),    // 10 secs ago
+            create_entry("new_dir", true, 2, 0),        // 2 secs ago
+        ];
+        sort_entries_by(&mut entries, SortColumn::Modified, SortOrder::Descending);
+        // Dirs first (newest to oldest), then files (newest to oldest)
+        assert_eq!(
+            get_names(&entries),
+            vec!["new_dir", "old_dir", "newest_file", "mid_file"]
+        );
+    }
+
+    #[test]
+    fn test_sort_size_ascending() {
+        let mut entries = vec![
+            create_entry("large_file", false, 10, 1000),
+            create_entry("dir_a", true, 20, 0),
+            create_entry("small_file", false, 5, 50),
+            create_entry("dir_b", true, 15, 0),
+            create_entry("medium_file", false, 12, 200),
+        ];
+        sort_entries_by(&mut entries, SortColumn::Size, SortOrder::Ascending);
+        // Dirs first (order among dirs undefined by size, likely stable based on input), then files by size ascending
+        // We check files part specifically. Dirs should just be before files.
+        let names = get_names(&entries);
+        assert!(names[0] == "dir_a" || names[0] == "dir_b");
+        assert!(names[1] == "dir_a" || names[1] == "dir_b");
+        assert_ne!(names[0], names[1]);
+        assert_eq!(&names[2..], &["small_file", "medium_file", "large_file"]);
+    }
+
+    #[test]
+    fn test_sort_size_descending() {
+        let mut entries = vec![
+            create_entry("large_file", false, 10, 1000),
+            create_entry("dir_a", true, 20, 0),
+            create_entry("small_file", false, 5, 50),
+            create_entry("dir_b", true, 15, 0),
+            create_entry("medium_file", false, 12, 200),
+        ];
+        sort_entries_by(&mut entries, SortColumn::Size, SortOrder::Descending);
+        // Dirs first (order among dirs undefined by size), then files by size descending
+        let names = get_names(&entries);
+        assert!(names[0] == "dir_a" || names[0] == "dir_b");
+        assert!(names[1] == "dir_a" || names[1] == "dir_b");
+        assert_ne!(names[0], names[1]);
+        assert_eq!(&names[2..], &["large_file", "medium_file", "small_file"]);
+    }
+
+    #[test]
+    fn test_sort_only_dirs() {
+        let mut entries = vec![
+            create_entry("dir_b", true, 10, 0),
+            create_entry("dir_a", true, 20, 0),
+            create_entry("dir_c", true, 5, 0),
+        ];
+        sort_entries_by(&mut entries, SortColumn::Name, SortOrder::Ascending);
+        assert_eq!(get_names(&entries), vec!["dir_a", "dir_b", "dir_c"]);
+        sort_entries_by(&mut entries, SortColumn::Name, SortOrder::Descending);
+        assert_eq!(get_names(&entries), vec!["dir_c", "dir_b", "dir_a"]);
+    }
+
+    #[test]
+    fn test_sort_only_files() {
+        let mut entries = vec![
+            create_entry("file_b", false, 10, 100),
+            create_entry("file_a", false, 20, 200),
+            create_entry("file_c", false, 5, 50),
+        ];
+        sort_entries_by(&mut entries, SortColumn::Name, SortOrder::Ascending);
+        assert_eq!(get_names(&entries), vec!["file_a", "file_b", "file_c"]);
+        sort_entries_by(&mut entries, SortColumn::Name, SortOrder::Descending);
+        assert_eq!(get_names(&entries), vec!["file_c", "file_b", "file_a"]);
+    }
+
+    #[test]
+    fn test_sort_stability_equal_primary_key() {
+        // Test stability when primary sort key is the same (e.g., two files with the same name)
+        // The current sort is stable by default Rust sort, but let's confirm dirs stay first.
+        let mut entries = vec![
+            create_entry("same_name", false, 10, 100), // File 1
+            create_entry("dir_a", true, 20, 0),
+            create_entry("same_name", false, 5, 50), // File 2 (newer, smaller)
+            create_entry("dir_b", true, 15, 0),
+        ];
+        // Sort by name ascending. Dirs first, then files. Order between 'same_name' files should be stable.
+        sort_entries_by(&mut entries, SortColumn::Name, SortOrder::Ascending);
+        let names = get_names(&entries);
+        assert_eq!(names, vec!["dir_a", "dir_b", "same_name", "same_name"]);
+
+        // Sort by name descending. Dirs first (desc), then files (desc). Order between 'same_name' files should be stable.
+        sort_entries_by(&mut entries, SortColumn::Name, SortOrder::Descending);
+        let names = get_names(&entries);
+        assert_eq!(names, vec!["dir_b", "dir_a", "same_name", "same_name"]);
+
+        // Sort by size ascending. Dirs first, then files by size.
+        sort_entries_by(&mut entries, SortColumn::Size, SortOrder::Ascending);
+        let names = get_names(&entries);
+        assert!(names[0] == "dir_a" || names[0] == "dir_b"); // Dirs first
+        assert!(names[1] == "dir_a" || names[1] == "dir_b");
+        assert_ne!(names[0], names[1]);
+        assert_eq!(entries[2].name, "same_name"); // Smaller file
+        assert_eq!(entries[2].size, 50);
+        assert_eq!(entries[3].name, "same_name"); // Larger file
+        assert_eq!(entries[3].size, 100);
+
+        // Sort by size descending. Dirs first, then files by size desc.
+        sort_entries_by(&mut entries, SortColumn::Size, SortOrder::Descending);
+        let names = get_names(&entries);
+        assert!(names[0] == "dir_a" || names[0] == "dir_b"); // Dirs first
+        assert!(names[1] == "dir_a" || names[1] == "dir_b");
+        assert_ne!(names[0], names[1]);
+        assert_eq!(entries[2].name, "same_name"); // Larger file
+        assert_eq!(entries[2].size, 100);
+        assert_eq!(entries[3].name, "same_name"); // Smaller file
+        assert_eq!(entries[3].size, 50);
     }
 }

@@ -26,7 +26,7 @@ impl SearchBar {
         self.focus = true;
     }
 
-    fn close(&mut self) {
+    pub fn close(&mut self) {
         self.focus = false;
         self.query = None;
     }

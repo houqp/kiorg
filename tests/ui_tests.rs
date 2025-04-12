@@ -54,6 +54,18 @@ fn create_harness<'a>(temp_dir: &tempfile::TempDir) -> TestHarness<'a> {
     }
 }
 
+impl<'a> TestHarness<'a> {
+    /// Ensures the current tab's entries are sorted by Name/Ascending.
+    fn ensure_sorted_by_name_ascending(&mut self) {
+        let tab = self.harness.state_mut().tab_manager.current_tab();
+        // Toggle twice to ensure Ascending order regardless of the initial state
+        tab.toggle_sort(kiorg::models::tab::SortColumn::Name); // Sets Name/Descending or None
+        tab.toggle_sort(kiorg::models::tab::SortColumn::Name); // Sets Name/Ascending
+        tab.sort_entries();
+        self.harness.step(); // Allow sort to apply and UI to update
+    }
+}
+
 // Add methods to TestHarness to delegate to the inner harness
 impl<'a> std::ops::Deref for TestHarness<'a> {
     type Target = Harness<'a, Kiorg>;
@@ -96,6 +108,9 @@ fn test_delete_shortcut() {
     create_test_files(&[subdir_file.clone()]);
 
     let mut harness = create_harness(&temp_dir);
+
+    // Ensure consistent sort order for reliable selection
+    harness.ensure_sorted_by_name_ascending();
 
     // Test file deletion first
     // Move down twice to select test1.txt (after dir1 and dir2)
@@ -202,6 +217,9 @@ fn test_copy_paste_shortcuts() {
 
     let mut harness = create_harness(&temp_dir);
 
+    // Ensure consistent sort order for reliable selection
+    harness.ensure_sorted_by_name_ascending();
+
     // Move down twice to select test1.txt (after dir1 and dir2)
     harness.press_key(Key::J);
     harness.step();
@@ -287,6 +305,9 @@ fn test_cut_paste_shortcuts() {
 
     let mut harness = create_harness(&temp_dir);
 
+    // Ensure consistent sort order for reliable selection
+    harness.ensure_sorted_by_name_ascending();
+
     // Move down twice to select test1.txt (after dir1 and dir2)
     harness.press_key(Key::J);
     harness.step();
@@ -337,6 +358,9 @@ fn test_g_shortcuts() {
         temp_dir.path().join("test2.txt"),
     ]);
     let mut harness = create_harness(&temp_dir);
+
+    // Ensure consistent sort order for reliable selection
+    harness.ensure_sorted_by_name_ascending();
 
     let tab = harness.state().tab_manager.current_tab_ref();
     assert_eq!(tab.selected_index, 0);
@@ -430,6 +454,9 @@ fn test_bookmark_feature() {
     // Select the first directory
     {
         let tab = harness.state_mut().tab_manager.current_tab();
+        tab.toggle_sort(kiorg::models::tab::SortColumn::Name); // Sets Name/Descending
+        tab.toggle_sort(kiorg::models::tab::SortColumn::Name); // Sets Name/AScending
+        tab.sort_entries();
         tab.selected_index = 0; // Select dir1
     }
     harness.step();
@@ -540,6 +567,9 @@ fn test_parent_directory_selection() {
 
     let mut harness = create_harness(&temp_dir);
 
+    // Ensure consistent sort order for reliable selection
+    harness.ensure_sorted_by_name_ascending();
+
     // Move down to select dir2
     harness.press_key(Key::J);
     harness.step();
@@ -583,23 +613,35 @@ fn test_prev_path_selection_with_sort() {
     // Start the harness in the parent directory
     let mut harness = create_harness(&temp_dir);
 
-    // Initial state: aaa, bbb, ccc (default sort)
+    // Ensure consistent sort order for reliable selection
+    harness.ensure_sorted_by_name_ascending();
+
+    // Initial state: aaa, bbb, ccc (now explicitly sorted Name/Ascending)
     // Select ccc (index 2)
     harness.press_key(Key::J);
     harness.step();
     harness.press_key(Key::J);
     harness.step();
-    assert_eq!(harness.state().tab_manager.current_tab_ref().selected_index, 2);
+    assert_eq!(
+        harness.state().tab_manager.current_tab_ref().selected_index,
+        2
+    );
 
     // Navigate into bbb
     harness.press_key(Key::L);
     harness.step();
-    assert!(harness.state().tab_manager.current_tab_ref().current_path.ends_with("ccc"));
+    assert!(harness
+        .state()
+        .tab_manager
+        .current_tab_ref()
+        .current_path
+        .ends_with("ccc"));
 
     // Manually set sort order to Descending Name *while inside bbb*
     // (Simulating header click is complex, direct state change is acceptable here)
     {
         let tab = harness.state_mut().tab_manager.current_tab();
+        tab.toggle_sort(kiorg::models::tab::SortColumn::Name); // Sets to None
         tab.toggle_sort(kiorg::models::tab::SortColumn::Name); // Sets Name/Descending
         assert_eq!(tab.sort_column, kiorg::models::tab::SortColumn::Name);
         assert_eq!(tab.sort_order, kiorg::models::tab::SortOrder::Descending);
@@ -618,7 +660,11 @@ fn test_prev_path_selection_with_sort() {
 
     // Verify the state in the parent directory
     let tab = harness.state().tab_manager.current_tab_ref();
-    assert_eq!(tab.current_path, temp_dir.path(), "Current path should be the parent");
+    assert_eq!(
+        tab.current_path,
+        temp_dir.path(),
+        "Current path should be the parent"
+    );
     assert_eq!(tab.entries.len(), 3, "Should have 3 entries");
 
     // Check sorted order
@@ -628,5 +674,163 @@ fn test_prev_path_selection_with_sort() {
 
     // Check selected index based on prev_path (bbb)
     assert_eq!(tab.selected_index, 0, "Selected index should point to ccc");
-    assert_eq!(tab.entries[tab.selected_index].path, test_dirs[2], "Selected entry should be ccc");
+    assert_eq!(
+        tab.entries[tab.selected_index].path, test_dirs[2],
+        "Selected entry should be ccc"
+    );
+}
+
+#[test]
+fn test_search_edit_existing_query() {
+    // Create a temporary directory for testing
+    let temp_dir = tempdir().unwrap();
+    create_test_files(&[
+        temp_dir.path().join("test1.txt"),
+        temp_dir.path().join("test2.txt"),
+        temp_dir.path().join("another.log"),
+    ]);
+
+    let mut harness = create_harness(&temp_dir);
+
+    // Ensure consistent sort order for reliable selection
+    harness.ensure_sorted_by_name_ascending();
+
+    // Activate search
+    harness.press_key(Key::Slash);
+    harness.step();
+
+    // Input search query "test"
+    harness
+        .input_mut()
+        .events
+        .push(egui::Event::Text("test".to_string()));
+    harness.step();
+
+    // Verify search bar has the query
+    assert!(
+        harness.state().search_bar.query.is_some(),
+        "Search bar should have query after input"
+    );
+    assert_eq!(
+        harness.state().search_bar.query.as_deref(),
+        Some("test"),
+        "Search query should be 'test'"
+    );
+
+    // Press '/' again while search is active
+    harness.press_key(Key::Slash);
+    harness.step();
+
+    // Verify search bar query is preserved
+    assert!(
+        harness.state().search_bar.query.is_some(),
+        "Search query should still be Some"
+    );
+    assert_eq!(
+        harness.state().search_bar.query.as_deref(),
+        Some("test"),
+        "Search query should not be reset"
+    );
+}
+
+#[test]
+fn test_search_resets_selection() {
+    // Create a temporary directory for testing
+    let temp_dir = tempdir().unwrap();
+    create_test_files(&[
+        temp_dir.path().join("apple.txt"),
+        temp_dir.path().join("banana.txt"), // index 1
+        temp_dir.path().join("apricot.txt"),
+    ]);
+
+    let mut harness = create_harness(&temp_dir);
+
+    // Select the second entry (banana.txt)
+    harness.press_key(Key::J);
+    harness.step();
+    assert_eq!(
+        harness.state().tab_manager.current_tab_ref().selected_index,
+        1
+    );
+    assert_eq!(
+        harness.state().tab_manager.current_tab_ref().entries[1].name,
+        "banana.txt"
+    );
+
+    // Activate search
+    harness.press_key(Key::Slash);
+    harness.step();
+
+    // Input search query "ap" (matches apple and apricot)
+    harness
+        .input_mut()
+        .events
+        .push(egui::Event::Text("ap".to_string()));
+    harness.step();
+    harness.press_key(Key::Enter);
+    harness.step();
+
+    // Verify selection is reset to the first matching entry (apple.txt)
+    let tab = harness.state().tab_manager.current_tab_ref();
+    assert_eq!(
+        tab.selected_index, 0,
+        "Selection should reset to the first filtered item"
+    );
+}
+
+#[test]
+fn test_search_cleared_on_directory_change() {
+    // Create a temporary directory for testing
+    let temp_dir = tempdir().unwrap();
+    let test_files = create_test_files(&[
+        temp_dir.path().join("dir1"),
+        temp_dir.path().join("test1.txt"),
+        temp_dir.path().join("test2.txt"),
+    ]);
+
+    let mut harness = create_harness(&temp_dir);
+
+    // Ensure consistent sort order for reliable selection
+    harness.ensure_sorted_by_name_ascending();
+
+    // Activate search
+    harness.press_key(Key::Slash);
+    harness.step();
+
+    // Input search query "test"
+    harness
+        .input_mut()
+        .events
+        .push(egui::Event::Text("dir".to_string()));
+    harness.step();
+    harness.press_key(Key::Enter);
+    harness.step();
+
+    // Verify search bar has the query
+    assert_eq!(
+        harness.state().search_bar.query.as_deref(),
+        Some("dir"),
+        "Search query should be 'dir'"
+    );
+
+    // Select dir1 (index 0) - already selected by default
+    assert_eq!(
+        harness.state().tab_manager.current_tab_ref().selected_index,
+        0
+    );
+    assert_eq!(
+        harness.state().tab_manager.current_tab_ref().entries[0].path,
+        test_files[0]
+    );
+
+    // Navigate into dir1
+    harness.press_key(Key::L);
+    harness.step();
+
+    // Verify search query is cleared (is None) after directory change
+    assert!(
+        harness.state().search_bar.query.is_none(),
+        "Search query should be None after entering a directory. Actual: {:?}",
+        harness.state().search_bar.query
+    );
 }

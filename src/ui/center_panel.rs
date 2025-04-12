@@ -179,8 +179,8 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
         // Save sort preferences after sorting
         let mut config = config::load_config_with_override(config_dir_override.as_ref());
         config.sort_preference = Some(SortPreference {
-            column: tab.sort_column.clone(),
-            order: tab.sort_order.clone(),
+            column: tab.sort_column,
+            order: tab.sort_order,
         });
         if let Err(e) = config::save_config_with_override(&config, config_dir_override.as_ref()) {
             eprintln!("Failed to save sort preferences: {}", e);
