@@ -133,6 +133,15 @@ fn test_delete_shortcut() {
     assert!(test_files[1].exists(), "dir2 should still exist");
     assert!(test_files[3].exists(), "test2.txt should still exist");
 
+    // Verify UI list is updated (test1.txt removed)
+    {
+        let tab = harness.state().tab_manager.current_tab_ref();
+        assert!(
+            !tab.entries.iter().any(|e| e.path == test_files[2]),
+            "UI entry list should not contain test1.txt after deletion"
+        );
+    }
+
     // Test recursive directory deletion
     // First entry should be dir1, move 2 entries up
     harness.press_key(Key::K);
@@ -153,6 +162,15 @@ fn test_delete_shortcut() {
     assert!(!subdir_file.exists(), "subfile.txt should be deleted");
     assert!(test_files[1].exists(), "dir2 should still exist");
     assert!(test_files[3].exists(), "test2.txt should still exist");
+
+    // Verify UI list is updated (dir1 removed)
+    {
+        let tab = harness.state().tab_manager.current_tab_ref();
+        assert!(
+            !tab.entries.iter().any(|e| e.path == test_files[0]),
+            "UI entry list should not contain dir1 after deletion"
+        );
+    }
 }
 
 #[test]
@@ -200,6 +218,19 @@ fn test_rename_shortcut() {
         temp_dir.path().join("test2_renamed.txt").exists(),
         "test2_renamed.txt should exist"
     );
+
+    // Verify UI list is updated
+    {
+        let tab = harness.state().tab_manager.current_tab_ref();
+        assert!(
+            !tab.entries.iter().any(|e| e.name == "test2.txt"),
+            "UI entry list should not contain test2.txt after rename"
+        );
+        assert!(
+            tab.entries.iter().any(|e| e.name == "test2_renamed.txt"),
+            "UI entry list should contain test2_renamed.txt after rename"
+        );
+    }
 }
 
 #[test]
@@ -251,6 +282,15 @@ fn test_copy_paste_shortcuts() {
         test_files[1].join("test1.txt").exists(),
         "test1.txt should be copied to dir2"
     );
+
+    // Verify UI list in dir2 is updated
+    {
+        let tab = harness.state().tab_manager.current_tab_ref();
+        assert!(
+            tab.entries.iter().any(|e| e.name == "test1.txt"),
+            "UI entry list in dir2 should contain test1.txt after paste"
+        );
+    }
 }
 
 #[test]
@@ -345,6 +385,28 @@ fn test_cut_paste_shortcuts() {
         test_files[1].join("test1.txt").exists(),
         "test1.txt should exist in dir2"
     );
+
+    // Verify UI list in dir2 is updated
+    {
+        let tab = harness.state().tab_manager.current_tab_ref();
+        assert!(
+            tab.entries.iter().any(|e| e.name == "test1.txt"),
+            "UI entry list in dir2 should contain test1.txt after paste"
+        );
+    }
+
+    // Navigate back to parent to verify original file is removed from UI list
+    harness.press_key(Key::H);
+    harness.step();
+
+    // Verify UI list in parent directory is updated
+    {
+        let tab = harness.state().tab_manager.current_tab_ref();
+        assert!(
+            !tab.entries.iter().any(|e| e.path == test_files[2]),
+            "UI entry list in parent dir should not contain test1.txt after cut/paste"
+        );
+    }
 }
 
 #[test]
