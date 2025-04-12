@@ -32,8 +32,7 @@ pub fn draw_table_header(ui: &mut Ui, params: &mut TableHeaderParams) {
     let mut cursor = rect.left_top();
 
     // Calculate total fixed width (icon + date + size + paddings)
-    let fixed_width_total =
-        ICON_WIDTH
+    let fixed_width_total = ICON_WIDTH
             + HORIZONTAL_PADDING // Padding after icon
             + MODIFIED_DATE_WIDTH
             + INTER_COLUMN_PADDING // Padding between Modified and Size
@@ -47,17 +46,20 @@ pub fn draw_table_header(ui: &mut Ui, params: &mut TableHeaderParams) {
     cursor.x += ICON_WIDTH + HORIZONTAL_PADDING;
 
     // --- Draw Name Column ---
-    let name_col_rect = egui::Rect::from_min_size(cursor, egui::vec2(name_width,HEADER_ROW_HEIGHT));
+    let name_col_rect =
+        egui::Rect::from_min_size(cursor, egui::vec2(name_width, HEADER_ROW_HEIGHT));
     draw_header_column(ui, params, name_col_rect, "Name", SortColumn::Name);
     cursor.x += name_width + INTER_COLUMN_PADDING; // Advance cursor including padding
 
     // --- Draw Modified Column ---
-    let mod_col_rect = egui::Rect::from_min_size(cursor, egui::vec2(MODIFIED_DATE_WIDTH,HEADER_ROW_HEIGHT));
+    let mod_col_rect =
+        egui::Rect::from_min_size(cursor, egui::vec2(MODIFIED_DATE_WIDTH, HEADER_ROW_HEIGHT));
     draw_header_column(ui, params, mod_col_rect, "Modified", SortColumn::Modified);
     cursor.x += MODIFIED_DATE_WIDTH + INTER_COLUMN_PADDING; // Advance cursor including padding
 
     // --- Draw Size Column ---
-    let size_col_rect = egui::Rect::from_min_size(cursor, egui::vec2(FILE_SIZE_WIDTH,HEADER_ROW_HEIGHT));
+    let size_col_rect =
+        egui::Rect::from_min_size(cursor, egui::vec2(FILE_SIZE_WIDTH, HEADER_ROW_HEIGHT));
     draw_header_column(ui, params, size_col_rect, "Size", SortColumn::Size);
     // No cursor advance needed after the last column
 
@@ -123,11 +125,17 @@ pub struct EntryRowParams<'a> {
     pub rename_focus: bool,
     pub is_marked: bool,
     pub is_bookmarked: bool,
-    pub search_query: &'a str,
-    pub search_active: bool,
+    pub search_query: &'a Option<String>,
 }
 
-fn draw_icon(ui: &mut Ui, cursor: egui::Pos2, is_dir: bool, is_selected: bool, colors: &AppColors, is_bookmarked: bool) -> f32 {
+fn draw_icon(
+    ui: &mut Ui,
+    cursor: egui::Pos2,
+    is_dir: bool,
+    is_selected: bool,
+    colors: &AppColors,
+    is_bookmarked: bool,
+) -> f32 {
     // Draw the base icon (folder or file)
     let base_icon = if is_dir { "📁" } else { "📄" };
     let icon_color = if is_selected {
@@ -173,7 +181,6 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> bool {
         is_marked,
         is_bookmarked,
         search_query,
-        search_active,
     } = params;
 
     let (rect, response) = ui.allocate_exact_size(
@@ -190,8 +197,7 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> bool {
     let mut cursor = rect.left_top();
 
     // Calculate total fixed width (icon + date + size + paddings) - same as header
-    let fixed_width_total =
-        ICON_WIDTH
+    let fixed_width_total = ICON_WIDTH
             + HORIZONTAL_PADDING // Padding after icon
             + MODIFIED_DATE_WIDTH
             + INTER_COLUMN_PADDING // Padding between Modified and Size
@@ -223,7 +229,7 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> bool {
 
         // Define the rectangle for the text edit
         let text_edit_rect = name_clip_rect.with_min_x(rename_cursor_start);
-        
+
         // Place the TextEdit widget within the specific rectangle using ui.put
         let text_edit_response = ui.put(text_edit_rect, text_edit);
 
@@ -236,40 +242,83 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> bool {
         let name_text = truncate_text(&entry.name, name_width);
         let name_color = if entry.is_dir { colors.blue } else { colors.fg };
 
-        let mut job = egui::text::LayoutJob::default();
-        job.text = name_text.clone();
+        let mut job = egui::text::LayoutJob {
+            text: name_text.clone(),
+            ..Default::default()
+        };
 
-        if search_active && !search_query.is_empty() && !name_text.is_empty() {
-            let highlight_color = colors.yellow; // Use theme yellow for highlighting
-            let mut last_match_end = 0;
-            
-            for (start, matched_part) in name_text.match_indices(search_query) {
-                let end = start + matched_part.len();
-                // Add non-matching part before the match
-                if start > last_match_end {
-                    job.append(&name_text[last_match_end..start], 0.0, egui::TextFormat { color: name_color, ..Default::default() });
+        // TODO: why would name_text ever be empty?
+        match (search_query, name_text.is_empty()) {
+            (Some(query), false) => {
+                let highlight_color = colors.yellow; // Use theme yellow for highlighting
+                let mut last_match_end = 0;
+
+                for (start, matched_part) in name_text.match_indices(query) {
+                    let end = start + matched_part.len();
+                    // Add non-matching part before the match
+                    if start > last_match_end {
+                        job.append(
+                            &name_text[last_match_end..start],
+                            0.0,
+                            egui::TextFormat {
+                                color: name_color,
+                                ..Default::default()
+                            },
+                        );
+                    }
+                    // Add matching part
+                    job.append(
+                        &name_text[start..end],
+                        0.0,
+                        egui::TextFormat {
+                            color: highlight_color,
+                            ..Default::default()
+                        },
+                    );
+                    last_match_end = end;
                 }
-                // Add matching part
-                job.append(&name_text[start..end], 0.0, egui::TextFormat { color: highlight_color, ..Default::default() });
-                last_match_end = end;
+                // Add remaining non-matching part after the last match
+                if last_match_end < name_text.len() {
+                    job.append(
+                        &name_text[last_match_end..],
+                        0.0,
+                        egui::TextFormat {
+                            color: name_color,
+                            ..Default::default()
+                        },
+                    );
+                }
+                // If no matches were found, just add the whole text with normal color
+                if job.sections.is_empty() {
+                    job.append(
+                        &name_text,
+                        0.0,
+                        egui::TextFormat {
+                            color: colors.gray,
+                            ..Default::default()
+                        },
+                    ); // Show non-matches in gray
+                }
             }
-            // Add remaining non-matching part after the last match
-            if last_match_end < name_text.len() {
-                job.append(&name_text[last_match_end..], 0.0, egui::TextFormat { color: name_color, ..Default::default() });
+            _ => {
+                // No search active, just add the whole text with normal color
+                job.append(
+                    &name_text,
+                    0.0,
+                    egui::TextFormat {
+                        color: name_color,
+                        ..Default::default()
+                    },
+                );
             }
-            // If no matches were found, just add the whole text with normal color
-            if job.sections.is_empty() {
-                 job.append(&name_text, 0.0, egui::TextFormat { color: colors.gray, ..Default::default() }); // Show non-matches in gray
-            }
-        } else {
-            // No search active, just add the whole text with normal color
-            job.append(&name_text, 0.0, egui::TextFormat { color: name_color, ..Default::default() });
         }
 
         let galley = ui.fonts(|f| f.layout_job(job));
         let galley_pos = cursor + egui::vec2(0.0, ROW_HEIGHT / 2.0 - galley.size().y / 2.0); // Center vertically
 
-        ui.painter().with_clip_rect(name_clip_rect).galley(galley_pos, galley, name_color);
+        ui.painter()
+            .with_clip_rect(name_clip_rect)
+            .galley(galley_pos, galley, name_color);
     }
     cursor.x += name_width + INTER_COLUMN_PADDING; // Advance cursor including padding
 

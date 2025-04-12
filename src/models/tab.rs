@@ -27,8 +27,6 @@ pub struct Tab {
     pub sort_column: SortColumn,
     pub sort_order: SortOrder,
     pub last_refreshed_path: Option<PathBuf>,
-    pub search_query: String, // Added for search filter
-    pub search_active: bool,  // Added for search filter state
 }
 
 // Private helper function for sorting DirEntry slices
@@ -80,8 +78,6 @@ impl Tab {
             sort_column,
             sort_order,
             last_refreshed_path: None,
-            search_query: String::new(), // Initialize search query
-            search_active: false,        // Initialize search state
         }
     }
 
@@ -106,7 +102,11 @@ impl Tab {
     }
 
     pub fn sort_parent_entries(&mut self) {
-        sort_entries_by(&mut self.parent_entries, &self.sort_column, &self.sort_order);
+        sort_entries_by(
+            &mut self.parent_entries,
+            &self.sort_column,
+            &self.sort_order,
+        );
     }
 
     pub fn update_selection(&mut self, new_index: usize) {
@@ -115,59 +115,54 @@ impl Tab {
         }
     }
 
-    // Clears the search query and resets the active state
-    pub fn clear_filter(&mut self) {
-        self.search_query.clear();
-        self.search_active = false;
-    }
-
     // Returns the index of the first entry that matches the current search query
-    pub fn get_first_filtered_entry_index(&self) -> Option<usize> {
-        if !self.search_active || self.search_query.is_empty() {
-            // If search isn't active or query is empty, return the current selection or 0
-            return if !self.entries.is_empty() { Some(self.selected_index.min(self.entries.len() - 1)) } else { None };
+    pub fn get_first_filtered_entry_index(&self, query: &str) -> Option<usize> {
+        if query.is_empty() {
+            // If query is empty, return the current selection or 0
+            return if !self.entries.is_empty() {
+                Some(self.selected_index.min(self.entries.len() - 1))
+            } else {
+                None
+            };
         }
         self.entries
             .iter()
-            .position(|entry| entry.name.to_lowercase().contains(&self.search_query.to_lowercase()))
+            .position(|entry| entry.name.to_lowercase().contains(&query.to_lowercase()))
     }
 
     // Returns a filtered list of entries based on the search query
-    pub fn get_filtered_entries(&self) -> Vec<&DirEntry> {
-        if !self.search_active || self.search_query.is_empty() {
-            self.entries.iter().collect()
-        } else {
-            self.entries
+    pub fn get_filtered_entries(&self, query: &Option<String>) -> Vec<&DirEntry> {
+        match query {
+            Some(query) => self
+                .entries
                 .iter()
-                .filter(|entry| {
-                    entry.name.to_lowercase().contains(&self.search_query.to_lowercase())
-                })
-                .collect()
+                .filter(|entry| entry.name.to_lowercase().contains(&query.to_lowercase()))
+                .collect(),
+            None => self.entries.iter().collect(),
         }
     }
 
     // Returns a filtered list of entries along with their original indices
-    pub fn get_filtered_entries_with_indices(&self) -> Vec<(&DirEntry, usize)> {
-        if !self.search_active || self.search_query.is_empty() {
-            self.entries.iter().enumerate().map(|(i, e)| (e, i)).collect()
-        } else {
-            self.entries
+    pub fn get_filtered_entries_with_indices(
+        &self,
+        query: &Option<String>,
+    ) -> Vec<(&DirEntry, usize)> {
+        match query {
+            Some(q) => {
+                let lower_query = q.to_lowercase();
+                self.entries
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, entry)| entry.name.to_lowercase().contains(&lower_query))
+                    .map(|(i, e)| (e, i))
+                    .collect()
+            }
+            None => self
+                .entries
                 .iter()
                 .enumerate()
-                .filter(|(_, entry)| {
-                    entry.name.to_lowercase().contains(&self.search_query.to_lowercase())
-                })
                 .map(|(i, e)| (e, i))
-                .collect()
-        }
-    }
-
-    // Checks if a given entry is visible based on the current filter
-    pub fn is_entry_visible(&self, entry: &DirEntry) -> bool {
-        if !self.search_active || self.search_query.is_empty() {
-            true // Visible if search is inactive or query is empty
-        } else {
-            entry.name.to_lowercase().contains(&self.search_query.to_lowercase())
+                .collect(),
         }
     }
 }

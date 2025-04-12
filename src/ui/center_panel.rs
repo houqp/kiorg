@@ -1,10 +1,10 @@
 use egui::Ui;
 use std::path::PathBuf;
 
+use crate::app::Kiorg;
 use crate::config;
 use crate::config::SortPreference;
 use crate::ui::file_list::{self, TableHeaderParams, ROW_HEIGHT};
-use crate::app::Kiorg;
 
 /// Handles clipboard paste operations (copy/cut)
 /// Returns true if any operation was performed
@@ -54,21 +54,9 @@ pub fn handle_clipboard_operations(
 pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
     let tab_index = app.tab_manager.current_tab_index;
 
-    // --- Search Filter Logic ---
-    if app.search_mode {
-        let tab = &mut app.tab_manager.tabs[tab_index];
-        tab.search_active = true; // Mark search as active when in search mode
-        tab.search_query = app.search_query.clone(); // Update tab's query from app state
-    } else {
-        let tab = &mut app.tab_manager.tabs[tab_index];
-        // Keep search active if query is not empty (filter persists after Enter)
-        if tab.search_query.is_empty() {
-            tab.search_active = false;
-        }
-    }
-
     // Get filtered entries and other data before any closures
-    let filtered_entries = app.tab_manager.tabs[tab_index].get_filtered_entries();
+    let filtered_entries =
+        app.tab_manager.tabs[tab_index].get_filtered_entries(&app.search_bar.query);
     let sort_column = app.tab_manager.tabs[tab_index].sort_column.clone();
     let sort_order = app.tab_manager.tabs[tab_index].sort_order.clone();
     let selected_entries = app.tab_manager.tabs[tab_index].selected_entries.clone();
@@ -84,7 +72,6 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
 
     let mut path_to_navigate = None;
     let mut entry_to_rename = None;
-    let search_query_changed = false; // Flag to track search query changes
     let mut sort_requested = None;
 
     ui.vertical(|ui| {
@@ -123,7 +110,8 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                 } else {
                     for entry in filtered_entries.iter() {
                         // Find the original index in the full `entries` list for selection checks
-                        let original_index = entries_clone.iter()
+                        let original_index = entries_clone
+                            .iter()
                             .position(|e| e.path == entry.path)
                             .unwrap_or(usize::MAX); // Should always find it
 
@@ -141,8 +129,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                                 rename_focus: rename_focus && is_selected,
                                 is_marked: is_in_selection,
                                 is_bookmarked: bookmarks.contains(&entry.path),
-                                search_query: &app.tab_manager.tabs[tab_index].search_query,
-                                search_active: app.tab_manager.tabs[tab_index].search_active,
+                                search_query: &app.search_bar.query,
                             },
                         );
 
@@ -161,7 +148,9 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                 if ensure_selected_visible && !filtered_entries.is_empty() {
                     // Find the position of the selected item *within the filtered list*
                     if let Some(filtered_selected_index) = filtered_entries.iter().position(|e| {
-                        entries_clone.get(selected_index).is_some_and(|selected_entry| selected_entry.path == e.path)
+                        entries_clone
+                            .get(selected_index)
+                            .is_some_and(|selected_entry| selected_entry.path == e.path)
                     }) {
                         let selected_pos = filtered_selected_index as f32 * ROW_HEIGHT;
                         ui.scroll_to_rect(
@@ -199,14 +188,6 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
     }
 
     // --- Handle actions after UI drawing ---
-
-    // Update tab search query if it changed
-    if search_query_changed {
-        let tab = &mut app.tab_manager.tabs[tab_index];
-        tab.search_query = app.search_query.clone();
-        // Since the query changed, the filter is active
-        tab.search_active = !tab.search_query.is_empty(); 
-    }
 
     // Handle navigation
     if let Some(path) = path_to_navigate {
