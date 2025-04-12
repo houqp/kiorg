@@ -474,14 +474,11 @@ impl Kiorg {
                 || i.key_pressed(egui::Key::ArrowRight)
                 || i.key_pressed(egui::Key::Enter)
         }) {
-            println!("Enter key pressed");
             let tab = self.tab_manager.current_tab_ref();
             // Get the entry corresponding to the current `selected_index`.
             // This index always refers to the original `entries` list.
             if let Some(selected_entry) = tab.entries.get(tab.selected_index) {
-                println!("Selected entry: {:?}", selected_entry);
                 self.search_bar.close();
-                println!("search bar closed, query: {:?}", self.search_bar.query);
                 self.navigate_to(selected_entry.path.clone());
             }
         } else if ctx.input(|i| i.key_pressed(egui::Key::G) && i.modifiers.shift) {
