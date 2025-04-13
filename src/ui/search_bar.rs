@@ -39,35 +39,42 @@ pub fn handle_key_press(ctx: &Context, app: &mut Kiorg) -> bool {
                 return false;
             }
 
-            // Process Enter key even when search bar has focus
-            if ctx.input(|i| i.key_pressed(egui::Key::Enter)) {
-                // Keep search mode active if there's a non-empty search query
-                if query.is_empty() {
-                    app.search_bar.close();
-                } else {
-                    // Select the first matched entry
-                    let tab = app.tab_manager.current_tab();
-                    if let Some(first_filtered_index) =
-                        tab.get_first_filtered_entry_index(query.as_str())
-                    {
-                        tab.update_selection(first_filtered_index);
-                        app.ensure_selected_visible = true;
-                        app.selection_changed = true;
+            let mut close_search_bar = false;
+
+            let consumed = ctx.input(|i| {
+                if i.key_pressed(egui::Key::Enter) {
+                    // Keep search mode active if there's a non-empty search query
+                    if query.is_empty() {
+                        close_search_bar = true;
+                    } else {
+                        // Select the first matched entry
+                        let tab = app.tab_manager.current_tab();
+                        if let Some(first_filtered_index) =
+                            tab.get_first_filtered_entry_index(query.as_str())
+                        {
+                            tab.update_selection(first_filtered_index);
+                            app.ensure_selected_visible = true;
+                            app.selection_changed = true;
+                        }
                     }
+                    app.search_bar.focus = false;
+                    return true; // Consume Enter key
                 }
-                // Unfocus the search bar
-                app.search_bar.focus = false;
-                return true; // Consume Enter key
-            }
 
-            // Process Escape key
-            if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
+                if i.key_pressed(egui::Key::Escape) {
+                    close_search_bar = true;
+                    return true; // Consume Escape key
+                }
+
+                // Block all other keyboard inputs when search bar has focus
+                true
+            });
+
+            if close_search_bar {
                 app.search_bar.close();
-                return true; // Consume Escape key
             }
 
-            // Block all other keyboard inputs when search bar has focus
-            true
+            consumed
         }
         None => false,
     }

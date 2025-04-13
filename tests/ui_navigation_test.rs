@@ -36,7 +36,11 @@ fn test_g_shortcuts() {
 
     // a single g press doesn't move selection
     {
-        harness.press_key(Key::G);
+        let modifiers = egui::Modifiers {
+            shift: false,
+            ..Default::default()
+        };
+        harness.press_key_modifiers(modifiers, Key::G);
         harness.step();
         let tab = harness.state().tab_manager.current_tab_ref();
         assert_eq!(tab.selected_index, tab.entries.len() - 1);
@@ -44,8 +48,6 @@ fn test_g_shortcuts() {
 
     // Test gg shortcut (go to first entry)
     {
-        // First g press
-        harness.press_key(Key::G);
         // Second g press should go back to the top
         harness.press_key(Key::G);
         harness.step();
@@ -245,14 +247,16 @@ fn test_mouse_click_selects_and_previews() {
     );
     // Preview cache should be empty or contain preview for a.txt initially
     // (Depending on initial load behavior, let's ensure it doesn't contain b.txt yet)
-     assert!(harness.state().cached_preview_path != Some(test_files[1].clone()), "Preview path should not be b.txt yet");
-
+    assert!(
+        harness.state().cached_preview_path != Some(test_files[1].clone()),
+        "Preview path should not be b.txt yet"
+    );
 
     // --- Simulate Click on the second entry ("b.txt") ---
     // Calculate the bounding box for the second row (index 1)
     // all the heights and widths are emprically determined from actual UI run
     let header_height = kiorg::ui::style::HEADER_ROW_HEIGHT; // Header row
-    let row_height = kiorg::ui::file_list::ROW_HEIGHT;    // Entry row
+    let row_height = kiorg::ui::file_list::ROW_HEIGHT; // Entry row
     let banner_height = 27.0;
     let target_y = banner_height + header_height + (2.0 * row_height) + (row_height / 2.0); // Click in the middle of the second entry row
     let target_pos = egui::pos2(200.0, target_y); // Click somewhere within the row horizontally
@@ -288,7 +292,13 @@ fn test_mouse_click_selects_and_previews() {
 
     // 2. Check if the preview cache now contains the preview for "b.txt"
     // The preview update happens in the right_panel draw phase, which runs during step()
-     assert_eq!(harness.state().cached_preview_path, Some(test_files[1].clone()), "Cached preview path should be b.txt after selection");
-     assert!(harness.state().preview_content.contains("Content of b.txt"), "Preview content should contain 'Content of b.txt'");
-
+    assert_eq!(
+        harness.state().cached_preview_path,
+        Some(test_files[1].clone()),
+        "Cached preview path should be b.txt after selection"
+    );
+    assert!(
+        harness.state().preview_content.contains("Content of b.txt"),
+        "Preview content should contain 'Content of b.txt'"
+    );
 }

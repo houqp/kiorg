@@ -1,7 +1,5 @@
 use egui::TextureHandle;
 use std::path::PathBuf;
-use std::sync::atomic::AtomicU64;
-use std::sync::atomic::Ordering::Relaxed;
 
 use crate::config::{self, colors::AppColors};
 use crate::models::tab::TabManager;
@@ -13,9 +11,6 @@ use crate::ui::separator::SEPARATOR_PADDING;
 use crate::ui::top_banner;
 use crate::ui::{bookmark_popup, center_panel, help_window, left_panel, right_panel};
 
-// Static variable for tracking key press times
-static LAST_LOWERCASE_G_PRESS: AtomicU64 = AtomicU64::new(0);
-
 // Layout constants
 const PANEL_SPACING: f32 = 5.0; // Space between panels
 
@@ -24,6 +19,8 @@ const LEFT_PANEL_RATIO: f32 = 0.15;
 const RIGHT_PANEL_RATIO: f32 = 0.25;
 const LEFT_PANEL_MIN_WIDTH: f32 = 150.0;
 const RIGHT_PANEL_MIN_WIDTH: f32 = 200.0;
+
+const DOUBLE_KEY_PRESS_THRESHOLD_MS: u64 = 500;
 
 pub struct Kiorg {
     pub tab_manager: TabManager,
@@ -46,6 +43,9 @@ pub struct Kiorg {
     pub cached_preview_path: Option<PathBuf>,
     pub selection_changed: bool, // Flag to track if selection changed
     pub search_bar: SearchBar,
+
+    // ts variable for tracking key press times
+    pub last_lowercase_g_pressed_ms: u64,
 }
 
 impl Kiorg {
@@ -99,6 +99,7 @@ impl Kiorg {
             cached_preview_path: None,
             selection_changed: true, // Initialize flag to true
             search_bar: SearchBar::new(),
+            last_lowercase_g_pressed_ms: 0,
         };
 
         // Load bookmarks after initializing the app with the config directory
@@ -414,6 +415,7 @@ impl Kiorg {
                 self.ensure_selected_visible = true;
                 self.selection_changed = true;
             }
+            self.last_lowercase_g_pressed_ms = 0;
         } else if ctx.input(|i| i.key_pressed(egui::Key::G) && !i.modifiers.shift) {
             let tab = self.tab_manager.current_tab();
             let now = std::time::SystemTime::now()
@@ -421,14 +423,15 @@ impl Kiorg {
                 .unwrap_or_default()
                 .as_millis() as u64;
 
-            let last = LAST_LOWERCASE_G_PRESS.load(Relaxed);
-            if last > 0 && now - last < 500 {
+            let last = self.last_lowercase_g_pressed_ms;
+            if last > 0 && now - last < DOUBLE_KEY_PRESS_THRESHOLD_MS {
                 tab.update_selection(0);
                 self.ensure_selected_visible = true;
                 self.selection_changed = true;
-                LAST_LOWERCASE_G_PRESS.store(0, Relaxed);
+                // Reset the timestamp after double g presses has been detected
+                self.last_lowercase_g_pressed_ms = 0;
             } else {
-                LAST_LOWERCASE_G_PRESS.store(now, Relaxed);
+                self.last_lowercase_g_pressed_ms = now;
             }
         } else if ctx.input(|i| i.key_pressed(egui::Key::Space)) {
             let tab = self.tab_manager.current_tab();
