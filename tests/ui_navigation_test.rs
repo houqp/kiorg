@@ -216,3 +216,79 @@ fn test_prev_path_selection_with_sort() {
         "Selected entry should be ccc"
     );
 }
+
+#[test]
+fn test_mouse_click_selects_and_previews() {
+    // Create a temporary directory for testing
+    let temp_dir = tempdir().unwrap();
+
+    // Create test files
+    let test_files = create_test_files(&[
+        temp_dir.path().join("a.txt"), // index 0
+        temp_dir.path().join("b.txt"), // index 1
+        temp_dir.path().join("c.txt"), // index 2
+    ]);
+
+    // Create some content for b.txt to ensure preview is generated
+    std::fs::write(&test_files[1], "Content of b.txt").unwrap();
+
+    // Start the harness
+    let mut harness = create_harness(&temp_dir);
+
+    // Ensure consistent sort order for reliable selection
+    harness.ensure_sorted_by_name_ascending();
+
+    // Initially, index 0 ("a.txt") should be selected
+    assert_eq!(
+        harness.state().tab_manager.current_tab_ref().selected_index,
+        0
+    );
+    // Preview cache should be empty or contain preview for a.txt initially
+    // (Depending on initial load behavior, let's ensure it doesn't contain b.txt yet)
+     assert!(harness.state().cached_preview_path != Some(test_files[1].clone()), "Preview path should not be b.txt yet");
+
+
+    // --- Simulate Click on the second entry ("b.txt") ---
+    // Calculate the bounding box for the second row (index 1)
+    // all the heights and widths are emprically determined from actual UI run
+    let header_height = kiorg::ui::style::HEADER_ROW_HEIGHT; // Header row
+    let row_height = kiorg::ui::file_list::ROW_HEIGHT;    // Entry row
+    let banner_height = 27.0;
+    let target_y = banner_height + header_height + (2.0 * row_height) + (row_height / 2.0); // Click in the middle of the second entry row
+    let target_pos = egui::pos2(200.0, target_y); // Click somewhere within the row horizontally
+
+    // Simulate a primary mouse button click (press and release)
+    harness.input_mut().events.push(egui::Event::PointerButton {
+        pos: target_pos,
+        button: egui::PointerButton::Primary,
+        pressed: true,
+        modifiers: egui::Modifiers::default(),
+    });
+    harness.input_mut().events.push(egui::Event::PointerButton {
+        pos: target_pos,
+        button: egui::PointerButton::Primary,
+        pressed: false,
+        modifiers: egui::Modifiers::default(),
+    });
+
+    harness.step(); // Process the click and update state
+    harness.step(); // One more step to process the preview content
+
+    // --- Assertions ---
+    // 1. Check if the selected index is updated to 1 ("b.txt")
+    let tab = harness.state().tab_manager.current_tab_ref();
+    assert_eq!(
+        tab.selected_index, 1,
+        "Selected index should be 1 after clicking the second entry"
+    );
+    assert_eq!(
+        tab.entries[tab.selected_index].path, test_files[1],
+        "Selected entry should be b.txt"
+    );
+
+    // 2. Check if the preview cache now contains the preview for "b.txt"
+    // The preview update happens in the right_panel draw phase, which runs during step()
+     assert_eq!(harness.state().cached_preview_path, Some(test_files[1].clone()), "Cached preview path should be b.txt after selection");
+     assert!(harness.state().preview_content.contains("Content of b.txt"), "Preview content should contain 'Content of b.txt'");
+
+}

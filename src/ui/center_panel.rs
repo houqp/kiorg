@@ -52,26 +52,24 @@ pub fn handle_clipboard_operations(
 
 /// Draws the center panel content.
 pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
-    let tab_index = app.tab_manager.current_tab_index;
+    let tab = app.tab_manager.current_tab_ref();
 
     // Get filtered entries and other data before any closures
-    let filtered_entries =
-        app.tab_manager.tabs[tab_index].get_filtered_entries(&app.search_bar.query);
-    let sort_column = app.tab_manager.tabs[tab_index].sort_column.clone();
-    let sort_order = app.tab_manager.tabs[tab_index].sort_order.clone();
-    let selected_entries = app.tab_manager.tabs[tab_index].selected_entries.clone();
-    let entries_clone = app.tab_manager.tabs[tab_index].entries.clone();
-    let selected_index = app.tab_manager.tabs[tab_index].selected_index;
+    let filtered_entries = tab.get_filtered_entries(&app.search_bar.query);
+    let sort_column = tab.sort_column;
+    let sort_order = tab.sort_order;
+    let selected_entries = tab.selected_entries.clone();
+    let entries_clone = tab.entries.clone();
+    let selected_index = tab.selected_index;
     let colors = app.colors.clone();
     let config_dir_override = app.config_dir_override.clone();
     let bookmarks = app.bookmarks.clone();
     let rename_mode = app.rename_mode;
     let rename_focus = app.rename_focus;
     let mut new_name = app.new_name.clone();
+    let mut new_selected_index = None;
     let ensure_selected_visible = app.ensure_selected_visible;
 
-    let mut path_to_navigate = None;
-    let mut entry_to_rename = None;
     let mut sort_requested = None;
 
     ui.vertical(|ui| {
@@ -135,11 +133,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
 
                         // Check for clicks/activation after drawing
                         if response {
-                            if rename_mode && is_selected {
-                                entry_to_rename = Some((entry.path.clone(), new_name.clone()));
-                            } else {
-                                path_to_navigate = Some(entry.path.clone());
-                            }
+                            new_selected_index = Some(original_index);
                         }
                     }
                 }
@@ -187,27 +181,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
         }
     }
 
-    // --- Handle actions after UI drawing ---
-
-    // Handle navigation
-    if let Some(path) = path_to_navigate {
-        app.navigate_to(path);
-    }
-
-    // Handle rename completion
-    if let Some((old_path, new_name)) = entry_to_rename {
-        if let Some(parent) = old_path.parent() {
-            let new_path = parent.join(new_name);
-            if let Err(e) = std::fs::rename(&old_path, &new_path) {
-                eprintln!("Failed to rename: {e}");
-            } else {
-                // Refresh entries only on successful rename
-                app.refresh_entries();
-            }
-        }
-        // Reset rename state regardless of success/failure
-        app.rename_mode = false;
-        app.new_name.clear();
-        app.rename_focus = false;
+    if let Some(index) = new_selected_index {
+        app.set_selection(index);
     }
 }

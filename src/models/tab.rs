@@ -26,7 +26,6 @@ pub struct Tab {
     pub selected_entries: std::collections::HashSet<PathBuf>,
     pub sort_column: SortColumn,
     pub sort_order: SortOrder,
-    pub last_refreshed_path: Option<PathBuf>,
 }
 
 // Private helper function for sorting DirEntry slices
@@ -68,7 +67,7 @@ fn sort_entries_by(entries: &mut [DirEntry], sort_column: SortColumn, sort_order
 impl Tab {
     pub fn new(path: PathBuf, sort_preference: Option<&crate::config::SortPreference>) -> Self {
         let (sort_column, sort_order) = if let Some(pref) = sort_preference {
-            (pref.column.clone(), pref.order.clone())
+            (pref.column, pref.order)
         } else {
             (SortColumn::None, SortOrder::Ascending)
         };
@@ -82,7 +81,6 @@ impl Tab {
             selected_entries: std::collections::HashSet::new(),
             sort_column,
             sort_order,
-            last_refreshed_path: None,
         }
     }
 
@@ -168,9 +166,38 @@ impl Tab {
     }
 }
 
+fn read_dir_entries(path: &PathBuf) -> Vec<DirEntry> {
+    if let Ok(read_dir) = std::fs::read_dir(path) {
+        read_dir
+            .filter_map(|entry| {
+                let entry = entry.ok()?;
+                let path = entry.path();
+                let is_dir = path.is_dir();
+                let name = entry.file_name().to_string_lossy().into_owned();
+
+                let metadata = entry.metadata().ok()?;
+                let modified = metadata
+                    .modified()
+                    .unwrap_or(std::time::SystemTime::UNIX_EPOCH);
+                let size = if is_dir { 0 } else { metadata.len() };
+
+                Some(DirEntry {
+                    name,
+                    path,
+                    is_dir,
+                    modified,
+                    size,
+                })
+            })
+            .collect()
+    } else {
+        Vec::new()
+    }
+}
+
 pub struct TabManager {
-    pub tabs: Vec<Tab>,
-    pub current_tab_index: usize,
+    tabs: Vec<Tab>,
+    current_tab_index: usize,
 }
 
 impl TabManager {
@@ -184,6 +211,12 @@ impl TabManager {
             tabs: vec![Tab::new(initial_path, sort_preference)],
             current_tab_index: 0,
         }
+    }
+
+    pub fn tab_indexes(&self) -> Vec<(usize, bool)> {
+        (0..self.tabs.len())
+            .map(|i| (i, i == self.current_tab_index))
+            .collect()
     }
 
     pub fn add_tab(&mut self, path: PathBuf) {
@@ -208,6 +241,52 @@ impl TabManager {
 
     pub fn current_tab_ref(&self) -> &Tab {
         &self.tabs[self.current_tab_index]
+    }
+
+    pub fn reset_selection(&mut self) {
+        let tab = self.current_tab();
+        tab.selected_index = 0;
+    }
+
+    pub fn select_child(&mut self, child: &PathBuf) -> bool {
+        let tab = self.current_tab();
+        if child.parent().is_some_and(|p| p == tab.current_path) {
+            if let Some(pos) = tab.entries.iter().position(|e| &e.path == child) {
+                tab.update_selection(pos);
+                return true;
+            }
+        }
+        false
+    }
+
+    pub fn refresh_entries(&mut self) {
+        let tab = self.current_tab();
+
+        let current_path = tab.current_path.clone(); // Get current path from the tab
+
+        // Path changed or first load, perform full refresh
+        // --- Start: Parent Directory Logic ---
+        tab.parent_entries.clear();
+        tab.parent_selected_index = 0; // Default selection
+
+        if let Some(parent) = current_path.parent() {
+            tab.parent_entries = read_dir_entries(&parent.to_path_buf());
+            tab.sort_parent_entries(); // Sort parent entries
+
+            // Find current directory in parent entries after sorting
+            if let Some(pos) = tab
+                .parent_entries
+                .iter()
+                .position(|e| e.path == current_path)
+            {
+                tab.parent_selected_index = pos;
+            }
+        } // else: No parent (e.g., root), parent_entries remains empty
+          // --- End: Parent Directory Logic ---
+
+        // --- Start: Current Directory Logic ---
+        tab.entries = read_dir_entries(&current_path); // Read entries for the current path
+        tab.sort_entries(); // Apply the tab's sort order
     }
 }
 

@@ -9,5 +9,5 @@ pub mod path_nav;
 pub mod right_panel;
 pub mod search_bar;
 pub mod separator;
-mod style;
+pub mod style;
 pub mod top_banner;

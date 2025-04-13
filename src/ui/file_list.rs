@@ -94,7 +94,7 @@ fn draw_header_column(
     let header_text = format!("{}{}", text, sort_indicator);
 
     // Interact with the calculated rectangle
-    let response = ui.interact(col_rect, ui.id().with(&column), egui::Sense::click());
+    let response = ui.interact(col_rect, ui.id().with(column), egui::Sense::click());
 
     if response.clicked() {
         (params.on_sort)(column);

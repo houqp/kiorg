@@ -1,18 +1,16 @@
 use egui::TextureHandle;
-use std::fs;
 use std::path::PathBuf;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering::Relaxed;
 
 use crate::config::{self, colors::AppColors};
-use crate::models::dir_entry::DirEntry;
 use crate::models::tab::TabManager;
 use crate::ui::delete_dialog::DeleteDialog;
 use crate::ui::dialogs::Dialogs;
 use crate::ui::search_bar::{self, SearchBar};
 use crate::ui::separator;
 use crate::ui::separator::SEPARATOR_PADDING;
-use crate::ui::top_banner::TopBanner;
+use crate::ui::top_banner;
 use crate::ui::{bookmark_popup, center_panel, help_window, left_panel, right_panel};
 
 // Static variable for tracking key press times
@@ -30,6 +28,7 @@ const RIGHT_PANEL_MIN_WIDTH: f32 = 200.0;
 pub struct Kiorg {
     pub tab_manager: TabManager,
     pub colors: AppColors,
+    // TODO: delete this field
     pub ensure_selected_visible: bool,
     pub show_help: bool,
     pub preview_content: String,
@@ -110,104 +109,32 @@ impl Kiorg {
         app
     }
 
-    fn read_dir_entries(path: &PathBuf) -> Vec<DirEntry> {
-        if let Ok(read_dir) = fs::read_dir(path) {
-            read_dir
-                .filter_map(|entry| {
-                    let entry = entry.ok()?;
-                    let path = entry.path();
-                    let is_dir = path.is_dir();
-                    let name = entry.file_name().to_string_lossy().into_owned();
+    pub fn refresh_entries(&mut self) {
+        self.tab_manager.refresh_entries();
 
-                    let metadata = entry.metadata().ok()?;
-                    let modified = metadata
-                        .modified()
-                        .unwrap_or(std::time::SystemTime::UNIX_EPOCH);
-                    let size = if is_dir { 0 } else { metadata.len() };
-
-                    Some(DirEntry {
-                        name,
-                        path,
-                        is_dir,
-                        modified,
-                        size,
-                    })
-                })
-                .collect()
-        } else {
-            Vec::new()
+        // --- Start: Restore Selection Preservation (Post-Sort) ---
+        let mut selection_restored = false;
+        if let Some(prev_path) = &self.prev_path {
+            selection_restored = self.tab_manager.select_child(prev_path)
+        };
+        if !selection_restored {
+            // Default to the first item if selection wasn't restored
+            self.tab_manager.reset_selection();
         }
+        self.selection_changed = true;
+        // Clear prev_path after attempting to use it
+        self.prev_path = None;
+
+        // Always ensure selection is visible and invalidate preview cache
+        self.ensure_selected_visible = true;
+        self.cached_preview_path = None; // Invalidate preview cache
     }
 
-    pub fn refresh_entries(&mut self) {
-        let tab_index = self.tab_manager.current_tab_index;
-
-        // Get mutable access safely
-        if let Some(tab) = self.tab_manager.tabs.get_mut(tab_index) {
-            let current_path = tab.current_path.clone(); // Get current path from the tab
-
-            // --- Start: Optimization Check ---
-            // Only refresh fully if the path has changed
-            if tab.last_refreshed_path.as_ref() != Some(&current_path) {
-                // Path changed or first load, perform full refresh
-                // --- Start: Parent Directory Logic ---
-                tab.parent_entries.clear();
-                tab.parent_selected_index = 0; // Default selection
-
-                if let Some(parent) = current_path.parent() {
-                    tab.parent_entries = Self::read_dir_entries(&parent.to_path_buf());
-                    tab.sort_parent_entries(); // Sort parent entries
-
-                    // Find current directory in parent entries after sorting
-                    if let Some(pos) = tab
-                        .parent_entries
-                        .iter()
-                        .position(|e| e.path == current_path)
-                    {
-                        tab.parent_selected_index = pos;
-                    }
-                } // else: No parent (e.g., root), parent_entries remains empty
-                  // --- End: Parent Directory Logic ---
-
-                // --- Start: Current Directory Logic ---
-                tab.entries = Self::read_dir_entries(&current_path); // Read entries for the current path
-                tab.sort_entries(); // Apply the tab's sort order
-                                    // --- End: Current Directory Logic ---
-
-                // --- Start: Restore Selection Preservation (Post-Sort) ---
-                let mut selection_restored = false;
-                if let Some(prev_path) = &self.prev_path {
-                    // Check if prev_path is a direct child of the current_path using is_some_and
-                    if prev_path.parent().is_some_and(|p| p == current_path) {
-                        // Find the position *after* applying the correct sort
-                        if let Some(pos) = tab.entries.iter().position(|e| e.path == *prev_path) {
-                            tab.update_selection(pos);
-                            self.ensure_selected_visible = true;
-                            self.selection_changed = true;
-                            selection_restored = true;
-                        }
-                    }
-                }
-
-                if !selection_restored {
-                    // Default to the first item if selection wasn't restored
-                    tab.update_selection(0);
-                    self.ensure_selected_visible = true;
-                    self.selection_changed = true;
-                }
-                // Clear prev_path after attempting to use it
-                self.prev_path = None;
-                // --- End: Restore Selection Preservation (Post-Sort) ---
-
-                // Update the last refreshed path
-                tab.last_refreshed_path = Some(current_path);
-            }
-            // --- End: Optimization Check ---
-
-            // Always ensure selection is visible and invalidate preview cache
-            self.ensure_selected_visible = true;
-            self.cached_preview_path = None; // Invalidate preview cache
-        }
+    pub fn set_selection(&mut self, index: usize) {
+        let tab = self.tab_manager.current_tab();
+        tab.update_selection(index);
+        self.ensure_selected_visible = true;
+        self.selection_changed = true;
     }
 
     pub fn move_selection(&mut self, delta: isize) {
@@ -655,7 +582,7 @@ impl eframe::App for Kiorg {
 
             // Draw top banner and measure its height
             let top_banner_response = ui.scope(|ui| {
-                TopBanner::new(self).draw(ui);
+                top_banner::draw(self, ui);
             });
             let top_banner_height = top_banner_response.response.rect.height();
 
