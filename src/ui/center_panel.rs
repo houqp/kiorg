@@ -52,135 +52,126 @@ pub fn handle_clipboard_operations(
 
 /// Draws the center panel content.
 pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
-    let tab = app.tab_manager.current_tab_ref();
+    let tab_ref = app.tab_manager.current_tab_ref(); // Use a different name to avoid confusion
+    let current_search_query = &app.search_bar.query;
 
-    // Get filtered entries and other data before any closures
-    let filtered_entries = tab.get_filtered_entries(&app.search_bar.query);
-    let sort_column = tab.sort_column;
-    let sort_order = tab.sort_order;
-    let selected_entries = tab.selected_entries.clone();
-    let entries_clone = tab.entries.clone();
-    let selected_index = tab.selected_index;
-    let colors = app.colors.clone();
-    let config_dir_override = app.config_dir_override.clone();
-    let bookmarks = app.bookmarks.clone();
-    let rename_mode = app.rename_mode;
-    let rename_focus = app.rename_focus;
-    let mut new_name = app.new_name.clone();
-    let mut new_selected_index = None;
-    let ensure_selected_visible = app.ensure_selected_visible;
+    // Get filtered entries - needs tab_ref and search query
+    let filtered_entries = tab_ref.get_filtered_entries(current_search_query);
 
-    let mut sort_requested = None;
+    // --- State variables to capture changes from UI closures ---
+    let mut new_selected_index = None; // For selection changes captured from the row click
+    let mut sort_requested = None; // For sort changes captured from the header click
+    let mut scrolling_performed = false; // Flag to defer scroll state update
 
     ui.vertical(|ui| {
         ui.set_min_width(width);
         ui.set_max_width(width);
         ui.set_min_height(height);
 
-        // Draw table header
         let mut header_params = TableHeaderParams {
-            colors: &colors,
-            sort_column: &sort_column,
-            sort_order: &sort_order,
+            colors: &app.colors,
+            sort_column: &tab_ref.sort_column,
+            sort_order: &tab_ref.sort_order,
             on_sort: &mut |column| {
                 sort_requested = Some(column);
             },
         };
-        // Draw the header
         file_list::draw_table_header(ui, &mut header_params);
 
-        // Calculate available height for scroll area
+        // --- Draw Scrollable File List ---
         let available_height = height - ROW_HEIGHT;
-
         egui::ScrollArea::vertical()
-            .id_salt("current_list_scroll")
+            .id_salt("center_panel_list_scroll") // Use id_source for stable ID
             .auto_shrink([false; 2])
             .max_height(available_height)
-            .show(ui, |ui| {
-                // Set the width of the content area
-                let scrollbar_width = 6.0;
-                ui.set_min_width(width - scrollbar_width);
-                ui.set_max_width(width - scrollbar_width);
+            .show_rows(
+                ui,
+                ROW_HEIGHT,
+                filtered_entries.len(),
+                |scroll_ui, row_range| {
+                    let scrollbar_width = 6.0;
+                    scroll_ui.set_min_width(width - scrollbar_width);
+                    scroll_ui.set_max_width(width - scrollbar_width);
 
-                // --- Draw Filtered Entries ---
-                if filtered_entries.is_empty() {
-                    ui.label("No matching entries found.");
-                } else {
-                    for entry in filtered_entries.iter() {
-                        // Find the original index in the full `entries` list for selection checks
-                        let original_index = entries_clone
+                    if filtered_entries.is_empty() {
+                        scroll_ui.label("No matching entries found.");
+                        return;
+                    }
+
+                    for row_index in row_range {
+                        // Get the entry for the current visible row from the filtered list
+                        let entry = &filtered_entries[row_index];
+
+                        // Find the original index in the full `entries` list for selection state
+                        let original_index = tab_ref
+                            .entries
                             .iter()
                             .position(|e| e.path == entry.path)
-                            .unwrap_or(usize::MAX); // Should always find it
+                            .unwrap_or(usize::MAX); // Should always find
 
-                        let is_selected = original_index == selected_index;
-                        let is_in_selection = selected_entries.contains(&entry.path);
+                        let is_selected = original_index == tab_ref.selected_index;
+                        let is_in_selection = tab_ref.selected_entries.contains(&entry.path);
 
-                        let response = file_list::draw_entry_row(
-                            ui,
+                        // Draw the row and get its response
+                        let row_response = file_list::draw_entry_row(
+                            scroll_ui,
                             file_list::EntryRowParams {
-                                entry, // Use the filtered entry
+                                entry,
                                 is_selected,
-                                colors: &colors,
-                                rename_mode: rename_mode && is_selected,
-                                new_name: &mut new_name,
-                                rename_focus: rename_focus && is_selected,
+                                colors: &app.colors,
+                                rename_mode: app.rename_mode && is_selected,
+                                new_name: &mut app.new_name,
+                                rename_focus: app.rename_focus && is_selected,
                                 is_marked: is_in_selection,
-                                is_bookmarked: bookmarks.contains(&entry.path),
-                                search_query: &app.search_bar.query,
+                                is_bookmarked: app.bookmarks.contains(&entry.path),
+                                search_query: current_search_query,
                             },
                         );
 
-                        // Check for clicks/activation after drawing
-                        if response {
+                        // Check for clicks to update selection state (captured outside)
+                        if row_response.clicked() {
                             new_selected_index = Some(original_index);
                         }
+
+                        // Handle scrolling to the selected item if needed for this row
+                        if app.ensure_selected_visible && is_selected {
+                            scroll_ui.scroll_to_rect(row_response.rect, Some(egui::Align::Center));
+                            scrolling_performed = true;
+                        }
                     }
-                }
+                },
+            );
+    }); // End of ui.vertical closure. All borrows of `app` inside are released here.
 
-                // Handle scrolling to selected item
-                if ensure_selected_visible && !filtered_entries.is_empty() {
-                    // Find the position of the selected item *within the filtered list*
-                    if let Some(filtered_selected_index) = filtered_entries.iter().position(|e| {
-                        entries_clone
-                            .get(selected_index)
-                            .is_some_and(|selected_entry| selected_entry.path == e.path)
-                    }) {
-                        let selected_pos = filtered_selected_index as f32 * ROW_HEIGHT;
-                        ui.scroll_to_rect(
-                            egui::Rect::from_min_size(
-                                egui::pos2(0.0, selected_pos),
-                                egui::vec2(width, ROW_HEIGHT),
-                            ),
-                            Some(egui::Align::Center),
-                        );
-                        app.ensure_selected_visible = false; // Reset flag after scrolling
-                    }
-                }
-                // --- End Filtered Entries ---
-            });
-    });
+    // --- Apply state changes captured from the UI closures AFTER drawing ---
 
-    // Update app state with any changes
-    app.new_name = new_name;
+    // Reset the scroll flag in app state only if scrolling actually happened
+    if scrolling_performed {
+        app.ensure_selected_visible = false;
+    }
 
-    // Handle sort request after UI is drawn
+    // Handle sort request captured from the header closure
     if let Some(column) = sort_requested {
+        // Borrow app mutably here - should be fine as UI closure is finished
         let tab = app.tab_manager.current_tab();
         tab.toggle_sort(column);
         tab.sort_entries();
 
-        // Save sort preferences after sorting
-        let mut config = config::load_config_with_override(config_dir_override.as_ref());
+        // Save sort preferences - requires immutable borrows followed by mutable config load/save
+        let config_dir_override = app.config_dir_override.as_ref(); // Borrow immutably
+        let mut config = config::load_config_with_override(config_dir_override);
         config.sort_preference = Some(SortPreference {
             column: tab.sort_column,
             order: tab.sort_order,
         });
-        if let Err(e) = config::save_config_with_override(&config, config_dir_override.as_ref()) {
+        // Re-borrow immutably for save path
+        if let Err(e) = config::save_config_with_override(&config, app.config_dir_override.as_ref())
+        {
             eprintln!("Failed to save sort preferences: {}", e);
         }
     }
 
+    // Handle selection change captured from the row closure
     if let Some(index) = new_selected_index {
         app.set_selection(index);
     }

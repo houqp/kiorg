@@ -28,7 +28,6 @@ const RIGHT_PANEL_MIN_WIDTH: f32 = 200.0;
 pub struct Kiorg {
     pub tab_manager: TabManager,
     pub colors: AppColors,
-    // TODO: delete this field
     pub ensure_selected_visible: bool,
     pub show_help: bool,
     pub preview_content: String,
@@ -609,9 +608,6 @@ impl eframe::App for Kiorg {
                 right_panel::draw(self, ui, right_width, content_height);
                 ui.add_space(PANEL_SPACING);
             });
-
-            // Reset ensure_selected_visible flag after drawing
-            self.ensure_selected_visible = false;
         });
 
         search_bar::draw(ctx, self);

@@ -170,7 +170,7 @@ fn draw_icon(
     ICON_WIDTH + HORIZONTAL_PADDING
 }
 
-pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> bool {
+pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response {
     let EntryRowParams {
         entry,
         is_selected,
@@ -360,7 +360,7 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> bool {
     );
     // No cursor advance needed after the last column
 
-    response.clicked()
+    response
 }
 
 pub fn draw_parent_entry_row(
