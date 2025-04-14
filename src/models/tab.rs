@@ -23,6 +23,7 @@ pub struct Tab {
     pub parent_entries: Vec<DirEntry>,
     pub selected_index: usize,
     pub parent_selected_index: usize,
+    // TODO: rename this, confusing with selected_index
     pub selected_entries: std::collections::HashSet<PathBuf>,
     pub sort_column: SortColumn,
     pub sort_order: SortOrder,
@@ -111,6 +112,14 @@ impl Tab {
     pub fn update_selection(&mut self, new_index: usize) {
         if new_index < self.entries.len() {
             self.selected_index = new_index;
+        }
+    }
+
+    pub fn selected_entry(&self) -> Option<&DirEntry> {
+        if self.entries.is_empty() {
+            None
+        } else {
+            Some(&self.entries[self.selected_index])
         }
     }
 

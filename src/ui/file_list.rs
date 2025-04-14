@@ -22,10 +22,10 @@ pub struct TableHeaderParams<'a> {
     pub on_sort: &'a mut dyn FnMut(SortColumn),
 }
 
-pub fn draw_table_header(ui: &mut Ui, params: &mut TableHeaderParams) {
+pub fn draw_table_header(ui: &mut Ui, params: &mut TableHeaderParams) -> egui::Response {
     ui.style_mut().spacing.item_spacing.y = 2.0;
 
-    let (rect, _) = ui.allocate_exact_size(
+    let (rect, response) = ui.allocate_exact_size(
         egui::vec2(ui.available_width(), HEADER_ROW_HEIGHT),
         egui::Sense::hover(), // Sense hover on the whole row for potential background effects
     );
@@ -64,6 +64,8 @@ pub fn draw_table_header(ui: &mut Ui, params: &mut TableHeaderParams) {
     // No cursor advance needed after the last column
 
     ui.separator();
+
+    response
 }
 
 // Helper function to draw a single header column

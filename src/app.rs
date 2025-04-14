@@ -43,6 +43,7 @@ pub struct Kiorg {
     pub cached_preview_path: Option<PathBuf>,
     pub selection_changed: bool, // Flag to track if selection changed
     pub search_bar: SearchBar,
+    pub scroll_range: std::ops::Range<usize>,
 
     // ts variable for tracking key press times
     pub last_lowercase_g_pressed_ms: u64,
@@ -99,6 +100,7 @@ impl Kiorg {
             cached_preview_path: None,
             selection_changed: true, // Initialize flag to true
             search_bar: SearchBar::new(),
+            scroll_range: 0..0,
             last_lowercase_g_pressed_ms: 0,
         };
 
