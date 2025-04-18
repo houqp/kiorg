@@ -24,6 +24,7 @@ pub fn show_help_window(ctx: &egui::Context, show_help: &mut bool, colors: &AppC
                     ("G", "Go to last entry"),
                     ("D", "Delete selected file/directory"),
                     ("r", "Rename selected file/directory"),
+                    ("a", "Add file/directory"),
                     ("space", "Select/deselect entry"),
                     ("/", "Enter search filter mode"),
                     ("Enter (in search)", "Confirm filter"),

@@ -3,6 +3,7 @@ use std::path::PathBuf;
 
 use crate::config::{self, colors::AppColors};
 use crate::models::tab::TabManager;
+use crate::ui::add_entry_popup; // Import the new module
 use crate::ui::delete_dialog::DeleteDialog;
 use crate::ui::dialogs;
 use crate::ui::search_bar::{self, SearchBar};
@@ -44,6 +45,9 @@ pub struct Kiorg {
     pub selection_changed: bool, // Flag to track if selection changed
     pub search_bar: SearchBar,
     pub scroll_range: std::ops::Range<usize>,
+    pub add_mode: bool,
+    pub new_entry_name: String,
+    pub add_focus: bool,
 
     // ts variable for tracking key press times
     pub last_lowercase_g_pressed_ms: u64,
@@ -101,6 +105,9 @@ impl Kiorg {
             selection_changed: true, // Initialize flag to true
             search_bar: SearchBar::new(),
             scroll_range: 0..0,
+            add_mode: false,
+            new_entry_name: String::new(),
+            add_focus: false,
             last_lowercase_g_pressed_ms: 0,
         };
 
@@ -189,6 +196,11 @@ impl Kiorg {
     }
 
     pub fn handle_key_press(&mut self, ctx: &egui::Context) {
+        // Prioritize Add Mode Input
+        if add_entry_popup::handle_key_press(ctx, self) {
+            return;
+        }
+
         // Prioritize Search Mode Input
         if search_bar::handle_key_press(ctx, self) {
             return;
@@ -499,6 +511,25 @@ impl Kiorg {
         // Handle search activation
         if ctx.input(|i| i.key_pressed(egui::Key::Slash)) {
             self.search_bar.activate();
+            return;
+        }
+
+        // Handle Add Entry activation
+        if ctx.input(|i| i.key_pressed(egui::Key::A)) {
+            // Ensure no other modal/popup is active
+            if !self.show_help
+                && !self.show_exit_confirm
+                && !self.show_delete_confirm
+                && !self.rename_mode
+                && !self.search_bar.active() // Corrected method call
+                && !self.show_bookmarks
+            {
+                self.add_mode = true;
+                self.add_focus = true; // Request focus for the input field
+                self.new_entry_name.clear();
+            }
+            // Consume the 'a' key press
+            return;
         }
     }
 
@@ -616,6 +647,11 @@ impl eframe::App for Kiorg {
         });
 
         search_bar::draw(ctx, self);
+
+        // Show add entry popup if needed
+        if self.add_mode {
+            add_entry_popup::draw(ctx, self);
+        }
 
         // Show help window if needed
         if self.show_help {
