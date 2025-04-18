@@ -1,15 +1,13 @@
 use crate::config::colors::AppColors;
-use egui::{self, Align2, RichText};
+use egui::{self, RichText};
+
+use super::window_utils::new_center_popup_window;
 
 pub fn show_help_window(ctx: &egui::Context, show_help: &mut bool, colors: &AppColors) {
-    if !*show_help {
-        return;
-    }
-
-    egui::Window::new("Keyboard Shortcuts")
-        .collapsible(false)
-        .resizable(false)
-        .anchor(Align2::CENTER_CENTER, [0.0, 0.0])
+    let mut keep_open = *show_help; // Use a temporary variable for the open state
+                                    //
+    let response = new_center_popup_window("Help")
+        .open(&mut keep_open)
         .show(ctx, |ui| {
             ui.style_mut().spacing.item_spacing = egui::vec2(10.0, 6.0);
 
@@ -97,4 +95,8 @@ pub fn show_help_window(ctx: &egui::Context, show_help: &mut bool, colors: &AppC
                 ui.add_space(10.0);
             });
         });
+
+    if response.is_some() {
+        *show_help = keep_open;
+    }
 }

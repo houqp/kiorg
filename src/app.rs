@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use crate::config::{self, colors::AppColors};
 use crate::models::tab::TabManager;
 use crate::ui::delete_dialog::DeleteDialog;
-use crate::ui::dialogs::Dialogs;
+use crate::ui::dialogs;
 use crate::ui::search_bar::{self, SearchBar};
 use crate::ui::separator;
 use crate::ui::separator::SEPARATOR_PADDING;
@@ -625,7 +625,7 @@ impl eframe::App for Kiorg {
         // Show exit confirmation window if needed
         if self.show_exit_confirm {
             // Call the refactored dialog function
-            Dialogs::show_exit_dialog(ctx, &mut self.show_exit_confirm, &self.colors);
+            dialogs::show_exit_dialog(ctx, &mut self.show_exit_confirm, &self.colors);
         }
 
         // Show delete confirmation window if needed

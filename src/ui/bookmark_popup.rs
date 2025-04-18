@@ -5,7 +5,7 @@ use std::fs;
 use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf; // Removed unused Path
 
-// --- New functions moved from app.rs ---
+use super::window_utils::new_center_popup_window;
 
 // Get the path to the kiorg config directory
 fn get_kiorg_config_dir(override_path: Option<&PathBuf>) -> PathBuf {
@@ -152,6 +152,7 @@ pub fn show_bookmark_popup(
 
     let mut show_popup = *show_bookmarks;
 
+    // FIXME: get rid of this static non-sense
     // Initialize a static bookmark index to preserve selection state between frames
     static mut BOOKMARK_SELECTED_INDEX: usize = 0;
     let mut selected_index = unsafe { BOOKMARK_SELECTED_INDEX };
@@ -176,10 +177,7 @@ pub fn show_bookmark_popup(
 
     let mut navigate_to_path = None;
 
-    if let Some(response) = egui::Window::new("Bookmarks")
-        .resizable(true)
-        .default_width(500.0) // Wider window for two columns
-        .pivot(egui::Align2::CENTER_CENTER) // Center the window
+    if let Some(response) = new_center_popup_window("Bookmarks")
         .default_pos(ctx.screen_rect().center()) // Position at screen center
         .open(&mut show_popup)
         .show(ctx, |ui| {

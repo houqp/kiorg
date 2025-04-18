@@ -11,3 +11,5 @@ pub mod search_bar;
 pub mod separator;
 pub mod style;
 pub mod top_banner;
+
+mod window_utils;
