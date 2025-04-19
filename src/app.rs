@@ -48,6 +48,7 @@ pub struct Kiorg {
     pub scroll_range: Option<std::ops::Range<usize>>,
     pub add_mode: bool,
     pub new_entry_name: String,
+    // TODO: is this neeeded if we already have add_mode?
     pub add_focus: bool,
 
     // ts variable for tracking key press times

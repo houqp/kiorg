@@ -15,42 +15,43 @@ pub fn handle_clipboard_operations(
     clipboard: &mut Option<(Vec<PathBuf>, bool)>,
     current_path: &std::path::Path,
 ) -> bool {
-    if let Some((paths, is_cut)) = clipboard.take() {
-        for path in paths {
-            let name = path
-                .file_name()
-                .and_then(|n| n.to_str())
+    let (paths, is_cut) = match clipboard.take() {
+        Some((paths, is_cut)) => (paths, is_cut),
+        _ => return false, // No clipboard operation to perform
+    };
+
+    for path in paths {
+        let name = path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or_default();
+        let mut new_path = current_path.join(name);
+
+        // Handle duplicate names
+        let mut counter = 1;
+        while new_path.exists() {
+            let stem = path
+                .file_stem()
+                .and_then(|s| s.to_str())
                 .unwrap_or_default();
-            let mut new_path = current_path.join(name);
-
-            // Handle duplicate names
-            let mut counter = 1;
-            while new_path.exists() {
-                let stem = path
-                    .file_stem()
-                    .and_then(|s| s.to_str())
-                    .unwrap_or_default();
-                let ext = path
-                    .extension()
-                    .and_then(|e| e.to_str())
-                    .map(|e| format!(".{}", e))
-                    .unwrap_or_default();
-                new_path = current_path.join(format!("{}_{}{}", stem, counter, ext));
-                counter += 1;
-            }
-
-            if is_cut {
-                if let Err(e) = std::fs::rename(&path, &new_path) {
-                    eprintln!("Failed to move: {e}");
-                }
-            } else if let Err(e) = std::fs::copy(&path, &new_path) {
-                eprintln!("Failed to copy: {e}");
-            }
+            let ext = path
+                .extension()
+                .and_then(|e| e.to_str())
+                .map(|e| format!(".{}", e))
+                .unwrap_or_default();
+            new_path = current_path.join(format!("{}_{}{}", stem, counter, ext));
+            counter += 1;
         }
-        true
-    } else {
-        false
+
+        if is_cut {
+            if let Err(e) = std::fs::rename(&path, &new_path) {
+                eprintln!("Failed to move: {e}");
+            }
+        } else if let Err(e) = std::fs::copy(&path, &new_path) {
+            eprintln!("Failed to copy: {e}");
+        }
     }
+    true
 }
 
 fn scroll_by_filtered_index(
@@ -64,7 +65,7 @@ fn scroll_by_filtered_index(
         Some(range) => range,
         None => return scroll_area,
     };
-    
+
     // scroll_area will always be lagging one cycle behind, i.e. it shows the view port before
     // current action has been processed
     let rows = scroll_range.end - scroll_range.start;
@@ -74,7 +75,7 @@ fn scroll_by_filtered_index(
     let rows_offset = 2;
 
     // where there are not enough entries to fill the viewport, just start from 0
-    if filtered_index + rows_offset < rows || rows_offset > rows{
+    if filtered_index + rows_offset < rows || rows_offset > rows {
         return scroll_area.vertical_scroll_offset(0.0);
     }
 
@@ -101,6 +102,36 @@ fn scroll_by_filtered_index(
     scroll_area
 }
 
+/// Enum to represent actions triggered by the context menu.
+#[derive(Clone, Copy, PartialEq)]
+enum ContextMenuAction {
+    None,
+    Add,
+    Paste,
+}
+
+/// Helper function to build the context menu items and return the chosen action.
+/// Takes a boolean indicating if pasting is possible.
+fn show_context_menu(ui: &mut Ui, can_paste: bool) -> ContextMenuAction {
+    let mut action = ContextMenuAction::None;
+
+    if ui.button("Add new file/directory").clicked() {
+        action = ContextMenuAction::Add;
+        ui.close_menu();
+    }
+
+    // Use the passed boolean directly
+    if ui
+        .add_enabled(can_paste, egui::Button::new("Paste"))
+        .clicked()
+    {
+        action = ContextMenuAction::Paste;
+        ui.close_menu();
+    }
+
+    action
+}
+
 /// Draws the center panel content.
 pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
     let tab_ref = app.tab_manager.current_tab_ref(); // Use a different name to avoid confusion
@@ -113,10 +144,11 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
     // --- State variables to capture changes from UI closures ---
     let mut new_selected_index = None; // For selection changes captured from the row click
     let mut sort_requested = None; // For sort changes captured from the header click
+    let mut file_list_response = None; // To store the response for the background context menu
+    let mut context_menu_action = ContextMenuAction::None; // To store the action from any context menu
 
     ui.vertical(|ui| {
         ui.set_min_width(width);
-        ui.set_max_width(width);
         ui.set_min_height(height);
         ui.set_max_height(height);
 
@@ -130,77 +162,136 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
         };
         let header_resp = file_list::draw_table_header(ui, &mut header_params);
 
-        // --- Draw Scrollable File List ---
+        // --- Draw Scrollable File List within its own container for context menu ---
         let available_height = height - header_resp.rect.height();
-        let mut scroll_area = egui::ScrollArea::vertical()
-            .id_salt("center_panel_list_scroll") // Use id_source for stable ID
-            .auto_shrink([false; 2])
-            .max_height(available_height);
-        let total_rows = filtered_entries.len();
-        if app.ensure_selected_visible {
-            if let Some(selected_entry) = tab_ref.selected_entry() {
-                let filtered_index = filtered_entries
-                    .iter()
-                    .enumerate()
-                    .find(|(_, entry)| entry.path == selected_entry.path)
-                    .expect("selected entry not in filtered list")
-                    .0;
+        let scroll_area_id = ui.id().with("center_panel_list_scroll");
 
-                scroll_area =
-                    scroll_by_filtered_index(ui, scroll_area, filtered_index, &app.scroll_range);
-            }
-            app.ensure_selected_visible = false;
-        }
-        scroll_area.show_rows(ui, ROW_HEIGHT, total_rows, |scroll_ui, row_range| {
-            let scrollbar_width = 6.0;
-            scroll_ui.set_min_width(width - scrollbar_width);
-            scroll_ui.set_max_width(width - scrollbar_width);
+        // Use a containing layout for the scroll area to capture interactions
+        let inner_response = ui
+            .vertical(|ui| {
+                ui.set_min_height(available_height);
+                ui.set_max_height(available_height); // Constrain the inner vertical area
 
-            if filtered_entries.is_empty() {
-                scroll_ui.label("No matching entries found.");
-                return;
-            }
-            app.scroll_range = Some(row_range.clone());
+                let mut scroll_area = egui::ScrollArea::vertical()
+                    .id_salt(scroll_area_id) // Use id_salt for stable ID
+                    .auto_shrink([false; 2])
+                    .max_height(available_height); // Use available_height
 
-            for row_index in row_range {
-                // Get the entry for the current visible row from the filtered list
-                let entry = &filtered_entries[row_index];
+                let total_rows = filtered_entries.len();
+                if app.ensure_selected_visible {
+                    if let Some(selected_entry) = tab_ref.selected_entry() {
+                        let filtered_index = filtered_entries
+                            .iter()
+                            .enumerate()
+                            .find(|(_, entry)| entry.path == selected_entry.path)
+                            .expect("selected entry not in filtered list")
+                            .0;
 
-                // Find the original index in the full `entries` list for selection state
-                let original_index = tab_ref
-                    .entries
-                    .iter()
-                    .position(|e| e.path == entry.path)
-                    .unwrap_or(usize::MAX); // Should always find
-
-                let is_selected = original_index == tab_ref.selected_index;
-                let is_in_selection = tab_ref.selected_entries.contains(&entry.path);
-
-                // Draw the row and get its response
-                let row_response = file_list::draw_entry_row(
-                    scroll_ui,
-                    file_list::EntryRowParams {
-                        entry,
-                        is_selected,
-                        colors: &app.colors,
-                        rename_mode: app.rename_mode && is_selected,
-                        new_name: &mut app.new_name,
-                        rename_focus: app.rename_focus && is_selected,
-                        is_marked: is_in_selection,
-                        is_bookmarked: app.bookmarks.contains(&entry.path),
-                        search_query: current_search_query,
-                    },
-                );
-
-                // Check for clicks to update selection state (captured outside)
-                if row_response.clicked() {
-                    new_selected_index = Some(original_index);
+                        println!(
+                            "scrolling range: {:?}, filtered_index: {:?}",
+                            app.scroll_range, filtered_index
+                        );
+                        scroll_area = scroll_by_filtered_index(
+                            ui,
+                            scroll_area,
+                            filtered_index,
+                            &app.scroll_range,
+                        );
+                    }
+                    app.ensure_selected_visible = false;
                 }
-            }
+
+                // Draw the rows within the scroll area
+                scroll_area.show_rows(ui, ROW_HEIGHT, total_rows, |scroll_ui, row_range| {
+                    // Calculate width considering potential scrollbar
+                    // Use available_width which accounts for parent layouts and scrollbars automatically
+                    let available_width = scroll_ui.available_width();
+                    scroll_ui.set_min_width(available_width);
+
+                    if filtered_entries.is_empty() {
+                        scroll_ui.label("No matching entries found.");
+                        return;
+                    }
+                    app.scroll_range = Some(row_range.clone());
+
+                    for row_index in row_range {
+                        // Get the entry for the current visible row from the filtered list
+                        let entry = &filtered_entries[row_index];
+
+                        // Find the original index in the full `entries` list for selection state
+                        let original_index = tab_ref
+                            .entries
+                            .iter()
+                            .position(|e| e.path == entry.path)
+                            .unwrap_or(usize::MAX); // Should always find
+
+                        let is_selected = original_index == tab_ref.selected_index;
+                        let is_in_selection = tab_ref.selected_entries.contains(&entry.path);
+
+                        // Draw the row and get its response and potential new name
+                        // Destructure the tuple returned by draw_entry_row
+                        let row_response = file_list::draw_entry_row(
+                            scroll_ui,
+                            file_list::EntryRowParams {
+                                entry,
+                                is_selected,
+                                colors: &app.colors,
+                                rename_mode: app.rename_mode && is_selected,
+                                new_name: &mut app.new_name,
+                                rename_focus: app.rename_focus && is_selected,
+                                is_marked: is_in_selection,
+                                is_bookmarked: app.bookmarks.contains(&entry.path),
+                                search_query: current_search_query,
+                            },
+                        );
+
+                        // Check for clicks to update selection state (captured outside)
+                        if row_response.clicked() {
+                            new_selected_index = Some(original_index);
+                        }
+
+                        // --- Add Context Menu for Rows ---
+                        row_response.context_menu(|menu_ui| {
+                            new_selected_index = Some(original_index);
+                            // Capture the action, don't perform it yet
+                            // Pass only the necessary boolean, not the whole app
+                            context_menu_action =
+                                show_context_menu(menu_ui, app.clipboard.is_some());
+                        });
+                    } // End row loop
+                }); // End show_rows
+            })
+            .response; // End inner ui.vertical and get its response
+
+        // Store the response of the inner container for context menu handling outside
+        file_list_response = Some(inner_response);
+    }); // End of main ui.vertical closure. All borrows of `app` inside are released here.
+
+    // --- Context Menu Logic for Background Area (using the stored response) ---
+    if let Some(response) = file_list_response {
+        response.context_menu(|menu_ui| {
+            // Capture the action, don't perform it yet
+            // Pass only the necessary boolean, not the whole app
+            context_menu_action = show_context_menu(menu_ui, app.clipboard.is_some());
         });
-    }); // End of ui.vertical closure. All borrows of `app` inside are released here.
+    }
 
     // --- Apply state changes captured from the UI closures AFTER drawing ---
+
+    // Handle context menu action captured from closures
+    match context_menu_action {
+        ContextMenuAction::Add => {
+            app.add_mode = true;
+            app.add_focus = true;
+        }
+        ContextMenuAction::Paste => {
+            let current_path = app.tab_manager.current_tab_ref().current_path.clone(); // Clone path
+            if handle_clipboard_operations(&mut app.clipboard, &current_path) {
+                app.refresh_entries();
+            }
+        }
+        ContextMenuAction::None => {} // Do nothing
+    }
 
     // Handle sort request captured from the header closure
     if let Some(column) = sort_requested {
