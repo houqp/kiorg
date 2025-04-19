@@ -6,6 +6,7 @@ use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf; // Removed unused Path
 
 use super::window_utils::new_center_popup_window;
+use crate::app::Kiorg;
 
 // Get the path to the kiorg config directory
 fn get_kiorg_config_dir(override_path: Option<&PathBuf>) -> PathBuf {
@@ -228,12 +229,41 @@ pub fn show_bookmark_popup(
 
         // Update the selected_index with our current_index
         *selected_index = current_index;
-        
+
         *show_bookmarks = show_popup && !response.response.clicked_elsewhere();
         action
     } else {
         *show_bookmarks = show_popup;
         *selected_index = current_index;
         BookmarkAction::None
+    }
+}
+
+/// Toggle bookmark status for the given path
+///
+/// Returns true if the bookmark was added, false if it was removed
+pub fn toggle_bookmark(app: &mut Kiorg) {
+    let bookmarks = &mut app.bookmarks;
+    let tab = app.tab_manager.current_tab();
+    let selected_entry = match tab.selected_entry() {
+        Some(entry) => entry,
+        None => return, // No selected entry
+    };
+
+    // Only allow bookmarking directories, not files
+    if selected_entry.is_dir {
+        let path = selected_entry.path.clone();
+
+        // Toggle bookmark status
+        if bookmarks.contains(&path) {
+            bookmarks.retain(|p| p != &path);
+        } else {
+            bookmarks.push(path);
+        }
+
+        // Save bookmarks to config file
+        if let Err(e) = save_bookmarks(bookmarks, app.config_dir_override.as_ref()) {
+            eprintln!("Failed to save bookmarks: {}", e);
+        }
     }
 }

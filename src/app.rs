@@ -41,7 +41,7 @@ pub struct Kiorg {
     pub show_bookmarks: bool,
     pub bookmark_selected_index: usize, // Store bookmark selection index in app state
     pub config_dir_override: Option<PathBuf>, // Optional override for config directory path
-    pub prev_path: Option<PathBuf>,           // Previous path for selection preservation
+    pub prev_path: Option<PathBuf>,     // Previous path for selection preservation
     pub cached_preview_path: Option<PathBuf>,
     pub selection_changed: bool, // Flag to track if selection changed
     pub search_bar: SearchBar,
@@ -469,46 +469,7 @@ impl Kiorg {
                     return;
                 }
             } else {
-                let tab = self.tab_manager.current_tab();
-                if tab.selected_index < tab.entries.len() {
-                    let selected_entry = &tab.entries[tab.selected_index];
-
-                    // Only allow bookmarking directories, not files
-                    if selected_entry.is_dir {
-                        let path = selected_entry.path.clone();
-
-                        // Toggle bookmark status
-                        if self.bookmarks.contains(&path) {
-                            self.bookmarks.retain(|p| p != &path);
-                        } else {
-                            self.bookmarks.push(path);
-                        }
-
-                        // Save bookmarks to config file
-                        if let Err(e) = bookmark_popup::save_bookmarks(
-                            &self.bookmarks,
-                            self.config_dir_override.as_ref(),
-                        ) {
-                            eprintln!("Failed to save bookmarks: {}", e);
-                        }
-                    }
-                } else {
-                    // Bookmark/unbookmark current directory if no entry is selected
-                    let current_path = tab.current_path.clone();
-                    if self.bookmarks.contains(&current_path) {
-                        self.bookmarks.retain(|p| p != &current_path);
-                    } else {
-                        self.bookmarks.push(current_path);
-                    }
-
-                    // Save bookmarks to config file
-                    if let Err(e) = bookmark_popup::save_bookmarks(
-                        &self.bookmarks,
-                        self.config_dir_override.as_ref(),
-                    ) {
-                        eprintln!("Failed to save bookmarks: {}", e);
-                    }
-                }
+                bookmark_popup::toggle_bookmark(self);
             }
         }
 
@@ -599,8 +560,12 @@ impl eframe::App for Kiorg {
 
         // Handle bookmark popup with the new approach
         // Use the bookmark_selected_index field from Kiorg struct
-        let bookmark_action =
-            bookmark_popup::show_bookmark_popup(ctx, &mut self.show_bookmarks, &mut self.bookmarks, &mut self.bookmark_selected_index);
+        let bookmark_action = bookmark_popup::show_bookmark_popup(
+            ctx,
+            &mut self.show_bookmarks,
+            &mut self.bookmarks,
+            &mut self.bookmark_selected_index,
+        );
 
         // Process the bookmark action
         match bookmark_action {
