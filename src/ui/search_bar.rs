@@ -1,5 +1,5 @@
 use crate::app::Kiorg;
-use egui::{Context, Shadow, Color32};
+use egui::{Color32, Context, Shadow};
 
 #[derive(Default)]
 pub struct SearchBar {
@@ -94,9 +94,9 @@ pub fn draw(ctx: &Context, app: &mut Kiorg) {
 
             // Create a shadow similar to window popups
             let shadow = Shadow {
-                offset: [0, 4],  // 4px downward shadow
-                blur: 12,        // 12px blur
-                spread: 0,       // No spread
+                offset: [0, 4],                       // 4px downward shadow
+                blur: 12,                             // 12px blur
+                spread: 0,                            // No spread
                 color: Color32::from_black_alpha(60), // Semi-transparent black shadow
             };
 
@@ -105,7 +105,7 @@ pub fn draw(ctx: &Context, app: &mut Kiorg) {
                 .inner_margin(5.0)
                 .shadow(shadow)
                 .show(ui, |ui| {
-                    ui.set_max_width(ctx.available_rect().width() * 0.6); // Limit width
+                    ui.set_max_width(400.0); // Limit width
 
                     ui.horizontal(|ui| {
                         // Search input

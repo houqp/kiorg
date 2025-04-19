@@ -23,7 +23,7 @@ pub fn draw(ctx: &egui::Context, app: &mut Kiorg) {
                 .fill(app.colors.bg_light)
                 .inner_margin(5.0)
                 .show(ui, |ui| {
-                    ui.set_max_width(ctx.available_rect().width() * 0.6); // Limit width like search bar
+                    ui.set_max_width(400.0); // Limit width
 
                     // Horizontal layout for input and close button
                     ui.horizontal(|ui| {
