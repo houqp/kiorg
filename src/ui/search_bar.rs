@@ -91,9 +91,17 @@ pub fn draw(ctx: &Context, app: &mut Kiorg) {
         .movable(false)
         .show(ctx, |ui| {
             ui.visuals_mut().widgets.noninteractive.bg_fill = app.colors.bg_light;
+
+            let shadow = egui::Shadow {
+                offset: [4, 6],
+                blur: 12,                                   // 12px blur
+                spread: 0,                                  // No spread
+                color: egui::Color32::from_black_alpha(60), // Semi-transparent black shadow
+            };
             egui::Frame::default()
                 .fill(app.colors.bg_light)
                 .inner_margin(5.0)
+                .shadow(shadow)
                 .show(ui, |ui| {
                     ui.set_max_width(ctx.available_rect().width() * 0.6); // Limit width
 
