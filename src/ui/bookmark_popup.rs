@@ -145,23 +145,20 @@ pub fn show_bookmark_popup(
     ctx: &Context,
     show_bookmarks: &mut bool,
     bookmarks: &mut Vec<PathBuf>,
+    selected_index: &mut usize,
 ) -> BookmarkAction {
     if !*show_bookmarks {
         return BookmarkAction::None;
     }
 
     let mut show_popup = *show_bookmarks;
-
-    // FIXME: get rid of this static non-sense
-    // Initialize a static bookmark index to preserve selection state between frames
-    static mut BOOKMARK_SELECTED_INDEX: usize = 0;
-    let mut selected_index = unsafe { BOOKMARK_SELECTED_INDEX };
+    let mut current_index = *selected_index;
 
     // Ensure index is valid
     if !bookmarks.is_empty() {
-        selected_index = selected_index.min(bookmarks.len() - 1);
+        current_index = current_index.min(bookmarks.len() - 1);
     } else {
-        selected_index = 0;
+        current_index = 0;
     }
 
     // Handle keyboard navigation for closing the popup
@@ -172,7 +169,7 @@ pub fn show_bookmark_popup(
     // Handle keyboard shortcut for deleting bookmarks
     let mut remove_bookmark_path = None;
     if ctx.input(|i| i.key_pressed(egui::Key::D)) && !bookmarks.is_empty() {
-        remove_bookmark_path = Some(bookmarks[selected_index].clone());
+        remove_bookmark_path = Some(bookmarks[current_index].clone());
     }
 
     let mut navigate_to_path = None;
@@ -189,28 +186,22 @@ pub fn show_bookmark_popup(
             // Handle keyboard navigation
             if ctx.input(|i| i.key_pressed(egui::Key::J) || i.key_pressed(egui::Key::ArrowDown)) {
                 if !bookmarks.is_empty() {
-                    selected_index = (selected_index + 1).min(bookmarks.len() - 1);
-                    unsafe {
-                        BOOKMARK_SELECTED_INDEX = selected_index;
-                    }
+                    current_index = (current_index + 1).min(bookmarks.len() - 1);
                 }
             } else if ctx
                 .input(|i| i.key_pressed(egui::Key::K) || i.key_pressed(egui::Key::ArrowUp))
             {
-                selected_index = selected_index.saturating_sub(1);
-                unsafe {
-                    BOOKMARK_SELECTED_INDEX = selected_index;
-                }
+                current_index = current_index.saturating_sub(1);
             } else if ctx.input(|i| i.key_pressed(egui::Key::Enter) || i.key_pressed(egui::Key::L))
                 && !bookmarks.is_empty()
             {
-                navigate_to_path = Some(bookmarks[selected_index].clone());
+                navigate_to_path = Some(bookmarks[current_index].clone());
             }
 
             // Display bookmarks in a scrollable area
             egui::ScrollArea::vertical().show(ui, |ui| {
                 let (click_navigate, context_menu_remove) =
-                    display_bookmarks_grid(ui, bookmarks, selected_index);
+                    display_bookmarks_grid(ui, bookmarks, current_index);
                 if let Some(path) = click_navigate {
                     navigate_to_path = Some(path);
                 }
@@ -235,10 +226,14 @@ pub fn show_bookmark_popup(
             action = BookmarkAction::SaveBookmarks;
         }
 
+        // Update the selected_index with our current_index
+        *selected_index = current_index;
+        
         *show_bookmarks = show_popup && !response.response.clicked_elsewhere();
         action
     } else {
         *show_bookmarks = show_popup;
+        *selected_index = current_index;
         BookmarkAction::None
     }
 }

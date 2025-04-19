@@ -20,24 +20,23 @@
     - Orange highlighting of matching text
     - Search state persists after Enter
     - Clear filter with Esc
+*   Add file/directory (a)
 
 ### What's left to build
 *   PDF preview
 *   cache directory list
-*   Shortcut to create new file
-*   Shortcut to create new folder
 *   Shortcut to toggle sort
 *   Fuzzy directory jump
-*   Optimize performance for large directory
 *   Case-sensitive/insensitive search toggle
 *   Regular expression search support
+*   Fix global static variable in bookmark module
+*   Right click menu for various operations
 
 ### Current status
 The application is in a functional state with core file management features implemented. Recent improvements to the search functionality make it more user-friendly with visual feedback through text highlighting.
 
 ### Known issues
 *   PDF preview is not yet implemented.
-*   Image preview is not yet implemented.
 
 ### Evolution of project decisions
 *   The project initially started as a simple file manager but has evolved to include more advanced features such as bookmark management and tab creation.

@@ -39,6 +39,7 @@ pub struct Kiorg {
     pub entry_to_delete: Option<PathBuf>,
     pub bookmarks: Vec<PathBuf>,
     pub show_bookmarks: bool,
+    pub bookmark_selected_index: usize, // Store bookmark selection index in app state
     pub config_dir_override: Option<PathBuf>, // Optional override for config directory path
     pub prev_path: Option<PathBuf>,           // Previous path for selection preservation
     pub cached_preview_path: Option<PathBuf>,
@@ -99,6 +100,7 @@ impl Kiorg {
             entry_to_delete: None,
             bookmarks: Vec::new(),
             show_bookmarks: false,
+            bookmark_selected_index: 0, // Initialize the bookmark selection index
             config_dir_override,
             prev_path: None,
             cached_preview_path: None,
@@ -594,8 +596,9 @@ impl eframe::App for Kiorg {
         self.handle_key_press(ctx);
 
         // Handle bookmark popup with the new approach
+        // Use the bookmark_selected_index field from Kiorg struct
         let bookmark_action =
-            bookmark_popup::show_bookmark_popup(ctx, &mut self.show_bookmarks, &mut self.bookmarks);
+            bookmark_popup::show_bookmark_popup(ctx, &mut self.show_bookmarks, &mut self.bookmarks, &mut self.bookmark_selected_index);
 
         // Process the bookmark action
         match bookmark_action {
