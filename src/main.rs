@@ -1,7 +1,7 @@
-use eframe::egui;
-use std::path::PathBuf;
 use clap::Parser;
+use eframe::egui;
 use std::fs;
+use std::path::PathBuf;
 
 use kiorg::app::Kiorg;
 
@@ -15,13 +15,16 @@ struct Args {
 
 fn main() -> Result<(), eframe::Error> {
     let args = Args::parse();
-    
+
     // Validate and canonicalize the provided directory
     if !args.directory.exists() {
-        eprintln!("Error: Directory '{}' does not exist", args.directory.display());
+        eprintln!(
+            "Error: Directory '{}' does not exist",
+            args.directory.display()
+        );
         std::process::exit(1);
     }
-    
+
     if !args.directory.is_dir() {
         eprintln!("Error: '{}' is not a directory", args.directory.display());
         std::process::exit(1);
@@ -31,7 +34,11 @@ fn main() -> Result<(), eframe::Error> {
     let canonical_dir = match fs::canonicalize(&args.directory) {
         Ok(path) => path,
         Err(e) => {
-            eprintln!("Error: Failed to canonicalize path '{}': {}", args.directory.display(), e);
+            eprintln!(
+                "Error: Failed to canonicalize path '{}': {}",
+                args.directory.display(),
+                e
+            );
             std::process::exit(1);
         }
     };
@@ -42,10 +49,10 @@ fn main() -> Result<(), eframe::Error> {
             .with_min_inner_size([800.0, 600.0]),
         ..Default::default()
     };
-    
+
     eframe::run_native(
         "Kiorg",
         options,
-        Box::new(|cc| Ok(Box::new(Kiorg::new(cc, canonical_dir))))
+        Box::new(|cc| Ok(Box::new(Kiorg::new(cc, canonical_dir)))),
     )
 }
