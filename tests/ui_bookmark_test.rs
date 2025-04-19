@@ -23,12 +23,19 @@ fn test_bookmark_feature() {
     assert!(harness.state().bookmarks.is_empty());
     assert!(!harness.state().show_bookmarks);
 
-    // Select the first directory
+    // Select the first directory and ensure sorting
     {
+        // Toggle twice on the TabManager to ensure Ascending order
+        harness
+            .state_mut()
+            .tab_manager
+            .toggle_sort(kiorg::models::tab::SortColumn::Name); // Sets Name/Descending or None
+        harness
+            .state_mut()
+            .tab_manager
+            .toggle_sort(kiorg::models::tab::SortColumn::Name); // Sets Name/Ascending
+                                                                // sort_all_tabs is called implicitly by toggle_sort now
         let tab = harness.state_mut().tab_manager.current_tab();
-        tab.toggle_sort(kiorg::models::tab::SortColumn::Name); // Sets Name/Descending
-        tab.toggle_sort(kiorg::models::tab::SortColumn::Name); // Sets Name/AScending
-        tab.sort_entries();
         tab.selected_index = 0; // Select dir1
     }
     harness.step();

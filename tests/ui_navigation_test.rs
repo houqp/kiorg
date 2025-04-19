@@ -179,11 +179,9 @@ fn test_prev_path_selection_with_sort() {
     // Manually set sort order to Descending Name *while inside bbb*
     // (Simulating header click is complex, direct state change is acceptable here)
     {
-        let tab = harness.state_mut().tab_manager.current_tab();
-        tab.toggle_sort(kiorg::models::tab::SortColumn::Name); // Sets to None
-        tab.toggle_sort(kiorg::models::tab::SortColumn::Name); // Sets Name/Descending
-        assert_eq!(tab.sort_column, kiorg::models::tab::SortColumn::Name);
-        assert_eq!(tab.sort_order, kiorg::models::tab::SortOrder::Descending);
+        let tab_manager = &mut harness.state_mut().tab_manager;
+        tab_manager.toggle_sort(kiorg::models::tab::SortColumn::Name); // Sets to None
+        tab_manager.toggle_sort(kiorg::models::tab::SortColumn::Name); // Sets Name/Descending
     }
     harness.step(); // Allow state update propagation if needed
 

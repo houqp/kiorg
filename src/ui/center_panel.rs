@@ -115,8 +115,8 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
 
         let mut header_params = TableHeaderParams {
             colors: &app.colors,
-            sort_column: &tab_ref.sort_column,
-            sort_order: &tab_ref.sort_order,
+            sort_column: &app.tab_manager.sort_column,
+            sort_order: &app.tab_manager.sort_order,
             on_sort: &mut |column| {
                 sort_requested = Some(column);
             },
@@ -198,16 +198,14 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
     // Handle sort request captured from the header closure
     if let Some(column) = sort_requested {
         // Borrow app mutably here - should be fine as UI closure is finished
-        let tab = app.tab_manager.current_tab();
-        tab.toggle_sort(column);
-        tab.sort_entries();
+        app.tab_manager.toggle_sort(column);
 
         // Save sort preferences - requires immutable borrows followed by mutable config load/save
         let config_dir_override = app.config_dir_override.as_ref(); // Borrow immutably
         let mut config = config::load_config_with_override(config_dir_override);
         config.sort_preference = Some(SortPreference {
-            column: tab.sort_column,
-            order: tab.sort_order,
+            column: app.tab_manager.sort_column,
+            order: app.tab_manager.sort_order,
         });
         // Re-borrow immutably for save path
         if let Err(e) = config::save_config_with_override(&config, app.config_dir_override.as_ref())

@@ -1,7 +1,6 @@
 mod ui_test_helpers;
 
 use egui::Key;
-use kiorg::models::dir_entry::DirEntry;
 use tempfile::tempdir;
 use ui_test_helpers::create_harness;
 

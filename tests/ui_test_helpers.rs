@@ -58,11 +58,16 @@ pub fn create_harness<'a>(temp_dir: &tempfile::TempDir) -> TestHarness<'a> {
 impl<'a> TestHarness<'a> {
     /// Ensures the current tab's entries are sorted by Name/Ascending.
     pub fn ensure_sorted_by_name_ascending(&mut self) {
-        let tab = self.harness.state_mut().tab_manager.current_tab();
-        // Toggle twice to ensure Ascending order regardless of the initial state
-        tab.toggle_sort(kiorg::models::tab::SortColumn::Name); // Sets Name/Descending or None
-        tab.toggle_sort(kiorg::models::tab::SortColumn::Name); // Sets Name/Ascending
-        tab.sort_entries();
+        // Toggle twice on the TabManager to ensure Ascending order regardless of the initial state
+        self.harness
+            .state_mut()
+            .tab_manager
+            .toggle_sort(kiorg::models::tab::SortColumn::Name); // Sets Name/Descending or None
+        self.harness
+            .state_mut()
+            .tab_manager
+            .toggle_sort(kiorg::models::tab::SortColumn::Name); // Sets Name/Ascending
+                                                                // sort_all_tabs is called implicitly by toggle_sort now, no need for explicit call
         self.harness.step(); // Allow sort to apply and UI to update
     }
 }
