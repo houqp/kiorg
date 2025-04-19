@@ -45,7 +45,7 @@ pub struct Kiorg {
     pub cached_preview_path: Option<PathBuf>,
     pub selection_changed: bool, // Flag to track if selection changed
     pub search_bar: SearchBar,
-    pub scroll_range: std::ops::Range<usize>,
+    pub scroll_range: Option<std::ops::Range<usize>>,
     pub add_mode: bool,
     pub new_entry_name: String,
     pub add_focus: bool,
@@ -106,7 +106,7 @@ impl Kiorg {
             cached_preview_path: None,
             selection_changed: true, // Initialize flag to true
             search_bar: SearchBar::new(),
-            scroll_range: 0..0,
+            scroll_range: None,
             add_mode: false,
             new_entry_name: String::new(),
             add_focus: false,
@@ -189,6 +189,8 @@ impl Kiorg {
             // Swap current_path with path and store the swapped path as prev_path
             std::mem::swap(&mut tab.current_path, &mut path);
             self.prev_path = Some(path);
+            // Reset scroll_range to None when navigating to a new directory
+            self.scroll_range = None;
             self.refresh_entries();
         } else if path.is_file() {
             if let Err(e) = open::that(&path) {

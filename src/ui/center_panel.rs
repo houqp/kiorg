@@ -57,26 +57,24 @@ fn scroll_by_filtered_index(
     ui: &mut Ui,
     mut scroll_area: egui::ScrollArea,
     filtered_index: usize,
-    scroll_range: &std::ops::Range<usize>,
+    scroll_range: &Option<std::ops::Range<usize>>,
 ) -> egui::ScrollArea {
+    // Return early if scroll_range is None
+    let scroll_range = match scroll_range {
+        Some(range) => range,
+        None => return scroll_area,
+    };
+    
     // scroll_area will always be lagging one cycle behind, i.e. it shows the view port before
     // current action has been processed
     let rows = scroll_range.end - scroll_range.start;
-
-    if filtered_index >= rows {
-        // if the filtered index is greater than the number of rows, just return
-        // this happens when returning to a parent directory that has current
-        // directory indexed at a larger number compared to the number of
-        // entries in the current directory
-        return scroll_area;
-    }
 
     // NOTE: for some reason, the range provided by show_rows has 2 more rows than what's visible
     // on the viewport
     let rows_offset = 2;
 
     // where there are not enough entries to fill the viewport, just start from 0
-    if filtered_index + rows_offset < rows {
+    if filtered_index + rows_offset < rows || rows_offset > rows{
         return scroll_area.vertical_scroll_offset(0.0);
     }
 
@@ -162,7 +160,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                 scroll_ui.label("No matching entries found.");
                 return;
             }
-            app.scroll_range = row_range.clone();
+            app.scroll_range = Some(row_range.clone());
 
             for row_index in row_range {
                 // Get the entry for the current visible row from the filtered list
