@@ -67,20 +67,7 @@ impl Kiorg {
         let config = config::load_config_with_override(config_dir_override.as_ref());
         let colors = AppColors::from_config(&config.colors);
 
-        let mut visuals = egui::Visuals::dark();
-        visuals.override_text_color = Some(colors.fg);
-        visuals.widgets.noninteractive.bg_fill = colors.bg;
-        visuals.widgets.inactive.bg_fill = colors.bg_dim;
-        visuals.widgets.hovered.bg_fill = colors.bg_light;
-        visuals.widgets.active.bg_fill = colors.selected_bg;
-        visuals.widgets.noninteractive.fg_stroke.color = colors.fg;
-        visuals.widgets.inactive.fg_stroke.color = colors.fg;
-        visuals.widgets.hovered.fg_stroke.color = colors.fg;
-        visuals.widgets.active.fg_stroke.color = colors.fg;
-        visuals.window_fill = colors.bg;
-        visuals.panel_fill = colors.bg;
-
-        cc.egui_ctx.set_visuals(visuals);
+        cc.egui_ctx.set_visuals(colors.to_visuals());
 
         let tab_manager = TabManager::new_with_config(initial_dir, Some(&config));
 

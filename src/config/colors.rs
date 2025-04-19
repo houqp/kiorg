@@ -54,7 +54,7 @@ pub struct AppColors {
 impl AppColors {
     pub fn from_config(config: &ColorScheme) -> Self {
         use crate::utils::color::hex_to_color32;
-        
+
         Self {
             bg: hex_to_color32(&config.bg),
             bg_dim: hex_to_color32(&config.bg_dim),
@@ -66,6 +66,22 @@ impl AppColors {
             blue: hex_to_color32(&config.blue),
             orange: hex_to_color32(&config.orange),
         }
+    }
+
+    pub fn to_visuals(&self) -> egui::Visuals {
+        let mut visuals = egui::Visuals::dark();
+        visuals.override_text_color = Some(self.fg);
+        visuals.widgets.noninteractive.bg_fill = self.bg;
+        visuals.widgets.inactive.bg_fill = self.bg_dim;
+        visuals.widgets.hovered.bg_fill = self.bg_light;
+        visuals.widgets.active.bg_fill = self.selected_bg;
+        visuals.widgets.noninteractive.fg_stroke.color = self.fg;
+        visuals.widgets.inactive.fg_stroke.color = self.fg;
+        visuals.widgets.hovered.fg_stroke.color = self.fg;
+        visuals.widgets.active.fg_stroke.color = self.fg;
+        visuals.window_fill = self.bg;
+        visuals.panel_fill = self.bg;
+        visuals
     }
 }
 
@@ -92,4 +108,4 @@ mod tests {
         let colors = AppColors::from_config(&scheme);
         assert_eq!(colors.bg, Color32::from_rgb(0x2c, 0x2e, 0x34));
     }
-} 
+}
