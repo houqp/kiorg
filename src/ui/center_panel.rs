@@ -62,6 +62,15 @@ fn scroll_by_filtered_index(
     // scroll_area will always be lagging one cycle behind, i.e. it shows the view port before
     // current action has been processed
     let rows = scroll_range.end - scroll_range.start;
+
+    if filtered_index >= rows {
+        // if the filtered index is greater than the number of rows, just return
+        // this happens when returning to a parent directory that has current
+        // directory indexed at a larger number compared to the number of
+        // entries in the current directory
+        return scroll_area;
+    }
+
     // NOTE: for some reason, the range provided by show_rows has 2 more rows than what's visible
     // on the viewport
     let rows_offset = 2;
