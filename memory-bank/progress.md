@@ -29,7 +29,6 @@
 *   Fuzzy directory jump
 *   Case-sensitive/insensitive search toggle
 *   Regular expression search support
-*   Fix global static variable in bookmark module
 *   Right click menu for various operations
 
 ### Current status

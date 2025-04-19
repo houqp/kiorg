@@ -35,6 +35,7 @@ It is built using Rust with the egui framework.
   - users can use number key `1`, `2`, `3`, etc to switch between tabs
   - tab numbers are displayed in right side of the top nav banner, with the current tab highlighted
 * `?` to toggle help window that displays all the shortcuts in a popup window
+* `a` to add file/directory
 
 ## Visual design
 

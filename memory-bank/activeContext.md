@@ -55,6 +55,7 @@ Improved search filter feature with visual highlighting and fixed entry name dis
 *   When dealing with borrow checker issues:
     1. Move data access before closures when possible
     2. Consider restructuring code to minimize mutable borrows
+*   Always avoid unsafe rust code.
 
 ### Learnings and project insights
 *   The importance of maintaining accurate and up-to-date documentation for long-term project success
