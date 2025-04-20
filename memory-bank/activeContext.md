@@ -1,7 +1,8 @@
 ## Active Context
 
 ### Current work focus
-Improved search filter feature with visual highlighting and fixed entry name display issues.
+- Column sort order persistence feature is now fully implemented and tested. User sort preferences are reliably loaded and saved between sessions, enhancing UX.
+- Improved search filter feature with robust visual highlighting and support for large directories, Unicode, and long filenames.
 
 ### Recent changes
 1. Fixed entry name display and search highlighting:
@@ -24,6 +25,13 @@ Improved search filter feature with visual highlighting and fixed entry name dis
    - Updated `center_panel.rs` to display search bar and use filtered entries.
    - Resolved borrow checker issues in `center_panel.rs` by deferring state updates.
    - Updated help window and `projectbrief.md` with the new shortcut.
+5. Created UI style guide documentation:
+   - Added `ui_style_guide.md` to document UI patterns and preferences
+   - Documented popup and dialog styling patterns
+   - Documented input bar styling patterns
+   - Documented navigation patterns including double-click behavior
+   - Documented context menu patterns and functionality
+   - Documented testing requirements for UI components
 
 ### Next steps
 1. Test the search filter feature thoroughly, especially with:
@@ -32,7 +40,8 @@ Improved search filter feature with visual highlighting and fixed entry name dis
    - Very long filenames
    - Empty search queries
 2. Consider implementing other features from the backlog (e.g., PDF preview, create new file/folder shortcuts).
-3. Continue maintaining and updating the Memory Bank.
+3. Ensure all future UI development follows the patterns documented in the UI style guide.
+4. Continue maintaining and updating the Memory Bank.
 
 ### Active decisions and considerations
 *   Decided to filter entries in real-time as the user types in the search bar.
@@ -56,6 +65,7 @@ Improved search filter feature with visual highlighting and fixed entry name dis
     1. Move data access before closures when possible
     2. Consider restructuring code to minimize mutable borrows
 *   Always avoid unsafe rust code.
+*   Follow UI style guidelines documented in `ui_style_guide.md` for consistent user experience.
 
 ### Learnings and project insights
 *   The importance of maintaining accurate and up-to-date documentation for long-term project success
