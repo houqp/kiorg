@@ -20,6 +20,7 @@ open = "4.0"
 pdfium-render = "0"
 image = "0.24.8"
 clap = { version = "4.5.1", features = ["derive"] }
+egui_term = { git = "https://github.com/Harzu/egui_term.git" }
 
 [dev-dependencies]
 egui_kittest = { version = "0.31.1", features = ["eframe"] }

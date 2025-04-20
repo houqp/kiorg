@@ -1,9 +1,11 @@
-use egui::{RichText, Ui};
+use egui::Ui;
 use std::path::PathBuf;
 
 use crate::app::Kiorg;
 use crate::ui::file_list::{self, ROW_HEIGHT};
-use crate::ui::style::{HEADER_FONT_SIZE, HEADER_ROW_HEIGHT};
+use crate::ui::style::HEADER_ROW_HEIGHT;
+
+use super::style::section_title_text;
 
 /// Draws the left panel (parent directory list).
 /// Returns Some(PathBuf) if a directory was clicked for navigation.
@@ -20,11 +22,7 @@ pub fn draw(app: &Kiorg, ui: &mut Ui, width: f32, height: f32) -> Option<PathBuf
         ui.set_min_width(width);
         ui.set_max_width(width);
         ui.set_min_height(height);
-        ui.label(
-            RichText::new("Parent Directory")
-                .color(colors.gray)
-                .font(egui::FontId::proportional(HEADER_FONT_SIZE)),
-        );
+        ui.label(section_title_text("Parent Directory", colors));
         ui.separator();
 
         // Calculate available height for scroll area

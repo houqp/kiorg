@@ -63,3 +63,6 @@ Improved search filter feature with visual highlighting and fixed entry name dis
 *   Persisting user preferences enhances the user experience significantly
 *   The serde library makes it straightforward to serialize and deserialize Rust structs to and from TOML
 *   Modular code organization makes it easier to implement new features without introducing bugs
+*   Confirmed that persisting user preferences (like sort order) significantly improves user experience and is technically straightforward with serde/TOML.
+*   Ensured backward compatibility when expanding the config file for new preferences.
+*   Reinforced the value of immediate persistence (saving on change) for user settings, rather than on exit.

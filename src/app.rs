@@ -9,6 +9,7 @@ use crate::ui::dialogs;
 use crate::ui::search_bar::{self, SearchBar};
 use crate::ui::separator;
 use crate::ui::separator::SEPARATOR_PADDING;
+use crate::ui::terminal;
 use crate::ui::top_banner;
 use crate::ui::{bookmark_popup, center_panel, help_window, left_panel, right_panel};
 
@@ -46,6 +47,9 @@ pub struct Kiorg {
     pub selection_changed: bool, // Flag to track if selection changed
     pub search_bar: SearchBar,
     pub scroll_range: Option<std::ops::Range<usize>>,
+
+    pub terminal_ctx: Option<terminal::TerminalContext>,
+
     pub add_mode: bool,
     pub new_entry_name: String,
     // TODO: is this neeeded if we already have add_mode?
@@ -99,6 +103,7 @@ impl Kiorg {
             new_entry_name: String::new(),
             add_focus: false,
             last_lowercase_g_pressed_ms: 0,
+            terminal_ctx: None,
         };
 
         // Load bookmarks after initializing the app with the config directory
@@ -246,6 +251,10 @@ impl Kiorg {
             return;
         }
 
+        if self.terminal_ctx.is_some() {
+            return;
+        }
+
         // Don't process other keyboard input if the bookmark popup is active
         if self.show_bookmarks {
             return;
@@ -347,10 +356,15 @@ impl Kiorg {
         }
 
         // Handle tab creation and switching
-        if ctx.input(|i| i.key_pressed(egui::Key::T)) {
+        if ctx.input(|i| i.key_pressed(egui::Key::T) && !i.modifiers.shift) {
             let current_path = self.tab_manager.current_tab_ref().current_path.clone();
             self.tab_manager.add_tab(current_path);
             self.refresh_entries();
+            return;
+        }
+
+        if ctx.input(|i| i.key_pressed(egui::Key::T) && i.modifiers.shift) {
+            self.terminal_ctx = Some(terminal::TerminalContext::new(ctx));
             return;
         }
 
@@ -646,5 +660,7 @@ impl eframe::App for Kiorg {
             // Call the refactored dialog function
             dialogs::show_exit_dialog(ctx, &mut self.show_exit_confirm, &self.colors);
         }
+
+        terminal::draw(ctx, self);
     }
 }

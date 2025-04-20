@@ -11,6 +11,7 @@ pub mod right_panel;
 pub mod search_bar;
 pub mod separator;
 pub mod style;
+pub mod terminal;
 pub mod top_banner;
 
 mod window_utils;
