@@ -187,6 +187,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
     let mut sort_requested = None; // For sort changes captured from the header click
     let mut file_list_response = None; // To store the response for the background context menu
     let mut context_menu_action = ContextMenuAction::None; // To store the action from any context menu
+    let mut double_clicked_path: Option<PathBuf> = None; // To store the path of a double-clicked entry
 
     ui.vertical(|ui| {
         ui.set_min_width(width);
@@ -293,6 +294,11 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                             new_selected_index = Some(original_index);
                         }
 
+                        // Check for double-clicks to navigate or open files
+                        if row_response.double_clicked() {
+                            double_clicked_path = Some(entry.path.clone());
+                        }
+
                         // --- Add Context Menu for Rows ---
                         row_response.context_menu(|menu_ui| {
                             new_selected_index = Some(original_index);
@@ -327,6 +333,15 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
     // so it's acting on the current selected entry
     if let Some(index) = new_selected_index {
         app.set_selection(index);
+    }
+
+    // Handle double-click navigation or file opening
+    if let Some(path) = double_clicked_path {
+        if path.is_dir() {
+            app.navigate_to_dir(path);
+        } else if path.is_file() {
+            app.open_file(path);
+        }
     }
 
     // Handle context menu action captured from closures

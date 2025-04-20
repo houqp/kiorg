@@ -187,7 +187,7 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
 
     let (rect, response) = ui.allocate_exact_size(
         egui::vec2(ui.available_width(), ROW_HEIGHT),
-        egui::Sense::click(),
+        egui::Sense::click_and_drag(), // Use click_and_drag to detect double clicks
     );
 
     if is_marked {
@@ -371,10 +371,10 @@ pub fn draw_parent_entry_row(
     is_selected: bool,
     colors: &AppColors,
     is_bookmarked: bool,
-) -> bool {
+) -> egui::Response {
     let (rect, response) = ui.allocate_exact_size(
         egui::vec2(ui.available_width(), ROW_HEIGHT),
-        egui::Sense::click(),
+        egui::Sense::click_and_drag(), // Use click_and_drag to detect double clicks
     );
 
     if is_selected {
@@ -398,7 +398,7 @@ pub fn draw_parent_entry_row(
         name_color,
     );
 
-    response.clicked()
+    response
 }
 
 fn truncate_text(text: &str, available_width: f32) -> String {

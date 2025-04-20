@@ -7,12 +7,7 @@ use crate::ui::style::{HEADER_FONT_SIZE, HEADER_ROW_HEIGHT};
 
 /// Draws the left panel (parent directory list).
 /// Returns Some(PathBuf) if a directory was clicked for navigation.
-pub fn draw(
-    app: &Kiorg,
-    ui: &mut Ui,
-    width: f32,
-    height: f32,
-) -> Option<PathBuf> {
+pub fn draw(app: &Kiorg, ui: &mut Ui, width: f32, height: f32) -> Option<PathBuf> {
     let tab = app.tab_manager.current_tab_ref();
     let parent_entries = tab.parent_entries.clone();
     let parent_selected_index = tab.parent_selected_index;
@@ -48,16 +43,20 @@ pub fn draw(
                 // Draw all rows
                 for (i, entry) in parent_entries.iter().enumerate() {
                     let is_bookmarked = bookmarks.contains(&entry.path);
-                    let clicked = file_list::draw_parent_entry_row(
+                    let response = file_list::draw_parent_entry_row(
                         ui,
                         entry,
                         i == parent_selected_index,
                         colors,
                         is_bookmarked,
                     );
-                    if clicked {
+                    if response.clicked() {
                         path_to_navigate = Some(entry.path.clone());
-                        // Don't break here, let the loop finish drawing all visible items
+                    }
+
+                    // Also navigate on double-click
+                    if response.double_clicked() {
+                        path_to_navigate = Some(entry.path.clone());
                     }
                 }
 
@@ -76,4 +75,4 @@ pub fn draw(
     });
 
     path_to_navigate
-} 
+}

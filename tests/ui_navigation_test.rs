@@ -300,3 +300,51 @@ fn test_mouse_click_selects_and_previews() {
         "Preview content should contain 'Content of b.txt'"
     );
 }
+
+#[test]
+fn test_enter_directory() {
+    // Create a temporary directory for testing
+    let temp_dir = tempdir().unwrap();
+
+    // Create test directories and files
+    create_test_files(&[
+        temp_dir.path().join("dir1"),
+        temp_dir.path().join("test1.txt"),
+    ]);
+
+    let mut harness = create_harness(&temp_dir);
+    harness.ensure_sorted_by_name_ascending();
+
+    // Select the directory
+    {
+        let tab = harness.state_mut().tab_manager.current_tab();
+        tab.selected_index = 0; // Select dir1
+    }
+    harness.step();
+
+    // Get the current path before double-click
+    let current_path = harness
+        .state()
+        .tab_manager
+        .current_tab_ref()
+        .current_path
+        .clone();
+    let expected_path = current_path.join("dir1");
+
+    // Simulate a double-click by using Enter key (which has the same effect)
+    // This is a simplification since egui_kittest doesn't easily support double-click simulation
+    harness.press_key(Key::Enter);
+    harness.step();
+
+    // Verify that we navigated to the directory
+    let new_path = harness
+        .state()
+        .tab_manager
+        .current_tab_ref()
+        .current_path
+        .clone();
+    assert_eq!(
+        new_path, expected_path,
+        "Should have navigated to the directory"
+    );
+}
