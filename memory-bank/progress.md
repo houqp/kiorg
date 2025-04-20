@@ -14,13 +14,21 @@
 *   Tab creation and switching (t, 1, 2, 3, etc.)
 *   Help window (?)
 *   Configurable color schemes
-*   Column sort order persistence between sessions
-*   Search filter with visual highlighting (`/`, Enter, Esc)
+*   Column sort order persistence between sessions (fully implemented and tested)
+*   Search filter with robust visual highlighting and support for large directories, Unicode, and long filenames
     - Real-time filtering as you type
     - Orange highlighting of matching text
     - Search state persists after Enter
     - Clear filter with Esc
 *   Add file/directory (a)
+*   Right click context menu with operations:
+    - Add new file/directory
+    - Rename selected file/directory
+    - Delete selected file/directory
+    - Copy selected file/directory
+    - Cut selected file/directory
+    - Paste copied/cut file/directory
+    - Context-aware enabling/disabling of options
 
 ### What's left to build
 *   PDF preview
@@ -29,10 +37,9 @@
 *   Fuzzy directory jump
 *   Case-sensitive/insensitive search toggle
 *   Regular expression search support
-*   Right click menu for various operations
 
 ### Current status
-The application is in a functional state with core file management features implemented. Recent improvements to the search functionality make it more user-friendly with visual feedback through text highlighting.
+The application is in a functional state with core file management features implemented. Recent improvements include enhanced search functionality with visual feedback through text highlighting and a comprehensive right-click context menu that provides intuitive access to file operations.
 
 ### Known issues
 *   PDF preview is not yet implemented.

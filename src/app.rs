@@ -218,19 +218,20 @@ impl Kiorg {
         }
     }
 
-    pub fn navigate_to(&mut self, mut path: PathBuf) {
-        if path.is_dir() {
-            let tab = self.tab_manager.current_tab();
-            // Swap current_path with path and store the swapped path as prev_path
-            std::mem::swap(&mut tab.current_path, &mut path);
-            self.prev_path = Some(path);
-            // Reset scroll_range to None when navigating to a new directory
-            self.scroll_range = None;
-            self.refresh_entries();
-        } else if path.is_file() {
-            if let Err(e) = open::that(&path) {
-                eprintln!("Failed to open file: {e}");
-            }
+    pub fn navigate_to_dir(&mut self, mut path: PathBuf) {
+        let tab = self.tab_manager.current_tab();
+        // Swap current_path with path and store the swapped path as prev_path
+        std::mem::swap(&mut tab.current_path, &mut path);
+        self.prev_path = Some(path);
+        // Reset scroll_range to None when navigating to a new directory
+        self.scroll_range = None;
+        self.search_bar.close();
+        self.refresh_entries();
+    }
+
+    pub fn open_file(&mut self, path: PathBuf) {
+        if let Err(e) = open::that(&path) {
+            eprintln!("Failed to open file: {e}");
         }
     }
 
@@ -414,7 +415,7 @@ impl Kiorg {
                 .parent()
                 .map(|p| p.to_path_buf());
             if let Some(parent) = parent_path {
-                self.navigate_to(parent);
+                self.navigate_to_dir(parent);
             }
         } else if ctx.input(|i| {
             i.key_pressed(egui::Key::L)
@@ -425,8 +426,13 @@ impl Kiorg {
             // Get the entry corresponding to the current `selected_index`.
             // This index always refers to the original `entries` list.
             if let Some(selected_entry) = tab.entries.get(tab.selected_index) {
-                self.search_bar.close();
-                self.navigate_to(selected_entry.path.clone());
+                let path = selected_entry.path.clone();
+                if path.is_dir() {
+                    self.navigate_to_dir(path);
+                } else if path.is_file() && ctx.input(|i| i.key_pressed(egui::Key::Enter)) {
+                    // only open file on enter
+                    self.open_file(path);
+                }
             }
         } else if ctx.input(|i| i.key_pressed(egui::Key::G) && i.modifiers.shift) {
             let tab = self.tab_manager.current_tab();
@@ -571,7 +577,7 @@ impl eframe::App for Kiorg {
 
         // Process the bookmark action
         match bookmark_action {
-            bookmark_popup::BookmarkAction::Navigate(path) => self.navigate_to(path),
+            bookmark_popup::BookmarkAction::Navigate(path) => self.navigate_to_dir(path),
             bookmark_popup::BookmarkAction::SaveBookmarks => {
                 // Save bookmarks when the popup signals a change (e.g., deletion)
                 if let Err(e) = bookmark_popup::save_bookmarks(
@@ -612,7 +618,7 @@ impl eframe::App for Kiorg {
 
                 // Call the new left_panel::draw function directly
                 if let Some(path) = left_panel::draw(self, ui, left_width, content_height) {
-                    self.navigate_to(path);
+                    self.navigate_to_dir(path);
                 }
                 separator::draw_vertical_separator(ui);
                 center_panel::draw(self, ui, center_width, content_height);

@@ -14,7 +14,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui) {
                 ) {
                     match message {
                         path_nav::PathNavMessage::Navigate(path) => {
-                            app.navigate_to(path);
+                            app.navigate_to_dir(path);
                         }
                     }
                 }
