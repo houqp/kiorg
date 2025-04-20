@@ -108,21 +108,62 @@ enum ContextMenuAction {
     None,
     Add,
     Paste,
+    Rename,
+    Delete,
+    Copy,
+    Cut,
 }
 
 /// Helper function to build the context menu items and return the chosen action.
-/// Takes a boolean indicating if pasting is possible.
-fn show_context_menu(ui: &mut Ui, can_paste: bool) -> ContextMenuAction {
+/// Takes a boolean indicating if pasting is possible and if a file is selected.
+fn show_context_menu(ui: &mut Ui, can_paste: bool, has_selection: bool) -> ContextMenuAction {
     let mut action = ContextMenuAction::None;
 
-    if ui.button("Add new file/directory").clicked() {
+    if ui.button("Add new file/directory (a)").clicked() {
         action = ContextMenuAction::Add;
+        ui.close_menu();
+    }
+
+    // File operations - only enabled when a file is selected
+    ui.separator();
+
+    if ui
+        .add_enabled(has_selection, egui::Button::new("Rename (r)"))
+        .clicked()
+    {
+        action = ContextMenuAction::Rename;
+        ui.close_menu();
+    }
+
+    if ui
+        .add_enabled(has_selection, egui::Button::new("Delete (d)"))
+        .clicked()
+    {
+        action = ContextMenuAction::Delete;
+        ui.close_menu();
+    }
+
+    ui.separator();
+
+    if ui
+        .add_enabled(has_selection, egui::Button::new("Copy (yy)"))
+        .clicked()
+    {
+        action = ContextMenuAction::Copy;
+        ui.close_menu();
+    }
+
+    if ui
+        .add_enabled(has_selection, egui::Button::new("Cut (x)"))
+        .clicked()
+    {
+        action = ContextMenuAction::Cut;
         ui.close_menu();
     }
 
     // Use the passed boolean directly
     if ui
-        .add_enabled(can_paste, egui::Button::new("Paste"))
+        .add_enabled(can_paste, egui::Button::new("Paste (p)"))
         .clicked()
     {
         action = ContextMenuAction::Paste;
@@ -178,6 +219,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                     .max_height(available_height); // Use available_height
 
                 let total_rows = filtered_entries.len();
+
                 if app.ensure_selected_visible {
                     if let Some(selected_entry) = tab_ref.selected_entry() {
                         let filtered_index = filtered_entries
@@ -254,9 +296,9 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                         row_response.context_menu(|menu_ui| {
                             new_selected_index = Some(original_index);
                             // Capture the action, don't perform it yet
-                            // Pass only the necessary boolean, not the whole app
+                            // Pass only the necessary booleans, not the whole app
                             context_menu_action =
-                                show_context_menu(menu_ui, app.clipboard.is_some());
+                                show_context_menu(menu_ui, app.clipboard.is_some(), true);
                         });
                     } // End row loop
                 }); // End show_rows
@@ -271,12 +313,20 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
     if let Some(response) = file_list_response {
         response.context_menu(|menu_ui| {
             // Capture the action, don't perform it yet
-            // Pass only the necessary boolean, not the whole app
-            context_menu_action = show_context_menu(menu_ui, app.clipboard.is_some());
+            // Pass only the necessary booleans, not the whole app
+            // For background context menu, no file is selected
+            context_menu_action = show_context_menu(menu_ui, app.clipboard.is_some(), false);
         });
     }
 
     // --- Apply state changes captured from the UI closures AFTER drawing ---
+
+    // Handle selection change captured from the row closure
+    // NOTE: important to update the index before handle the context menu action
+    // so it's acting on the current selected entry
+    if let Some(index) = new_selected_index {
+        app.set_selection(index);
+    }
 
     // Handle context menu action captured from closures
     match context_menu_action {
@@ -285,10 +335,22 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
             app.add_focus = true;
         }
         ContextMenuAction::Paste => {
-            let current_path = app.tab_manager.current_tab_ref().current_path.clone(); // Clone path
-            if handle_clipboard_operations(&mut app.clipboard, &current_path) {
+            let current_path = &app.tab_manager.current_tab_ref().current_path;
+            if handle_clipboard_operations(&mut app.clipboard, current_path) {
                 app.refresh_entries();
             }
+        }
+        ContextMenuAction::Rename => {
+            app.rename_selected_entry();
+        }
+        ContextMenuAction::Delete => {
+            app.delete_selected_entry();
+        }
+        ContextMenuAction::Copy => {
+            app.copy_selected_entries();
+        }
+        ContextMenuAction::Cut => {
+            app.cut_selected_entries();
         }
         ContextMenuAction::None => {} // Do nothing
     }
@@ -310,10 +372,5 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
         {
             eprintln!("Failed to save sort preferences: {}", e);
         }
-    }
-
-    // Handle selection change captured from the row closure
-    if let Some(index) = new_selected_index {
-        app.set_selection(index);
     }
 }

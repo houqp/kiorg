@@ -1,6 +1,7 @@
-use egui::{Align2, Context, RichText};
+use egui::{Context, RichText};
 use std::path::{Path, PathBuf};
 
+use super::window_utils::new_center_popup_window;
 use crate::config::colors::AppColors;
 
 /// Dialog for confirming file and directory deletion
@@ -16,6 +17,10 @@ impl DeleteDialog {
         on_confirm: impl FnOnce(),
         on_cancel: impl FnOnce(),
     ) {
+        if ctx.input(|i| i.key_pressed(egui::Key::Q) || i.key_pressed(egui::Key::Escape)) {
+            *show_delete_confirm = false;
+        }
+
         if !*show_delete_confirm || entry_to_delete.is_none() {
             return;
         }
@@ -23,10 +28,7 @@ impl DeleteDialog {
         let path = entry_to_delete.as_ref().unwrap();
         let mut show_popup = *show_delete_confirm;
 
-        if let Some(response) = egui::Window::new("Delete Confirmation")
-            .collapsible(false)
-            .resizable(false)
-            .anchor(Align2::CENTER_CENTER, [0.0, 0.0])
+        if let Some(response) = new_center_popup_window("Delete Confirmation")
             .open(&mut show_popup)
             .show(ctx, |ui| {
                 ui.vertical_centered(|ui| {

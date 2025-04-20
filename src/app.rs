@@ -131,9 +131,56 @@ impl Kiorg {
 
     pub fn set_selection(&mut self, index: usize) {
         let tab = self.tab_manager.current_tab();
+        if tab.selected_index == index {
+            return;
+        }
         tab.update_selection(index);
         self.ensure_selected_visible = true;
         self.selection_changed = true;
+    }
+
+    pub fn delete_selected_entry(&mut self) {
+        let tab = self.tab_manager.current_tab();
+        if let Some(entry) = tab.selected_entry() {
+            self.entry_to_delete = Some(entry.path.clone());
+            self.show_delete_confirm = true;
+        }
+    }
+
+    pub fn rename_selected_entry(&mut self) {
+        let tab = self.tab_manager.current_tab();
+        if let Some(entry) = tab.selected_entry() {
+            self.new_name = entry.name.clone();
+            self.rename_mode = true;
+            self.rename_focus = true;
+        }
+    }
+
+    fn get_selected_entries(&mut self) -> Vec<PathBuf> {
+        let tab = self.tab_manager.current_tab();
+        if tab.selected_entries.is_empty() {
+            if let Some(entry) = tab.selected_entry() {
+                vec![entry.path.clone()]
+            } else {
+                vec![]
+            }
+        } else {
+            tab.selected_entries.iter().cloned().collect()
+        }
+    }
+
+    pub fn cut_selected_entries(&mut self) {
+        let paths = self.get_selected_entries();
+        if !paths.is_empty() {
+            self.clipboard = Some((paths, true));
+        }
+    }
+
+    pub fn copy_selected_entries(&mut self) {
+        let paths = self.get_selected_entries();
+        if !paths.is_empty() {
+            self.clipboard = Some((paths, false));
+        }
     }
 
     pub fn move_selection(&mut self, delta: isize) {
@@ -270,47 +317,18 @@ impl Kiorg {
         }
 
         if ctx.input(|i| i.key_pressed(egui::Key::R)) {
-            let tab = self.tab_manager.current_tab();
-            if let Some(entry) = tab.entries.get(tab.selected_index) {
-                self.new_name = entry.name.clone();
-                self.rename_mode = true;
-                self.rename_focus = true;
-            }
+            self.rename_selected_entry();
             return;
         }
 
         // Handle copy/cut/paste
         if ctx.input(|i| i.key_pressed(egui::Key::Y)) {
-            let tab = self.tab_manager.current_tab();
-            let paths: Vec<PathBuf> = if tab.selected_entries.is_empty() {
-                if let Some(entry) = tab.entries.get(tab.selected_index) {
-                    vec![entry.path.clone()]
-                } else {
-                    vec![]
-                }
-            } else {
-                tab.selected_entries.iter().cloned().collect()
-            };
-            if !paths.is_empty() {
-                self.clipboard = Some((paths, false));
-            }
+            self.copy_selected_entries();
             return;
         }
 
         if ctx.input(|i| i.key_pressed(egui::Key::X)) {
-            let tab = self.tab_manager.current_tab();
-            let paths: Vec<PathBuf> = if tab.selected_entries.is_empty() {
-                if let Some(entry) = tab.entries.get(tab.selected_index) {
-                    vec![entry.path.clone()]
-                } else {
-                    vec![]
-                }
-            } else {
-                tab.selected_entries.iter().cloned().collect()
-            };
-            if !paths.is_empty() {
-                self.clipboard = Some((paths, true));
-            }
+            self.cut_selected_entries();
             return;
         }
 
@@ -323,11 +341,7 @@ impl Kiorg {
         }
 
         if ctx.input(|i| i.key_pressed(egui::Key::D)) {
-            let tab = self.tab_manager.current_tab();
-            if let Some(entry) = tab.entries.get(tab.selected_index) {
-                self.entry_to_delete = Some(entry.path.clone());
-                self.show_delete_confirm = true;
-            }
+            self.delete_selected_entry();
             return;
         }
 
@@ -570,6 +584,11 @@ impl eframe::App for Kiorg {
             bookmark_popup::BookmarkAction::None => {}
         };
 
+        // Show delete confirmation window if needed
+        // NOTE: important to keep it before the center panel so the popup can
+        // be triggered through the right click context menu
+        self.handle_delete_confirmation(ctx);
+
         egui::CentralPanel::default().show(ctx, |ui| {
             let total_available_height = ui.available_height();
 
@@ -621,8 +640,5 @@ impl eframe::App for Kiorg {
             // Call the refactored dialog function
             dialogs::show_exit_dialog(ctx, &mut self.show_exit_confirm, &self.colors);
         }
-
-        // Show delete confirmation window if needed
-        self.handle_delete_confirmation(ctx);
     }
 }
