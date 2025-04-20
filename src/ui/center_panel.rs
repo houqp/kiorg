@@ -190,6 +190,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
 
     ui.vertical(|ui| {
         ui.set_min_width(width);
+        ui.set_max_width(width);
         ui.set_min_height(height);
         ui.set_max_height(height);
 
