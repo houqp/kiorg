@@ -56,7 +56,6 @@ pub fn draw(ctx: &egui::Context, app: &mut Kiorg) {
                 ui.horizontal(|ui| {
                     ui.label(section_title_text("Terminal", &app.colors));
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        ui.add_space(5.0);
                         if ui.button("×").clicked() {
                             close_terminal = true;
                         }
