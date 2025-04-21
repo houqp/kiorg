@@ -20,4 +20,4 @@ mod tests {
         // Test invalid input
         assert_eq!(hex_to_color32("invalid"), Color32::from_rgb(0, 0, 0));
     }
-} 
+}

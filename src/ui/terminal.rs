@@ -10,7 +10,7 @@ pub struct TerminalContext {
 }
 
 impl TerminalContext {
-    pub fn new(ctx: &egui::Context) -> Self {
+    pub fn new(ctx: &egui::Context, working_directory: std::path::PathBuf) -> Self {
         let system_shell = std::env::var("SHELL")
             .expect("SHELL variable is not defined")
             .to_string();
@@ -21,6 +21,7 @@ impl TerminalContext {
             pty_proxy_sender.clone(),
             egui_term::BackendSettings {
                 shell: system_shell,
+                working_directory: Some(working_directory),
                 ..Default::default()
             },
         )
@@ -44,19 +45,21 @@ pub fn draw(ctx: &egui::Context, app: &mut Kiorg) {
         let mut close_terminal = false;
 
         // Create a panel at the bottom of the screen
+        let screen_height = ctx.screen_rect().height();
         egui::TopBottomPanel::bottom("terminal_panel")
             .resizable(true)
-            .default_height(200.0)
+            .default_height(screen_height * 0.6)
             .min_height(100.0)
+            .max_height(screen_height * 0.9)
             .show(ctx, |ui| {
                 // Add a close button in the top right corner
                 ui.horizontal(|ui| {
                     ui.label(section_title_text("Terminal", &app.colors));
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        ui.add_space(5.0);
                         if ui.button("×").clicked() {
                             close_terminal = true;
                         }
-                        ui.add_space(ui.available_width() - 20.0); // Push the button to the right
                     });
                 });
 

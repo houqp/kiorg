@@ -364,7 +364,8 @@ impl Kiorg {
         }
 
         if ctx.input(|i| i.key_pressed(egui::Key::T) && i.modifiers.shift) {
-            self.terminal_ctx = Some(terminal::TerminalContext::new(ctx));
+            let path = self.tab_manager.current_tab().current_path.clone();
+            self.terminal_ctx = Some(terminal::TerminalContext::new(ctx, path));
             return;
         }
 
@@ -578,6 +579,8 @@ impl eframe::App for Kiorg {
             self.selection_changed = false; // Reset flag after update
         }
 
+        terminal::draw(ctx, self);
+
         self.handle_key_press(ctx);
 
         // Handle bookmark popup with the new approach
@@ -660,7 +663,5 @@ impl eframe::App for Kiorg {
             // Call the refactored dialog function
             dialogs::show_exit_dialog(ctx, &mut self.show_exit_confirm, &self.colors);
         }
-
-        terminal::draw(ctx, self);
     }
 }
