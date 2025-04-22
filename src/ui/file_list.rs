@@ -405,14 +405,20 @@ fn truncate_text(text: &str, available_width: f32) -> String {
     // Approximate width of a character in pixels
     let char_width = 8.0;
     let max_chars = (available_width / char_width) as usize;
+    let chars_cnt = text.chars().count();
 
-    if text.len() <= max_chars {
+    if chars_cnt <= max_chars {
         return text.to_string();
     }
 
     let half_chars = (max_chars - 3) / 2;
-    let start = &text[..half_chars];
-    let end = &text[text.len() - half_chars..];
+
+    let start = text.chars().take(half_chars).collect::<String>();
+    let end = text
+        .chars()
+        .skip(chars_cnt - half_chars)
+        .take(half_chars)
+        .collect::<String>();
 
     format!("{}...{}", start, end)
 }
@@ -427,6 +433,15 @@ mod tests {
         assert_eq!(
             truncate_text("this_is_a_very_long_filename.txt", 80.0),
             "thi...txt"
+        );
+    }
+
+    #[test]
+    fn test_truncate_unicode() {
+        assert_eq!(
+            // set to 136.0 so it tries to subindex at the Narrow No-Break Space char
+            truncate_text("Screenshot 2025-04-21 at 2.45.13 AM.png", 136.0),
+            "Screens...\u{202f}AM.png"
         );
     }
 }
