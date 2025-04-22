@@ -2,6 +2,7 @@ use egui::TextureHandle;
 use std::path::PathBuf;
 
 use crate::config::{self, colors::AppColors};
+use crate::input;
 use crate::models::tab::TabManager;
 use crate::ui::add_entry_popup; // Import the new module
 use crate::ui::delete_dialog::DeleteDialog;
@@ -21,8 +22,6 @@ const LEFT_PANEL_RATIO: f32 = 0.15;
 const RIGHT_PANEL_RATIO: f32 = 0.25;
 const LEFT_PANEL_MIN_WIDTH: f32 = 150.0;
 const RIGHT_PANEL_MIN_WIDTH: f32 = 200.0;
-
-const DOUBLE_KEY_PRESS_THRESHOLD_MS: u64 = 500;
 
 pub struct Kiorg {
     pub tab_manager: TabManager,
@@ -240,7 +239,12 @@ impl Kiorg {
         }
     }
 
-    pub fn handle_key_press(&mut self, ctx: &egui::Context) {
+    pub fn process_input(&mut self, ctx: &egui::Context) {
+        // Let terminal widget process all the inputs
+        if self.terminal_ctx.is_some() {
+            return;
+        }
+
         // Prioritize Add Mode Input
         if add_entry_popup::handle_key_press(ctx, self) {
             return;
@@ -251,274 +255,12 @@ impl Kiorg {
             return;
         }
 
-        if self.terminal_ctx.is_some() {
-            return;
-        }
-
         // Don't process other keyboard input if the bookmark popup is active
         if self.show_bookmarks {
             return;
         }
 
-        if self.show_exit_confirm {
-            if ctx.input(|i| i.key_pressed(egui::Key::Enter)) {
-                std::process::exit(0);
-            } else if ctx.input(|i| i.key_pressed(egui::Key::Escape) || i.key_pressed(egui::Key::Q))
-            {
-                self.show_exit_confirm = false;
-            }
-            return;
-        }
-
-        if self.show_delete_confirm {
-            if ctx.input(|i| i.key_pressed(egui::Key::Enter)) {
-                self.confirm_delete();
-            } else if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
-                self.cancel_delete();
-            }
-            return;
-        }
-
-        if self.rename_mode {
-            if ctx.input(|i| i.key_pressed(egui::Key::Enter)) {
-                let tab = self.tab_manager.current_tab();
-                if let Some(entry) = tab.entries.get(tab.selected_index) {
-                    let parent = entry.path.parent().unwrap_or(&tab.current_path);
-                    let new_path = parent.join(&self.new_name);
-
-                    if let Err(e) = std::fs::rename(&entry.path, &new_path) {
-                        eprintln!("Failed to rename: {e}");
-                    } else {
-                        self.refresh_entries();
-                    }
-                }
-                self.rename_mode = false;
-                self.new_name.clear();
-                self.rename_focus = false;
-            } else if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
-                self.rename_mode = false;
-                self.new_name.clear();
-                self.rename_focus = false;
-            }
-            return;
-        }
-
-        if ctx.input(|i| i.key_pressed(egui::Key::Questionmark)) {
-            self.show_help = !self.show_help;
-            return;
-        }
-
-        if self.show_help
-            && (ctx.input(|i| i.key_pressed(egui::Key::Enter))
-                || ctx.input(|i| i.key_pressed(egui::Key::Questionmark))
-                || ctx.input(|i| i.key_pressed(egui::Key::Q)))
-        {
-            self.show_help = false;
-            return;
-        }
-
-        if self.show_help {
-            return;
-        }
-
-        if ctx.input(|i| i.key_pressed(egui::Key::Q)) {
-            self.show_exit_confirm = true;
-            return;
-        }
-
-        if ctx.input(|i| i.key_pressed(egui::Key::R)) {
-            self.rename_selected_entry();
-            return;
-        }
-
-        // Handle copy/cut/paste
-        if ctx.input(|i| i.key_pressed(egui::Key::Y)) {
-            self.copy_selected_entries();
-            return;
-        }
-
-        if ctx.input(|i| i.key_pressed(egui::Key::X)) {
-            self.cut_selected_entries();
-            return;
-        }
-
-        if ctx.input(|i| i.key_pressed(egui::Key::P)) {
-            let tab = self.tab_manager.current_tab();
-            if center_panel::handle_clipboard_operations(&mut self.clipboard, &tab.current_path) {
-                self.refresh_entries();
-            }
-            return;
-        }
-
-        if ctx.input(|i| i.key_pressed(egui::Key::D)) {
-            self.delete_selected_entry();
-            return;
-        }
-
-        // Handle tab creation and switching
-        if ctx.input(|i| i.key_pressed(egui::Key::T) && !i.modifiers.shift) {
-            let current_path = self.tab_manager.current_tab_ref().current_path.clone();
-            self.tab_manager.add_tab(current_path);
-            self.refresh_entries();
-            return;
-        }
-
-        if ctx.input(|i| i.key_pressed(egui::Key::T) && i.modifiers.shift) {
-            let path = self.tab_manager.current_tab().current_path.clone();
-            self.terminal_ctx = Some(terminal::TerminalContext::new(ctx, path));
-            return;
-        }
-
-        // Handle tab switching with number keys
-        if ctx.input(|i| i.key_pressed(egui::Key::Num1)) {
-            self.tab_manager.switch_to_tab(0);
-            self.refresh_entries();
-            return;
-        }
-        if ctx.input(|i| i.key_pressed(egui::Key::Num2)) {
-            self.tab_manager.switch_to_tab(1);
-            self.refresh_entries();
-            return;
-        }
-        if ctx.input(|i| i.key_pressed(egui::Key::Num3)) {
-            self.tab_manager.switch_to_tab(2);
-            self.refresh_entries();
-            return;
-        }
-        if ctx.input(|i| i.key_pressed(egui::Key::Num4)) {
-            self.tab_manager.switch_to_tab(3);
-            self.refresh_entries();
-            return;
-        }
-        if ctx.input(|i| i.key_pressed(egui::Key::Num5)) {
-            self.tab_manager.switch_to_tab(4);
-            self.refresh_entries();
-            return;
-        }
-        if ctx.input(|i| i.key_pressed(egui::Key::Num6)) {
-            self.tab_manager.switch_to_tab(5);
-            self.refresh_entries();
-            return;
-        }
-        if ctx.input(|i| i.key_pressed(egui::Key::Num7)) {
-            self.tab_manager.switch_to_tab(6);
-            self.refresh_entries();
-            return;
-        }
-        if ctx.input(|i| i.key_pressed(egui::Key::Num8)) {
-            self.tab_manager.switch_to_tab(7);
-            self.refresh_entries();
-            return;
-        }
-        if ctx.input(|i| i.key_pressed(egui::Key::Num9)) {
-            self.tab_manager.switch_to_tab(8);
-            self.refresh_entries();
-            return;
-        }
-
-        // Handle navigation in current panel
-        if ctx.input(|i| i.key_pressed(egui::Key::J) || i.key_pressed(egui::Key::ArrowDown)) {
-            self.move_selection(1);
-        } else if ctx.input(|i| i.key_pressed(egui::Key::K) || i.key_pressed(egui::Key::ArrowUp)) {
-            self.move_selection(-1);
-        } else if ctx.input(|i| i.key_pressed(egui::Key::H) || i.key_pressed(egui::Key::ArrowLeft))
-        {
-            let parent_path = self
-                .tab_manager
-                .current_tab_ref()
-                .current_path
-                .parent()
-                .map(|p| p.to_path_buf());
-            if let Some(parent) = parent_path {
-                self.navigate_to_dir(parent);
-            }
-        } else if ctx.input(|i| {
-            i.key_pressed(egui::Key::L)
-                || i.key_pressed(egui::Key::ArrowRight)
-                || i.key_pressed(egui::Key::Enter)
-        }) {
-            let tab = self.tab_manager.current_tab_ref();
-            // Get the entry corresponding to the current `selected_index`.
-            // This index always refers to the original `entries` list.
-            if let Some(selected_entry) = tab.entries.get(tab.selected_index) {
-                let path = selected_entry.path.clone();
-                if path.is_dir() {
-                    self.navigate_to_dir(path);
-                } else if path.is_file() && ctx.input(|i| i.key_pressed(egui::Key::Enter)) {
-                    // only open file on enter
-                    self.open_file(path);
-                }
-            }
-        } else if ctx.input(|i| i.key_pressed(egui::Key::G) && i.modifiers.shift) {
-            let tab = self.tab_manager.current_tab();
-            if !tab.entries.is_empty() {
-                tab.update_selection(tab.entries.len() - 1);
-                self.ensure_selected_visible = true;
-                self.selection_changed = true;
-            }
-            self.last_lowercase_g_pressed_ms = 0;
-        } else if ctx.input(|i| i.key_pressed(egui::Key::G) && !i.modifiers.shift) {
-            let tab = self.tab_manager.current_tab();
-            let now = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap_or_default()
-                .as_millis() as u64;
-
-            let last = self.last_lowercase_g_pressed_ms;
-            if last > 0 && now - last < DOUBLE_KEY_PRESS_THRESHOLD_MS {
-                tab.update_selection(0);
-                self.ensure_selected_visible = true;
-                self.selection_changed = true;
-                // Reset the timestamp after double g presses has been detected
-                self.last_lowercase_g_pressed_ms = 0;
-            } else {
-                self.last_lowercase_g_pressed_ms = now;
-            }
-        } else if ctx.input(|i| i.key_pressed(egui::Key::Space)) {
-            let tab = self.tab_manager.current_tab();
-            if let Some(entry) = tab.entries.get(tab.selected_index) {
-                if tab.selected_entries.contains(&entry.path) {
-                    tab.selected_entries.remove(&entry.path);
-                } else {
-                    tab.selected_entries.insert(entry.path.clone());
-                }
-            }
-        } else if ctx.input(|i| i.key_pressed(egui::Key::B)) {
-            if ctx.input(|i| i.modifiers.shift) {
-                // Toggle bookmark popup visibility
-                self.show_bookmarks = !self.show_bookmarks;
-                // If we're showing the popup, return immediately to avoid processing other shortcuts
-                if self.show_bookmarks {
-                    return;
-                }
-            } else {
-                bookmark_popup::toggle_bookmark(self);
-            }
-        }
-
-        // Handle search activation
-        if ctx.input(|i| i.key_pressed(egui::Key::Slash)) {
-            self.search_bar.activate();
-            return;
-        }
-
-        // Handle Add Entry activation
-        if ctx.input(|i| i.key_pressed(egui::Key::A)) {
-            // Ensure no other modal/popup is active
-            if !self.show_help
-                && !self.show_exit_confirm
-                && !self.show_delete_confirm
-                && !self.rename_mode
-                && !self.search_bar.active() // Corrected method call
-                && !self.show_bookmarks
-            {
-                self.add_mode = true;
-                self.add_focus = true; // Request focus for the input field
-                self.new_entry_name.clear();
-            }
-            // Consume the 'a' key press
-            return;
-        }
+        input::process_input_events(self, ctx);
     }
 
     fn calculate_panel_widths(&self, available_width: f32) -> (f32, f32, f32) {
@@ -535,7 +277,7 @@ impl Kiorg {
         (left_width, center_width, right_width)
     }
 
-    fn confirm_delete(&mut self) {
+    pub fn confirm_delete(&mut self) {
         if let Some(path) = self.entry_to_delete.clone() {
             DeleteDialog::perform_delete(&path, || {
                 self.refresh_entries();
@@ -545,7 +287,7 @@ impl Kiorg {
         self.entry_to_delete = None;
     }
 
-    fn cancel_delete(&mut self) {
+    pub fn cancel_delete(&mut self) {
         self.show_delete_confirm = false;
         self.entry_to_delete = None;
     }
@@ -581,7 +323,7 @@ impl eframe::App for Kiorg {
 
         terminal::draw(ctx, self);
 
-        self.handle_key_press(ctx);
+        self.process_input(ctx);
 
         // Handle bookmark popup with the new approach
         // Use the bookmark_selected_index field from Kiorg struct
@@ -591,7 +333,6 @@ impl eframe::App for Kiorg {
             &mut self.bookmarks,
             &mut self.bookmark_selected_index,
         );
-
         // Process the bookmark action
         match bookmark_action {
             bookmark_popup::BookmarkAction::Navigate(path) => self.navigate_to_dir(path),

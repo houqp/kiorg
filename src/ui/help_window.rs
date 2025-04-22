@@ -116,7 +116,7 @@ pub fn show_help_window(ctx: &egui::Context, show_help: &mut bool, colors: &AppC
                     table.show(ui, |ui| {
                         let shortcuts = [
                             ("T (shift+t)", "Open terminal panel at current directory"),
-                            ("q", "Exit application"),
+                            ("q", "Exit Kiorg or close popups"),
                             ("?", "Toggle this help window"),
                         ];
                         for (key, description) in shortcuts {
