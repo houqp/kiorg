@@ -81,7 +81,11 @@ pub fn show_help_window(ctx: &egui::Context, show_help: &mut bool, colors: &AppC
                     ui.heading(RichText::new("Tabs").color(colors.gray));
                     let table = egui::Grid::new("tab_help_grid");
                     table.show(ui, |ui| {
-                        let shortcuts = [("t", "Create new tab"), ("1-9", "Switch to tab number")];
+                        let shortcuts = [
+                            ("t", "Create new tab"),
+                            ("1-9", "Switch to tab by number"),
+                            ("Ctrl+C", "Close current tab"),
+                        ];
 
                         for (key, description) in shortcuts {
                             ui.label(RichText::new(key).color(colors.yellow));

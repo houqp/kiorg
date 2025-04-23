@@ -241,6 +241,13 @@ fn process_key(
             app.add_focus = true; // Request focus for the input field
             app.new_entry_name.clear();
         }
+        // Close current tab
+        (Key::C, false) if modifiers.ctrl => {
+            if app.tab_manager.close_current_tab() {
+                // Refresh entries in case the active tab changed
+                app.refresh_entries();
+            }
+        }
         _ => {}
     }
 }

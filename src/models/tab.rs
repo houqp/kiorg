@@ -221,6 +221,19 @@ impl TabManager {
         }
     }
 
+    pub fn close_current_tab(&mut self) -> bool {
+        if self.tabs.len() > 1 {
+            self.tabs.remove(self.current_tab_index);
+            // Adjust the current tab index if necessary
+            if self.current_tab_index >= self.tabs.len() {
+                self.current_tab_index = self.tabs.len() - 1;
+            }
+            return true;
+        }
+        // Do nothing if it's the last tab
+        return false;
+    }
+
     pub fn current_tab(&mut self) -> &mut Tab {
         &mut self.tabs[self.current_tab_index]
     }
