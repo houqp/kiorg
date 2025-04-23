@@ -19,7 +19,7 @@ fn test_g_shortcuts() {
     // Ensure consistent sort order for reliable selection
     harness.ensure_sorted_by_name_ascending();
 
-    let tab = harness.state().tab_manager.current_tab_ref();
+    let tab = harness.state().state.tab_manager.current_tab_ref();
     assert_eq!(tab.selected_index, 0);
 
     // Test G shortcut (go to last entry)
@@ -30,7 +30,7 @@ fn test_g_shortcuts() {
         };
         harness.press_key_modifiers(modifiers, Key::G);
         harness.step();
-        let tab = harness.state().tab_manager.current_tab_ref();
+        let tab = harness.state().state.tab_manager.current_tab_ref();
         assert_eq!(tab.selected_index, tab.entries.len() - 1);
     }
 
@@ -42,7 +42,7 @@ fn test_g_shortcuts() {
         };
         harness.press_key_modifiers(modifiers, Key::G);
         harness.step();
-        let tab = harness.state().tab_manager.current_tab_ref();
+        let tab = harness.state().state.tab_manager.current_tab_ref();
         assert_eq!(tab.selected_index, tab.entries.len() - 1);
     }
 
@@ -51,7 +51,7 @@ fn test_g_shortcuts() {
         // Second g press should go back to the top
         harness.press_key(Key::G);
         harness.step();
-        let tab = harness.state().tab_manager.current_tab_ref();
+        let tab = harness.state().state.tab_manager.current_tab_ref();
         assert_eq!(tab.selected_index, 0);
     }
 }
@@ -63,7 +63,7 @@ fn test_g_shortcuts_empty_list() {
 
     // Clear entries
     {
-        let tab = harness.state_mut().tab_manager.current_tab();
+        let tab = harness.state_mut().state.tab_manager.current_tab();
         tab.entries.clear();
     }
 
@@ -75,7 +75,7 @@ fn test_g_shortcuts_empty_list() {
         };
         harness.press_key_modifiers(modifiers, Key::G);
         harness.step();
-        let tab = harness.state().tab_manager.current_tab_ref();
+        let tab = harness.state().state.tab_manager.current_tab_ref();
         assert_eq!(tab.selected_index, 0); // Should stay at 0
     }
 
@@ -86,7 +86,7 @@ fn test_g_shortcuts_empty_list() {
         // Second g press
         harness.press_key(Key::G);
         harness.step();
-        let tab = harness.state().tab_manager.current_tab_ref();
+        let tab = harness.state().state.tab_manager.current_tab_ref();
         assert_eq!(tab.selected_index, 0); // Should stay at 0
     }
 }
@@ -130,7 +130,7 @@ fn test_parent_directory_selection() {
     harness.step();
 
     // Verify that dir2 is still selected
-    let tab = harness.state().tab_manager.current_tab_ref();
+    let tab = harness.state().state.tab_manager.current_tab_ref();
     assert_eq!(
         tab.entries[tab.selected_index].path, test_files[1],
         "dir2 should be selected after navigating to parent directory"
@@ -162,7 +162,12 @@ fn test_prev_path_selection_with_sort() {
     harness.press_key(Key::J);
     harness.step();
     assert_eq!(
-        harness.state().tab_manager.current_tab_ref().selected_index,
+        harness
+            .state()
+            .state
+            .tab_manager
+            .current_tab_ref()
+            .selected_index,
         2
     );
 
@@ -171,6 +176,7 @@ fn test_prev_path_selection_with_sort() {
     harness.step();
     assert!(harness
         .state()
+        .state
         .tab_manager
         .current_tab_ref()
         .current_path
@@ -179,7 +185,7 @@ fn test_prev_path_selection_with_sort() {
     // Manually set sort order to Descending Name *while inside bbb*
     // (Simulating header click is complex, direct state change is acceptable here)
     {
-        let tab_manager = &mut harness.state_mut().tab_manager;
+        let tab_manager = &mut harness.state_mut().state.tab_manager;
         tab_manager.toggle_sort(kiorg::models::tab::SortColumn::Name); // Sets to None
         tab_manager.toggle_sort(kiorg::models::tab::SortColumn::Name); // Sets Name/Descending
     }
@@ -196,7 +202,7 @@ fn test_prev_path_selection_with_sort() {
     // 4. selected_index should be 1 (pointing to bbb)
 
     // Verify the state in the parent directory
-    let tab = harness.state().tab_manager.current_tab_ref();
+    let tab = harness.state().state.tab_manager.current_tab_ref();
     assert_eq!(
         tab.current_path,
         temp_dir.path(),
@@ -240,7 +246,12 @@ fn test_mouse_click_selects_and_previews() {
 
     // Initially, index 0 ("a.txt") should be selected
     assert_eq!(
-        harness.state().tab_manager.current_tab_ref().selected_index,
+        harness
+            .state()
+            .state
+            .tab_manager
+            .current_tab_ref()
+            .selected_index,
         0
     );
     // Preview cache should be empty or contain preview for a.txt initially
@@ -278,7 +289,7 @@ fn test_mouse_click_selects_and_previews() {
 
     // --- Assertions ---
     // 1. Check if the selected index is updated to 1 ("b.txt")
-    let tab = harness.state().tab_manager.current_tab_ref();
+    let tab = harness.state().state.tab_manager.current_tab_ref();
     assert_eq!(
         tab.selected_index, 1,
         "Selected index should be 1 after clicking the second entry"
@@ -317,7 +328,7 @@ fn test_enter_directory() {
 
     // Select the directory
     {
-        let tab = harness.state_mut().tab_manager.current_tab();
+        let tab = harness.state_mut().state.tab_manager.current_tab();
         tab.selected_index = 0; // Select dir1
     }
     harness.step();
@@ -325,6 +336,7 @@ fn test_enter_directory() {
     // Get the current path before double-click
     let current_path = harness
         .state()
+        .state
         .tab_manager
         .current_tab_ref()
         .current_path
@@ -339,6 +351,7 @@ fn test_enter_directory() {
     // Verify that we navigated to the directory
     let new_path = harness
         .state()
+        .state
         .tab_manager
         .current_tab_ref()
         .current_path

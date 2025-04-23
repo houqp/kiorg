@@ -20,7 +20,7 @@ fn test_bookmark_feature() {
 
     // Check initial state - no bookmarks
     harness.step();
-    assert!(harness.state().bookmarks.is_empty());
+    assert!(harness.state().state.bookmarks.is_empty());
     assert!(!harness.state().show_bookmarks);
 
     // Select the first directory and ensure sorting
@@ -28,14 +28,16 @@ fn test_bookmark_feature() {
         // Toggle twice on the TabManager to ensure Ascending order
         harness
             .state_mut()
+            .state
             .tab_manager
             .toggle_sort(kiorg::models::tab::SortColumn::Name); // Sets Name/Descending or None
         harness
             .state_mut()
+            .state
             .tab_manager
             .toggle_sort(kiorg::models::tab::SortColumn::Name); // Sets Name/Ascending
                                                                 // sort_all_tabs is called implicitly by toggle_sort now
-        let tab = harness.state_mut().tab_manager.current_tab();
+        let tab = harness.state_mut().state.tab_manager.current_tab();
         tab.selected_index = 0; // Select dir1
     }
     harness.step();
@@ -47,8 +49,8 @@ fn test_bookmark_feature() {
     // Verify bookmark was added
     {
         let app = harness.state();
-        assert_eq!(app.bookmarks.len(), 1);
-        assert!(app.bookmarks[0].ends_with("dir1"));
+        assert_eq!(app.state.bookmarks.len(), 1);
+        assert!(app.state.bookmarks[0].ends_with("dir1"));
     }
 
     // Open bookmark popup with 'B' (shift+b)
@@ -75,7 +77,7 @@ fn test_bookmark_feature() {
 
     // Select the second directory
     {
-        let tab = harness.state_mut().tab_manager.current_tab();
+        let tab = harness.state_mut().state.tab_manager.current_tab();
         tab.selected_index = 1; // Select dir2
     }
     harness.step();
@@ -87,20 +89,20 @@ fn test_bookmark_feature() {
     // Verify second bookmark was added
     {
         let app = harness.state();
-        assert_eq!(app.bookmarks.len(), 2);
-        assert!(app.bookmarks[1].ends_with("dir2"));
+        assert_eq!(app.state.bookmarks.len(), 2);
+        assert!(app.state.bookmarks[1].ends_with("dir2"));
     }
 
     // Try to bookmark a file (should not work)
     {
-        let tab = harness.state_mut().tab_manager.current_tab();
+        let tab = harness.state_mut().state.tab_manager.current_tab();
         tab.selected_index = 2; // Select test1.txt
     }
     harness.press_key(Key::B);
     harness.step();
 
     // Verify no new bookmark was added (still 2)
-    assert_eq!(harness.state().bookmarks.len(), 2);
+    assert_eq!(harness.state().state.bookmarks.len(), 2);
 
     // Open bookmark popup again
     {
@@ -119,8 +121,8 @@ fn test_bookmark_feature() {
     // Verify bookmark was removed
     {
         let app = harness.state();
-        assert_eq!(app.bookmarks.len(), 1);
-        assert!(app.bookmarks[0].ends_with("dir2")); // Only dir2 remains
+        assert_eq!(app.state.bookmarks.len(), 1);
+        assert!(app.state.bookmarks[0].ends_with("dir2")); // Only dir2 remains
     }
 
     // Close bookmark popup with 'q'

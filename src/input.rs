@@ -42,7 +42,7 @@ fn process_key(
 
     if app.rename_mode {
         if key == Key::Enter {
-            let tab = app.tab_manager.current_tab();
+            let tab = app.state.tab_manager.current_tab();
             if let Some(entry) = tab.entries.get(tab.selected_index) {
                 let parent = entry.path.parent().unwrap_or(&tab.current_path);
                 let new_path = parent.join(&app.new_name);
@@ -90,57 +90,57 @@ fn process_key(
             app.cut_selected_entries();
         }
         (Key::P, false) => {
-            let tab = app.tab_manager.current_tab();
+            let tab = app.state.tab_manager.current_tab();
             if center_panel::handle_clipboard_operations(&mut app.clipboard, &tab.current_path) {
                 app.refresh_entries();
             }
         }
         // Handle tab creation and switching
         (Key::T, false) => {
-            let current_path = app.tab_manager.current_tab_ref().current_path.clone();
-            app.tab_manager.add_tab(current_path);
+            let current_path = app.state.tab_manager.current_tab_ref().current_path.clone();
+            app.state.tab_manager.add_tab(current_path);
             app.refresh_entries();
         }
         // T for terminal popup
         (Key::T, true) => {
-            let path = app.tab_manager.current_tab().current_path.clone();
+            let path = app.state.tab_manager.current_tab().current_path.clone();
             app.terminal_ctx = Some(terminal::TerminalContext::new(ctx, path));
         }
         // Handle tab switching with number keys
         (Key::Num1, false) => {
-            app.tab_manager.switch_to_tab(0);
+            app.state.tab_manager.switch_to_tab(0);
             app.refresh_entries();
         }
         (Key::Num2, false) => {
-            app.tab_manager.switch_to_tab(1);
+            app.state.tab_manager.switch_to_tab(1);
             app.refresh_entries();
         }
         (Key::Num3, false) => {
-            app.tab_manager.switch_to_tab(2);
+            app.state.tab_manager.switch_to_tab(2);
             app.refresh_entries();
         }
         (Key::Num4, false) => {
-            app.tab_manager.switch_to_tab(3);
+            app.state.tab_manager.switch_to_tab(3);
             app.refresh_entries();
         }
         (Key::Num5, false) => {
-            app.tab_manager.switch_to_tab(4);
+            app.state.tab_manager.switch_to_tab(4);
             app.refresh_entries();
         }
         (Key::Num6, false) => {
-            app.tab_manager.switch_to_tab(5);
+            app.state.tab_manager.switch_to_tab(5);
             app.refresh_entries();
         }
         (Key::Num7, false) => {
-            app.tab_manager.switch_to_tab(6);
+            app.state.tab_manager.switch_to_tab(6);
             app.refresh_entries();
         }
         (Key::Num8, false) => {
-            app.tab_manager.switch_to_tab(7);
+            app.state.tab_manager.switch_to_tab(7);
             app.refresh_entries();
         }
         (Key::Num9, false) => {
-            app.tab_manager.switch_to_tab(8);
+            app.state.tab_manager.switch_to_tab(8);
             app.refresh_entries();
         }
         // Handle navigation in current panel
@@ -152,6 +152,7 @@ fn process_key(
         }
         (Key::H, false) | (Key::ArrowLeft, false) => {
             let parent_path = app
+                .state
                 .tab_manager
                 .current_tab_ref()
                 .current_path
@@ -162,7 +163,7 @@ fn process_key(
             }
         }
         (Key::L, false) | (Key::ArrowRight, false) => {
-            let tab = app.tab_manager.current_tab_ref();
+            let tab = app.state.tab_manager.current_tab_ref();
             // Get the entry corresponding to the current `selected_index`.
             // This index always refers to the original `entries` list.
             if let Some(selected_entry) = tab.entries.get(tab.selected_index) {
@@ -173,7 +174,7 @@ fn process_key(
             }
         }
         (Key::Enter, false) => {
-            let tab = app.tab_manager.current_tab_ref();
+            let tab = app.state.tab_manager.current_tab_ref();
             if let Some(selected_entry) = tab.entries.get(tab.selected_index) {
                 let path = selected_entry.path.clone();
                 if path.is_dir() {
@@ -185,7 +186,7 @@ fn process_key(
             }
         }
         (Key::G, false) => {
-            let tab = app.tab_manager.current_tab();
+            let tab = app.state.tab_manager.current_tab();
             let now = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap_or_default()
@@ -203,7 +204,7 @@ fn process_key(
             }
         }
         (Key::G, true) => {
-            let tab = app.tab_manager.current_tab();
+            let tab = app.state.tab_manager.current_tab();
             if !tab.entries.is_empty() {
                 tab.update_selection(tab.entries.len() - 1);
                 app.ensure_selected_visible = true;
@@ -212,7 +213,7 @@ fn process_key(
             app.last_lowercase_g_pressed_ms = 0;
         }
         (Key::Space, false) => {
-            let tab = app.tab_manager.current_tab();
+            let tab = app.state.tab_manager.current_tab();
             if let Some(entry) = tab.entries.get(tab.selected_index) {
                 if tab.selected_entries.contains(&entry.path) {
                     tab.selected_entries.remove(&entry.path);
@@ -238,7 +239,7 @@ fn process_key(
         }
         // Close current tab
         (Key::C, false) if modifiers.ctrl => {
-            if app.tab_manager.close_current_tab() {
+            if app.state.tab_manager.close_current_tab() {
                 // Refresh entries in case the active tab changed
                 app.refresh_entries();
             }

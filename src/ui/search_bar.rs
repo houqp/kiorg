@@ -48,7 +48,7 @@ pub fn handle_key_press(ctx: &Context, app: &mut Kiorg) -> bool {
                         close_search_bar = true;
                     } else {
                         // Select the first matched entry
-                        let tab = app.tab_manager.current_tab();
+                        let tab = app.state.tab_manager.current_tab();
                         if let Some(first_filtered_index) =
                             tab.get_first_filtered_entry_index(query.as_str())
                         {
@@ -90,7 +90,7 @@ pub fn draw(ctx: &Context, app: &mut Kiorg) {
         .interactable(true)
         .movable(false)
         .show(ctx, |ui| {
-            ui.visuals_mut().widgets.noninteractive.bg_fill = app.colors.bg_light;
+            ui.visuals_mut().widgets.noninteractive.bg_fill = app.state.colors.bg_light;
 
             // Create a shadow similar to window popups
             let shadow = Shadow {
@@ -101,7 +101,7 @@ pub fn draw(ctx: &Context, app: &mut Kiorg) {
             };
 
             egui::Frame::default()
-                .fill(app.colors.bg_light)
+                .fill(app.state.colors.bg_light)
                 .inner_margin(5.0)
                 .shadow(shadow)
                 .show(ui, |ui| {

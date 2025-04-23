@@ -14,6 +14,7 @@ use ui_test_helpers::create_harness;
 fn find_entry_index(harness: &ui_test_helpers::TestHarness, name: &str) -> Option<usize> {
     harness
         .state()
+        .state
         .tab_manager
         .current_tab_ref()
         .entries
@@ -56,7 +57,7 @@ fn test_external_file_addition() {
 
     let file_index = find_entry_index(&harness, file_name)
         .expect("External file should appear in the UI after creation");
-    let entry = &harness.state().tab_manager.current_tab_ref().entries[file_index];
+    let entry = &harness.state().state.tab_manager.current_tab_ref().entries[file_index];
     assert_eq!(entry.name, file_name);
     assert_eq!(entry.path, file_path);
     assert!(!entry.is_dir);
@@ -83,7 +84,7 @@ fn test_external_directory_addition() {
 
     let dir_index = find_entry_index(&harness, dir_name)
         .expect("External directory should appear in the UI after creation");
-    let entry = &harness.state().tab_manager.current_tab_ref().entries[dir_index];
+    let entry = &harness.state().state.tab_manager.current_tab_ref().entries[dir_index];
     assert_eq!(entry.name, dir_name);
     assert_eq!(entry.path, dir_path);
     assert!(entry.is_dir);
@@ -104,7 +105,7 @@ fn test_external_file_modification() {
     let initial_entry_index =
         find_entry_index(&harness, mod_file_name).expect("Modifiable file should be in UI");
     let initial_entry =
-        harness.state().tab_manager.current_tab_ref().entries[initial_entry_index].clone();
+        harness.state().state.tab_manager.current_tab_ref().entries[initial_entry_index].clone();
     assert_eq!(initial_entry.size, 0, "Initial size should be 0");
 
     let mut file = File::options().write(true).open(&mod_file_path).unwrap();
@@ -117,7 +118,8 @@ fn test_external_file_modification() {
 
     let updated_entry_index = find_entry_index(&harness, mod_file_name)
         .expect("Modifiable file should still be in UI after modification");
-    let updated_entry = &harness.state().tab_manager.current_tab_ref().entries[updated_entry_index];
+    let updated_entry =
+        &harness.state().state.tab_manager.current_tab_ref().entries[updated_entry_index];
 
     assert_eq!(updated_entry.name, mod_file_name);
     assert_eq!(updated_entry.path, mod_file_path);

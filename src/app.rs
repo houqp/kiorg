@@ -1,6 +1,7 @@
 use egui::TextureHandle;
 use notify::RecursiveMode;
 use notify::Watcher;
+use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
@@ -54,17 +55,44 @@ fn create_fs_watcher(watch_dir: &Path) -> (notify::RecommendedWatcher, Arc<Atomi
     (fs_watcher, notify_fs_change)
 }
 
-pub struct Kiorg {
+/// Application state that can be serialized and persisted between app restarts
+#[derive(Serialize, Deserialize)]
+pub struct AppState {
     pub tab_manager: TabManager,
     pub colors: AppColors,
-    pub ensure_selected_visible: bool,
-    pub preview_content: String,
-    pub current_image: Option<TextureHandle>,
     pub bookmarks: Vec<PathBuf>,
     pub config_dir_override: Option<PathBuf>, // Optional override for config directory path
-    pub prev_path: Option<PathBuf>,           // Previous path for selection preservation
-    pub cached_preview_path: Option<PathBuf>,
+}
+
+impl AppState {
+    pub fn new(
+        tab_manager: TabManager,
+        colors: AppColors,
+        config_dir_override: Option<PathBuf>,
+    ) -> Self {
+        Self {
+            tab_manager,
+            colors,
+            bookmarks: Vec::new(),
+            config_dir_override,
+        }
+    }
+}
+
+pub struct Kiorg {
+    // Serializable app state
+    pub state: AppState,
+
+    // Fields that get reset after refresh_entries
     pub selection_changed: bool, // Flag to track if selection changed
+    pub ensure_selected_visible: bool,
+    pub prev_path: Option<PathBuf>, // Previous path for selection preservation
+    pub cached_preview_path: Option<PathBuf>,
+    pub preview_content: String,
+    pub current_image: Option<TextureHandle>,
+
+    // fields that get reset after changing directories
+    // TODO: will it crash the app if large amount of entries are deleted in the same dir?
     pub scroll_range: Option<std::ops::Range<usize>>,
 
     // TODO: replace rename_mode with Option<new_name>?
@@ -110,56 +138,58 @@ impl Kiorg {
         let (fs_watcher, notify_fs_change) = create_fs_watcher(initial_dir.as_path());
         let tab_manager = TabManager::new_with_config(initial_dir, Some(&config));
 
+        // Create the app state
+        let app_state = AppState::new(tab_manager, colors, config_dir_override.clone());
+
         let mut app = Self {
-            tab_manager,
-            colors,
-            ensure_selected_visible: false,
-            show_help: false,
-            preview_content: String::new(),
-            show_exit_confirm: false,
+            state: app_state,
             current_image: None,
+            // Initialize fields moved from AppState
+            selection_changed: true,
+            ensure_selected_visible: false,
+            prev_path: None,
+            cached_preview_path: None,
+            preview_content: String::new(),
+            scroll_range: None,
             rename_mode: false,
             new_name: String::new(),
             clipboard: None,
             show_delete_confirm: false,
             entry_to_delete: None,
-            bookmarks: Vec::new(),
             show_bookmarks: false,
             bookmark_selected_index: 0, // Initialize the bookmark selection index
-            config_dir_override,
-            prev_path: None,
-            cached_preview_path: None,
-            selection_changed: true, // Initialize flag to true
             search_bar: SearchBar::new(),
-            scroll_range: None,
+            show_exit_confirm: false,
             add_mode: false,
             new_entry_name: String::new(),
             add_focus: false,
             last_lowercase_g_pressed_ms: 0,
             terminal_ctx: None,
+            show_help: false,
             shutdown_requested: false,
             notify_fs_change,
             fs_watcher,
         };
 
         // Load bookmarks after initializing the app with the config directory
-        app.bookmarks = bookmark_popup::load_bookmarks(app.config_dir_override.as_ref());
+        app.state.bookmarks =
+            bookmark_popup::load_bookmarks(app.state.config_dir_override.as_ref());
 
         app.refresh_entries();
         app
     }
 
     pub fn refresh_entries(&mut self) {
-        self.tab_manager.refresh_entries();
+        self.state.tab_manager.refresh_entries();
 
         // --- Start: Restore Selection Preservation (Post-Sort) ---
         let mut selection_restored = false;
         if let Some(prev_path) = &self.prev_path {
-            selection_restored = self.tab_manager.select_child(prev_path)
+            selection_restored = self.state.tab_manager.select_child(prev_path)
         };
         if !selection_restored {
             // Default to the first item if selection wasn't restored
-            self.tab_manager.reset_selection();
+            self.state.tab_manager.reset_selection();
         }
         self.selection_changed = true;
         // Clear prev_path after attempting to use it
@@ -171,7 +201,7 @@ impl Kiorg {
     }
 
     pub fn set_selection(&mut self, index: usize) {
-        let tab = self.tab_manager.current_tab();
+        let tab = self.state.tab_manager.current_tab();
         if tab.selected_index == index {
             return;
         }
@@ -181,7 +211,7 @@ impl Kiorg {
     }
 
     pub fn delete_selected_entry(&mut self) {
-        let tab = self.tab_manager.current_tab();
+        let tab = self.state.tab_manager.current_tab();
         if let Some(entry) = tab.selected_entry() {
             self.entry_to_delete = Some(entry.path.clone());
             self.show_delete_confirm = true;
@@ -189,7 +219,7 @@ impl Kiorg {
     }
 
     pub fn rename_selected_entry(&mut self) {
-        let tab = self.tab_manager.current_tab();
+        let tab = self.state.tab_manager.current_tab();
         if let Some(entry) = tab.selected_entry() {
             self.new_name = entry.name.clone();
             self.rename_mode = true;
@@ -197,7 +227,7 @@ impl Kiorg {
     }
 
     fn get_selected_entries(&mut self) -> Vec<PathBuf> {
-        let tab = self.tab_manager.current_tab();
+        let tab = self.state.tab_manager.current_tab();
         if tab.selected_entries.is_empty() {
             if let Some(entry) = tab.selected_entry() {
                 vec![entry.path.clone()]
@@ -224,7 +254,7 @@ impl Kiorg {
     }
 
     pub fn move_selection(&mut self, delta: isize) {
-        let tab = self.tab_manager.current_tab();
+        let tab = self.state.tab_manager.current_tab();
         let entries = tab.get_filtered_entries_with_indices(&self.search_bar.query); // Get filtered entries with original indices
 
         if entries.is_empty() {
@@ -259,7 +289,7 @@ impl Kiorg {
     }
 
     pub fn navigate_to_dir(&mut self, mut path: PathBuf) {
-        let tab = self.tab_manager.current_tab();
+        let tab = self.state.tab_manager.current_tab();
         // Swap current_path with path and store the swapped path as prev_path
         std::mem::swap(&mut tab.current_path, &mut path);
         self.prev_path = Some(path);
@@ -339,7 +369,7 @@ impl Kiorg {
             ctx,
             &mut self.show_delete_confirm,
             &self.entry_to_delete,
-            &self.colors,
+            &self.state.colors,
             || should_confirm = true,
             || should_cancel = true,
         );
@@ -378,7 +408,7 @@ impl eframe::App for Kiorg {
         let bookmark_action = bookmark_popup::show_bookmark_popup(
             ctx,
             &mut self.show_bookmarks,
-            &mut self.bookmarks,
+            &mut self.state.bookmarks,
             &mut self.bookmark_selected_index,
         );
         // Process the bookmark action
@@ -387,8 +417,8 @@ impl eframe::App for Kiorg {
             bookmark_popup::BookmarkAction::SaveBookmarks => {
                 // Save bookmarks when the popup signals a change (e.g., deletion)
                 if let Err(e) = bookmark_popup::save_bookmarks(
-                    &self.bookmarks,
-                    self.config_dir_override.as_ref(),
+                    &self.state.bookmarks,
+                    self.state.config_dir_override.as_ref(),
                 ) {
                     eprintln!("Failed to save bookmarks: {}", e);
                 }
@@ -444,13 +474,13 @@ impl eframe::App for Kiorg {
 
         // Show help window if needed
         if self.show_help {
-            help_window::show_help_window(ctx, &mut self.show_help, &self.colors);
+            help_window::show_help_window(ctx, &mut self.show_help, &self.state.colors);
         }
 
         // Show exit confirmation window if needed
         if self.show_exit_confirm {
             // Call the refactored dialog function
-            dialogs::show_exit_dialog(ctx, &mut self.show_exit_confirm, &self.colors);
+            dialogs::show_exit_dialog(ctx, &mut self.show_exit_confirm, &self.state.colors);
         }
 
         if self.shutdown_requested {

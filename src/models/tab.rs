@@ -16,7 +16,7 @@ pub enum SortOrder {
     Descending,
 }
 
-#[derive(Clone)]
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
 pub struct Tab {
     pub current_path: PathBuf,
     pub entries: Vec<DirEntry>,
@@ -173,6 +173,7 @@ fn read_dir_entries(path: &PathBuf) -> Vec<DirEntry> {
     }
 }
 
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
 pub struct TabManager {
     tabs: Vec<Tab>,
     current_tab_index: usize,

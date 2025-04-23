@@ -175,7 +175,7 @@ fn show_context_menu(ui: &mut Ui, can_paste: bool, has_selection: bool) -> Conte
 
 /// Draws the center panel content.
 pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
-    let tab_ref = app.tab_manager.current_tab_ref(); // Use a different name to avoid confusion
+    let tab_ref = app.state.tab_manager.current_tab_ref(); // Use a different name to avoid confusion
     let current_search_query = &app.search_bar.query;
 
     // Get filtered entries - needs tab_ref and search query
@@ -196,9 +196,9 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
         ui.set_max_height(height);
 
         let mut header_params = TableHeaderParams {
-            colors: &app.colors,
-            sort_column: &app.tab_manager.sort_column,
-            sort_order: &app.tab_manager.sort_order,
+            colors: &app.state.colors,
+            sort_column: &app.state.tab_manager.sort_column,
+            sort_order: &app.state.tab_manager.sort_order,
             on_sort: &mut |column| {
                 sort_requested = Some(column);
             },
@@ -279,11 +279,11 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                             file_list::EntryRowParams {
                                 entry,
                                 is_selected,
-                                colors: &app.colors,
+                                colors: &app.state.colors,
                                 rename_mode: app.rename_mode && is_selected,
                                 new_name: &mut app.new_name,
                                 is_marked: is_in_selection,
-                                is_bookmarked: app.bookmarks.contains(&entry.path),
+                                is_bookmarked: app.state.bookmarks.contains(&entry.path),
                                 search_query: current_search_query,
                             },
                         );
@@ -350,7 +350,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
             app.add_focus = true;
         }
         ContextMenuAction::Paste => {
-            let current_path = &app.tab_manager.current_tab_ref().current_path;
+            let current_path = &app.state.tab_manager.current_tab_ref().current_path;
             if handle_clipboard_operations(&mut app.clipboard, current_path) {
                 app.refresh_entries();
             }
@@ -373,17 +373,18 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
     // Handle sort request captured from the header closure
     if let Some(column) = sort_requested {
         // Borrow app mutably here - should be fine as UI closure is finished
-        app.tab_manager.toggle_sort(column);
+        app.state.tab_manager.toggle_sort(column);
 
         // Save sort preferences - requires immutable borrows followed by mutable config load/save
-        let config_dir_override = app.config_dir_override.as_ref(); // Borrow immutably
+        let config_dir_override = app.state.config_dir_override.as_ref(); // Borrow immutably
         let mut config = config::load_config_with_override(config_dir_override);
         config.sort_preference = Some(SortPreference {
-            column: app.tab_manager.sort_column,
-            order: app.tab_manager.sort_order,
+            column: app.state.tab_manager.sort_column,
+            order: app.state.tab_manager.sort_order,
         });
         // Re-borrow immutably for save path
-        if let Err(e) = config::save_config_with_override(&config, app.config_dir_override.as_ref())
+        if let Err(e) =
+            config::save_config_with_override(&config, app.state.config_dir_override.as_ref())
         {
             eprintln!("Failed to save sort preferences: {}", e);
         }

@@ -16,11 +16,11 @@ pub fn draw(ctx: &egui::Context, app: &mut Kiorg) {
         .open(&mut keep_open)
         .show(ctx, |ui| {
             // Set background color to match search bar
-            ui.visuals_mut().widgets.noninteractive.bg_fill = app.colors.bg_light;
+            ui.visuals_mut().widgets.noninteractive.bg_fill = app.state.colors.bg_light;
 
             // Create a frame with styling similar to search bar
             Frame::default()
-                .fill(app.colors.bg_light)
+                .fill(app.state.colors.bg_light)
                 .inner_margin(5.0)
                 .show(ui, |ui| {
                     ui.set_max_width(400.0); // Limit width
@@ -68,7 +68,7 @@ pub(crate) fn handle_key_press(ctx: &Context, app: &mut Kiorg) -> bool {
     // Handle confirmation
     if ctx.input(|i| i.key_pressed(Key::Enter)) {
         if !app.new_entry_name.is_empty() {
-            let tab = app.tab_manager.current_tab();
+            let tab = app.state.tab_manager.current_tab();
             let new_path = tab.current_path.join(&app.new_entry_name);
 
             let result = if app.new_entry_name.ends_with('/') {

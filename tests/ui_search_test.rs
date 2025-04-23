@@ -73,11 +73,16 @@ fn test_search_resets_selection() {
     harness.press_key(Key::J);
     harness.step();
     assert_eq!(
-        harness.state().tab_manager.current_tab_ref().selected_index,
+        harness
+            .state()
+            .state
+            .tab_manager
+            .current_tab_ref()
+            .selected_index,
         1
     );
     assert_eq!(
-        harness.state().tab_manager.current_tab_ref().entries[1].name,
+        harness.state().state.tab_manager.current_tab_ref().entries[1].name,
         "banana.txt"
     );
 
@@ -95,7 +100,7 @@ fn test_search_resets_selection() {
     harness.step();
 
     // Verify selection is reset to the first matching entry (apple.txt)
-    let tab = harness.state().tab_manager.current_tab_ref();
+    let tab = harness.state().state.tab_manager.current_tab_ref();
     assert_eq!(
         tab.selected_index, 0,
         "Selection should reset to the first filtered item"
@@ -139,11 +144,16 @@ fn test_search_cleared_on_directory_change() {
 
     // Select dir1 (index 0) - already selected by default
     assert_eq!(
-        harness.state().tab_manager.current_tab_ref().selected_index,
+        harness
+            .state()
+            .state
+            .tab_manager
+            .current_tab_ref()
+            .selected_index,
         0
     );
     assert_eq!(
-        harness.state().tab_manager.current_tab_ref().entries[0].path,
+        harness.state().state.tab_manager.current_tab_ref().entries[0].path,
         test_files[0]
     );
 

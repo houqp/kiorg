@@ -1,3 +1,4 @@
+use crate::utils::color::hex_to_color32;
 use egui::Color32;
 use serde::{Deserialize, Serialize};
 
@@ -53,8 +54,6 @@ pub struct AppColors {
 
 impl AppColors {
     pub fn from_config(config: &ColorScheme) -> Self {
-        use crate::utils::color::hex_to_color32;
-
         Self {
             bg: hex_to_color32(&config.bg),
             bg_dim: hex_to_color32(&config.bg_dim),
@@ -88,6 +87,78 @@ impl AppColors {
 impl Default for AppColors {
     fn default() -> Self {
         Self::from_config(&ColorScheme::default())
+    }
+}
+
+// Custom serialization for AppColors
+impl Serialize for AppColors {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        // Convert to ColorScheme for serialization
+        let scheme = ColorScheme {
+            bg: format!("#{:02x}{:02x}{:02x}", self.bg.r(), self.bg.g(), self.bg.b()),
+            bg_dim: format!(
+                "#{:02x}{:02x}{:02x}",
+                self.bg_dim.r(),
+                self.bg_dim.g(),
+                self.bg_dim.b()
+            ),
+            bg_light: format!(
+                "#{:02x}{:02x}{:02x}",
+                self.bg_light.r(),
+                self.bg_light.g(),
+                self.bg_light.b()
+            ),
+            fg: format!("#{:02x}{:02x}{:02x}", self.fg.r(), self.fg.g(), self.fg.b()),
+            selected_bg: format!(
+                "#{:02x}{:02x}{:02x}",
+                self.selected_bg.r(),
+                self.selected_bg.g(),
+                self.selected_bg.b()
+            ),
+            gray: format!(
+                "#{:02x}{:02x}{:02x}",
+                self.gray.r(),
+                self.gray.g(),
+                self.gray.b()
+            ),
+            yellow: format!(
+                "#{:02x}{:02x}{:02x}",
+                self.yellow.r(),
+                self.yellow.g(),
+                self.yellow.b()
+            ),
+            blue: format!(
+                "#{:02x}{:02x}{:02x}",
+                self.blue.r(),
+                self.blue.g(),
+                self.blue.b()
+            ),
+            orange: format!(
+                "#{:02x}{:02x}{:02x}",
+                self.orange.r(),
+                self.orange.g(),
+                self.orange.b()
+            ),
+            red: "#fc5d7c".to_string(),
+            purple: "#b39df3".to_string(),
+            green: "#9ed072".to_string(),
+            aqua: "#76cce0".to_string(),
+        };
+        scheme.serialize(serializer)
+    }
+}
+
+// Custom deserialization for AppColors
+impl<'de> Deserialize<'de> for AppColors {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let scheme = ColorScheme::deserialize(deserializer)?;
+        Ok(AppColors::from_config(&scheme))
     }
 }
 
