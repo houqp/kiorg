@@ -32,7 +32,6 @@
 
 ### What's left to build
 *   Persist app state to disk
-*   Display linked files with icons
 *   PDF preview
 *   cache directory list
 *   Shortcut to toggle sort

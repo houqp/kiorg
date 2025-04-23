@@ -147,10 +147,12 @@ fn read_dir_entries(path: &PathBuf) -> Vec<DirEntry> {
             .filter_map(|entry| {
                 let entry = entry.ok()?;
                 let path = entry.path();
-                let is_dir = path.is_dir();
                 let name = entry.file_name().to_string_lossy().into_owned();
 
                 let metadata = entry.metadata().ok()?;
+                let is_symlink = metadata.file_type().is_symlink();
+                // For symlinks, we need to check if the target is a directory
+                let is_dir = path.is_dir();
                 let modified = metadata
                     .modified()
                     .unwrap_or(std::time::SystemTime::UNIX_EPOCH);
@@ -160,6 +162,7 @@ fn read_dir_entries(path: &PathBuf) -> Vec<DirEntry> {
                     name,
                     path,
                     is_dir,
+                    is_symlink,
                     modified,
                     size,
                 })
@@ -334,7 +337,8 @@ mod tests {
             path: PathBuf::from(name),
             name: name.to_string(),
             is_dir,
-            modified,                            // Use the calculated SystemTime directly
+            is_symlink: false, // Default to false for test entries
+            modified,          // Use the calculated SystemTime directly
             size: if is_dir { 0 } else { size }, // Use 0 for dirs, provided size for files
         }
     }

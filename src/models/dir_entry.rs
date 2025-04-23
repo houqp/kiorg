@@ -6,6 +6,7 @@ pub struct DirEntry {
     pub name: String,
     pub path: PathBuf,
     pub is_dir: bool,
+    pub is_symlink: bool,
     pub modified: SystemTime,
     pub size: u64,
 }
@@ -21,6 +22,7 @@ mod tests {
             name: "test.txt".to_string(),
             path: PathBuf::from("/tmp/test.txt"),
             is_dir: false,
+            is_symlink: false,
             modified: UNIX_EPOCH,
             size: 100,
         };
@@ -30,4 +32,4 @@ mod tests {
         assert!(!entry.is_dir);
         assert_eq!(entry.size, 100);
     }
-} 
+}

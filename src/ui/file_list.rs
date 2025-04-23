@@ -136,9 +136,18 @@ fn draw_icon(
     is_selected: bool,
     colors: &AppColors,
     is_bookmarked: bool,
+    is_symlink: bool,
 ) -> f32 {
-    // Draw the base icon (folder or file)
-    let base_icon = if is_dir { "📁" } else { "📄" };
+    // Draw the base icon (folder, file, or symlink)
+    let base_icon = if is_symlink {
+        // Use a link icon for symlinks
+        "🔗"
+    } else if is_dir {
+        "📁"
+    } else {
+        "📄"
+    };
+
     let icon_color = if is_selected {
         Color32::WHITE
     } else {
@@ -207,7 +216,15 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
     // Name width takes remaining space
     let name_width = (rect.width() - fixed_width_total).max(0.0);
 
-    cursor.x += draw_icon(ui, cursor, entry.is_dir, is_selected, colors, is_bookmarked);
+    cursor.x += draw_icon(
+        ui,
+        cursor,
+        entry.is_dir,
+        is_selected,
+        colors,
+        is_bookmarked,
+        entry.is_symlink,
+    );
 
     // --- Draw Name Column ---
     let name_clip_rect = egui::Rect::from_min_size(cursor, egui::vec2(name_width, ROW_HEIGHT));
@@ -381,7 +398,15 @@ pub fn draw_parent_entry_row(
 
     let name_width = rect.width() - ICON_WIDTH;
 
-    cursor.x += draw_icon(ui, cursor, entry.is_dir, is_selected, colors, is_bookmarked);
+    cursor.x += draw_icon(
+        ui,
+        cursor,
+        entry.is_dir,
+        is_selected,
+        colors,
+        is_bookmarked,
+        entry.is_symlink,
+    );
 
     // Name with truncation
     let name_text = truncate_text(&entry.name, name_width);
