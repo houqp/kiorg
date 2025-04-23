@@ -282,7 +282,6 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                                 colors: &app.colors,
                                 rename_mode: app.rename_mode && is_selected,
                                 new_name: &mut app.new_name,
-                                rename_focus: app.rename_focus && is_selected,
                                 is_marked: is_in_selection,
                                 is_bookmarked: app.bookmarks.contains(&entry.path),
                                 search_query: current_search_query,

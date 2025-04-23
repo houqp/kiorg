@@ -124,7 +124,6 @@ pub struct EntryRowParams<'a> {
     pub colors: &'a AppColors,
     pub rename_mode: bool,
     pub new_name: &'a mut String,
-    pub rename_focus: bool,
     pub is_marked: bool,
     pub is_bookmarked: bool,
     pub search_query: &'a Option<String>,
@@ -179,7 +178,6 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
         colors,
         rename_mode,
         new_name,
-        rename_focus,
         is_marked,
         is_bookmarked,
         search_query,
@@ -235,11 +233,9 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
         // Place the TextEdit widget within the specific rectangle using ui.put
         let text_edit_response = ui.put(text_edit_rect, text_edit);
 
-        if rename_focus {
-            ui.ctx().memory_mut(|mem| {
-                mem.request_focus(text_edit_response.id); // Focus the TextEdit response ID
-            });
-        }
+        ui.ctx().memory_mut(|mem| {
+            mem.request_focus(text_edit_response.id); // Focus the TextEdit response ID
+        });
     } else {
         let name_text = truncate_text(&entry.name, name_width);
         let name_color = if entry.is_dir { colors.blue } else { colors.fg };

@@ -27,30 +27,30 @@ pub struct Kiorg {
     pub tab_manager: TabManager,
     pub colors: AppColors,
     pub ensure_selected_visible: bool,
-    pub show_help: bool,
     pub preview_content: String,
-    pub show_exit_confirm: bool,
     pub current_image: Option<TextureHandle>,
-    pub rename_mode: bool,
-    pub new_name: String,
-    pub rename_focus: bool,
-    pub clipboard: Option<(Vec<PathBuf>, bool)>, // (paths, is_cut)
-    pub show_delete_confirm: bool,
-    pub entry_to_delete: Option<PathBuf>,
     pub bookmarks: Vec<PathBuf>,
-    pub show_bookmarks: bool,
-    pub bookmark_selected_index: usize, // Store bookmark selection index in app state
     pub config_dir_override: Option<PathBuf>, // Optional override for config directory path
-    pub prev_path: Option<PathBuf>,     // Previous path for selection preservation
+    pub prev_path: Option<PathBuf>,           // Previous path for selection preservation
     pub cached_preview_path: Option<PathBuf>,
     pub selection_changed: bool, // Flag to track if selection changed
-    pub search_bar: SearchBar,
     pub scroll_range: Option<std::ops::Range<usize>>,
 
+    // TODO: replace rename_mode with Option<new_name>?
+    pub new_name: String,
+    pub rename_mode: bool,
+    pub bookmark_selected_index: usize, // Store bookmark selection index in app state
+    pub entry_to_delete: Option<PathBuf>,
+    pub show_delete_confirm: bool,
+    pub clipboard: Option<(Vec<PathBuf>, bool)>, // (paths, is_cut)
+    pub show_bookmarks: bool,
+    pub search_bar: SearchBar,
+    pub show_exit_confirm: bool,
     pub terminal_ctx: Option<terminal::TerminalContext>,
+    pub show_help: bool,
 
     pub add_mode: bool,
-    pub new_entry_name: String,
+    pub new_entry_name: String, // name for newly created file/directory
     // TODO: is this neeeded if we already have add_mode?
     pub add_focus: bool,
 
@@ -85,7 +85,6 @@ impl Kiorg {
             current_image: None,
             rename_mode: false,
             new_name: String::new(),
-            rename_focus: false,
             clipboard: None,
             show_delete_confirm: false,
             entry_to_delete: None,
@@ -156,7 +155,6 @@ impl Kiorg {
         if let Some(entry) = tab.selected_entry() {
             self.new_name = entry.name.clone();
             self.rename_mode = true;
-            self.rename_focus = true;
         }
     }
 

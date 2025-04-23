@@ -56,11 +56,9 @@ fn process_key(
             }
             app.rename_mode = false;
             app.new_name.clear();
-            app.rename_focus = false;
         } else if key == Key::Escape {
             app.rename_mode = false;
             app.new_name.clear();
-            app.rename_focus = false;
         }
         return;
     }
