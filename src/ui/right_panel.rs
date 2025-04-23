@@ -11,7 +11,7 @@ const PANEL_SPACING: f32 = 10.0;
 /// Draws the right panel (preview).
 pub fn draw(app: &Kiorg, ui: &mut Ui, width: f32, height: f32) {
     let tab = app.state.tab_manager.current_tab_ref();
-    let colors = &app.state.colors;
+    let colors = &app.colors;
     let preview_content = &app.preview_content;
     let current_image = &app.current_image;
 

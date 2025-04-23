@@ -16,11 +16,11 @@ pub fn draw(ctx: &egui::Context, app: &mut Kiorg) {
         .open(&mut keep_open)
         .show(ctx, |ui| {
             // Set background color to match search bar
-            ui.visuals_mut().widgets.noninteractive.bg_fill = app.state.colors.bg_light;
+            ui.visuals_mut().widgets.noninteractive.bg_fill = app.colors.bg_light;
 
             // Create a frame with styling similar to search bar
             Frame::default()
-                .fill(app.state.colors.bg_light)
+                .fill(app.colors.bg_light)
                 .inner_margin(5.0)
                 .show(ui, |ui| {
                     ui.set_max_width(400.0); // Limit width

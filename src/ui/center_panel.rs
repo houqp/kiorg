@@ -196,7 +196,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
         ui.set_max_height(height);
 
         let mut header_params = TableHeaderParams {
-            colors: &app.state.colors,
+            colors: &app.colors,
             sort_column: &app.state.tab_manager.sort_column,
             sort_order: &app.state.tab_manager.sort_order,
             on_sort: &mut |column| {
@@ -279,7 +279,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                             file_list::EntryRowParams {
                                 entry,
                                 is_selected,
-                                colors: &app.state.colors,
+                                colors: &app.colors,
                                 rename_mode: app.rename_mode && is_selected,
                                 new_name: &mut app.new_name,
                                 is_marked: is_in_selection,

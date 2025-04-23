@@ -37,7 +37,11 @@ pub fn create_harness<'a>(temp_dir: &tempfile::TempDir) -> TestHarness<'a> {
     let cc = eframe::CreationContext::_new_kittest(ctx.clone());
 
     // Create the app with the test config directory override
-    let app = Kiorg::new_with_config_dir(&cc, temp_dir.path().to_path_buf(), Some(test_config_dir));
+    let app = Kiorg::new_with_config_dir(
+        &cc,
+        Some(temp_dir.path().to_path_buf()),
+        Some(test_config_dir),
+    );
 
     // Create a test harness with more steps to ensure all events are processed
     let harness = Harness::builder()

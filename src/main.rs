@@ -8,39 +8,43 @@ use kiorg::app::Kiorg;
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    /// Directory to open (default: current directory)
-    #[arg(default_value = ".")]
-    directory: PathBuf,
+    /// Directory to open (default: use saved state or current directory)
+    directory: Option<PathBuf>,
 }
 
 fn main() -> Result<(), eframe::Error> {
     let args = Args::parse();
 
-    // Validate and canonicalize the provided directory
-    if !args.directory.exists() {
-        eprintln!(
-            "Error: Directory '{}' does not exist",
-            args.directory.display()
-        );
-        std::process::exit(1);
-    }
-
-    if !args.directory.is_dir() {
-        eprintln!("Error: '{}' is not a directory", args.directory.display());
-        std::process::exit(1);
-    }
-
-    // Canonicalize the path to get absolute path
-    let canonical_dir = match fs::canonicalize(&args.directory) {
-        Ok(path) => path,
-        Err(e) => {
-            eprintln!(
-                "Error: Failed to canonicalize path '{}': {}",
-                args.directory.display(),
-                e
-            );
+    // If a directory is provided, validate and canonicalize it
+    let initial_dir = if let Some(dir) = args.directory {
+        // Validate the provided directory
+        if !dir.exists() {
+            eprintln!("Error: Directory '{}' does not exist", dir.display());
             std::process::exit(1);
         }
+
+        if !dir.is_dir() {
+            eprintln!("Error: '{}' is not a directory", dir.display());
+            std::process::exit(1);
+        }
+
+        // Canonicalize the path to get absolute path
+        let canonical_dir = match fs::canonicalize(&dir) {
+            Ok(path) => path,
+            Err(e) => {
+                eprintln!(
+                    "Error: Failed to canonicalize path '{}': {}",
+                    dir.display(),
+                    e
+                );
+                std::process::exit(1);
+            }
+        };
+
+        Some(canonical_dir)
+    } else {
+        // No directory provided, use None to load from saved state
+        None
     };
 
     let options = eframe::NativeOptions {
@@ -53,6 +57,6 @@ fn main() -> Result<(), eframe::Error> {
     eframe::run_native(
         "Kiorg",
         options,
-        Box::new(|cc| Ok(Box::new(Kiorg::new(cc, canonical_dir)))),
+        Box::new(|cc| Ok(Box::new(Kiorg::new(cc, initial_dir)))),
     )
 }

@@ -81,7 +81,7 @@ pub fn get_config_path_with_override(config_dir_override: Option<&PathBuf>) -> P
     config_dir.join("config.toml")
 }
 
-fn get_kiorg_config_dir(override_path: Option<&PathBuf>) -> PathBuf {
+pub fn get_kiorg_config_dir(override_path: Option<&PathBuf>) -> PathBuf {
     match override_path {
         Some(dir) => dir.clone(),
         None => {

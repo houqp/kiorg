@@ -54,7 +54,7 @@ pub fn draw(ctx: &egui::Context, app: &mut Kiorg) {
             .show(ctx, |ui| {
                 // Add a close button in the top right corner
                 ui.horizontal(|ui| {
-                    ui.label(section_title_text("Terminal", &app.state.colors));
+                    ui.label(section_title_text("Terminal", &app.colors));
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         if ui.button("×").clicked() {
                             close_terminal = true;

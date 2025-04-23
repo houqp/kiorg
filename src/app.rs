@@ -2,9 +2,13 @@ use egui::TextureHandle;
 use notify::RecursiveMode;
 use notify::Watcher;
 use serde::{Deserialize, Serialize};
+use serde_json;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
+
+// Constants
+const STATE_FILE_NAME: &str = "state.json";
 
 use crate::config::{self, colors::AppColors};
 use crate::input;
@@ -59,20 +63,14 @@ fn create_fs_watcher(watch_dir: &Path) -> (notify::RecommendedWatcher, Arc<Atomi
 #[derive(Serialize, Deserialize)]
 pub struct AppState {
     pub tab_manager: TabManager,
-    pub colors: AppColors,
     pub bookmarks: Vec<PathBuf>,
     pub config_dir_override: Option<PathBuf>, // Optional override for config directory path
 }
 
 impl AppState {
-    pub fn new(
-        tab_manager: TabManager,
-        colors: AppColors,
-        config_dir_override: Option<PathBuf>,
-    ) -> Self {
+    pub fn new(tab_manager: TabManager, config_dir_override: Option<PathBuf>) -> Self {
         Self {
             tab_manager,
-            colors,
             bookmarks: Vec::new(),
             config_dir_override,
         }
@@ -82,6 +80,9 @@ impl AppState {
 pub struct Kiorg {
     // Serializable app state
     pub state: AppState,
+
+    // Application colors
+    pub colors: AppColors,
 
     // Fields that get reset after refresh_entries
     pub selection_changed: bool, // Flag to track if selection changed
@@ -121,13 +122,13 @@ pub struct Kiorg {
 }
 
 impl Kiorg {
-    pub fn new(cc: &eframe::CreationContext<'_>, initial_dir: PathBuf) -> Self {
+    pub fn new(cc: &eframe::CreationContext<'_>, initial_dir: Option<PathBuf>) -> Self {
         Self::new_with_config_dir(cc, initial_dir, None)
     }
 
     pub fn new_with_config_dir(
         cc: &eframe::CreationContext<'_>,
-        initial_dir: PathBuf,
+        initial_dir: Option<PathBuf>,
         config_dir_override: Option<PathBuf>,
     ) -> Self {
         let config = config::load_config_with_override(config_dir_override.as_ref());
@@ -135,16 +136,48 @@ impl Kiorg {
 
         cc.egui_ctx.set_visuals(colors.to_visuals());
 
-        let (fs_watcher, notify_fs_change) = create_fs_watcher(initial_dir.as_path());
-        let tab_manager = TabManager::new_with_config(initial_dir, Some(&config));
+        // Determine the initial path and whether to use saved state
+        let (use_saved_state, initial_path) = match initial_dir {
+            // If initial directory is provided, use it
+            Some(path) => (None, path),
 
-        // Create the app state
-        let app_state = AppState::new(tab_manager, colors, config_dir_override.clone());
+            // If no initial directory is provided, try to load from saved state
+            None => {
+                if let Some(saved_state) = Self::load_app_state(config_dir_override.as_ref()) {
+                    // Use the saved state's path
+                    let path = saved_state
+                        .tab_manager
+                        .current_tab_ref()
+                        .current_path
+                        .clone();
+                    (Some(saved_state), path)
+                } else {
+                    // No saved state, use current directory
+                    let path = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+                    (None, path)
+                }
+            }
+        };
 
+        // Create file system watcher
+        let (fs_watcher, notify_fs_change) = create_fs_watcher(initial_path.as_path());
+
+        // Create the app with common initialization
         let mut app = Self {
-            state: app_state,
+            state: match use_saved_state {
+                Some(saved_state) => saved_state,
+                None => {
+                    let tab_manager = TabManager::new_with_config(initial_path, Some(&config));
+                    let mut app_state = AppState::new(tab_manager, config_dir_override.clone());
+
+                    // Load bookmarks for new state
+                    app_state.bookmarks =
+                        bookmark_popup::load_bookmarks(app_state.config_dir_override.as_ref());
+                    app_state
+                }
+            },
+            colors, // Add the colors field here
             current_image: None,
-            // Initialize fields moved from AppState
             selection_changed: true,
             ensure_selected_visible: false,
             prev_path: None,
@@ -157,7 +190,7 @@ impl Kiorg {
             show_delete_confirm: false,
             entry_to_delete: None,
             show_bookmarks: false,
-            bookmark_selected_index: 0, // Initialize the bookmark selection index
+            bookmark_selected_index: 0,
             search_bar: SearchBar::new(),
             show_exit_confirm: false,
             add_mode: false,
@@ -170,10 +203,6 @@ impl Kiorg {
             notify_fs_change,
             fs_watcher,
         };
-
-        // Load bookmarks after initializing the app with the config directory
-        app.state.bookmarks =
-            bookmark_popup::load_bookmarks(app.state.config_dir_override.as_ref());
 
         app.refresh_entries();
         app
@@ -369,7 +398,7 @@ impl Kiorg {
             ctx,
             &mut self.show_delete_confirm,
             &self.entry_to_delete,
-            &self.state.colors,
+            &self.colors,
             || should_confirm = true,
             || should_cancel = true,
         );
@@ -378,6 +407,52 @@ impl Kiorg {
             self.confirm_delete();
         } else if should_cancel {
             self.cancel_delete();
+        }
+    }
+
+    fn graceful_shutdown(&mut self, ctx: &egui::Context) {
+        // Save application state before shutting down
+        if let Err(e) = self.save_app_state() {
+            eprintln!("Failed to save application state: {}", e);
+        }
+
+        ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+    }
+
+    fn save_app_state(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let config_dir = config::get_kiorg_config_dir(self.state.config_dir_override.as_ref());
+
+        if !config_dir.exists() {
+            std::fs::create_dir_all(&config_dir)?;
+        }
+
+        let state_path = config_dir.join(STATE_FILE_NAME);
+        let state_json = serde_json::to_string_pretty(&self.state)?;
+        std::fs::write(&state_path, state_json)?;
+
+        Ok(())
+    }
+
+    fn load_app_state(config_dir_override: Option<&PathBuf>) -> Option<AppState> {
+        let config_dir = config::get_kiorg_config_dir(config_dir_override);
+        let state_path = config_dir.join(STATE_FILE_NAME);
+
+        if !state_path.exists() {
+            return None;
+        }
+
+        match std::fs::read_to_string(&state_path) {
+            Ok(json_str) => match serde_json::from_str(&json_str) {
+                Ok(state) => Some(state),
+                Err(e) => {
+                    eprintln!("Failed to parse app state: {}", e);
+                    None
+                }
+            },
+            Err(e) => {
+                eprintln!("Failed to read app state file: {}", e);
+                None
+            }
         }
     }
 }
@@ -474,17 +549,17 @@ impl eframe::App for Kiorg {
 
         // Show help window if needed
         if self.show_help {
-            help_window::show_help_window(ctx, &mut self.show_help, &self.state.colors);
+            help_window::show_help_window(ctx, &mut self.show_help, &self.colors);
         }
 
         // Show exit confirmation window if needed
         if self.show_exit_confirm {
             // Call the refactored dialog function
-            dialogs::show_exit_dialog(ctx, &mut self.show_exit_confirm, &self.state.colors);
+            dialogs::show_exit_dialog(ctx, &mut self.show_exit_confirm, &self.colors);
         }
 
         if self.shutdown_requested {
-            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+            self.graceful_shutdown(ctx);
         }
     }
 }

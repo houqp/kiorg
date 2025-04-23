@@ -90,7 +90,7 @@ pub fn draw(ctx: &Context, app: &mut Kiorg) {
         .interactable(true)
         .movable(false)
         .show(ctx, |ui| {
-            ui.visuals_mut().widgets.noninteractive.bg_fill = app.state.colors.bg_light;
+            ui.visuals_mut().widgets.noninteractive.bg_fill = app.colors.bg_light;
 
             // Create a shadow similar to window popups
             let shadow = Shadow {
@@ -101,7 +101,7 @@ pub fn draw(ctx: &Context, app: &mut Kiorg) {
             };
 
             egui::Frame::default()
-                .fill(app.state.colors.bg_light)
+                .fill(app.colors.bg_light)
                 .inner_margin(5.0)
                 .shadow(shadow)
                 .show(ui, |ui| {

@@ -10,7 +10,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui) {
                 if let Some(message) = path_nav::draw_path_navigation(
                     ui,
                     &app.state.tab_manager.current_tab().current_path,
-                    &app.state.colors,
+                    &app.colors,
                 ) {
                     match message {
                         path_nav::PathNavMessage::Navigate(path) => {
@@ -25,9 +25,9 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui) {
                 for (i, is_current) in app.state.tab_manager.tab_indexes().into_iter().rev() {
                     let text = format!("{}", i + 1);
                     let color = if is_current {
-                        app.state.colors.yellow
+                        app.colors.yellow
                     } else {
-                        app.state.colors.gray
+                        app.colors.gray
                     };
                     if ui.link(RichText::new(text).color(color)).clicked() {
                         app.state.tab_manager.switch_to_tab(i);
