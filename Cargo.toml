@@ -21,6 +21,7 @@ pdfium-render = "0"
 image = "0.24.8"
 clap = { version = "4.5.1", features = ["derive"] }
 egui_term = { git = "https://github.com/houqp/egui_term.git", rev = "b8b4a1b79e10e07bd64d8104449e8904b466b3cd" }
+notify = "8"
 
 [dev-dependencies]
 egui_kittest = { version = "0.31.1", features = ["eframe"] }

@@ -1,5 +1,9 @@
 use egui::TextureHandle;
-use std::path::PathBuf;
+use notify::RecursiveMode;
+use notify::Watcher;
+use std::path::{Path, PathBuf};
+use std::sync::atomic::AtomicBool;
+use std::sync::Arc;
 
 use crate::config::{self, colors::AppColors};
 use crate::input;
@@ -22,6 +26,33 @@ const LEFT_PANEL_RATIO: f32 = 0.15;
 const RIGHT_PANEL_RATIO: f32 = 0.25;
 const LEFT_PANEL_MIN_WIDTH: f32 = 150.0;
 const RIGHT_PANEL_MIN_WIDTH: f32 = 200.0;
+
+fn create_fs_watcher(watch_dir: &Path) -> (notify::RecommendedWatcher, Arc<AtomicBool>) {
+    let notify_fs_change = Arc::new(AtomicBool::new(false));
+    let (tx, rx) = std::sync::mpsc::channel::<notify::Result<notify::Event>>();
+    let mut fs_watcher = notify::recommended_watcher(tx).expect("Failed to create watcher");
+    fs_watcher
+        .watch(watch_dir, RecursiveMode::NonRecursive)
+        .expect("Failed to watch path");
+    let notify_fs_change_clone = notify_fs_change.clone();
+    std::thread::spawn(move || loop {
+        for res in &rx {
+            match res {
+                Ok(event) => match event.kind {
+                    notify::EventKind::Remove(_)
+                    | notify::EventKind::Modify(_)
+                    | notify::EventKind::Create(_) => {
+                        notify_fs_change_clone.store(true, std::sync::atomic::Ordering::Relaxed);
+                    }
+                    _ => {}
+                },
+                // TODO: print error in console
+                Err(_e) => {}
+            }
+        }
+    });
+    (fs_watcher, notify_fs_change)
+}
 
 pub struct Kiorg {
     pub tab_manager: TabManager,
@@ -49,6 +80,8 @@ pub struct Kiorg {
     pub terminal_ctx: Option<terminal::TerminalContext>,
     pub show_help: bool,
     pub shutdown_requested: bool,
+    pub notify_fs_change: Arc<AtomicBool>,
+    pub fs_watcher: notify::RecommendedWatcher,
 
     pub add_mode: bool,
     pub new_entry_name: String, // name for newly created file/directory
@@ -74,6 +107,7 @@ impl Kiorg {
 
         cc.egui_ctx.set_visuals(colors.to_visuals());
 
+        let (fs_watcher, notify_fs_change) = create_fs_watcher(initial_dir.as_path());
         let tab_manager = TabManager::new_with_config(initial_dir, Some(&config));
 
         let mut app = Self {
@@ -104,6 +138,8 @@ impl Kiorg {
             last_lowercase_g_pressed_ms: 0,
             terminal_ctx: None,
             shutdown_requested: false,
+            notify_fs_change,
+            fs_watcher,
         };
 
         // Load bookmarks after initializing the app with the config directory
@@ -230,6 +266,9 @@ impl Kiorg {
         // Reset scroll_range to None when navigating to a new directory
         self.scroll_range = None;
         self.search_bar.close();
+        self.fs_watcher
+            .watch(tab.current_path.as_path(), RecursiveMode::NonRecursive)
+            .expect("Failed to watch path");
         self.refresh_entries();
     }
 
@@ -315,6 +354,15 @@ impl Kiorg {
 
 impl eframe::App for Kiorg {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        if self
+            .notify_fs_change
+            .load(std::sync::atomic::Ordering::Relaxed)
+        {
+            self.refresh_entries();
+            self.notify_fs_change
+                .store(false, std::sync::atomic::Ordering::Relaxed);
+        }
+
         // Update preview cache only if selection changed
         if self.selection_changed {
             right_panel::update_preview_cache(self, ctx);
@@ -408,12 +456,5 @@ impl eframe::App for Kiorg {
         if self.shutdown_requested {
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
         }
-    }
-
-    fn on_close_event(&mut self) -> bool {
-        // Intercept the close event.
-        // Return false to prevent immediate closing and handle it manually.
-        self.shutdown_requested = true;
-        false // Prevent default close
     }
 }

@@ -31,8 +31,8 @@
     - Context-aware enabling/disabling of options
 
 ### What's left to build
-*   Detect file change in folder and auto refresh
 *   Persist app state to disk
+*   Display linked files with icons
 *   PDF preview
 *   cache directory list
 *   Shortcut to toggle sort
