@@ -66,7 +66,6 @@ fn process_key(
     }
 
     if app.show_help {
-        // TODO: test this
         if is_cancel_keys(key) || key == Key::Enter || key == Key::Questionmark {
             app.show_help = false;
         }
@@ -74,7 +73,6 @@ fn process_key(
     }
 
     match (key, modifiers.shift) {
-        // TODO: write test for questionmark with shift
         (Key::Questionmark, true) => {
             app.show_help = !app.show_help;
         }
