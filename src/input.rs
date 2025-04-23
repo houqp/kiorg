@@ -24,8 +24,7 @@ fn process_key(
 
     if app.show_exit_confirm {
         if key == Key::Enter {
-            // FIXME: use to egui exit
-            std::process::exit(0);
+            app.shutdown_requested = true;
         } else if is_cancel_keys(key) {
             app.show_exit_confirm = false;
         }

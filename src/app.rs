@@ -48,6 +48,7 @@ pub struct Kiorg {
     pub show_exit_confirm: bool,
     pub terminal_ctx: Option<terminal::TerminalContext>,
     pub show_help: bool,
+    pub shutdown_requested: bool,
 
     pub add_mode: bool,
     pub new_entry_name: String, // name for newly created file/directory
@@ -102,6 +103,7 @@ impl Kiorg {
             add_focus: false,
             last_lowercase_g_pressed_ms: 0,
             terminal_ctx: None,
+            shutdown_requested: false,
         };
 
         // Load bookmarks after initializing the app with the config directory
@@ -402,5 +404,16 @@ impl eframe::App for Kiorg {
             // Call the refactored dialog function
             dialogs::show_exit_dialog(ctx, &mut self.show_exit_confirm, &self.colors);
         }
+
+        if self.shutdown_requested {
+            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+        }
+    }
+
+    fn on_close_event(&mut self) -> bool {
+        // Intercept the close event.
+        // Return false to prevent immediate closing and handle it manually.
+        self.shutdown_requested = true;
+        false // Prevent default close
     }
 }
