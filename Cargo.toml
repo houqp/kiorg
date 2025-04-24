@@ -24,6 +24,7 @@ egui_term = { git = "https://github.com/houqp/egui_term.git", rev = "b8b4a1b79e1
 notify = "8"
 egui_extras = { version = "0", features = ["all_loaders"] }
 image = { version = "0"}
+zip = "2"
 
 [dev-dependencies]
 egui_kittest = { version = "0.31.1", features = ["eframe"] }

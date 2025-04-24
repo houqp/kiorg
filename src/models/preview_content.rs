@@ -7,6 +7,19 @@ pub enum PreviewContent {
     Text(String),
     /// Image content with URI to the image file
     Image(String),
+    /// Zip file content with a list of entries
+    Zip(Vec<ZipEntry>),
+}
+
+/// Represents an entry in a zip file
+#[derive(Clone, Debug)]
+pub struct ZipEntry {
+    /// Name of the entry (file or directory)
+    pub name: String,
+    /// Size of the entry in bytes
+    pub size: u64,
+    /// Whether the entry is a directory
+    pub is_dir: bool,
 }
 
 impl PreviewContent {
@@ -26,5 +39,10 @@ impl PreviewContent {
     /// Creates a new image preview content directly from a URI
     pub fn image_uri(uri: impl Into<String>) -> Self {
         PreviewContent::Image(uri.into())
+    }
+
+    /// Creates a new zip preview content from a list of entries
+    pub fn zip(entries: Vec<ZipEntry>) -> Self {
+        PreviewContent::Zip(entries)
     }
 }

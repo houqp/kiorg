@@ -9,10 +9,23 @@ use crate::ui::style::{section_title_text, HEADER_ROW_HEIGHT};
 /// Global HashSet of supported image extensions for efficient lookups
 static IMAGE_EXTENSIONS: OnceLock<HashSet<String>> = OnceLock::new();
 
+/// Global HashSet of supported zip extensions for efficient lookups
+static ZIP_EXTENSIONS: OnceLock<HashSet<String>> = OnceLock::new();
+
 /// Get the set of supported image extensions
 fn get_image_extensions() -> &'static HashSet<String> {
     IMAGE_EXTENSIONS.get_or_init(|| {
         ["jpg", "jpeg", "png", "gif", "bmp", "webp", "svg"]
+            .iter()
+            .map(|&s| s.to_string())
+            .collect()
+    })
+}
+
+/// Get the set of supported zip extensions
+fn get_zip_extensions() -> &'static HashSet<String> {
+    ZIP_EXTENSIONS.get_or_init(|| {
+        ["zip", "jar", "war", "ear"]
             .iter()
             .map(|&s| s.to_string())
             .collect()
@@ -32,6 +45,7 @@ pub fn draw(app: &Kiorg, ui: &mut Ui, width: f32, height: f32) {
         ui.set_min_width(width);
         ui.set_max_width(width);
         ui.set_min_height(height);
+        ui.set_max_height(height);
         ui.label(section_title_text("Preview", colors));
         ui.separator();
 
@@ -65,6 +79,45 @@ pub fn draw(app: &Kiorg, ui: &mut Ui, width: f32, height: f32) {
                             );
                         });
                     }
+                    Some(PreviewContent::Zip(entries)) => {
+                        // Display zip file contents
+                        ui.label(
+                            RichText::new("Zip Archive Contents:")
+                                .color(colors.fg)
+                                .strong(),
+                        );
+                        ui.add_space(5.0);
+
+                        // Constants for the list
+                        // TODO: calculate the correct row height
+                        const ROW_HEIGHT: f32 = 10.0;
+
+                        // Get the total number of entries
+                        let total_rows = entries.len();
+
+                        // Use show_rows for better performance
+                        egui::ScrollArea::vertical()
+                            .id_salt("zip_entries_scroll")
+                            .auto_shrink([false; 2])
+                            .show_rows(ui, ROW_HEIGHT, total_rows, |ui, row_range| {
+                                // Set width for the content area
+                                let available_width = ui.available_width();
+                                ui.set_min_width(available_width);
+
+                                // Display entries in the visible range
+                                for row_index in row_range {
+                                    let entry = &entries[row_index];
+                                    // Create a visual indicator for directories
+                                    let entry_text = if entry.is_dir {
+                                        RichText::new(format!("📁 {}", entry.name)).strong()
+                                    } else {
+                                        RichText::new(format!("📄 {}", entry.name))
+                                    };
+
+                                    ui.label(entry_text.color(colors.fg));
+                                }
+                            });
+                    }
                     None => {
                         ui.label(RichText::new("No file selected").color(colors.fg));
                     }
@@ -76,6 +129,49 @@ pub fn draw(app: &Kiorg, ui: &mut Ui, width: f32, height: f32) {
             ui.label(RichText::new("? for help").color(colors.gray));
         });
     });
+}
+
+/// Read entries from a zip file and return them as a vector of ZipEntry
+fn read_zip_entries(
+    path: &std::path::Path,
+) -> Result<Vec<crate::models::preview_content::ZipEntry>, String> {
+    use std::fs::File;
+    use zip::ZipArchive;
+
+    // Open the zip file
+    let file = File::open(path).map_err(|e| format!("Failed to open zip file: {}", e))?;
+
+    // Create a zip archive from the file
+    let mut archive =
+        ZipArchive::new(file).map_err(|e| format!("Failed to read zip archive: {}", e))?;
+
+    // Create a vector to store the entries
+    let mut entries = Vec::new();
+
+    // Process each file in the archive
+    for i in 0..archive.len() {
+        let file = archive
+            .by_index(i)
+            .map_err(|e| format!("Failed to read zip entry: {}", e))?;
+
+        // Create a ZipEntry from the file
+        let entry = crate::models::preview_content::ZipEntry {
+            name: file.name().to_string(),
+            size: file.size(),
+            is_dir: file.is_dir(),
+        };
+
+        entries.push(entry);
+    }
+
+    // Sort entries: directories first, then files, both alphabetically
+    entries.sort_by(|a, b| match (a.is_dir, b.is_dir) {
+        (true, false) => std::cmp::Ordering::Less,
+        (false, true) => std::cmp::Ordering::Greater,
+        _ => a.name.cmp(&b.name),
+    });
+
+    Ok(entries)
 }
 
 pub fn update_preview_cache(app: &mut Kiorg, _ctx: &egui::Context) {
@@ -109,6 +205,20 @@ pub fn update_preview_cache(app: &mut Kiorg, _ctx: &egui::Context) {
             match ext {
                 Some(ext) if get_image_extensions().contains(&ext) => {
                     app.preview_content = Some(PreviewContent::image(entry.path));
+                }
+                Some(ext) if get_zip_extensions().contains(&ext) => {
+                    // Handle zip files
+                    match read_zip_entries(&entry.path) {
+                        Ok(entries) => {
+                            app.preview_content = Some(PreviewContent::zip(entries));
+                        }
+                        Err(e) => {
+                            app.preview_content = Some(PreviewContent::text(format!(
+                                "Error reading zip file: {}",
+                                e
+                            )));
+                        }
+                    }
                 }
                 _ => {
                     match std::fs::read_to_string(&entry.path) {
