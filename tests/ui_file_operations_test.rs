@@ -58,7 +58,7 @@ fn test_delete_shortcut() {
 
     // Verify UI list is updated (test1.txt removed)
     {
-        let tab = harness.state().state.tab_manager.current_tab_ref();
+        let tab = harness.state().tab_manager.current_tab_ref();
         assert!(
             !tab.entries.iter().any(|e| e.path == test_files[2]),
             "UI entry list should not contain test1.txt after deletion"
@@ -88,7 +88,7 @@ fn test_delete_shortcut() {
 
     // Verify UI list is updated (dir1 removed)
     {
-        let tab = harness.state().state.tab_manager.current_tab_ref();
+        let tab = harness.state().tab_manager.current_tab_ref();
         assert!(
             !tab.entries.iter().any(|e| e.path == test_files[0]),
             "UI entry list should not contain dir1 after deletion"
@@ -144,7 +144,7 @@ fn test_rename_shortcut() {
 
     // Verify UI list is updated
     {
-        let tab = harness.state().state.tab_manager.current_tab_ref();
+        let tab = harness.state().tab_manager.current_tab_ref();
         assert!(
             !tab.entries.iter().any(|e| e.name == "test2.txt"),
             "UI entry list should not contain test2.txt after rename"
@@ -208,7 +208,7 @@ fn test_copy_paste_shortcuts() {
 
     // Verify UI list in dir2 is updated
     {
-        let tab = harness.state().state.tab_manager.current_tab_ref();
+        let tab = harness.state().tab_manager.current_tab_ref();
         assert!(
             tab.entries.iter().any(|e| e.name == "test1.txt"),
             "UI entry list in dir2 should contain test1.txt after paste"
@@ -230,7 +230,7 @@ fn test_copy_paste_same_directory() {
     let mut harness = create_harness(&temp_dir);
 
     // Make sure we're selecting the first file (test1.txt)
-    let tab = harness.state_mut().state.tab_manager.current_tab();
+    let tab = harness.state_mut().tab_manager.current_tab();
     tab.selected_index = 0;
 
     // Copy test1.txt
@@ -311,7 +311,7 @@ fn test_cut_paste_shortcuts() {
 
     // Verify UI list in dir2 is updated
     {
-        let tab = harness.state().state.tab_manager.current_tab_ref();
+        let tab = harness.state().tab_manager.current_tab_ref();
         assert!(
             tab.entries.iter().any(|e| e.name == "test1.txt"),
             "UI entry list in dir2 should contain test1.txt after paste"
@@ -324,7 +324,7 @@ fn test_cut_paste_shortcuts() {
 
     // Verify UI list in parent directory is updated
     {
-        let tab = harness.state().state.tab_manager.current_tab_ref();
+        let tab = harness.state().tab_manager.current_tab_ref();
         assert!(
             !tab.entries.iter().any(|e| e.path == test_files[2]),
             "UI entry list in parent dir should not contain test1.txt after cut/paste"

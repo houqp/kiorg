@@ -16,7 +16,14 @@ pub enum SortOrder {
     Descending,
 }
 
+// TabState is the minimal state that gets serialized/deserialized
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
+pub struct TabState {
+    pub current_path: PathBuf,
+}
+
+// Tab contains the full runtime state, but only TabState is persisted
+#[derive(Clone)]
 pub struct Tab {
     pub current_path: PathBuf,
     pub entries: Vec<DirEntry>,
@@ -63,10 +70,35 @@ fn sort_entries_by(entries: &mut [DirEntry], sort_column: SortColumn, sort_order
     };
 }
 
+impl TabState {
+    pub fn new(path: PathBuf) -> Self {
+        Self { current_path: path }
+    }
+}
+
 impl Tab {
     pub fn new(path: PathBuf) -> Self {
         Self {
             current_path: path,
+            entries: Vec::new(),
+            parent_entries: Vec::new(),
+            selected_index: 0,
+            parent_selected_index: 0,
+            selected_entries: std::collections::HashSet::new(),
+        }
+    }
+
+    // Convert Tab to TabState for serialization
+    pub fn to_state(&self) -> TabState {
+        TabState {
+            current_path: self.current_path.clone(),
+        }
+    }
+
+    // Create Tab from TabState
+    pub fn from_state(state: TabState) -> Self {
+        Self {
+            current_path: state.current_path,
             entries: Vec::new(),
             parent_entries: Vec::new(),
             selected_index: 0,
@@ -173,7 +205,16 @@ fn read_dir_entries(path: &PathBuf) -> Vec<DirEntry> {
     }
 }
 
+// TabManagerState is the minimal state that gets serialized/deserialized
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
+pub struct TabManagerState {
+    tab_states: Vec<TabState>,
+    current_tab_index: usize,
+    pub sort_column: SortColumn,
+    pub sort_order: SortOrder,
+}
+
+#[derive(Clone)]
 pub struct TabManager {
     tabs: Vec<Tab>,
     current_tab_index: usize,
@@ -201,6 +242,26 @@ impl TabManager {
             current_tab_index: 0,
             sort_column,
             sort_order,
+        }
+    }
+
+    // Convert TabManager to TabManagerState for serialization
+    pub fn to_state(&self) -> TabManagerState {
+        TabManagerState {
+            tab_states: self.tabs.iter().map(|tab| tab.to_state()).collect(),
+            current_tab_index: self.current_tab_index,
+            sort_column: self.sort_column,
+            sort_order: self.sort_order,
+        }
+    }
+
+    // Create TabManager from TabManagerState
+    pub fn from_state(state: TabManagerState) -> Self {
+        Self {
+            tabs: state.tab_states.into_iter().map(Tab::from_state).collect(),
+            current_tab_index: state.current_tab_index,
+            sort_column: state.sort_column,
+            sort_order: state.sort_order,
         }
     }
 
@@ -322,6 +383,11 @@ impl TabManager {
         tab.entries = read_dir_entries(&current_path); // Read entries for the current path
                                                        // Sort entries using the global sort settings
         sort_entries_by(&mut tab.entries, sort_column, sort_order);
+
+        // Reset selection index if it's out of bounds (can happen after rehydrating from TabState)
+        if tab.selected_index >= tab.entries.len() && !tab.entries.is_empty() {
+            tab.selected_index = 0;
+        }
     }
 }
 

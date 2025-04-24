@@ -52,7 +52,7 @@ fn test_add_file_and_directory() {
 
     // Verify file appears in UI list and is selected
     {
-        let tab = harness.state().state.tab_manager.current_tab_ref();
+        let tab = harness.state().tab_manager.current_tab_ref();
         let entry_index = tab
             .entries
             .iter()
@@ -113,7 +113,7 @@ fn test_add_file_and_directory() {
 
     // Verify directory appears in UI list and is selected
     {
-        let tab = harness.state().state.tab_manager.current_tab_ref();
+        let tab = harness.state().tab_manager.current_tab_ref();
         let entry_index = tab
             .entries
             .iter()
@@ -165,7 +165,7 @@ fn test_add_file_and_directory() {
 
     // Verify file appears in UI and is selected
     {
-        let tab = harness.state().state.tab_manager.current_tab_ref();
+        let tab = harness.state().tab_manager.current_tab_ref();
         let entry_index = tab
             .entries
             .iter()
@@ -209,7 +209,7 @@ fn test_add_file_and_directory() {
 
     // Verify directory appears in UI and is selected
     {
-        let tab = harness.state().state.tab_manager.current_tab_ref();
+        let tab = harness.state().tab_manager.current_tab_ref();
         let entry_index = tab
             .entries
             .iter()

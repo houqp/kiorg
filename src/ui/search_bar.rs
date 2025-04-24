@@ -48,7 +48,7 @@ pub fn handle_key_press(ctx: &Context, app: &mut Kiorg) -> bool {
                         close_search_bar = true;
                     } else {
                         // Select the first matched entry
-                        let tab = app.state.tab_manager.current_tab();
+                        let tab = app.tab_manager.current_tab();
                         if let Some(first_filtered_index) =
                             tab.get_first_filtered_entry_index(query.as_str())
                         {

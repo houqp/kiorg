@@ -10,11 +10,11 @@ use super::style::section_title_text;
 /// Draws the left panel (parent directory list).
 /// Returns Some(PathBuf) if a directory was clicked for navigation.
 pub fn draw(app: &Kiorg, ui: &mut Ui, width: f32, height: f32) -> Option<PathBuf> {
-    let tab = app.state.tab_manager.current_tab_ref();
+    let tab = app.tab_manager.current_tab_ref();
     let parent_entries = tab.parent_entries.clone();
     let parent_selected_index = tab.parent_selected_index;
     let colors = &app.colors;
-    let bookmarks = &app.state.bookmarks;
+    let bookmarks = &app.bookmarks;
 
     let mut path_to_navigate = None;
 

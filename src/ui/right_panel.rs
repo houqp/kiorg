@@ -10,7 +10,7 @@ const PANEL_SPACING: f32 = 10.0;
 
 /// Draws the right panel (preview).
 pub fn draw(app: &Kiorg, ui: &mut Ui, width: f32, height: f32) {
-    let tab = app.state.tab_manager.current_tab_ref();
+    let tab = app.tab_manager.current_tab_ref();
     let colors = &app.colors;
     let preview_content = &app.preview_content;
     let current_image = &app.current_image;
@@ -75,7 +75,7 @@ pub fn draw(app: &Kiorg, ui: &mut Ui, width: f32, height: f32) {
 }
 
 pub fn update_preview_cache(app: &mut Kiorg, ctx: &egui::Context) {
-    let tab = app.state.tab_manager.current_tab_ref();
+    let tab = app.tab_manager.current_tab_ref();
     let selected_path = tab.entries.get(tab.selected_index).map(|e| e.path.clone());
 
     // Check if the selected file is the same as the cached one in app

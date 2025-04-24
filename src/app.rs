@@ -12,7 +12,7 @@ const STATE_FILE_NAME: &str = "state.json";
 
 use crate::config::{self, colors::AppColors};
 use crate::input;
-use crate::models::tab::TabManager;
+use crate::models::tab::{TabManager, TabManagerState};
 use crate::ui::add_entry_popup; // Import the new module
 use crate::ui::delete_dialog::DeleteDialog;
 use crate::ui::dialogs;
@@ -59,27 +59,20 @@ fn create_fs_watcher(watch_dir: &Path) -> (notify::RecommendedWatcher, Arc<Atomi
     (fs_watcher, notify_fs_change)
 }
 
-/// Application state that can be serialized and persisted between app restarts
+/// Serializable app state structure
 #[derive(Serialize, Deserialize)]
 pub struct AppState {
-    pub tab_manager: TabManager,
-    pub bookmarks: Vec<PathBuf>,
-    pub config_dir_override: Option<PathBuf>, // Optional override for config directory path
-}
-
-impl AppState {
-    pub fn new(tab_manager: TabManager, config_dir_override: Option<PathBuf>) -> Self {
-        Self {
-            tab_manager,
-            bookmarks: Vec::new(),
-            config_dir_override,
-        }
-    }
+    pub tab_manager: TabManagerState,
+    // Add more fields here in the future
 }
 
 pub struct Kiorg {
-    // Serializable app state
-    pub state: AppState,
+    // Tab manager for file navigation
+    pub tab_manager: TabManager,
+
+    // Fields moved from AppState
+    pub bookmarks: Vec<PathBuf>,
+    pub config_dir_override: Option<PathBuf>,
 
     // Application colors
     pub colors: AppColors,
@@ -136,25 +129,24 @@ impl Kiorg {
 
         cc.egui_ctx.set_visuals(colors.to_visuals());
 
-        // Determine the initial path and whether to use saved state
-        let (use_saved_state, initial_path) = match initial_dir {
+        // Determine the initial path and tab manager
+        let (tab_manager, initial_path) = match initial_dir {
             // If initial directory is provided, use it
-            Some(path) => (None, path),
-
+            Some(path) => {
+                let tab_manager = TabManager::new_with_config(path.clone(), Some(&config));
+                (tab_manager, path)
+            }
             // If no initial directory is provided, try to load from saved state
             None => {
-                if let Some(saved_state) = Self::load_app_state(config_dir_override.as_ref()) {
+                if let Some(tab_manager) = Self::load_app_state(config_dir_override.as_ref()) {
                     // Use the saved state's path
-                    let path = saved_state
-                        .tab_manager
-                        .current_tab_ref()
-                        .current_path
-                        .clone();
-                    (Some(saved_state), path)
+                    let path = tab_manager.current_tab_ref().current_path.clone();
+                    (tab_manager, path)
                 } else {
                     // No saved state, use current directory
                     let path = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-                    (None, path)
+                    let tab_manager = TabManager::new_with_config(path.clone(), Some(&config));
+                    (tab_manager, path)
                 }
             }
         };
@@ -162,21 +154,14 @@ impl Kiorg {
         // Create file system watcher
         let (fs_watcher, notify_fs_change) = create_fs_watcher(initial_path.as_path());
 
-        // Create the app with common initialization
-        let mut app = Self {
-            state: match use_saved_state {
-                Some(saved_state) => saved_state,
-                None => {
-                    let tab_manager = TabManager::new_with_config(initial_path, Some(&config));
-                    let mut app_state = AppState::new(tab_manager, config_dir_override.clone());
+        // Load bookmarks
+        let bookmarks = bookmark_popup::load_bookmarks(config_dir_override.as_ref());
 
-                    // Load bookmarks for new state
-                    app_state.bookmarks =
-                        bookmark_popup::load_bookmarks(app_state.config_dir_override.as_ref());
-                    app_state
-                }
-            },
-            colors, // Add the colors field here
+        let mut app = Self {
+            tab_manager,
+            bookmarks,
+            config_dir_override, // Use the provided config_dir_override
+            colors,              // Add the colors field here
             current_image: None,
             selection_changed: true,
             ensure_selected_visible: false,
@@ -209,16 +194,16 @@ impl Kiorg {
     }
 
     pub fn refresh_entries(&mut self) {
-        self.state.tab_manager.refresh_entries();
+        self.tab_manager.refresh_entries();
 
         // --- Start: Restore Selection Preservation (Post-Sort) ---
         let mut selection_restored = false;
         if let Some(prev_path) = &self.prev_path {
-            selection_restored = self.state.tab_manager.select_child(prev_path)
+            selection_restored = self.tab_manager.select_child(prev_path)
         };
         if !selection_restored {
             // Default to the first item if selection wasn't restored
-            self.state.tab_manager.reset_selection();
+            self.tab_manager.reset_selection();
         }
         self.selection_changed = true;
         // Clear prev_path after attempting to use it
@@ -230,7 +215,7 @@ impl Kiorg {
     }
 
     pub fn set_selection(&mut self, index: usize) {
-        let tab = self.state.tab_manager.current_tab();
+        let tab = self.tab_manager.current_tab();
         if tab.selected_index == index {
             return;
         }
@@ -240,7 +225,7 @@ impl Kiorg {
     }
 
     pub fn delete_selected_entry(&mut self) {
-        let tab = self.state.tab_manager.current_tab();
+        let tab = self.tab_manager.current_tab();
         if let Some(entry) = tab.selected_entry() {
             self.entry_to_delete = Some(entry.path.clone());
             self.show_delete_confirm = true;
@@ -248,7 +233,7 @@ impl Kiorg {
     }
 
     pub fn rename_selected_entry(&mut self) {
-        let tab = self.state.tab_manager.current_tab();
+        let tab = self.tab_manager.current_tab();
         if let Some(entry) = tab.selected_entry() {
             self.new_name = entry.name.clone();
             self.rename_mode = true;
@@ -256,7 +241,7 @@ impl Kiorg {
     }
 
     fn get_selected_entries(&mut self) -> Vec<PathBuf> {
-        let tab = self.state.tab_manager.current_tab();
+        let tab = self.tab_manager.current_tab();
         if tab.selected_entries.is_empty() {
             if let Some(entry) = tab.selected_entry() {
                 vec![entry.path.clone()]
@@ -283,7 +268,7 @@ impl Kiorg {
     }
 
     pub fn move_selection(&mut self, delta: isize) {
-        let tab = self.state.tab_manager.current_tab();
+        let tab = self.tab_manager.current_tab();
         let entries = tab.get_filtered_entries_with_indices(&self.search_bar.query); // Get filtered entries with original indices
 
         if entries.is_empty() {
@@ -318,7 +303,7 @@ impl Kiorg {
     }
 
     pub fn navigate_to_dir(&mut self, mut path: PathBuf) {
-        let tab = self.state.tab_manager.current_tab();
+        let tab = self.tab_manager.current_tab();
         // Swap current_path with path and store the swapped path as prev_path
         std::mem::swap(&mut tab.current_path, &mut path);
         self.prev_path = Some(path);
@@ -420,20 +405,25 @@ impl Kiorg {
     }
 
     fn save_app_state(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let config_dir = config::get_kiorg_config_dir(self.state.config_dir_override.as_ref());
+        let config_dir = config::get_kiorg_config_dir(self.config_dir_override.as_ref());
 
         if !config_dir.exists() {
             std::fs::create_dir_all(&config_dir)?;
         }
 
+        // Save app state with tab_manager as a top-level key
         let state_path = config_dir.join(STATE_FILE_NAME);
-        let state_json = serde_json::to_string_pretty(&self.state)?;
+        let app_state = AppState {
+            tab_manager: self.tab_manager.to_state(),
+            // Add more fields here in the future
+        };
+        let state_json = serde_json::to_string_pretty(&app_state)?;
         std::fs::write(&state_path, state_json)?;
 
         Ok(())
     }
 
-    fn load_app_state(config_dir_override: Option<&PathBuf>) -> Option<AppState> {
+    fn load_app_state(config_dir_override: Option<&PathBuf>) -> Option<TabManager> {
         let config_dir = config::get_kiorg_config_dir(config_dir_override);
         let state_path = config_dir.join(STATE_FILE_NAME);
 
@@ -442,13 +432,30 @@ impl Kiorg {
         }
 
         match std::fs::read_to_string(&state_path) {
-            Ok(json_str) => match serde_json::from_str(&json_str) {
-                Ok(state) => Some(state),
-                Err(e) => {
-                    eprintln!("Failed to parse app state: {}", e);
-                    None
+            Ok(json_str) => {
+                // First try to parse as the new format (AppState)
+                match serde_json::from_str::<AppState>(&json_str) {
+                    Ok(app_state) => {
+                        // Convert TabManagerState to TabManager
+                        let tab_manager = TabManager::from_state(app_state.tab_manager);
+                        Some(tab_manager)
+                    }
+                    Err(_) => {
+                        // If that fails, try the old format (direct TabManagerState)
+                        match serde_json::from_str::<TabManagerState>(&json_str) {
+                            Ok(tab_manager_state) => {
+                                // Convert TabManagerState to TabManager
+                                let tab_manager = TabManager::from_state(tab_manager_state);
+                                Some(tab_manager)
+                            }
+                            Err(e) => {
+                                eprintln!("Failed to parse app state: {}", e);
+                                None
+                            }
+                        }
+                    }
                 }
-            },
+            }
             Err(e) => {
                 eprintln!("Failed to read app state file: {}", e);
                 None
@@ -483,7 +490,7 @@ impl eframe::App for Kiorg {
         let bookmark_action = bookmark_popup::show_bookmark_popup(
             ctx,
             &mut self.show_bookmarks,
-            &mut self.state.bookmarks,
+            &mut self.bookmarks,
             &mut self.bookmark_selected_index,
         );
         // Process the bookmark action
@@ -492,8 +499,8 @@ impl eframe::App for Kiorg {
             bookmark_popup::BookmarkAction::SaveBookmarks => {
                 // Save bookmarks when the popup signals a change (e.g., deletion)
                 if let Err(e) = bookmark_popup::save_bookmarks(
-                    &self.state.bookmarks,
-                    self.state.config_dir_override.as_ref(),
+                    &self.bookmarks,
+                    self.config_dir_override.as_ref(),
                 ) {
                     eprintln!("Failed to save bookmarks: {}", e);
                 }
