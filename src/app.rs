@@ -1,4 +1,3 @@
-use egui::TextureHandle;
 use notify::RecursiveMode;
 use notify::Watcher;
 use serde::{Deserialize, Serialize};
@@ -6,6 +5,8 @@ use serde_json;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
+
+use crate::models::preview_content::PreviewContent;
 
 // Constants
 const STATE_FILE_NAME: &str = "state.json";
@@ -82,8 +83,7 @@ pub struct Kiorg {
     pub ensure_selected_visible: bool,
     pub prev_path: Option<PathBuf>, // Previous path for selection preservation
     pub cached_preview_path: Option<PathBuf>,
-    pub preview_content: String,
-    pub current_image: Option<TextureHandle>,
+    pub preview_content: Option<PreviewContent>,
 
     // fields that get reset after changing directories
     // TODO: will it crash the app if large amount of entries are deleted in the same dir?
@@ -162,12 +162,11 @@ impl Kiorg {
             bookmarks,
             config_dir_override, // Use the provided config_dir_override
             colors,              // Add the colors field here
-            current_image: None,
             selection_changed: true,
             ensure_selected_visible: false,
             prev_path: None,
             cached_preview_path: None,
-            preview_content: String::new(),
+            preview_content: None,
             scroll_range: None,
             rename_mode: false,
             new_name: String::new(),

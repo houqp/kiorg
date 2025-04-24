@@ -57,6 +57,9 @@ fn main() -> Result<(), eframe::Error> {
     eframe::run_native(
         "Kiorg",
         options,
-        Box::new(|cc| Ok(Box::new(Kiorg::new(cc, initial_dir)))),
+        Box::new(|cc| {
+            egui_extras::install_image_loaders(&cc.egui_ctx);
+            Ok(Box::new(Kiorg::new(cc, initial_dir)))
+        }),
     )
 }

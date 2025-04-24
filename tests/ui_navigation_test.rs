@@ -1,6 +1,7 @@
 mod ui_test_helpers;
 
 use egui::Key;
+use kiorg::models::preview_content::PreviewContent;
 use tempfile::tempdir;
 use ui_test_helpers::{create_harness, create_test_files};
 
@@ -295,10 +296,19 @@ fn test_mouse_click_selects_and_previews() {
         Some(test_files[1].clone()),
         "Cached preview path should be b.txt after selection"
     );
-    assert!(
-        harness.state().preview_content.contains("Content of b.txt"),
-        "Preview content should contain 'Content of b.txt'"
-    );
+    // Check if the preview content is text and contains the expected content
+    match &harness.state().preview_content {
+        Some(PreviewContent::Text(text)) => {
+            assert!(
+                text.contains("Content of b.txt"),
+                "Preview content should contain 'Content of b.txt'"
+            );
+        }
+        Some(PreviewContent::Image(_)) => {
+            panic!("Preview content should be Text variant, not Image")
+        }
+        None => panic!("Preview content should not be None"),
+    };
 }
 
 #[test]

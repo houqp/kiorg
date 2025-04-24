@@ -1,2 +1,3 @@
 pub mod dir_entry;
-pub mod tab; 
+pub mod preview_content;
+pub mod tab;

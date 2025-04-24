@@ -1,19 +1,32 @@
-use egui::{RichText, Ui};
-use image::io::Reader as ImageReader;
-use std::fs;
-use std::io::Cursor;
+use egui::{Image, RichText, Ui};
+use std::collections::HashSet;
+use std::sync::OnceLock;
 
 use crate::app::Kiorg;
+use crate::models::preview_content::PreviewContent;
 use crate::ui::style::{section_title_text, HEADER_ROW_HEIGHT};
+
+/// Global HashSet of supported image extensions for efficient lookups
+static IMAGE_EXTENSIONS: OnceLock<HashSet<String>> = OnceLock::new();
+
+/// Get the set of supported image extensions
+fn get_image_extensions() -> &'static HashSet<String> {
+    IMAGE_EXTENSIONS.get_or_init(|| {
+        ["jpg", "jpeg", "png", "gif", "bmp", "webp", "svg"]
+            .iter()
+            .map(|&s| s.to_string())
+            .collect()
+    })
+}
 
 const PANEL_SPACING: f32 = 10.0;
 
 /// Draws the right panel (preview).
 pub fn draw(app: &Kiorg, ui: &mut Ui, width: f32, height: f32) {
-    let tab = app.tab_manager.current_tab_ref();
+    // No longer need tab reference since we're using the preview_content enum
+    // let tab = app.tab_manager.current_tab_ref();
     let colors = &app.colors;
     let preview_content = &app.preview_content;
-    let current_image = &app.current_image;
 
     ui.vertical(|ui| {
         ui.set_min_width(width);
@@ -35,35 +48,26 @@ pub fn draw(app: &Kiorg, ui: &mut Ui, width: f32, height: f32) {
                 ui.set_min_width(width - scrollbar_width);
                 ui.set_max_width(width - scrollbar_width);
 
-                // Draw preview content
-                if let Some(entry) = tab.entries.get(tab.selected_index) {
-                    if entry.is_dir {
-                        ui.label(
-                            RichText::new(format!("Directory: {}", entry.path.display()))
-                                .color(colors.fg),
-                        );
-                    } else {
-                        // Show image preview if available
-                        if let Some(texture) = current_image {
-                            ui.centered_and_justified(|ui| {
-                                let available_width = width - PANEL_SPACING * 2.0;
-                                let available_height = available_height - PANEL_SPACING * 2.0;
-                                let image_size = texture.size_vec2();
-                                let scale = (available_width / image_size.x)
-                                    .min(available_height / image_size.y);
-                                let scaled_size = image_size * scale;
-
-                                ui.add(egui::Image::new((texture.id(), scaled_size)));
-                            });
-                        }
-
-                        // Show text preview
-                        if !preview_content.is_empty() {
-                            ui.label(RichText::new(preview_content).color(colors.fg));
-                        }
+                // Draw preview content based on the enum variant
+                match preview_content {
+                    Some(PreviewContent::Text(text)) => {
+                        ui.label(RichText::new(text).color(colors.fg));
                     }
-                } else {
-                    ui.label(RichText::new("No file selected").color(colors.fg));
+                    Some(PreviewContent::Image(uri)) => {
+                        ui.centered_and_justified(|ui| {
+                            let available_width = width - PANEL_SPACING * 2.0;
+                            let available_height = available_height - PANEL_SPACING * 2.0;
+                            // Use the URI directly with the Image widget
+                            ui.add(
+                                Image::new(uri)
+                                    .max_size(egui::vec2(available_width, available_height))
+                                    .maintain_aspect_ratio(true),
+                            );
+                        });
+                    }
+                    None => {
+                        ui.label(RichText::new("No file selected").color(colors.fg));
+                    }
                 }
             });
 
@@ -74,7 +78,7 @@ pub fn draw(app: &Kiorg, ui: &mut Ui, width: f32, height: f32) {
     });
 }
 
-pub fn update_preview_cache(app: &mut Kiorg, ctx: &egui::Context) {
+pub fn update_preview_cache(app: &mut Kiorg, _ctx: &egui::Context) {
     let tab = app.tab_manager.current_tab_ref();
     let selected_path = tab.entries.get(tab.selected_index).map(|e| e.path.clone());
 
@@ -91,74 +95,41 @@ pub fn update_preview_cache(app: &mut Kiorg, ctx: &egui::Context) {
 
     if let Some(entry) = maybe_entry {
         if entry.is_dir {
-            app.preview_content = format!("Directory: {}", entry.path.display());
-            app.current_image = None;
+            app.preview_content = Some(PreviewContent::text(format!(
+                "Directory: {}",
+                entry.path.display()
+            )));
         } else {
-            // Check if it's an image file
-            let is_image = entry
+            let ext = entry
                 .path
                 .extension()
                 .and_then(|e| e.to_str())
-                .map(|e| e.to_lowercase())
-                .is_some_and(|ext| {
-                    ["jpg", "jpeg", "png", "gif", "bmp", "webp"].contains(&ext.as_str())
-                });
+                .map(|e| e.to_lowercase());
 
-            if is_image {
-                match fs::read(&entry.path) {
-                    Ok(bytes) => match ImageReader::new(Cursor::new(bytes)).with_guessed_format() {
-                        Ok(reader) => match reader.decode() {
-                            Ok(img) => {
-                                let size = [img.width() as _, img.height() as _];
-                                let image_buffer = img.to_rgba8();
-                                let egui_image = egui::ColorImage::from_rgba_unmultiplied(
-                                    size,
-                                    image_buffer.as_raw(),
-                                );
-                                app.current_image = Some(ctx.load_texture(
-                                    entry.path.to_string_lossy().to_string(),
-                                    egui_image,
-                                    egui::TextureOptions::default(),
-                                ));
-                                app.preview_content =
-                                    format!("Image: {}x{}", img.width(), img.height());
-                            }
-                            Err(e) => {
-                                eprintln!("Failed to decode image {:?}: {}", entry.path, e);
-                                app.preview_content = format!("Failed to decode image: {}", e);
-                                app.current_image = None;
-                            }
-                        },
-                        Err(e) => {
-                            eprintln!("Failed guess image format {:?}: {}", entry.path, e);
-                            app.preview_content = format!("Failed guess image format: {}", e);
-                            app.current_image = None;
-                        }
-                    },
-                    Err(e) => {
-                        eprintln!("Failed to read image file {:?}: {}", entry.path, e);
-                        app.preview_content = format!("Failed to read file: {}", e);
-                        app.current_image = None;
-                    }
+            match ext {
+                Some(ext) if get_image_extensions().contains(&ext) => {
+                    app.preview_content = Some(PreviewContent::image(entry.path));
                 }
-            } else {
-                // Clear image texture for non-image files
-                app.current_image = None;
-                match std::fs::read_to_string(&entry.path) {
-                    Ok(content) => {
-                        // Only show first 1000 characters for text files
-                        app.preview_content = content.chars().take(1000).collect();
-                    }
-                    Err(_) => {
-                        // For binary files or files that can't be read
-                        app.preview_content = format!("Binary file: {} bytes", entry.size);
+                _ => {
+                    match std::fs::read_to_string(&entry.path) {
+                        Ok(content) => {
+                            // Only show first 1000 characters for text files
+                            let preview_text = content.chars().take(1000).collect::<String>();
+                            app.preview_content = Some(PreviewContent::text(preview_text));
+                        }
+                        Err(_) => {
+                            // For binary files or files that can't be read
+                            app.preview_content = Some(PreviewContent::text(format!(
+                                "Binary file: {} bytes",
+                                entry.size
+                            )));
+                        }
                     }
                 }
             }
         }
     } else {
-        app.preview_content.clear();
-        app.current_image = None;
+        app.preview_content = None; // No content to display
         app.cached_preview_path = None; // Clear cache in app if no file is selected
     }
 }
