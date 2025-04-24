@@ -31,13 +31,15 @@
     - Context-aware enabling/disabling of options
 
 ### What's left to build
-*   Persist app state to disk
 *   PDF preview
 *   cache directory list
 *   Shortcut to toggle sort
 *   Fuzzy directory jump
 *   Case-sensitive/insensitive search toggle
 *   Regular expression search support
+*   In rename mode, start the cursor after the extension
+*   Renaming a file doesn't clear the image rendering cache, so it still displays the old image
+*   Maintain selection index when switching between tabs 
 
 ### Current status
 The application is in a functional state with core file management features implemented. Recent improvements include enhanced search functionality with visual feedback through text highlighting and a comprehensive right-click context menu that provides intuitive access to file operations.
