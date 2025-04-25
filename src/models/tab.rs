@@ -609,4 +609,70 @@ mod tests {
         assert_eq!(entries[3].name, "same_name"); // Smaller file
         assert_eq!(entries[3].size, 50);
     }
+
+    #[test]
+    fn test_tab_selection_preservation() {
+        // Create a tab manager with two tabs
+        let mut tab_manager = TabManager::new(PathBuf::from("/path1"));
+        tab_manager.add_tab(PathBuf::from("/path2"));
+
+        // Set up some entries for each tab
+        let entries1 = vec![
+            create_entry("file1", false, 10, 100),
+            create_entry("file2", false, 20, 200),
+            create_entry("file3", false, 30, 300),
+        ];
+        let entries2 = vec![
+            create_entry("fileA", false, 10, 100),
+            create_entry("fileB", false, 20, 200),
+            create_entry("fileC", false, 30, 300),
+        ];
+
+        // Set entries for tab 1
+        tab_manager.tabs[0].entries = entries1;
+        // Set entries for tab 2
+        tab_manager.tabs[1].entries = entries2;
+
+        // Set different selection indices for each tab
+        tab_manager.tabs[0].update_selection(2); // Select "file3" in tab 1
+        tab_manager.tabs[1].update_selection(1); // Select "fileB" in tab 2
+
+        // Switch to tab 2
+        tab_manager.switch_to_tab(1);
+        assert_eq!(tab_manager.current_tab_ref().selected_index, 1);
+
+        // Switch back to tab 1
+        tab_manager.switch_to_tab(0);
+        assert_eq!(tab_manager.current_tab_ref().selected_index, 2);
+
+        // Switch to tab 2 again
+        tab_manager.switch_to_tab(1);
+        assert_eq!(tab_manager.current_tab_ref().selected_index, 1);
+    }
+
+    #[test]
+    fn test_tab_state_serialization() {
+        // Create a tab with a specific selection
+        let mut tab = Tab::new(PathBuf::from("/test/path"));
+        tab.entries = vec![
+            create_entry("file1", false, 10, 100),
+            create_entry("file2", false, 20, 200),
+            create_entry("file3", false, 30, 300),
+        ];
+        tab.update_selection(2); // Select "file3"
+        tab.parent_selected_index = 1; // Set a parent selection index
+
+        // Convert to TabState
+        let state = tab.to_state();
+
+        // Verify the state contains only the path
+        assert_eq!(state.current_path, PathBuf::from("/test/path"));
+
+        // Create a new Tab from the state
+        let new_tab = Tab::from_state(state);
+
+        // Verify the indices are reset to default
+        assert_eq!(new_tab.selected_index, 0);
+        assert_eq!(new_tab.parent_selected_index, 0);
+    }
 }

@@ -31,6 +31,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui) {
                     };
                     if ui.link(RichText::new(text).color(color)).clicked() {
                         app.tab_manager.switch_to_tab(i);
+                        app.refresh_entries();
                     }
                 }
             });

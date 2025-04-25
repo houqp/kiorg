@@ -196,13 +196,8 @@ impl Kiorg {
         self.tab_manager.refresh_entries();
 
         // --- Start: Restore Selection Preservation (Post-Sort) ---
-        let mut selection_restored = false;
         if let Some(prev_path) = &self.prev_path {
-            selection_restored = self.tab_manager.select_child(prev_path)
-        };
-        if !selection_restored {
-            // Default to the first item if selection wasn't restored
-            self.tab_manager.reset_selection();
+            self.tab_manager.select_child(prev_path);
         }
         self.selection_changed = true;
         // Clear prev_path after attempting to use it
