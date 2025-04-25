@@ -541,7 +541,7 @@ impl eframe::App for Kiorg {
                 center_panel::draw(self, ui, center_width, content_height);
                 separator::draw_vertical_separator(ui);
                 // Call the new right_panel::draw function directly
-                right_panel::draw(self, ui, right_width, content_height);
+                right_panel::draw(self, ctx, ui, right_width, content_height);
                 ui.add_space(PANEL_SPACING);
             });
         });

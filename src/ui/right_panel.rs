@@ -35,11 +35,13 @@ fn get_zip_extensions() -> &'static HashSet<String> {
 const PANEL_SPACING: f32 = 10.0;
 
 /// Draws the right panel (preview).
-pub fn draw(app: &Kiorg, ui: &mut Ui, width: f32, height: f32) {
+pub fn draw(app: &mut Kiorg, ctx: &egui::Context, ui: &mut Ui, width: f32, height: f32) {
     // No longer need tab reference since we're using the preview_content enum
     // let tab = app.tab_manager.current_tab_ref();
     let colors = &app.colors;
-    let preview_content = &app.preview_content;
+
+    // Clone the preview content to avoid borrow issues
+    let preview_content = app.preview_content.clone();
 
     ui.vertical(|ui| {
         ui.set_min_width(width);
@@ -117,6 +119,46 @@ pub fn draw(app: &Kiorg, ui: &mut Ui, width: f32, height: f32) {
                                     ui.label(entry_text.color(colors.fg));
                                 }
                             });
+                    }
+                    Some(PreviewContent::Loading(path, receiver_opt)) => {
+                        // Display loading indicator
+                        ui.vertical_centered(|ui| {
+                            ui.add_space(20.0);
+                            ui.spinner();
+                            ui.add_space(10.0);
+                            ui.label(
+                                RichText::new(format!(
+                                    "Loading preview contents for {}...",
+                                    path.display()
+                                ))
+                                .color(colors.fg),
+                            );
+                        });
+
+                        // Check if we have a receiver to poll for results
+                        let receiver = match receiver_opt {
+                            Some(receiver) => receiver,
+                            None => return,
+                        };
+                        // Try to get a lock on the receiver
+                        let receiver = receiver.lock().expect("failed to obtain lock");
+                        // Try to receive the result without blocking
+                        if let Ok(result) = receiver.try_recv() {
+                            // Request a repaint to update the UI with the result
+                            ctx.request_repaint();
+                            // Update the preview content with the result
+                            match result {
+                                Ok(entries) => {
+                                    app.preview_content = Some(PreviewContent::zip(entries));
+                                }
+                                Err(e) => {
+                                    app.preview_content = Some(PreviewContent::text(format!(
+                                        "Error reading zip file: {}",
+                                        e
+                                    )));
+                                }
+                            }
+                        }
                     }
                     None => {
                         ui.label(RichText::new("No file selected").color(colors.fg));
@@ -207,18 +249,26 @@ pub fn update_preview_cache(app: &mut Kiorg, _ctx: &egui::Context) {
                     app.preview_content = Some(PreviewContent::image(entry.path));
                 }
                 Some(ext) if get_zip_extensions().contains(&ext) => {
-                    // Handle zip files
-                    match read_zip_entries(&entry.path) {
-                        Ok(entries) => {
-                            app.preview_content = Some(PreviewContent::zip(entries));
-                        }
-                        Err(e) => {
-                            app.preview_content = Some(PreviewContent::text(format!(
-                                "Error reading zip file: {}",
-                                e
-                            )));
-                        }
-                    }
+                    // Handle zip files asynchronously
+                    let path = entry.path.clone();
+
+                    // Create a channel for communication
+                    let (sender, receiver) = std::sync::mpsc::channel();
+
+                    // Set the initial loading state
+                    app.preview_content = Some(PreviewContent::loading_with_receiver(
+                        path.clone(),
+                        receiver,
+                    ));
+
+                    // Spawn a thread to load the zip file
+                    std::thread::spawn(move || {
+                        // Load the zip entries
+                        let result = read_zip_entries(&path);
+
+                        // Send the result back to the main thread
+                        let _ = sender.send(result);
+                    });
                 }
                 _ => {
                     match std::fs::read_to_string(&entry.path) {

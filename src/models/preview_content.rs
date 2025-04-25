@@ -1,4 +1,6 @@
 use std::path::PathBuf;
+use std::sync::mpsc::Receiver;
+use std::sync::{Arc, Mutex};
 
 /// Represents different types of preview content that can be displayed in the right panel
 #[derive(Clone, Debug)]
@@ -9,6 +11,11 @@ pub enum PreviewContent {
     Image(String),
     /// Zip file content with a list of entries
     Zip(Vec<ZipEntry>),
+    /// Loading state with path being loaded and optional receiver for async loading
+    Loading(
+        PathBuf,
+        Option<Arc<Mutex<Receiver<Result<Vec<ZipEntry>, String>>>>>,
+    ),
 }
 
 /// Represents an entry in a zip file
@@ -44,5 +51,18 @@ impl PreviewContent {
     /// Creates a new zip preview content from a list of entries
     pub fn zip(entries: Vec<ZipEntry>) -> Self {
         PreviewContent::Zip(entries)
+    }
+
+    /// Creates a new loading preview content for a path
+    pub fn loading(path: impl Into<PathBuf>) -> Self {
+        PreviewContent::Loading(path.into(), None)
+    }
+
+    /// Creates a new loading preview content with a receiver for async updates
+    pub fn loading_with_receiver(
+        path: impl Into<PathBuf>,
+        receiver: Receiver<Result<Vec<ZipEntry>, String>>,
+    ) -> Self {
+        PreviewContent::Loading(path.into(), Some(Arc::new(Mutex::new(receiver))))
     }
 }

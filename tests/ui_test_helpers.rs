@@ -20,6 +20,53 @@ pub fn create_test_files(paths: &[PathBuf]) -> Vec<PathBuf> {
     paths.to_vec()
 }
 
+/// Create a test image file with minimal valid PNG content
+pub fn create_test_image(path: &PathBuf) -> PathBuf {
+    // Minimal valid PNG file (1x1 transparent pixel)
+    let png_data: &[u8] = &[
+        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44,
+        0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1F,
+        0x15, 0xC4, 0x89, 0x00, 0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00,
+        0x01, 0x00, 0x00, 0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49,
+        0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
+    ];
+    std::fs::write(path, png_data).unwrap();
+    assert!(path.exists());
+    path.clone()
+}
+
+/// Create a test zip file with some entries
+pub fn create_test_zip(path: &PathBuf) -> PathBuf {
+    use std::io::Write;
+    use zip::write::FileOptions;
+
+    let file = std::fs::File::create(path).unwrap();
+    let mut zip = zip::ZipWriter::new(file);
+
+    // Use explicit type annotation to fix the compiler error
+    let options = FileOptions::default()
+        .compression_method(zip::CompressionMethod::Stored)
+        .unix_permissions(0o755) as FileOptions<'_, ()>;
+
+    // Add a few entries to the zip
+    zip.start_file("file1.txt", options).unwrap();
+    zip.write_all(b"Content of file1.txt").unwrap();
+
+    zip.start_file("file2.txt", options).unwrap();
+    zip.write_all(b"Content of file2.txt").unwrap();
+
+    // Add a directory
+    zip.add_directory("subdir", options).unwrap();
+
+    // Add a file in the subdirectory
+    zip.start_file("subdir/file3.txt", options).unwrap();
+    zip.write_all(b"Content of file3.txt in subdir").unwrap();
+
+    zip.finish().unwrap();
+    assert!(path.exists());
+    path.clone()
+}
+
 // Wrapper to hold both the harness and the config temp directory to prevent premature cleanup
 pub struct TestHarness<'a> {
     pub harness: Harness<'a, Kiorg>,

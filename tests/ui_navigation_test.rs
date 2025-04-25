@@ -3,7 +3,7 @@ mod ui_test_helpers;
 use egui::Key;
 use kiorg::models::preview_content::PreviewContent;
 use tempfile::tempdir;
-use ui_test_helpers::{create_harness, create_test_files};
+use ui_test_helpers::{create_harness, create_test_files, create_test_image, create_test_zip};
 
 #[test]
 fn test_g_shortcuts() {
@@ -307,6 +307,27 @@ fn test_mouse_click_selects_and_previews() {
         Some(PreviewContent::Image(_)) => {
             panic!("Preview content should be Text variant, not Image")
         }
+        Some(PreviewContent::Zip(_)) => {
+            panic!("Preview content should be Text variant, not Zip")
+        }
+        Some(PreviewContent::Loading(..)) => {
+            // Wait for loading to complete
+            for _ in 0..10 {
+                harness.step();
+                if let Some(PreviewContent::Text(_)) = &harness.state().preview_content {
+                    break;
+                }
+            }
+            // Check again after waiting
+            if let Some(PreviewContent::Text(text)) = &harness.state().preview_content {
+                assert!(
+                    text.contains("Content of b.txt"),
+                    "Preview content should contain 'Content of b.txt' after loading"
+                );
+            } else {
+                panic!("Preview content should be Text variant after loading completes");
+            }
+        }
         None => panic!("Preview content should not be None"),
     };
 }
@@ -356,5 +377,150 @@ fn test_enter_directory() {
     assert_eq!(
         new_path, expected_path,
         "Should have navigated to the directory"
+    );
+}
+
+#[test]
+fn test_image_preview() {
+    // Create a temporary directory for testing
+    let temp_dir = tempdir().unwrap();
+
+    // Create test files including an image
+    let image_path = temp_dir.path().join("test.png");
+    create_test_image(&image_path);
+
+    // Create a text file for comparison
+    let text_path = temp_dir.path().join("test.txt");
+    std::fs::write(&text_path, "This is a text file").unwrap();
+
+    let _test_files = vec![image_path, text_path]; // Keep references to prevent cleanup
+
+    // Start the harness
+    let mut harness = create_harness(&temp_dir);
+    harness.ensure_sorted_by_name_ascending();
+
+    // Select the image file
+    {
+        let tab = harness.state_mut().tab_manager.current_tab();
+        // Find the index of the image file
+        let image_index = tab
+            .entries
+            .iter()
+            .position(|e| e.path.extension().unwrap_or_default() == "png")
+            .expect("Image file should be in the entries");
+        tab.selected_index = image_index;
+    }
+
+    // Step to update the preview
+    harness.step();
+    harness.step(); // Additional step to ensure preview is updated
+
+    // Check if the preview content is an image
+    match &harness.state().preview_content {
+        Some(PreviewContent::Image(uri)) => {
+            assert!(
+                uri.contains("file://") && uri.contains(".png"),
+                "Image URI should contain file:// protocol and .png extension"
+            );
+        }
+        Some(PreviewContent::Loading(..)) => {
+            // Wait for loading to complete
+            for _ in 0..10 {
+                harness.step();
+                if let Some(PreviewContent::Image(_)) = &harness.state().preview_content {
+                    break;
+                }
+            }
+            // Check again after waiting
+            if let Some(PreviewContent::Image(uri)) = &harness.state().preview_content {
+                assert!(
+                    uri.contains("file://") && uri.contains(".png"),
+                    "Image URI should contain file:// protocol and .png extension after loading"
+                );
+            } else {
+                panic!("Preview content should be Image variant after loading completes");
+            }
+        }
+        Some(other) => {
+            panic!("Preview content should be Image variant, got {:?}", other);
+        }
+        None => panic!("Preview content should not be None"),
+    };
+}
+
+#[test]
+fn test_zip_preview() {
+    // Create a temporary directory for testing
+    let temp_dir = tempdir().unwrap();
+
+    // Create test files including a zip file
+    let zip_path = temp_dir.path().join("test.zip");
+    create_test_zip(&zip_path);
+
+    // Create a text file for comparison
+    let text_path = temp_dir.path().join("test.txt");
+    std::fs::write(&text_path, "This is a text file").unwrap();
+
+    let _test_files = vec![zip_path, text_path]; // Keep references to prevent cleanup
+
+    // Start the harness
+    let mut harness = create_harness(&temp_dir);
+    harness.ensure_sorted_by_name_ascending();
+
+    // Select the zip file
+    {
+        let tab = harness.state_mut().tab_manager.current_tab();
+        // Find the index of the zip file
+        let zip_index = tab
+            .entries
+            .iter()
+            .position(|e| e.path.extension().unwrap_or_default() == "zip")
+            .expect("Zip file should be in the entries");
+        tab.selected_index = zip_index;
+    }
+
+    // Step to update the preview
+    harness.step();
+    harness.step(); // Additional step to ensure preview is updated
+
+    // Check if the preview content is a zip or loading
+    let mut is_zip_content = false;
+
+    // Try multiple steps to allow async loading to complete
+    for _ in 0..20 {
+        match &harness.state().preview_content {
+            Some(PreviewContent::Zip(entries)) => {
+                // Verify zip entries
+                assert!(!entries.is_empty(), "Zip entries should not be empty");
+
+                // Check for expected files
+                let file1 = entries.iter().find(|e| e.name == "file1.txt");
+                let file2 = entries.iter().find(|e| e.name == "file2.txt");
+                let subdir = entries.iter().find(|e| e.name == "subdir/" && e.is_dir);
+
+                assert!(file1.is_some(), "file1.txt should be in the zip entries");
+                assert!(file2.is_some(), "file2.txt should be in the zip entries");
+                assert!(subdir.is_some(), "subdir/ should be in the zip entries");
+
+                is_zip_content = true;
+                break;
+            }
+            Some(PreviewContent::Loading(..)) => {
+                // Still loading, try another step
+                harness.step();
+            }
+            Some(other) => {
+                panic!(
+                    "Preview content should be Zip or Loading variant, got {:?}",
+                    other
+                );
+            }
+            None => panic!("Preview content should not be None"),
+        }
+    }
+
+    assert!(
+        is_zip_content,
+        "Preview content should eventually be Zip variant"
     );
 }
