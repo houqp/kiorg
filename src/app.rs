@@ -75,6 +75,9 @@ pub struct Kiorg {
     pub bookmarks: Vec<PathBuf>,
     pub config_dir_override: Option<PathBuf>,
 
+    // Application configuration
+    pub config: config::Config,
+
     // Application colors
     pub colors: AppColors,
 
@@ -124,8 +127,12 @@ impl Kiorg {
         initial_dir: Option<PathBuf>,
         config_dir_override: Option<PathBuf>,
     ) -> Self {
-        let config = config::load_config_with_override(config_dir_override.as_ref());
-        let colors = AppColors::from_config(&config.colors);
+        let config = config::load_config_with_override(config_dir_override.as_ref())
+            .expect("Invalid config");
+        let colors = match &config.colors {
+            Some(color_scheme) => AppColors::from_config(color_scheme),
+            None => AppColors::default(),
+        };
 
         cc.egui_ctx.set_visuals(colors.to_visuals());
 
@@ -161,6 +168,7 @@ impl Kiorg {
             tab_manager,
             bookmarks,
             config_dir_override, // Use the provided config_dir_override
+            config,              // Store the loaded config
             colors,              // Add the colors field here
             selection_changed: true,
             ensure_selected_visible: false,
@@ -460,6 +468,11 @@ impl Kiorg {
 
 impl eframe::App for Kiorg {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // Store shortcuts in the context for the help window to access
+        if let Some(shortcuts) = &self.config.shortcuts {
+            ctx.data_mut(|d| d.insert_temp(egui::Id::new("shortcuts"), shortcuts.clone()));
+        }
+
         if self
             .notify_fs_change
             .load(std::sync::atomic::Ordering::Relaxed)

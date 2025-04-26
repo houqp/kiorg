@@ -374,16 +374,14 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
     if let Some(column) = sort_requested {
         // Borrow app mutably here - should be fine as UI closure is finished
         app.tab_manager.toggle_sort(column);
-
         // Save sort preferences - requires immutable borrows followed by mutable config load/save
-        let config_dir_override = app.config_dir_override.as_ref(); // Borrow immutably
-        let mut config = config::load_config_with_override(config_dir_override);
-        config.sort_preference = Some(SortPreference {
+        app.config.sort_preference = Some(SortPreference {
             column: app.tab_manager.sort_column,
             order: app.tab_manager.sort_order,
         });
         // Re-borrow immutably for save path
-        if let Err(e) = config::save_config_with_override(&config, app.config_dir_override.as_ref())
+        if let Err(e) =
+            config::save_config_with_override(&app.config, app.config_dir_override.as_ref())
         {
             eprintln!("Failed to save sort preferences: {}", e);
         }

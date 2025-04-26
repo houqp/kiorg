@@ -1,8 +1,10 @@
 pub mod colors;
+pub mod shortcuts;
 
 use crate::models::tab::{SortColumn, SortOrder};
 use colors::ColorScheme;
 use serde::{Deserialize, Serialize};
+
 use std::fs;
 use std::io::Read;
 use std::path::PathBuf;
@@ -13,24 +15,27 @@ pub struct SortPreference {
     pub order: SortOrder,
 }
 
-#[derive(Deserialize, Serialize, Default)]
+#[derive(Deserialize, Serialize, Default, Debug)]
 pub struct Config {
-    pub colors: ColorScheme,
+    pub colors: Option<ColorScheme>,
     pub sort_preference: Option<SortPreference>,
+    pub shortcuts: Option<shortcuts::Shortcuts>,
 }
 
 impl Config {
     fn default() -> Self {
         Self {
-            colors: ColorScheme::default(),
+            colors: None,
             sort_preference: None,
+            shortcuts: Some(shortcuts::default_shortcuts()),
         }
     }
 }
 
-pub fn load_config_with_override(config_dir_override: Option<&PathBuf>) -> Config {
+pub fn load_config_with_override(
+    config_dir_override: Option<&PathBuf>,
+) -> Result<Config, toml::de::Error> {
     let config_dir = get_kiorg_config_dir(config_dir_override);
-
     if !config_dir.exists() {
         let _ = fs::create_dir_all(&config_dir);
     }
@@ -38,23 +43,20 @@ pub fn load_config_with_override(config_dir_override: Option<&PathBuf>) -> Confi
     let config_path = config_dir.join("config.toml");
 
     if !config_path.exists() {
-        let default_config = Config::default();
-        let toml_str = toml::to_string_pretty(&default_config).unwrap_or_default();
-        let _ = fs::write(&config_path, toml_str);
-        return default_config;
+        return Ok(Config::default());
     }
 
     let mut file = match fs::File::open(&config_path) {
         Ok(file) => file,
-        Err(_) => return Config::default(),
+        Err(_) => return Ok(Config::default()),
     };
 
     let mut contents = String::new();
     if file.read_to_string(&mut contents).is_err() {
-        return Config::default();
+        return Ok(Config::default());
     }
 
-    toml::from_str(&contents).unwrap_or_default()
+    toml::from_str(&contents)
 }
 
 pub fn save_config(config: &Config) -> Result<(), std::io::Error> {
