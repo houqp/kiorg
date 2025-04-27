@@ -2,7 +2,7 @@
 
 ### What works
 *   Basic file navigation (j, k, h, l, Enter, gg, G)
-*   File opening (o)
+*   File opening (o/Enter)
 *   File deletion (D)
 *   File renaming (r)
 *   File selection (space)
@@ -29,6 +29,13 @@
     - Cut selected file/directory
     - Paste copied/cut file/directory
     - Context-aware enabling/disabling of options
+*   Tab selection preservation when switching between tabs at runtime
+*   SVG preview using the resvg crate
+*   Image previews using egui's Image widget with direct URI source paths
+*   Zip file preview showing contained files and folders
+*   Configurable keyboard shortcuts through TOML config files
+*   'g' namespace key similar to Vim for special shortcut combinations
+*   Soft/hard link files display with dedicated icons
 
 ### What's left to build
 *   PDF preview
@@ -39,13 +46,4 @@
 *   Regular expression search support
 *   In rename mode, start the cursor after the extension
 *   Renaming a file doesn't clear the image rendering cache, so it still displays the old image
-
-### Current status
-The application is in a functional state with core file management features implemented. Recent improvements include enhanced search functionality with visual feedback through text highlighting and a comprehensive right-click context menu that provides intuitive access to file operations.
-
-### Known issues
-*   PDF preview is not yet implemented.
-
-### Evolution of project decisions
-*   The project initially started as a simple file manager but has evolved to include more advanced features such as bookmark management and tab creation.
-*   Configuration management has been expanded to store more user preferences beyond just color schemes.
+*   Open file with alternative commands leveraging open::commands and open::with_command.

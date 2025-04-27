@@ -7,7 +7,7 @@ It is built using Rust with the egui framework.
 * `k` to move up to the previous entry
 * `h` to navigate to the parent directory
 * `l` or Enter to navigate into a selected folder
-* `o` to open the selected file with external app
+* `o/Enter` to open the selected file with external app
 * `gg` to go to the first entry
 * `G` to go to the last entry
 * `D` to delete the selected file or folder with a confirmation prompt
@@ -47,6 +47,7 @@ It is built using Rust with the egui framework.
 * Path truncation for long paths with "..." in the middle
 * Bookmarked entries in the left and middle panel should be highlighted with bookmark icons
 * The application uses icons to distinguish between files (📄) and folders (📁)
+* When file is being opened, flash the relevant file entry
 
 ## Other features
 
