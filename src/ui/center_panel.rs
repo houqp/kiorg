@@ -271,6 +271,19 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
 
                         let is_selected = original_index == tab_ref.selected_index;
                         let is_in_selection = tab_ref.selected_entries.contains(&entry.path);
+                        let being_opened = match app.files_being_opened.get(&entry.path) {
+                            Some(signal) => {
+                                match signal.load(std::sync::atomic::Ordering::Relaxed) {
+                                    true => true,
+                                    false => {
+                                        // trim hashmap to keep it lean
+                                        app.files_being_opened.remove(&entry.path);
+                                        false
+                                    }
+                                }
+                            }
+                            None => false,
+                        };
 
                         // Draw the row and get its response and potential new name
                         // Destructure the tuple returned by draw_entry_row
@@ -284,6 +297,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                                 new_name: &mut app.new_name,
                                 is_marked: is_in_selection,
                                 is_bookmarked: app.bookmarks.contains(&entry.path),
+                                is_being_opened: being_opened,
                                 search_query: current_search_query,
                             },
                         );

@@ -524,3 +524,118 @@ fn test_zip_preview() {
         "Preview content should eventually be Zip variant"
     );
 }
+
+#[test]
+fn test_open_directory_vs_open_directory_or_file() {
+    // Create a temporary directory for testing
+    let temp_dir = tempdir().unwrap();
+
+    // Create test files and directories
+    let test_files = create_test_files(&[
+        temp_dir.path().join("dir1"),
+        temp_dir.path().join("test1.txt"),
+    ]);
+
+    // Write some content to the text file
+    std::fs::write(&test_files[1], "Test file content").unwrap();
+
+    // Start the harness
+    let mut harness = create_harness(&temp_dir);
+    harness.ensure_sorted_by_name_ascending();
+
+    // Test 1: OpenDirectory should not open a file
+    {
+        // Select the text file (index 1)
+        {
+            let tab = harness.state_mut().tab_manager.current_tab();
+            tab.selected_index = 1; // Select test1.txt
+        }
+        harness.step();
+
+        // Get the current path before attempting to open
+        let current_path = harness
+            .state()
+            .tab_manager
+            .current_tab_ref()
+            .current_path
+            .clone();
+
+        // Press 'l' key which is mapped to OpenDirectory
+        harness.press_key(Key::L);
+        harness.step();
+
+        // Verify that the current path hasn't changed (file wasn't opened)
+        let new_path = harness
+            .state()
+            .tab_manager
+            .current_tab_ref()
+            .current_path
+            .clone();
+        assert_eq!(
+            new_path, current_path,
+            "OpenDirectory should not change the current path when selecting a file"
+        );
+
+        // Verify that the file is not in the files_being_opened map
+        assert!(
+            harness.state().files_being_opened.is_empty(),
+            "No files should be in the files_being_opened map"
+        );
+    }
+
+    // Test 2: OpenDirectoryOrFile should open a file
+    {
+        // Select the text file (index 1)
+        {
+            let tab = harness.state_mut().tab_manager.current_tab();
+            tab.selected_index = 1; // Select test1.txt
+        }
+        harness.step();
+
+        // Press Enter key which is mapped to OpenDirectoryOrFile
+        harness.press_key(Key::Enter);
+        harness.step();
+
+        // Check that the specific file is being opened
+        let file_path = &test_files[1];
+        assert!(
+            harness.state().files_being_opened.contains_key(file_path),
+            "The specific file should be in the files_being_opened map"
+        );
+    }
+
+    // Test 3: OpenDirectoryOrFile should also open a directory
+    {
+        // Select the directory (index 0)
+        {
+            let tab = harness.state_mut().tab_manager.current_tab();
+            tab.selected_index = 0; // Select dir1
+        }
+        harness.step();
+
+        // Get the current path before attempting to open
+        let current_path = harness
+            .state()
+            .tab_manager
+            .current_tab_ref()
+            .current_path
+            .clone();
+        let expected_path = current_path.join("dir1");
+
+        // Press Enter key which is mapped to OpenDirectoryOrFile
+        harness.press_key(Key::Enter);
+        harness.step();
+
+        // Verify that the current path has changed to the directory
+        let new_path = harness
+            .state()
+            .tab_manager
+            .current_tab_ref()
+            .current_path
+            .clone();
+        assert_eq!(
+            new_path, expected_path,
+            "OpenDirectoryOrFile should change the current path when selecting a directory"
+        );
+    }
+}

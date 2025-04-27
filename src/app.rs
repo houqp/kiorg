@@ -2,6 +2,7 @@ use notify::RecursiveMode;
 use notify::Watcher;
 use serde::{Deserialize, Serialize};
 use serde_json;
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
@@ -113,6 +114,9 @@ pub struct Kiorg {
     // TODO: is this neeeded if we already have add_mode?
     pub add_focus: bool,
 
+    // Track files that are currently being opened
+    pub files_being_opened: HashMap<PathBuf, Arc<AtomicBool>>,
+
     // ts variable for tracking key press times
     pub last_lowercase_g_pressed_ms: u64,
 }
@@ -188,6 +192,7 @@ impl Kiorg {
             add_mode: false,
             new_entry_name: String::new(),
             add_focus: false,
+            files_being_opened: HashMap::new(),
             last_lowercase_g_pressed_ms: 0,
             terminal_ctx: None,
             show_help: false,
@@ -319,9 +324,19 @@ impl Kiorg {
     }
 
     pub fn open_file(&mut self, path: PathBuf) {
-        if let Err(e) = open::that(&path) {
-            eprintln!("Failed to open file: {e}");
-        }
+        // Add the file to the list of files being opened
+        let signal = Arc::new(AtomicBool::new(true));
+        self.files_being_opened.insert(path.clone(), signal.clone());
+
+        // Clone the path for the thread
+        let path_clone = path.clone();
+        // Spawn a thread to open the file asynchronously
+        std::thread::spawn(move || match open::that(&path_clone) {
+            Ok(_) => {
+                signal.store(false, std::sync::atomic::Ordering::Relaxed);
+            }
+            Err(e) => eprintln!("Failed to open file: {e}"),
+        });
     }
 
     pub fn process_input(&mut self, ctx: &egui::Context) {

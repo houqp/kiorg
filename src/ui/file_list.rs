@@ -126,6 +126,7 @@ pub struct EntryRowParams<'a> {
     pub new_name: &'a mut String,
     pub is_marked: bool,
     pub is_bookmarked: bool,
+    pub is_being_opened: bool,
     pub search_query: &'a Option<String>,
 }
 
@@ -189,6 +190,7 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
         new_name,
         is_marked,
         is_bookmarked,
+        is_being_opened,
         search_query,
     } = params;
 
@@ -197,10 +199,19 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
         egui::Sense::click_and_drag(), // Use click_and_drag to detect double clicks
     );
 
-    if is_marked {
-        ui.painter().rect_filled(rect, 0.0, colors.bg_light);
-    } else if is_selected {
-        ui.painter().rect_filled(rect, 0.0, colors.selected_bg);
+    // Show a subtle pulsing effect for files being opened
+    if is_being_opened && !entry.is_dir {
+        let time = ui.ctx().input(|i| i.time);
+        let pulse = ((time * 20.0).sin() * 0.5 + 0.5) as f32; // Pulsing effect between 0.0 and 1.0
+        let pulse_color = colors.selected_bg.gamma_multiply(0.3 + pulse * 0.5);
+        // Draw a pulsing background
+        ui.painter().rect_filled(rect, 0.0, pulse_color);
+    } else {
+        if is_marked {
+            ui.painter().rect_filled(rect, 0.0, colors.bg_light);
+        } else if is_selected {
+            ui.painter().rect_filled(rect, 0.0, colors.selected_bg);
+        }
     }
 
     let mut cursor = rect.left_top();

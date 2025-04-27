@@ -62,7 +62,7 @@ pub fn show_help_window(ctx: &egui::Context, show_help: &mut bool, colors: &AppC
                                 "Rename selected file/directory",
                             ),
                             (ShortcutAction::AddEntry, "Add file/directory"),
-                            (ShortcutAction::SelectEntry, "Select/deselect entry"),
+                            (ShortcutAction::SelectEntry, "Mark/unmark entry"),
                             (ShortcutAction::CopyEntry, "Copy selected entry"),
                             (ShortcutAction::CutEntry, "Cut selected entry"),
                             (ShortcutAction::PasteEntry, "Paste copied/cut entries"),
