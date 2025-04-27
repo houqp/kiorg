@@ -8,15 +8,15 @@ pub struct ColorScheme {
     pub bg_dim: String,
     pub bg_light: String,
     pub fg: String,
-    pub red: String,
-    pub orange: String,
-    pub yellow: String,
-    pub green: String,
-    pub aqua: String,
-    pub blue: String,
-    pub purple: String,
+    pub highlight: String,
+    pub link_text: String,
+    pub link_underscore: String,
     pub selected_bg: String,
-    pub gray: String,
+    pub fg_light: String,
+    pub fg_folder: String,
+    pub success: String,
+    pub warn: String,
+    pub error: String,
 }
 
 impl Default for ColorScheme {
@@ -26,15 +26,15 @@ impl Default for ColorScheme {
             bg_dim: "#33353f".to_string(),
             bg_light: "#3b3e48".to_string(),
             fg: "#e2e2e3".to_string(),
-            red: "#fc5d7c".to_string(),
-            orange: "#f39660".to_string(),
-            yellow: "#e7c664".to_string(),
-            green: "#9ed072".to_string(),
-            aqua: "#76cce0".to_string(),
-            blue: "#7f84de".to_string(),
-            purple: "#b39df3".to_string(),
+            error: "#fc5d7c".to_string(),
+            warn: "#f39660".to_string(),
+            highlight: "#e7c664".to_string(),
+            success: "#9ed072".to_string(),
+            link_underscore: "#76cce0".to_string(),
+            fg_folder: "#7f84de".to_string(),
+            link_text: "#b39df3".to_string(),
             selected_bg: "#45475a".to_string(),
-            gray: "#7f8490".to_string(),
+            fg_light: "#7f8490".to_string(),
         }
     }
 }
@@ -46,10 +46,14 @@ pub struct AppColors {
     pub bg_dim: Color32,
     pub bg_light: Color32,
     pub selected_bg: Color32,
-    pub gray: Color32,
-    pub yellow: Color32,
-    pub blue: Color32,
-    pub orange: Color32,
+    pub fg_light: Color32,
+    pub fg_folder: Color32,
+    pub highlight: Color32,
+    pub link_text: Color32,
+    pub link_underscore: Color32,
+    pub warn: Color32,
+    pub error: Color32,
+    pub success: Color32,
 }
 
 impl AppColors {
@@ -60,10 +64,14 @@ impl AppColors {
             bg_light: hex_to_color32(&config.bg_light),
             fg: hex_to_color32(&config.fg),
             selected_bg: hex_to_color32(&config.selected_bg),
-            gray: hex_to_color32(&config.gray),
-            yellow: hex_to_color32(&config.yellow),
-            blue: hex_to_color32(&config.blue),
-            orange: hex_to_color32(&config.orange),
+            fg_light: hex_to_color32(&config.fg_light),
+            fg_folder: hex_to_color32(&config.fg_folder),
+            highlight: hex_to_color32(&config.highlight),
+            link_text: hex_to_color32(&config.link_text),
+            error: hex_to_color32(&config.error),
+            warn: hex_to_color32(&config.warn),
+            success: hex_to_color32(&config.success),
+            link_underscore: hex_to_color32(&config.link_underscore),
         }
     }
 
@@ -80,6 +88,9 @@ impl AppColors {
         visuals.widgets.active.fg_stroke.color = self.fg;
         visuals.window_fill = self.bg;
         visuals.panel_fill = self.bg;
+        visuals.warn_fg_color = self.warn;
+        visuals.error_fg_color = self.error;
+        visuals.hyperlink_color = self.link_underscore;
         visuals
     }
 }
@@ -118,34 +129,54 @@ impl Serialize for AppColors {
                 self.selected_bg.g(),
                 self.selected_bg.b()
             ),
-            gray: format!(
+            fg_light: format!(
                 "#{:02x}{:02x}{:02x}",
-                self.gray.r(),
-                self.gray.g(),
-                self.gray.b()
+                self.fg_light.r(),
+                self.fg_light.g(),
+                self.fg_light.b()
             ),
-            yellow: format!(
+            fg_folder: format!(
                 "#{:02x}{:02x}{:02x}",
-                self.yellow.r(),
-                self.yellow.g(),
-                self.yellow.b()
+                self.fg_folder.r(),
+                self.fg_folder.g(),
+                self.fg_folder.b()
             ),
-            blue: format!(
+            highlight: format!(
                 "#{:02x}{:02x}{:02x}",
-                self.blue.r(),
-                self.blue.g(),
-                self.blue.b()
+                self.highlight.r(),
+                self.highlight.g(),
+                self.highlight.b()
             ),
-            orange: format!(
+            link_text: format!(
                 "#{:02x}{:02x}{:02x}",
-                self.orange.r(),
-                self.orange.g(),
-                self.orange.b()
+                self.link_text.r(),
+                self.link_text.g(),
+                self.link_text.b()
             ),
-            red: "#fc5d7c".to_string(),
-            purple: "#b39df3".to_string(),
-            green: "#9ed072".to_string(),
-            aqua: "#76cce0".to_string(),
+            link_underscore: format!(
+                "#{:02x}{:02x}{:02x}",
+                self.link_underscore.r(),
+                self.link_underscore.g(),
+                self.link_underscore.b()
+            ),
+            error: format!(
+                "#{:02x}{:02x}{:02x}",
+                self.error.r(),
+                self.error.g(),
+                self.error.b()
+            ),
+            warn: format!(
+                "#{:02x}{:02x}{:02x}",
+                self.warn.r(),
+                self.warn.g(),
+                self.warn.b()
+            ),
+            success: format!(
+                "#{:02x}{:02x}{:02x}",
+                self.success.r(),
+                self.success.g(),
+                self.success.b()
+            ),
         };
         scheme.serialize(serializer)
     }

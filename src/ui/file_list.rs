@@ -87,10 +87,10 @@ fn draw_header_column(
     };
 
     let text_color = if is_sorted {
-        params.colors.yellow
+        params.colors.highlight
     } else {
         // Use gray as base, hover will change cursor, not color here
-        params.colors.gray
+        params.colors.fg_light
     };
 
     let header_text = format!("{}{}", text, sort_indicator);
@@ -152,7 +152,7 @@ fn draw_icon(
     let icon_color = if is_selected {
         Color32::WHITE
     } else {
-        colors.gray
+        colors.fg_light
     };
     ui.painter().text(
         cursor + egui::vec2(HORIZONTAL_PADDING, ROW_HEIGHT / 2.0),
@@ -173,7 +173,7 @@ fn draw_icon(
             if is_selected {
                 Color32::WHITE
             } else {
-                colors.gray.gamma_multiply(1.2)
+                colors.fg_light.gamma_multiply(1.2)
             }, // More subtle color
         );
     }
@@ -203,7 +203,7 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
     if is_being_opened && !entry.is_dir {
         let time = ui.ctx().input(|i| i.time);
         let pulse = ((time * 20.0).sin() * 0.5 + 0.5) as f32; // Pulsing effect between 0.0 and 1.0
-        let pulse_color = colors.selected_bg.gamma_multiply(0.3 + pulse * 0.5);
+        let pulse_color = colors.success.gamma_multiply(0.3 + pulse * 0.5);
         // Draw a pulsing background
         ui.painter().rect_filled(rect, 0.0, pulse_color);
     } else {
@@ -245,14 +245,14 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
             Align2::LEFT_CENTER,
             "> ",
             egui::FontId::proportional(14.0),
-            colors.yellow,
+            colors.highlight,
         );
         let rename_cursor_start = cursor.x + 14.0; // Width of "> " prefix
 
         let text_edit = egui::TextEdit::singleline(new_name)
             .desired_width(name_width - 14.0)
             .font(egui::FontId::proportional(14.0))
-            .text_color(colors.yellow)
+            .text_color(colors.highlight)
             .frame(false);
 
         // Define the rectangle for the text edit
@@ -266,7 +266,11 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
         });
     } else {
         let name_text = truncate_text(&entry.name, name_width);
-        let name_color = if entry.is_dir { colors.blue } else { colors.fg };
+        let name_color = if entry.is_dir {
+            colors.fg_folder
+        } else {
+            colors.fg
+        };
 
         let mut job = egui::text::LayoutJob {
             text: name_text.clone(),
@@ -276,7 +280,6 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
         // TODO: why would name_text ever be empty?
         match (search_query, name_text.is_empty()) {
             (Some(query), false) => {
-                let highlight_color = colors.yellow; // Use theme yellow for highlighting
                 let mut last_match_end = 0;
 
                 for (start, matched_part) in name_text.match_indices(query) {
@@ -297,7 +300,7 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
                         &name_text[start..end],
                         0.0,
                         egui::TextFormat {
-                            color: highlight_color,
+                            color: colors.highlight,
                             ..Default::default()
                         },
                     );
@@ -320,7 +323,7 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
                         &name_text,
                         0.0,
                         egui::TextFormat {
-                            color: colors.gray,
+                            color: colors.fg_light,
                             ..Default::default()
                         },
                     ); // Show non-matches in gray
@@ -355,7 +358,7 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
     let date_color = if is_selected {
         Color32::WHITE
     } else {
-        colors.gray
+        colors.fg_light
     };
     ui.painter().text(
         cursor + egui::vec2(0.0, ROW_HEIGHT / 2.0),
@@ -375,7 +378,7 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
     let size_color = if is_selected {
         Color32::WHITE
     } else {
-        colors.gray
+        colors.fg_light
     };
     ui.painter().text(
         cursor + egui::vec2(0.0, ROW_HEIGHT / 2.0),
@@ -421,7 +424,11 @@ pub fn draw_parent_entry_row(
 
     // Name with truncation
     let name_text = truncate_text(&entry.name, name_width);
-    let name_color = if entry.is_dir { colors.blue } else { colors.fg };
+    let name_color = if entry.is_dir {
+        colors.fg_folder
+    } else {
+        colors.fg
+    };
     ui.painter().text(
         cursor + egui::vec2(0.0, ROW_HEIGHT / 2.0),
         Align2::LEFT_CENTER,

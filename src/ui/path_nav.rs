@@ -1,5 +1,5 @@
-use std::path::{Path, PathBuf};
 use egui::{RichText, Ui};
+use std::path::{Path, PathBuf};
 
 #[derive(Debug)]
 pub enum PathNavMessage {
@@ -15,10 +15,10 @@ pub fn draw_path_navigation(
     let mut message = None;
 
     ui.horizontal(|ui| {
-        ui.label(RichText::new("$ ").color(colors.gray));
+        ui.label(RichText::new("$ ").color(colors.highlight));
 
         if components.is_empty() {
-            ui.label(RichText::new("/").color(colors.yellow));
+            ui.label(RichText::new("/").color(colors.link_text));
         } else {
             let mut path_str = String::new();
             for (i, (name, _)) in components.iter().enumerate() {
@@ -32,28 +32,37 @@ pub fn draw_path_navigation(
             let estimated_width = path_str.len() as f32 * 7.0;
 
             if estimated_width > available_width && components.len() > 4 {
-                if ui.link(RichText::new(&components[0].0).color(colors.yellow)).clicked() {
+                if ui
+                    .link(RichText::new(&components[0].0).color(colors.link_text))
+                    .clicked()
+                {
                     message = Some(PathNavMessage::Navigate(components[0].1.clone()));
                 }
 
-                ui.label(RichText::new("/").color(colors.gray));
-                ui.label(RichText::new("...").color(colors.gray));
+                ui.label(RichText::new("/").color(colors.fg_light));
+                ui.label(RichText::new("...").color(colors.fg_light));
 
                 let start_idx = components.len() - 2;
                 for component in components.iter().skip(start_idx) {
                     let (comp_str, path) = component;
-                    ui.label(RichText::new("/").color(colors.gray));
-                    if ui.link(RichText::new(comp_str).color(colors.yellow)).clicked() {
+                    ui.label(RichText::new("/").color(colors.fg_light));
+                    if ui
+                        .link(RichText::new(comp_str).color(colors.link_text))
+                        .clicked()
+                    {
                         message = Some(PathNavMessage::Navigate(path.clone()));
                     }
                 }
             } else {
                 for (i, (name, path)) in components.iter().enumerate() {
                     if (i > 1) || (i == 1 && components[0].0 != "/") {
-                        ui.label(RichText::new("/").color(colors.gray));
+                        ui.label(RichText::new("/").color(colors.fg_light));
                     }
 
-                    if ui.link(RichText::new(name).color(colors.yellow)).clicked() {
+                    if ui
+                        .link(RichText::new(name).color(colors.link_text))
+                        .clicked()
+                    {
                         message = Some(PathNavMessage::Navigate(path.clone()));
                     }
                 }
@@ -73,29 +82,28 @@ pub fn get_path_components(path: &Path) -> Vec<(String, PathBuf)> {
     // Handle Windows drive prefix or root directory
     if let Some(first) = path_components.first() {
         match first {
-            std::path::Component::Prefix(prefix) => {
-                match prefix.kind() {
-                    std::path::Prefix::Disk(letter) | std::path::Prefix::VerbatimDisk(letter) => {
-                        let drive = format!("{}:", letter as char);
-                        current = PathBuf::from(&drive);
-                        components.push((drive, current.clone()));
-                    }
-                    std::path::Prefix::UNC(server, share) | std::path::Prefix::VerbatimUNC(server, share) => {
-                        let unc = format!("\\\\{}", server.to_string_lossy());
-                        current = PathBuf::from(&unc);
-                        components.push((unc, current.clone()));
-                        
-                        let share = share.to_string_lossy().to_string();
-                        current.push(&share);
-                        components.push((share, current.clone()));
-                    }
-                    _ => {
-                        let prefix_str = prefix.as_os_str().to_string_lossy().to_string();
-                        current = PathBuf::from(&prefix_str);
-                        components.push((prefix_str, current.clone()));
-                    }
+            std::path::Component::Prefix(prefix) => match prefix.kind() {
+                std::path::Prefix::Disk(letter) | std::path::Prefix::VerbatimDisk(letter) => {
+                    let drive = format!("{}:", letter as char);
+                    current = PathBuf::from(&drive);
+                    components.push((drive, current.clone()));
                 }
-            }
+                std::path::Prefix::UNC(server, share)
+                | std::path::Prefix::VerbatimUNC(server, share) => {
+                    let unc = format!("\\\\{}", server.to_string_lossy());
+                    current = PathBuf::from(&unc);
+                    components.push((unc, current.clone()));
+
+                    let share = share.to_string_lossy().to_string();
+                    current.push(&share);
+                    components.push((share, current.clone()));
+                }
+                _ => {
+                    let prefix_str = prefix.as_os_str().to_string_lossy().to_string();
+                    current = PathBuf::from(&prefix_str);
+                    components.push((prefix_str, current.clone()));
+                }
+            },
             std::path::Component::RootDir => {
                 current = PathBuf::from("/");
                 components.push(("/".to_string(), current.clone()));
@@ -153,9 +161,9 @@ pub fn get_path_components(path: &Path) -> Vec<(String, PathBuf)> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::PathBuf;
-    use egui_kittest::Harness;
     use eframe::App;
+    use egui_kittest::Harness;
+    use std::path::PathBuf;
 
     struct TestApp {
         path: PathBuf,
@@ -233,7 +241,7 @@ mod tests {
         let path = PathBuf::from("/home/user/documents/projects/very/long/path");
         let components = get_path_components(&path);
         assert_eq!(components.len(), 8);
-        
+
         // Verify components
         assert_eq!(components[0].0, "/");
         assert_eq!(components[1].0, "home");
@@ -243,16 +251,28 @@ mod tests {
         assert_eq!(components[5].0, "very");
         assert_eq!(components[6].0, "long");
         assert_eq!(components[7].0, "path");
-        
+
         // Verify paths
         assert_eq!(components[0].1, PathBuf::from("/"));
         assert_eq!(components[1].1, PathBuf::from("/home"));
         assert_eq!(components[2].1, PathBuf::from("/home/user"));
         assert_eq!(components[3].1, PathBuf::from("/home/user/documents"));
-        assert_eq!(components[4].1, PathBuf::from("/home/user/documents/projects"));
-        assert_eq!(components[5].1, PathBuf::from("/home/user/documents/projects/very"));
-        assert_eq!(components[6].1, PathBuf::from("/home/user/documents/projects/very/long"));
-        assert_eq!(components[7].1, PathBuf::from("/home/user/documents/projects/very/long/path"));
+        assert_eq!(
+            components[4].1,
+            PathBuf::from("/home/user/documents/projects")
+        );
+        assert_eq!(
+            components[5].1,
+            PathBuf::from("/home/user/documents/projects/very")
+        );
+        assert_eq!(
+            components[6].1,
+            PathBuf::from("/home/user/documents/projects/very/long")
+        );
+        assert_eq!(
+            components[7].1,
+            PathBuf::from("/home/user/documents/projects/very/long/path")
+        );
     }
 
     #[test]
@@ -315,4 +335,4 @@ mod tests {
         assert_eq!(components[0].1, PathBuf::from("/"));
         assert_eq!(components[1].1, PathBuf::from("/home"));
     }
-} 
+}

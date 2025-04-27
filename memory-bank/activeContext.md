@@ -9,7 +9,7 @@
    - Added `search_query` and `search_active` fields to `EntryRowParams` struct
    - Implemented proper text highlighting in `draw_entry_row` using `LayoutJob`
    - Improved search UX by:
-     - Highlighting matching text in yellow
+     - Highlighting matching text
      - Showing non-matching entries in gray
      - Maintaining search state between sessions
 2. Implemented column sort order persistence feature:

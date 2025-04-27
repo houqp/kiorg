@@ -35,10 +35,10 @@ impl DeleteDialog {
                     ui.add_space(10.0);
                     ui.label(format!("Delete {}?", path.display()));
                     let confirm_clicked = ui
-                        .link(RichText::new("Press Enter to confirm").color(colors.yellow))
+                        .link(RichText::new("Press Enter to confirm").color(colors.highlight))
                         .clicked();
                     let cancel_clicked = ui
-                        .link(RichText::new("Press Esc to cancel").color(colors.gray))
+                        .link(RichText::new("Press Esc to cancel").color(colors.fg_light))
                         .clicked();
                     ui.add_space(10.0);
 

@@ -17,13 +17,13 @@ pub fn show_exit_dialog(ctx: &Context, show_exit_confirm: &mut bool, colors: &Ap
             ui.vertical_centered(|ui| {
                 ui.add_space(10.0);
                 if ui
-                    .link(RichText::new("Press Enter to exit").color(colors.yellow))
+                    .link(RichText::new("Press Enter to exit").color(colors.highlight))
                     .clicked()
                 {
                     std::process::exit(0);
                 }
                 if ui
-                    .link(RichText::new("Press Esc or q to cancel").color(colors.gray))
+                    .link(RichText::new("Press Esc or q to cancel").color(colors.fg_light))
                     .clicked()
                 {
                     *show_exit_confirm = false; // Update the original state variable

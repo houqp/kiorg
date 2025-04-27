@@ -23,7 +23,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui) {
             // Tab numbers on the right
             ui.with_layout(egui::Layout::right_to_left(egui::Align::RIGHT), |ui| {
                 // Menu button with popup
-                ui.menu_button(RichText::new("☰").color(app.colors.fg), |ui| {
+                ui.menu_button(RichText::new("☰").color(app.colors.fg_light), |ui| {
                     ui.set_min_width(150.0);
 
                     if ui.button("Bookmarks").clicked() {
@@ -58,9 +58,9 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui) {
                 for (i, is_current) in app.tab_manager.tab_indexes().into_iter().rev() {
                     let text = format!("{}", i + 1);
                     let color = if is_current {
-                        app.colors.yellow
+                        app.colors.highlight
                     } else {
-                        app.colors.gray
+                        app.colors.link_text
                     };
                     if ui.link(RichText::new(text).color(color)).clicked() {
                         app.tab_manager.switch_to_tab(i);

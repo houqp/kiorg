@@ -29,7 +29,7 @@ pub fn show_about_dialog(ctx: &Context, show_about: &mut bool, colors: &AppColor
                 // Repository URL as a clickable link
                 let repo_url = env!("CARGO_PKG_REPOSITORY");
                 if ui
-                    .link(RichText::new(repo_url).color(colors.blue))
+                    .link(RichText::new(repo_url).color(colors.link_text))
                     .clicked()
                 {
                     if let Err(e) = open::that(repo_url) {
