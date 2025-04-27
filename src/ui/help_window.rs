@@ -19,6 +19,8 @@ pub fn show_help_window(ctx: &egui::Context, show_help: &mut bool, colors: &AppC
             ui.style_mut().spacing.item_spacing = egui::vec2(10.0, 6.0);
 
             ui.horizontal(|ui| {
+                let hpadding = 20.0;
+                ui.add_space(hpadding);
                 // Column 1: Navigation
                 ui.vertical(|ui| {
                     ui.heading(RichText::new("Navigation").color(colors.gray));
@@ -174,6 +176,7 @@ pub fn show_help_window(ctx: &egui::Context, show_help: &mut bool, colors: &AppC
                         }
                     });
                 });
+                ui.add_space(hpadding);
             });
 
             ui.separator(); // Horizontal separator below columns
