@@ -41,9 +41,10 @@
 *   PDF preview
 *   cache directory list
 *   Shortcut to toggle sort
-*   Fuzzy directory jump
+*   Fuzzy directory jump (integrate with fzf)
 *   Case-sensitive/insensitive search toggle
 *   Regular expression search support
 *   In rename mode, start the cursor after the extension
 *   Renaming a file doesn't clear the image rendering cache, so it still displays the old image
-*   Open file with alternative commands leveraging open::commands and open::with_command.
+*   Open file with alternative commands leveraging open::commands and open::with_command
+*   ctrl+o and ctrl+i to go backward and forward

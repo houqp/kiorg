@@ -3,6 +3,7 @@ name = "kiorg"
 version = "0.1.0"
 edition = "2021"
 authors = ["houqp"]
+repository = "https://github.com/houqp/kiorg"
 
 [lib]
 name = "kiorg"

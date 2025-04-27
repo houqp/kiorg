@@ -1,3 +1,4 @@
+pub mod about_dialog;
 pub mod add_entry_popup;
 pub mod bookmark_popup;
 pub mod center_panel;

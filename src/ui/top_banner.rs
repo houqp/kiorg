@@ -22,6 +22,39 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui) {
 
             // Tab numbers on the right
             ui.with_layout(egui::Layout::right_to_left(egui::Align::RIGHT), |ui| {
+                // Menu button with popup
+                ui.menu_button(RichText::new("☰").color(app.colors.fg), |ui| {
+                    ui.set_min_width(150.0);
+
+                    if ui.button("Bookmarks").clicked() {
+                        app.show_bookmarks = true;
+                        ui.close_menu();
+                    }
+
+                    ui.separator();
+
+                    if ui.button("Help").clicked() {
+                        app.show_help = true;
+                        ui.close_menu();
+                    }
+
+                    if ui.button("About").clicked() {
+                        app.show_about = true;
+                        ui.close_menu();
+                    }
+
+                    ui.separator();
+
+                    if ui.button("Exit").clicked() {
+                        app.show_exit_confirm = true;
+                        ui.close_menu();
+                    }
+                });
+
+                // Add some spacing between menu and tabs
+                ui.add_space(5.0);
+
+                // Tab numbers
                 for (i, is_current) in app.tab_manager.tab_indexes().into_iter().rev() {
                     let text = format!("{}", i + 1);
                     let color = if is_current {

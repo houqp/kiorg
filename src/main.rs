@@ -12,26 +12,6 @@ struct Args {
     directory: Option<PathBuf>,
 }
 
-/// Load the embedded icon data into an egui icon
-fn load_icon() -> egui::IconData {
-    // Embed the icon directly into the binary
-    let icon_bytes = include_bytes!("../assets/icon.png");
-
-    // Load the image from the embedded bytes
-    let image = image::load_from_memory(icon_bytes)
-        .expect("Failed to load icon from embedded data")
-        .into_rgba8();
-
-    let (width, height) = image.dimensions();
-    let rgba = image.into_raw();
-
-    egui::IconData {
-        rgba,
-        width: width as _,
-        height: height as _,
-    }
-}
-
 fn main() -> Result<(), eframe::Error> {
     let args = Args::parse();
 
@@ -68,7 +48,7 @@ fn main() -> Result<(), eframe::Error> {
     };
 
     // Load the app icon from embedded data
-    let icon_data = load_icon();
+    let icon_data = kiorg::utils::icon::load_app_icon();
 
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()

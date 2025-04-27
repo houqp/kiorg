@@ -23,7 +23,7 @@ use crate::ui::separator;
 use crate::ui::separator::SEPARATOR_PADDING;
 use crate::ui::terminal;
 use crate::ui::top_banner;
-use crate::ui::{bookmark_popup, center_panel, help_window, left_panel, right_panel};
+use crate::ui::{about_dialog, bookmark_popup, center_panel, help_window, left_panel, right_panel};
 
 // Layout constants
 const PANEL_SPACING: f32 = 5.0; // Space between panels
@@ -105,6 +105,7 @@ pub struct Kiorg {
     pub show_exit_confirm: bool,
     pub terminal_ctx: Option<terminal::TerminalContext>,
     pub show_help: bool,
+    pub show_about: bool,
     pub shutdown_requested: bool,
     pub notify_fs_change: Arc<AtomicBool>,
     pub fs_watcher: notify::RecommendedWatcher,
@@ -196,6 +197,7 @@ impl Kiorg {
             last_lowercase_g_pressed_ms: 0,
             terminal_ctx: None,
             show_help: false,
+            show_about: false,
             shutdown_requested: false,
             notify_fs_change,
             fs_watcher,
@@ -580,6 +582,11 @@ impl eframe::App for Kiorg {
         // Show help window if needed
         if self.show_help {
             help_window::show_help_window(ctx, &mut self.show_help, &self.colors);
+        }
+
+        // Show about dialog if needed
+        if self.show_about {
+            about_dialog::show_about_dialog(ctx, &mut self.show_about, &self.colors);
         }
 
         // Show exit confirmation window if needed
