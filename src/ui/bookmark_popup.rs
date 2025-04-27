@@ -263,7 +263,7 @@ pub fn toggle_bookmark(app: &mut Kiorg) {
 
         // Save bookmarks to config file
         if let Err(e) = save_bookmarks(bookmarks, app.config_dir_override.as_ref()) {
-            eprintln!("Failed to save bookmarks: {}", e);
+            app.toasts.error(format!("Failed to save bookmarks: {}", e));
         }
     }
 }

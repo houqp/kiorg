@@ -81,11 +81,11 @@ pub(crate) fn handle_key_press(ctx: &Context, app: &mut Kiorg) -> bool {
                 // Ensure parent directories exist before creating the file
                 if let Some(parent) = new_path.parent() {
                     if let Err(e) = fs::create_dir_all(parent) {
-                        eprintln!(
+                        app.toasts.error(format!(
                             "Failed to create parent directories for '{}': {}",
                             app.new_entry_name.escape_default(),
                             e
-                        );
+                        ));
                         // Decide how to handle this error, maybe return early?
                         // For now, we'll proceed and let File::create handle the final error.
                     }
@@ -94,11 +94,11 @@ pub(crate) fn handle_key_press(ctx: &Context, app: &mut Kiorg) -> bool {
             };
 
             if let Err(e) = result {
-                eprintln!(
+                app.toasts.error(format!(
                     "Failed to create '{}': {}",
                     app.new_entry_name.escape_default(),
                     e
-                );
+                ));
                 // Optionally: Keep the popup open on error?
                 // For now, it closes regardless.
             } else {

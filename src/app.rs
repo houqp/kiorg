@@ -24,6 +24,7 @@ use crate::ui::separator::SEPARATOR_PADDING;
 use crate::ui::terminal;
 use crate::ui::top_banner;
 use crate::ui::{about_dialog, bookmark_popup, center_panel, help_window, left_panel, right_panel};
+use egui_notify::Toasts;
 
 // Layout constants
 const PANEL_SPACING: f32 = 5.0; // Space between panels
@@ -53,8 +54,9 @@ fn create_fs_watcher(watch_dir: &Path) -> (notify::RecommendedWatcher, Arc<Atomi
                     }
                     _ => {}
                 },
-                // TODO: print error in console
-                Err(_e) => {}
+                Err(e) => {
+                    eprintln!("File system watcher error: {}", e);
+                }
             }
         }
     });
@@ -81,6 +83,9 @@ pub struct Kiorg {
 
     // Application colors
     pub colors: AppColors,
+
+    // Toast notifications
+    pub toasts: Toasts,
 
     // Fields that get reset after refresh_entries
     pub selection_changed: bool, // Flag to track if selection changed
@@ -117,6 +122,10 @@ pub struct Kiorg {
 
     // Track files that are currently being opened
     pub files_being_opened: HashMap<PathBuf, Arc<AtomicBool>>,
+
+    // Error channel for background operations
+    pub error_sender: std::sync::mpsc::Sender<String>,
+    pub error_receiver: std::sync::mpsc::Receiver<String>,
 
     // ts variable for tracking key press times
     pub last_lowercase_g_pressed_ms: u64,
@@ -169,12 +178,18 @@ impl Kiorg {
         // Load bookmarks
         let bookmarks = bookmark_popup::load_bookmarks(config_dir_override.as_ref());
 
+        // Create a channel for error messages
+        let (tx, rx) = std::sync::mpsc::channel::<String>();
+        let error_sender = tx;
+        let error_receiver = rx;
+
         let mut app = Self {
             tab_manager,
             bookmarks,
             config_dir_override, // Use the provided config_dir_override
             config,              // Store the loaded config
             colors,              // Add the colors field here
+            toasts: Toasts::default().with_anchor(egui_notify::Anchor::BottomLeft),
             selection_changed: true,
             ensure_selected_visible: false,
             prev_path: None,
@@ -194,6 +209,8 @@ impl Kiorg {
             new_entry_name: String::new(),
             add_focus: false,
             files_being_opened: HashMap::new(),
+            error_sender,
+            error_receiver,
             last_lowercase_g_pressed_ms: 0,
             terminal_ctx: None,
             show_help: false,
@@ -332,12 +349,19 @@ impl Kiorg {
 
         // Clone the path for the thread
         let path_clone = path.clone();
+
+        // Clone the error sender for the thread
+        let error_sender = self.error_sender.clone();
+
         // Spawn a thread to open the file asynchronously
         std::thread::spawn(move || match open::that(&path_clone) {
             Ok(_) => {
                 signal.store(false, std::sync::atomic::Ordering::Relaxed);
             }
-            Err(e) => eprintln!("Failed to open file: {e}"),
+            Err(e) => {
+                // Send the error message back to the main thread
+                let _ = error_sender.send(format!("Failed to open file: {}", e));
+            }
         });
     }
 
@@ -381,9 +405,11 @@ impl Kiorg {
 
     pub fn confirm_delete(&mut self) {
         if let Some(path) = self.entry_to_delete.clone() {
-            DeleteDialog::perform_delete(&path, || {
+            if let Err(error) = DeleteDialog::perform_delete(&path, || {
                 self.refresh_entries();
-            });
+            }) {
+                self.toasts.error(error);
+            }
         }
         self.show_delete_confirm = false;
         self.entry_to_delete = None;
@@ -417,7 +443,8 @@ impl Kiorg {
     fn graceful_shutdown(&mut self, ctx: &egui::Context) {
         // Save application state before shutting down
         if let Err(e) = self.save_app_state() {
-            eprintln!("Failed to save application state: {}", e);
+            self.toasts
+                .error(format!("Failed to save application state: {}", e));
         }
 
         ctx.send_viewport_cmd(egui::ViewportCommand::Close);
@@ -499,6 +526,13 @@ impl eframe::App for Kiorg {
                 .store(false, std::sync::atomic::Ordering::Relaxed);
         }
 
+        // Check for error messages from background threads
+        // Process all pending error messages
+        while let Ok(error_message) = self.error_receiver.try_recv() {
+            // Add the error to the toasts
+            self.toasts.error(error_message);
+        }
+
         // Update preview cache only if selection changed
         if self.selection_changed {
             right_panel::update_preview_cache(self, ctx);
@@ -526,7 +560,8 @@ impl eframe::App for Kiorg {
                     &self.bookmarks,
                     self.config_dir_override.as_ref(),
                 ) {
-                    eprintln!("Failed to save bookmarks: {}", e);
+                    self.toasts
+                        .error(format!("Failed to save bookmarks: {}", e));
                 }
             }
             bookmark_popup::BookmarkAction::None => {}
@@ -586,7 +621,7 @@ impl eframe::App for Kiorg {
 
         // Show about dialog if needed
         if self.show_about {
-            about_dialog::show_about_dialog(ctx, &mut self.show_about, &self.colors);
+            about_dialog::show_about_dialog(ctx, self);
         }
 
         // Show exit confirmation window if needed
@@ -598,5 +633,8 @@ impl eframe::App for Kiorg {
         if self.shutdown_requested {
             self.graceful_shutdown(ctx);
         }
+
+        // Draw toast notifications
+        self.toasts.show(ctx);
     }
 }

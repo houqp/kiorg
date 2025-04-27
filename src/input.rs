@@ -101,7 +101,11 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: Shortcut
         }
         ShortcutAction::PasteEntry => {
             let tab = app.tab_manager.current_tab();
-            if center_panel::handle_clipboard_operations(&mut app.clipboard, &tab.current_path) {
+            if center_panel::handle_clipboard_operations(
+                &mut app.clipboard,
+                &tab.current_path,
+                &mut app.toasts,
+            ) {
                 app.refresh_entries();
             }
         }
@@ -213,7 +217,7 @@ fn process_key(
                 let new_path = parent.join(&app.new_name);
 
                 if let Err(e) = std::fs::rename(&entry.path, &new_path) {
-                    eprintln!("Failed to rename: {e}");
+                    app.toasts.error(format!("Failed to rename: {e}"));
                 } else {
                     app.refresh_entries();
                 }

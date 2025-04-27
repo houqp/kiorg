@@ -14,6 +14,7 @@ const PADDING_ROWS: usize = 3;
 pub fn handle_clipboard_operations(
     clipboard: &mut Option<(Vec<PathBuf>, bool)>,
     current_path: &std::path::Path,
+    toasts: &mut egui_notify::Toasts,
 ) -> bool {
     let (paths, is_cut) = match clipboard.take() {
         Some((paths, is_cut)) => (paths, is_cut),
@@ -45,10 +46,10 @@ pub fn handle_clipboard_operations(
 
         if is_cut {
             if let Err(e) = std::fs::rename(&path, &new_path) {
-                eprintln!("Failed to move: {e}");
+                toasts.error(format!("Failed to move: {e}"));
             }
         } else if let Err(e) = std::fs::copy(&path, &new_path) {
-            eprintln!("Failed to copy: {e}");
+            toasts.error(format!("Failed to copy: {e}"));
         }
     }
     true
@@ -365,7 +366,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
         }
         ContextMenuAction::Paste => {
             let current_path = &app.tab_manager.current_tab_ref().current_path;
-            if handle_clipboard_operations(&mut app.clipboard, current_path) {
+            if handle_clipboard_operations(&mut app.clipboard, current_path, &mut app.toasts) {
                 app.refresh_entries();
             }
         }
@@ -397,7 +398,8 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
         if let Err(e) =
             config::save_config_with_override(&app.config, app.config_dir_override.as_ref())
         {
-            eprintln!("Failed to save sort preferences: {}", e);
+            app.toasts
+                .error(format!("Failed to save sort preferences: {}", e));
         }
     }
 }

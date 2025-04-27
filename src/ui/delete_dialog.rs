@@ -76,7 +76,7 @@ impl DeleteDialog {
     }
 
     /// Helper function to perform the actual deletion
-    pub fn perform_delete(path: &Path, on_success: impl FnOnce()) {
+    pub fn perform_delete(path: &Path, on_success: impl FnOnce()) -> Result<(), String> {
         let result = if path.is_dir() {
             std::fs::remove_dir_all(path)
         } else {
@@ -84,8 +84,11 @@ impl DeleteDialog {
         };
 
         match result {
-            Ok(_) => on_success(),
-            Err(e) => eprintln!("Failed to delete: {e}"),
+            Ok(_) => {
+                on_success();
+                Ok(())
+            }
+            Err(e) => Err(format!("Failed to delete: {e}")),
         }
     }
 }
