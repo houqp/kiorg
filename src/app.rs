@@ -548,22 +548,23 @@ impl eframe::App for Kiorg {
             let (left_width, center_width, right_width) =
                 self.calculate_panel_widths(ui.available_width());
 
-            // Calculate content height based on actual top banner height
-            let content_height = total_available_height - top_banner_height;
-
             // Main panels layout
             ui.horizontal(|ui| {
+                let container_height = total_available_height - top_banner_height;
                 ui.spacing_mut().item_spacing.x = PANEL_SPACING;
-                ui.set_min_height(content_height);
+                ui.set_min_height(container_height);
 
-                // Call the new left_panel::draw function directly
+                let content_height =
+                    container_height - ui.spacing().item_spacing.x * 2.0 - PANEL_SPACING;
+
                 if let Some(path) = left_panel::draw(self, ui, left_width, content_height) {
                     self.navigate_to_dir(path);
                 }
                 separator::draw_vertical_separator(ui);
+
                 center_panel::draw(self, ui, center_width, content_height);
                 separator::draw_vertical_separator(ui);
-                // Call the new right_panel::draw function directly
+
                 right_panel::draw(self, ctx, ui, right_width, content_height);
                 ui.add_space(PANEL_SPACING);
             });

@@ -168,6 +168,7 @@ pub fn draw(app: &mut Kiorg, ctx: &egui::Context, ui: &mut Ui, width: f32, heigh
 
         // Draw help text in its own row at the bottom
         ui.with_layout(egui::Layout::right_to_left(egui::Align::BOTTOM), |ui| {
+            ui.add_space(2.0);
             ui.label(RichText::new("? for help").color(colors.gray));
         });
     });
