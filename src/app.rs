@@ -9,9 +9,9 @@ use std::sync::Arc;
 
 use crate::models::preview_content::PreviewContent;
 
-/// Dialog types that can be shown in the application
+/// Popup types that can be shown in the application
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum DialogType {
+pub enum PopupType {
     About,
     Help,
     Exit,
@@ -26,14 +26,14 @@ use crate::config::{self, colors::AppColors};
 use crate::input;
 use crate::models::tab::{TabManager, TabManagerState};
 use crate::ui::add_entry_popup; // Import the new module
-use crate::ui::delete_dialog::DeleteDialog;
-use crate::ui::exit_dialog;
+use crate::ui::delete_popup::DeletePopup;
+use crate::ui::exit_popup;
 use crate::ui::search_bar::{self, SearchBar};
 use crate::ui::separator;
 use crate::ui::separator::SEPARATOR_PADDING;
 use crate::ui::terminal;
 use crate::ui::top_banner;
-use crate::ui::{about_dialog, bookmark_popup, center_panel, help_window, left_panel, right_panel};
+use crate::ui::{about_popup, bookmark_popup, center_panel, help_window, left_panel, right_panel};
 use egui_notify::Toasts;
 
 // Layout constants
@@ -108,8 +108,8 @@ pub struct Kiorg {
     // TODO: will it crash the app if large amount of entries are deleted in the same dir?
     pub scroll_range: Option<std::ops::Range<usize>>,
 
-    // Dialog management
-    pub show_dialog: Option<DialogType>,
+    // Popup management
+    pub show_popup: Option<PopupType>,
 
     // TODO: replace rename_mode with Option<new_name>?
     pub new_name: String,
@@ -204,7 +204,7 @@ impl Kiorg {
             cached_preview_path: None,
             preview_content: None,
             scroll_range: None,
-            show_dialog: None,
+            show_popup: None,
             new_name: String::new(),
             clipboard: None,
             entry_to_delete: None,
@@ -258,7 +258,7 @@ impl Kiorg {
         let tab = self.tab_manager.current_tab();
         if let Some(entry) = tab.selected_entry() {
             self.entry_to_delete = Some(entry.path.clone());
-            self.show_dialog = Some(DialogType::Delete);
+            self.show_popup = Some(PopupType::Delete);
         }
     }
 
@@ -266,7 +266,7 @@ impl Kiorg {
         let tab = self.tab_manager.current_tab();
         if let Some(entry) = tab.selected_entry() {
             self.new_name = entry.name.clone();
-            self.show_dialog = Some(DialogType::Rename);
+            self.show_popup = Some(PopupType::Rename);
         }
     }
 
@@ -409,23 +409,23 @@ impl Kiorg {
 
     pub fn confirm_delete(&mut self) {
         if let Some(path) = self.entry_to_delete.clone() {
-            if let Err(error) = DeleteDialog::perform_delete(&path, || {
+            if let Err(error) = DeletePopup::perform_delete(&path, || {
                 self.refresh_entries();
             }) {
                 self.toasts.error(error);
             }
         }
-        self.show_dialog = None;
+        self.show_popup = None;
         self.entry_to_delete = None;
     }
 
     pub fn cancel_delete(&mut self) {
-        self.show_dialog = None;
+        self.show_popup = None;
         self.entry_to_delete = None;
     }
 
     fn handle_delete_confirmation(&mut self, ctx: &egui::Context) {
-        if self.show_dialog != Some(DialogType::Delete) || self.entry_to_delete.is_none() {
+        if self.show_popup != Some(PopupType::Delete) || self.entry_to_delete.is_none() {
             return;
         }
 
@@ -433,7 +433,7 @@ impl Kiorg {
         let mut should_cancel = false;
         let mut show_delete_confirm = true; // Temporary variable for compatibility
 
-        DeleteDialog::handle_delete_confirmation(
+        DeletePopup::handle_delete_confirmation(
             ctx,
             &mut show_delete_confirm,
             &self.entry_to_delete,
@@ -443,7 +443,7 @@ impl Kiorg {
         );
 
         if !show_delete_confirm {
-            self.show_dialog = None;
+            self.show_popup = None;
         }
 
         if should_confirm {
@@ -627,32 +627,32 @@ impl eframe::App for Kiorg {
             add_entry_popup::draw(ctx, self);
         }
 
-        // Handle dialogs based on the show_dialog field
-        match self.show_dialog {
-            Some(DialogType::Help) => {
+        // Handle popups based on the show_popup field
+        match self.show_popup {
+            Some(PopupType::Help) => {
                 let mut keep_open = true;
                 help_window::show_help_window(ctx, &mut keep_open, &self.colors);
                 if !keep_open {
-                    self.show_dialog = None;
+                    self.show_popup = None;
                 }
             }
-            Some(DialogType::About) => {
-                about_dialog::show_about_dialog(ctx, self);
+            Some(PopupType::About) => {
+                about_popup::show_about_popup(ctx, self);
             }
-            Some(DialogType::Exit) => {
+            Some(PopupType::Exit) => {
                 let mut keep_open = true;
-                exit_dialog::show(ctx, &mut keep_open, &self.colors);
+                exit_popup::show(ctx, &mut keep_open, &self.colors);
                 if !keep_open {
-                    self.show_dialog = None;
+                    self.show_popup = None;
                 }
             }
-            Some(DialogType::Delete) => {
+            Some(PopupType::Delete) => {
                 self.handle_delete_confirmation(ctx);
             }
-            Some(DialogType::Rename) => {
-                // The rename dialog is handled in the UI by the text edit field
+            Some(PopupType::Rename) => {
+                // The rename popup is handled in the UI by the text edit field
                 // in center_panel.rs, so we don't need to do anything here
-                // except keep the dialog state active
+                // except keep the popup state active
             }
             None => {}
         }

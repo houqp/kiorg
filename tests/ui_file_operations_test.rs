@@ -119,9 +119,9 @@ fn test_rename_shortcut() {
 
     // verify we are in rename mode
     assert_eq!(
-        harness.state().show_dialog,
-        Some(kiorg::app::DialogType::Rename),
-        "Rename dialog should be open"
+        harness.state().show_popup,
+        Some(kiorg::app::PopupType::Rename),
+        "Rename popup should be open"
     );
 
     // Press 'delete' to clear any existing text

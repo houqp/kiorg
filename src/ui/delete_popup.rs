@@ -4,12 +4,12 @@ use std::path::{Path, PathBuf};
 use super::window_utils::new_center_popup_window;
 use crate::config::colors::AppColors;
 
-/// Dialog for confirming file and directory deletion
-pub struct DeleteDialog;
+/// Popup for confirming file and directory deletion
+pub struct DeletePopup;
 
-impl DeleteDialog {
-    /// Show the delete confirmation dialog
-    pub fn show_delete_dialog(
+impl DeletePopup {
+    /// Show the delete confirmation popup
+    pub fn show_delete_popup(
         ctx: &Context,
         show_delete_confirm: &mut bool,
         entry_to_delete: &Option<PathBuf>,
@@ -64,7 +64,7 @@ impl DeleteDialog {
         on_cancel: impl FnOnce(),
     ) {
         if *show_delete_confirm && entry_to_delete.is_some() {
-            Self::show_delete_dialog(
+            Self::show_delete_popup(
                 ctx,
                 show_delete_confirm,
                 entry_to_delete,

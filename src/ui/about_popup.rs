@@ -4,10 +4,10 @@ use super::window_utils::new_center_popup_window;
 use crate::app::Kiorg;
 use crate::utils::icon;
 
-/// Show about dialog with application information
-pub fn show_about_dialog(ctx: &Context, app: &mut Kiorg) {
-    // Check if the dialog should be shown based on the show_dialog field
-    if app.show_dialog != Some(crate::app::DialogType::About) {
+/// Show about popup with application information
+pub fn show_about_popup(ctx: &Context, app: &mut Kiorg) {
+    // Check if the popup should be shown based on the show_popup field
+    if app.show_popup != Some(crate::app::PopupType::About) {
         return;
     }
 
@@ -40,12 +40,12 @@ pub fn show_about_dialog(ctx: &Context, app: &mut Kiorg) {
                 }
                 ui.add_space(10.0);
 
-                // Add a hint about closing the dialog
+                // Add a hint about closing the popup
                 if ui
                     .link(RichText::new("Press Esc or q to close").color(app.colors.fg_light))
                     .clicked()
                 {
-                    app.show_dialog = None;
+                    app.show_popup = None;
                 }
                 ui.add_space(5.0);
             });
@@ -54,9 +54,9 @@ pub fn show_about_dialog(ctx: &Context, app: &mut Kiorg) {
     // Update the state based on window interaction
     if response.is_some() {
         if !keep_open {
-            app.show_dialog = None;
+            app.show_popup = None;
         }
     } else {
-        app.show_dialog = None;
+        app.show_popup = None;
     }
 }

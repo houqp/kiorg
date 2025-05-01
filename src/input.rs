@@ -3,7 +3,7 @@ use crate::ui::terminal;
 use crate::ui::{bookmark_popup, center_panel};
 use egui::{Key, Modifiers};
 
-use super::app::{DialogType, Kiorg};
+use super::app::{Kiorg, PopupType};
 
 const DOUBLE_KEY_PRESS_THRESHOLD_MS: u64 = 500;
 
@@ -168,15 +168,15 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: Shortcut
             app.terminal_ctx = Some(terminal::TerminalContext::new(ctx, path));
         }
         ShortcutAction::ShowHelp => {
-            // Toggle help dialog
-            if app.show_dialog == Some(DialogType::Help) {
-                app.show_dialog = None;
+            // Toggle help popup
+            if app.show_popup == Some(PopupType::Help) {
+                app.show_popup = None;
             } else {
-                app.show_dialog = Some(DialogType::Help);
+                app.show_popup = Some(PopupType::Help);
             }
         }
         ShortcutAction::Exit => {
-            app.show_dialog = Some(DialogType::Exit);
+            app.show_popup = Some(PopupType::Exit);
         }
         ShortcutAction::ActivateSearch => {
             app.search_bar.activate();
@@ -195,17 +195,17 @@ fn process_key(
         return;
     }
 
-    // Handle special modal states first based on the show_dialog field
-    match app.show_dialog {
-        Some(DialogType::Exit) => {
+    // Handle special modal states first based on the show_popup field
+    match app.show_popup {
+        Some(PopupType::Exit) => {
             if key == Key::Enter {
                 app.shutdown_requested = true;
             } else if is_cancel_keys(key) {
-                app.show_dialog = None;
+                app.show_popup = None;
             }
             return;
         }
-        Some(DialogType::Delete) => {
+        Some(PopupType::Delete) => {
             if key == Key::Enter {
                 app.confirm_delete();
             } else if is_cancel_keys(key) {
@@ -213,7 +213,7 @@ fn process_key(
             }
             return;
         }
-        Some(DialogType::Rename) => {
+        Some(PopupType::Rename) => {
             if key == Key::Enter {
                 let tab = app.tab_manager.current_tab();
                 if let Some(entry) = tab.entries.get(tab.selected_index) {
@@ -226,23 +226,23 @@ fn process_key(
                         app.refresh_entries();
                     }
                 }
-                app.show_dialog = None;
+                app.show_popup = None;
                 app.new_name.clear();
             } else if key == Key::Escape {
-                app.show_dialog = None;
+                app.show_popup = None;
                 app.new_name.clear();
             }
             return;
         }
-        Some(DialogType::Help) => {
+        Some(PopupType::Help) => {
             if is_cancel_keys(key) || key == Key::Enter || key == Key::Questionmark {
-                app.show_dialog = None;
+                app.show_popup = None;
             }
             return;
         }
-        Some(DialogType::About) => {
+        Some(PopupType::About) => {
             if is_cancel_keys(key) {
-                app.show_dialog = None;
+                app.show_popup = None;
             }
             return;
         }

@@ -294,8 +294,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                                 entry,
                                 is_selected,
                                 colors: &app.colors,
-                                rename_mode: app.show_dialog
-                                    == Some(crate::app::DialogType::Rename)
+                                rename_mode: app.show_popup == Some(crate::app::PopupType::Rename)
                                     && is_selected,
                                 new_name: &mut app.new_name,
                                 is_marked: is_in_selection,

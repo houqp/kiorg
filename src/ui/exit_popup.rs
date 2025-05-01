@@ -3,7 +3,7 @@ use egui::{Context, RichText};
 use super::window_utils::new_center_popup_window;
 use crate::config::colors::AppColors;
 
-/// Show exit confirmation dialog (refactored from app.rs)
+/// Show exit confirmation popup (refactored from app.rs)
 pub fn show(ctx: &Context, show_exit_confirm: &mut bool, colors: &AppColors) {
     if !*show_exit_confirm {
         return;

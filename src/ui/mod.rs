@@ -1,10 +1,9 @@
-pub mod about_dialog;
+pub mod about_popup;
 pub mod add_entry_popup;
 pub mod bookmark_popup;
 pub mod center_panel;
-pub mod delete_dialog;
-pub mod dialogs;
-pub mod exit_dialog;
+pub mod delete_popup;
+pub mod exit_popup;
 pub mod file_list;
 pub mod help_window;
 pub mod left_panel;
