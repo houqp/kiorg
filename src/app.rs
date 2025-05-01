@@ -9,6 +9,16 @@ use std::sync::Arc;
 
 use crate::models::preview_content::PreviewContent;
 
+/// Dialog types that can be shown in the application
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DialogType {
+    About,
+    Help,
+    Exit,
+    Delete,
+    Rename,
+}
+
 // Constants
 const STATE_FILE_NAME: &str = "state.json";
 
@@ -17,7 +27,7 @@ use crate::input;
 use crate::models::tab::{TabManager, TabManagerState};
 use crate::ui::add_entry_popup; // Import the new module
 use crate::ui::delete_dialog::DeleteDialog;
-use crate::ui::dialogs;
+use crate::ui::exit_dialog;
 use crate::ui::search_bar::{self, SearchBar};
 use crate::ui::separator;
 use crate::ui::separator::SEPARATOR_PADDING;
@@ -98,19 +108,17 @@ pub struct Kiorg {
     // TODO: will it crash the app if large amount of entries are deleted in the same dir?
     pub scroll_range: Option<std::ops::Range<usize>>,
 
+    // Dialog management
+    pub show_dialog: Option<DialogType>,
+
     // TODO: replace rename_mode with Option<new_name>?
     pub new_name: String,
-    pub rename_mode: bool,
     pub bookmark_selected_index: usize, // Store bookmark selection index in app state
     pub entry_to_delete: Option<PathBuf>,
-    pub show_delete_confirm: bool,
     pub clipboard: Option<(Vec<PathBuf>, bool)>, // (paths, is_cut)
     pub show_bookmarks: bool,
     pub search_bar: SearchBar,
-    pub show_exit_confirm: bool,
     pub terminal_ctx: Option<terminal::TerminalContext>,
-    pub show_help: bool,
-    pub show_about: bool,
     pub shutdown_requested: bool,
     pub notify_fs_change: Arc<AtomicBool>,
     pub fs_watcher: notify::RecommendedWatcher,
@@ -196,15 +204,13 @@ impl Kiorg {
             cached_preview_path: None,
             preview_content: None,
             scroll_range: None,
-            rename_mode: false,
+            show_dialog: None,
             new_name: String::new(),
             clipboard: None,
-            show_delete_confirm: false,
             entry_to_delete: None,
             show_bookmarks: false,
             bookmark_selected_index: 0,
             search_bar: SearchBar::new(),
-            show_exit_confirm: false,
             add_mode: false,
             new_entry_name: String::new(),
             add_focus: false,
@@ -213,8 +219,6 @@ impl Kiorg {
             error_receiver,
             last_lowercase_g_pressed_ms: 0,
             terminal_ctx: None,
-            show_help: false,
-            show_about: false,
             shutdown_requested: false,
             notify_fs_change,
             fs_watcher,
@@ -254,7 +258,7 @@ impl Kiorg {
         let tab = self.tab_manager.current_tab();
         if let Some(entry) = tab.selected_entry() {
             self.entry_to_delete = Some(entry.path.clone());
-            self.show_delete_confirm = true;
+            self.show_dialog = Some(DialogType::Delete);
         }
     }
 
@@ -262,7 +266,7 @@ impl Kiorg {
         let tab = self.tab_manager.current_tab();
         if let Some(entry) = tab.selected_entry() {
             self.new_name = entry.name.clone();
-            self.rename_mode = true;
+            self.show_dialog = Some(DialogType::Rename);
         }
     }
 
@@ -411,27 +415,36 @@ impl Kiorg {
                 self.toasts.error(error);
             }
         }
-        self.show_delete_confirm = false;
+        self.show_dialog = None;
         self.entry_to_delete = None;
     }
 
     pub fn cancel_delete(&mut self) {
-        self.show_delete_confirm = false;
+        self.show_dialog = None;
         self.entry_to_delete = None;
     }
 
     fn handle_delete_confirmation(&mut self, ctx: &egui::Context) {
+        if self.show_dialog != Some(DialogType::Delete) || self.entry_to_delete.is_none() {
+            return;
+        }
+
         let mut should_confirm = false;
         let mut should_cancel = false;
+        let mut show_delete_confirm = true; // Temporary variable for compatibility
 
         DeleteDialog::handle_delete_confirmation(
             ctx,
-            &mut self.show_delete_confirm,
+            &mut show_delete_confirm,
             &self.entry_to_delete,
             &self.colors,
             || should_confirm = true,
             || should_cancel = true,
         );
+
+        if !show_delete_confirm {
+            self.show_dialog = None;
+        }
 
         if should_confirm {
             self.confirm_delete();
@@ -614,20 +627,34 @@ impl eframe::App for Kiorg {
             add_entry_popup::draw(ctx, self);
         }
 
-        // Show help window if needed
-        if self.show_help {
-            help_window::show_help_window(ctx, &mut self.show_help, &self.colors);
-        }
-
-        // Show about dialog if needed
-        if self.show_about {
-            about_dialog::show_about_dialog(ctx, self);
-        }
-
-        // Show exit confirmation window if needed
-        if self.show_exit_confirm {
-            // Call the refactored dialog function
-            dialogs::show_exit_dialog(ctx, &mut self.show_exit_confirm, &self.colors);
+        // Handle dialogs based on the show_dialog field
+        match self.show_dialog {
+            Some(DialogType::Help) => {
+                let mut keep_open = true;
+                help_window::show_help_window(ctx, &mut keep_open, &self.colors);
+                if !keep_open {
+                    self.show_dialog = None;
+                }
+            }
+            Some(DialogType::About) => {
+                about_dialog::show_about_dialog(ctx, self);
+            }
+            Some(DialogType::Exit) => {
+                let mut keep_open = true;
+                exit_dialog::show(ctx, &mut keep_open, &self.colors);
+                if !keep_open {
+                    self.show_dialog = None;
+                }
+            }
+            Some(DialogType::Delete) => {
+                self.handle_delete_confirmation(ctx);
+            }
+            Some(DialogType::Rename) => {
+                // The rename dialog is handled in the UI by the text edit field
+                // in center_panel.rs, so we don't need to do anything here
+                // except keep the dialog state active
+            }
+            None => {}
         }
 
         if self.shutdown_requested {

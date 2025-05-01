@@ -18,12 +18,20 @@ fn test_help_menu_close_behavior() {
         harness.press_key_modifiers(modifiers, Key::Questionmark);
         harness.step();
     }
-    assert!(harness.state().show_help, "Help menu should be open");
+    assert_eq!(
+        harness.state().show_dialog,
+        Some(kiorg::app::DialogType::Help),
+        "Help menu should be open"
+    );
 
     // Test closing with Escape
     harness.press_key(Key::Escape);
     harness.step();
-    assert!(!harness.state().show_help, "Help menu should close with Escape");
+    assert_eq!(
+        harness.state().show_dialog,
+        None,
+        "Help menu should close with Escape"
+    );
 
     // Reopen help menu
     {
@@ -38,7 +46,11 @@ fn test_help_menu_close_behavior() {
     // Test closing with Q
     harness.press_key(Key::Q);
     harness.step();
-    assert!(!harness.state().show_help, "Help menu should close with Q");
+    assert_eq!(
+        harness.state().show_dialog,
+        None,
+        "Help menu should close with Q"
+    );
 
     // Reopen help menu
     {
@@ -53,7 +65,11 @@ fn test_help_menu_close_behavior() {
     // Test closing with Enter
     harness.press_key(Key::Enter);
     harness.step();
-    assert!(!harness.state().show_help, "Help menu should close with Enter");
+    assert_eq!(
+        harness.state().show_dialog,
+        None,
+        "Help menu should close with Enter"
+    );
 
     // Reopen help menu
     {
@@ -68,5 +84,9 @@ fn test_help_menu_close_behavior() {
     // Test closing with ? (Questionmark)
     harness.press_key(Key::Questionmark);
     harness.step();
-    assert!(!harness.state().show_help, "Help menu should close with ?");
+    assert_eq!(
+        harness.state().show_dialog,
+        None,
+        "Help menu should close with ?"
+    );
 }

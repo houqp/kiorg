@@ -3,7 +3,7 @@ use crate::ui::terminal;
 use crate::ui::{bookmark_popup, center_panel};
 use egui::{Key, Modifiers};
 
-use super::app::Kiorg;
+use super::app::{DialogType, Kiorg};
 
 const DOUBLE_KEY_PRESS_THRESHOLD_MS: u64 = 500;
 
@@ -168,10 +168,15 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: Shortcut
             app.terminal_ctx = Some(terminal::TerminalContext::new(ctx, path));
         }
         ShortcutAction::ShowHelp => {
-            app.show_help = !app.show_help;
+            // Toggle help dialog
+            if app.show_dialog == Some(DialogType::Help) {
+                app.show_dialog = None;
+            } else {
+                app.show_dialog = Some(DialogType::Help);
+            }
         }
         ShortcutAction::Exit => {
-            app.show_exit_confirm = true;
+            app.show_dialog = Some(DialogType::Exit);
         }
         ShortcutAction::ActivateSearch => {
             app.search_bar.activate();
@@ -190,52 +195,58 @@ fn process_key(
         return;
     }
 
-    // Handle special modal states first
-    if app.show_exit_confirm {
-        if key == Key::Enter {
-            app.shutdown_requested = true;
-        } else if is_cancel_keys(key) {
-            app.show_exit_confirm = false;
-        }
-        return;
-    }
-
-    if app.show_delete_confirm {
-        if key == Key::Enter {
-            app.confirm_delete();
-        } else if is_cancel_keys(key) {
-            app.cancel_delete();
-        }
-        return;
-    }
-
-    if app.rename_mode {
-        if key == Key::Enter {
-            let tab = app.tab_manager.current_tab();
-            if let Some(entry) = tab.entries.get(tab.selected_index) {
-                let parent = entry.path.parent().unwrap_or(&tab.current_path);
-                let new_path = parent.join(&app.new_name);
-
-                if let Err(e) = std::fs::rename(&entry.path, &new_path) {
-                    app.toasts.error(format!("Failed to rename: {e}"));
-                } else {
-                    app.refresh_entries();
-                }
+    // Handle special modal states first based on the show_dialog field
+    match app.show_dialog {
+        Some(DialogType::Exit) => {
+            if key == Key::Enter {
+                app.shutdown_requested = true;
+            } else if is_cancel_keys(key) {
+                app.show_dialog = None;
             }
-            app.rename_mode = false;
-            app.new_name.clear();
-        } else if key == Key::Escape {
-            app.rename_mode = false;
-            app.new_name.clear();
+            return;
         }
-        return;
-    }
+        Some(DialogType::Delete) => {
+            if key == Key::Enter {
+                app.confirm_delete();
+            } else if is_cancel_keys(key) {
+                app.cancel_delete();
+            }
+            return;
+        }
+        Some(DialogType::Rename) => {
+            if key == Key::Enter {
+                let tab = app.tab_manager.current_tab();
+                if let Some(entry) = tab.entries.get(tab.selected_index) {
+                    let parent = entry.path.parent().unwrap_or(&tab.current_path);
+                    let new_path = parent.join(&app.new_name);
 
-    if app.show_help {
-        if is_cancel_keys(key) || key == Key::Enter || key == Key::Questionmark {
-            app.show_help = false;
+                    if let Err(e) = std::fs::rename(&entry.path, &new_path) {
+                        app.toasts.error(format!("Failed to rename: {e}"));
+                    } else {
+                        app.refresh_entries();
+                    }
+                }
+                app.show_dialog = None;
+                app.new_name.clear();
+            } else if key == Key::Escape {
+                app.show_dialog = None;
+                app.new_name.clear();
+            }
+            return;
         }
-        return;
+        Some(DialogType::Help) => {
+            if is_cancel_keys(key) || key == Key::Enter || key == Key::Questionmark {
+                app.show_dialog = None;
+            }
+            return;
+        }
+        Some(DialogType::About) => {
+            if is_cancel_keys(key) {
+                app.show_dialog = None;
+            }
+            return;
+        }
+        None => {}
     }
 
     // Get shortcuts from config or use defaults

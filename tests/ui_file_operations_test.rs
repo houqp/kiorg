@@ -117,6 +117,13 @@ fn test_rename_shortcut() {
     harness.press_key(Key::R);
     harness.step();
 
+    // verify we are in rename mode
+    assert_eq!(
+        harness.state().show_dialog,
+        Some(kiorg::app::DialogType::Rename),
+        "Rename dialog should be open"
+    );
+
     // Press 'delete' to clear any existing text
     for _ in 0..".txt".len() {
         harness.press_key(Key::Backspace);

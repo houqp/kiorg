@@ -34,19 +34,19 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui) {
                     ui.separator();
 
                     if ui.button("Help").clicked() {
-                        app.show_help = true;
+                        app.show_dialog = Some(crate::app::DialogType::Help);
                         ui.close_menu();
                     }
 
                     if ui.button("About").clicked() {
-                        app.show_about = true;
+                        app.show_dialog = Some(crate::app::DialogType::About);
                         ui.close_menu();
                     }
 
                     ui.separator();
 
                     if ui.button("Exit").clicked() {
-                        app.show_exit_confirm = true;
+                        app.show_dialog = Some(crate::app::DialogType::Exit);
                         ui.close_menu();
                     }
                 });

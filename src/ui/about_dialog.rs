@@ -6,11 +6,12 @@ use crate::utils::icon;
 
 /// Show about dialog with application information
 pub fn show_about_dialog(ctx: &Context, app: &mut Kiorg) {
-    if !app.show_about {
+    // Check if the dialog should be shown based on the show_dialog field
+    if app.show_dialog != Some(crate::app::DialogType::About) {
         return;
     }
 
-    let mut keep_open = app.show_about; // Use a temporary variable for the open state
+    let mut keep_open = true; // Use a temporary variable for the open state
 
     let response = new_center_popup_window("About")
         .open(&mut keep_open) // Control window visibility
@@ -38,13 +39,24 @@ pub fn show_about_dialog(ctx: &Context, app: &mut Kiorg) {
                     }
                 }
                 ui.add_space(10.0);
+
+                // Add a hint about closing the dialog
+                if ui
+                    .link(RichText::new("Press Esc or q to close").color(app.colors.fg_light))
+                    .clicked()
+                {
+                    app.show_dialog = None;
+                }
+                ui.add_space(5.0);
             });
         });
 
     // Update the state based on window interaction
     if response.is_some() {
-        app.show_about = keep_open;
+        if !keep_open {
+            app.show_dialog = None;
+        }
     } else {
-        app.show_about = false;
+        app.show_dialog = None;
     }
 }
