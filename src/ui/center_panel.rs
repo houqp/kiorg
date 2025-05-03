@@ -56,10 +56,11 @@ pub fn handle_clipboard_operations(
 }
 
 fn scroll_by_filtered_index(
-    ui: &mut Ui,
     mut scroll_area: egui::ScrollArea,
     filtered_index: usize,
     scroll_range: &Option<std::ops::Range<usize>>,
+    spaced_row_height: f32,
+    total_rows: usize,
 ) -> egui::ScrollArea {
     // Return early if scroll_range is None
     let scroll_range = match scroll_range {
@@ -69,34 +70,42 @@ fn scroll_by_filtered_index(
 
     // scroll_area will always be lagging one cycle behind, i.e. it shows the view port before
     // current action has been processed
-    let rows = scroll_range.end - scroll_range.start;
+    // range end is exclusive not inclusive, so subtract 1
+    let rows = scroll_range.end - scroll_range.start - 1;
 
     // NOTE: for some reason, the range provided by show_rows has 2 more rows than what's visible
     // on the viewport
     let rows_offset = 2;
 
     // where there are not enough entries to fill the viewport, just start from 0
-    if filtered_index + rows_offset < rows || rows_offset > rows {
+    // if filtered_index + rows_offset < rows || rows_offset > rows {
+    if filtered_index + PADDING_ROWS < rows || rows_offset > rows {
         return scroll_area.vertical_scroll_offset(0.0);
     }
 
-    let ui_spacing = ui.spacing().item_spacing.y;
+    let scroll_page_end_index = filtered_index + PADDING_ROWS + rows_offset;
+    // TODO: y offset is off for the last few rows, this is workaround to avoid
+    // excessive scroll when we reach the end
+    //
+    // note that we also need to check for scroll_range.end so jumping to the
+    // last page still works.
+    if filtered_index < scroll_range.end && scroll_page_end_index >= total_rows {
+        return scroll_area;
+    }
 
-    if filtered_index < scroll_range.start + PADDING_ROWS {
-        // reached start of view port + row padding
-        let entry_y = filtered_index as f32 * (ROW_HEIGHT + ui_spacing); // y for selected row
-        let scroll_y = entry_y - (ROW_HEIGHT + ui_spacing) * 3.0; // 3 rows before the selected row
+    if filtered_index <= scroll_range.start + PADDING_ROWS {
+        // scrolling up, reached start of view port + row padding
+        let entry_y = filtered_index as f32 * spaced_row_height; // y for selected row
+        let scroll_y = entry_y - spaced_row_height * PADDING_ROWS as f32; // 3 rows before the selected row
         scroll_area = scroll_area.vertical_scroll_offset(scroll_y.max(0.0));
-    } else if filtered_index + PADDING_ROWS + rows_offset >= scroll_range.end {
-        // reached end of view port + row padding
-        let entry_y = filtered_index as f32 * (ROW_HEIGHT + ui_spacing); // y for selected row
+    } else if scroll_page_end_index >= scroll_range.end {
+        // scrolling down, reached end of view port + row padding
+        let entry_y = filtered_index as f32 * spaced_row_height; // y for selected row
         let scroll_y = entry_y
             // adjust by 3 rows after the selected row
-            + (ROW_HEIGHT + ui_spacing) * 3.0
-            // add a little bitmore spacing so the text is not literally touching the bottom edge
-            + (ui_spacing * 3.0 )
+            + spaced_row_height * PADDING_ROWS as f32
             // find y for first row in the viewport
-            - ((rows-rows_offset) as f32 * (ROW_HEIGHT + ui_spacing));
+            - ((rows - 1) as f32 * spaced_row_height);
         scroll_area = scroll_area.vertical_scroll_offset(scroll_y.max(0.0));
     }
 
@@ -223,6 +232,9 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
 
                 let total_rows = filtered_entries.len();
 
+                let ui_spacing = ui.spacing().item_spacing.y;
+                let spaced_row_height = ROW_HEIGHT + ui_spacing;
+
                 if app.ensure_selected_visible {
                     if let Some(selected_entry) = tab_ref.selected_entry() {
                         let filtered_index = filtered_entries
@@ -232,15 +244,12 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                             .expect("selected entry not in filtered list")
                             .0;
 
-                        println!(
-                            "scrolling range: {:?}, filtered_index: {:?}",
-                            app.scroll_range, filtered_index
-                        );
                         scroll_area = scroll_by_filtered_index(
-                            ui,
                             scroll_area,
                             filtered_index,
                             &app.scroll_range,
+                            spaced_row_height,
+                            total_rows,
                         );
                     }
                     app.ensure_selected_visible = false;
