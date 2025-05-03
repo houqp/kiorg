@@ -283,7 +283,7 @@ pub fn default_shortcuts() -> Shortcuts {
     add_shortcut(KeyboardShortcut::new("9"), ShortcutAction::SwitchToTab9);
 
     add_shortcut(
-        KeyboardShortcut::new("c").with_ctrl(),
+        KeyboardShortcut::new("d").with_ctrl(),
         ShortcutAction::CloseCurrentTab,
     );
 

@@ -1,10 +1,10 @@
 ## UI Style Guide
 
-### Popups and Dialogs
+### Popups
 - All popups should use the `new_center_popup_window` utility function from `window_utils.rs`
 - Popups should be centered on the screen
 - Popups should have a close button in the top right corner or use keyboard shortcuts (Esc/q) to close
-- Confirmation dialogs (like delete and exit) should follow the pattern in `delete_dialog.rs`
+- Confirmation popups (like delete and exit) should follow the pattern in `delete_popup.rs`
 - Help window should follow the pattern in `help_window.rs`
 - All popups should have consistent styling with the app's color scheme
 
