@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 // Define a struct to represent a keyboard shortcut
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Hash, Default)]
 pub struct KeyboardShortcut {
     pub key: String,
     #[serde(default)]
@@ -16,19 +16,6 @@ pub struct KeyboardShortcut {
     pub mac_cmd: bool,
     #[serde(default)]
     pub namespace: bool,
-}
-
-impl Default for KeyboardShortcut {
-    fn default() -> Self {
-        Self {
-            key: String::new(),
-            shift: false,
-            ctrl: false,
-            alt: false,
-            mac_cmd: false,
-            namespace: false,
-        }
-    }
 }
 
 impl KeyboardShortcut {
@@ -199,10 +186,7 @@ pub fn default_shortcuts() -> Shortcuts {
 
     // Helper function to add a shortcut
     let mut add_shortcut = |shortcut: KeyboardShortcut, action: ShortcutAction| {
-        shortcuts
-            .entry(action)
-            .or_insert_with(Vec::new)
-            .push(shortcut);
+        shortcuts.entry(action).or_default().push(shortcut);
     };
 
     // Navigation shortcuts

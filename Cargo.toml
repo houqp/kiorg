@@ -27,6 +27,12 @@ image = { version = "0"}
 zip = "2"
 egui-notify = "0"
 
+# for pdf rendering
+pdf_render = { git = "https://github.com/pdf-rs/pdf_render.git", rev = "9a31988b091495c65a54236fd6cdce8f1fa2afd0", features = ["embed"] }
+pdf = { git = "https://github.com/pdf-rs/pdf" }
+pathfinder_geometry = { git = "https://github.com/servo/pathfinder" }
+pathfinder_export = { git = "https://github.com/servo/pathfinder" }
+# pathfinder_rasterize = { git = "https://github.com/s3bk/pathfinder_rasterizer" }
 
 [dev-dependencies]
 egui_kittest = { version = "0.31.1", features = ["eframe"] }

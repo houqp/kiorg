@@ -296,7 +296,7 @@ impl TabManager {
             return true;
         }
         // Do nothing if it's the last tab
-        return false;
+        false
     }
 
     pub fn current_tab(&mut self) -> &mut Tab {

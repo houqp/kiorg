@@ -206,12 +206,10 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
         let pulse_color = colors.success.gamma_multiply(0.3 + pulse * 0.5);
         // Draw a pulsing background
         ui.painter().rect_filled(rect, 0.0, pulse_color);
-    } else {
-        if is_marked {
-            ui.painter().rect_filled(rect, 0.0, colors.bg_light);
-        } else if is_selected {
-            ui.painter().rect_filled(rect, 0.0, colors.selected_bg);
-        }
+    } else if is_marked {
+        ui.painter().rect_filled(rect, 0.0, colors.bg_light);
+    } else if is_selected {
+        ui.painter().rect_filled(rect, 0.0, colors.selected_bg);
     }
 
     let mut cursor = rect.left_top();

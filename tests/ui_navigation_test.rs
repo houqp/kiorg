@@ -310,6 +310,9 @@ fn test_mouse_click_selects_and_previews() {
         Some(PreviewContent::Zip(_)) => {
             panic!("Preview content should be Text variant, not Zip")
         }
+        Some(PreviewContent::Pdf(_)) => {
+            panic!("Preview content should be Text variant, not Pdf")
+        }
         Some(PreviewContent::Loading(..)) => {
             // Wait for loading to complete
             for _ in 0..10 {
@@ -441,6 +444,9 @@ fn test_image_preview() {
                 panic!("Preview content should be Image variant after loading completes");
             }
         }
+        Some(PreviewContent::Pdf(_)) => {
+            panic!("Preview content should be Image variant, not Pdf");
+        }
         Some(other) => {
             panic!("Preview content should be Image variant, got {:?}", other);
         }
@@ -508,6 +514,9 @@ fn test_zip_preview() {
             Some(PreviewContent::Loading(..)) => {
                 // Still loading, try another step
                 harness.step();
+            }
+            Some(PreviewContent::Pdf(_)) => {
+                panic!("Preview content should be Zip or Loading variant, not Pdf");
             }
             Some(other) => {
                 panic!(

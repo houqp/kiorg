@@ -1,6 +1,9 @@
-use egui::{Image, RichText, Ui};
 use std::collections::HashSet;
 use std::sync::OnceLock;
+
+use egui::{Image, RichText, Ui};
+use pathfinder_geometry::transform2d::Transform2F;
+use pdf_render::{render_page, Cache, SceneBackend};
 
 use crate::app::Kiorg;
 use crate::models::preview_content::PreviewContent;
@@ -11,6 +14,9 @@ static IMAGE_EXTENSIONS: OnceLock<HashSet<String>> = OnceLock::new();
 
 /// Global HashSet of supported zip extensions for efficient lookups
 static ZIP_EXTENSIONS: OnceLock<HashSet<String>> = OnceLock::new();
+
+/// Global HashSet of supported PDF extensions for efficient lookups
+static PDF_EXTENSIONS: OnceLock<HashSet<String>> = OnceLock::new();
 
 /// Get the set of supported image extensions
 fn get_image_extensions() -> &'static HashSet<String> {
@@ -30,6 +36,11 @@ fn get_zip_extensions() -> &'static HashSet<String> {
             .map(|&s| s.to_string())
             .collect()
     })
+}
+
+/// Get the set of supported PDF extensions
+fn get_pdf_extensions() -> &'static HashSet<String> {
+    PDF_EXTENSIONS.get_or_init(|| ["pdf"].iter().map(|&s| s.to_string()).collect())
 }
 
 const PANEL_SPACING: f32 = 10.0;
@@ -64,6 +75,9 @@ pub fn draw(app: &mut Kiorg, ctx: &egui::Context, ui: &mut Ui, width: f32, heigh
                 ui.set_min_width(width - scrollbar_width);
                 ui.set_max_width(width - scrollbar_width);
 
+                let available_width = width - PANEL_SPACING * 2.0;
+                let available_height = available_height - PANEL_SPACING * 2.0;
+
                 // Draw preview content based on the enum variant
                 match preview_content {
                     Some(PreviewContent::Text(text)) => {
@@ -71,14 +85,19 @@ pub fn draw(app: &mut Kiorg, ctx: &egui::Context, ui: &mut Ui, width: f32, heigh
                     }
                     Some(PreviewContent::Image(uri)) => {
                         ui.centered_and_justified(|ui| {
-                            let available_width = width - PANEL_SPACING * 2.0;
-                            let available_height = available_height - PANEL_SPACING * 2.0;
-                            // Use the URI directly with the Image widget
                             ui.add(
                                 Image::new(uri)
                                     .max_size(egui::vec2(available_width, available_height))
                                     .maintain_aspect_ratio(true),
                             );
+                        });
+                    }
+                    Some(PreviewContent::Pdf(img_source)) => {
+                        let image = Image::new(img_source)
+                            .max_size(egui::vec2(available_width, available_height))
+                            .maintain_aspect_ratio(true);
+                        ui.centered_and_justified(|ui| {
+                            ui.add(image);
                         });
                     }
                     Some(PreviewContent::Zip(entries)) => {
@@ -148,12 +167,13 @@ pub fn draw(app: &mut Kiorg, ctx: &egui::Context, ui: &mut Ui, width: f32, heigh
                             ctx.request_repaint();
                             // Update the preview content with the result
                             match result {
-                                Ok(entries) => {
-                                    app.preview_content = Some(PreviewContent::zip(entries));
+                                Ok(content) => {
+                                    // Set the preview content directly with the received content
+                                    app.preview_content = Some(content);
                                 }
                                 Err(e) => {
                                     app.preview_content = Some(PreviewContent::text(format!(
-                                        "Error reading zip file: {}",
+                                        "Error loading file: {}",
                                         e
                                     )));
                                 }
@@ -217,6 +237,72 @@ fn read_zip_entries(
     Ok(entries)
 }
 
+fn render_pdf_page(
+    path: &std::path::Path,
+    page_number: u32,
+) -> Result<egui::widgets::ImageSource<'static>, String> {
+    let file = pdf::file::FileOptions::uncached()
+        .open(path)
+        .map_err(|e| format!("Failed to open PDF file: {}", e))?;
+    let resolver = file.resolver();
+    let page = file
+        .get_page(page_number)
+        .map_err(|e| format!("Failed to get page {}: {}", page_number, e))?;
+
+    let mut cache = Cache::new();
+    let mut backend = SceneBackend::new(&mut cache);
+
+    let dpi = 150.0; // Adjust DPI as needed for quality vs performance
+
+    render_page(
+        &mut backend,
+        &resolver,
+        &page,
+        Transform2F::from_scale(dpi / 25.4),
+    )
+    .map_err(|e| format!("Failed to render page: {}", e))?;
+
+    let scene = backend.finish();
+
+    {
+        use pathfinder_export::Export;
+        use pathfinder_export::FileFormat;
+
+        let mut svg_data = Vec::new();
+        scene.export(&mut svg_data, FileFormat::SVG).unwrap();
+        let svg_bytes: egui::load::Bytes = svg_data.into();
+        let img_source =
+            egui::widgets::ImageSource::from((format!("bytes:://{:?}.svg", path), svg_bytes));
+        Ok(img_source)
+    }
+
+    // Rasterize the scene to an RGBA image using the pathfinder_rasterize crate
+    // {
+    // use pathfinder_rasterize::Rasterizer;
+    // let image = Rasterizer::new().rasterize(scene, None);
+
+    // // Convert the RGBA image to egui's TextureHandle
+    // let width = image.width();
+    // let height = image.height();
+    // let size = [width, height];
+
+    // // Get raw pixel data
+    // let pixels_data = image.data();
+
+    // // Create a ColorImage from the raw RGBA data
+    // let color_image = egui::ColorImage::from_rgba_unmultiplied(size, pixels_data);
+
+    // // Create a texture from the color image
+    // let texture_handle: egui::TextureHandle = ctx.load_texture(
+    //     format!("pdf_page_{}_{}", page_number, path.display()),
+    //     color_image,
+    //     egui::TextureOptions::default(),
+    // );
+
+    // Ok(texture_handle)
+    // }
+}
+
 pub fn update_preview_cache(app: &mut Kiorg, _ctx: &egui::Context) {
     let tab = app.tab_manager.current_tab_ref();
     let selected_path = tab.entries.get(tab.selected_index).map(|e| e.path.clone());
@@ -232,65 +318,86 @@ pub fn update_preview_cache(app: &mut Kiorg, _ctx: &egui::Context) {
     });
     app.cached_preview_path = selected_path; // Update the cached path in app regardless
 
-    if let Some(entry) = maybe_entry {
-        if entry.is_dir {
-            app.preview_content = Some(PreviewContent::text(format!(
-                "Directory: {}",
-                entry.path.display()
-            )));
-        } else {
-            let ext = entry
-                .path
-                .extension()
-                .and_then(|e| e.to_str())
-                .map(|e| e.to_lowercase());
+    let entry = match maybe_entry {
+        Some(entry) => entry,
+        None => {
+            app.preview_content = None; // No content to display
+            app.cached_preview_path = None; // Clear cache in app if no file is selected
+            return;
+        } // No entry selected, clear the preview content
+    };
 
-            match ext {
-                Some(ext) if get_image_extensions().contains(&ext) => {
-                    app.preview_content = Some(PreviewContent::image(entry.path));
+    if entry.is_dir {
+        app.preview_content = Some(PreviewContent::text(format!(
+            "Directory: {}",
+            entry.path.display()
+        )));
+        return;
+    }
+
+    let ext = entry
+        .path
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|e| e.to_lowercase());
+
+    match ext {
+        Some(ext) if get_image_extensions().contains(&ext) => {
+            app.preview_content = Some(PreviewContent::image(entry.path));
+        }
+        Some(ext) if get_zip_extensions().contains(&ext) => {
+            // Handle zip files asynchronously
+            let path = entry.path.clone();
+
+            // Create a channel for communication
+            let (sender, receiver) = std::sync::mpsc::channel();
+
+            // Set the initial loading state
+            app.preview_content = Some(PreviewContent::loading_with_receiver(
+                path.clone(),
+                receiver,
+            ));
+
+            // Spawn a thread to load the zip file
+            std::thread::spawn(move || {
+                let result = read_zip_entries(&path);
+                let preview_result = result.map(PreviewContent::zip);
+                let _ = sender.send(preview_result);
+            });
+        }
+        Some(ext) if get_pdf_extensions().contains(&ext) => {
+            // Handle PDF files asynchronously
+            let path = entry.path.clone();
+
+            // Create a channel for communication
+            let (sender, receiver) = std::sync::mpsc::channel();
+
+            // Set the initial loading state with the receiver
+            app.preview_content = Some(PreviewContent::loading_with_receiver(
+                path.clone(),
+                receiver,
+            ));
+
+            std::thread::spawn(move || {
+                let preview_result = render_pdf_page(&path, 0).map(PreviewContent::pdf);
+                let _ = sender.send(preview_result);
+            });
+        }
+        _ => {
+            match std::fs::read_to_string(&entry.path) {
+                Ok(content) => {
+                    // Only show first 1000 characters for text files
+                    let preview_text = content.chars().take(1000).collect::<String>();
+                    app.preview_content = Some(PreviewContent::text(preview_text));
                 }
-                Some(ext) if get_zip_extensions().contains(&ext) => {
-                    // Handle zip files asynchronously
-                    let path = entry.path.clone();
-
-                    // Create a channel for communication
-                    let (sender, receiver) = std::sync::mpsc::channel();
-
-                    // Set the initial loading state
-                    app.preview_content = Some(PreviewContent::loading_with_receiver(
-                        path.clone(),
-                        receiver,
-                    ));
-
-                    // Spawn a thread to load the zip file
-                    std::thread::spawn(move || {
-                        // Load the zip entries
-                        let result = read_zip_entries(&path);
-
-                        // Send the result back to the main thread
-                        let _ = sender.send(result);
-                    });
-                }
-                _ => {
-                    match std::fs::read_to_string(&entry.path) {
-                        Ok(content) => {
-                            // Only show first 1000 characters for text files
-                            let preview_text = content.chars().take(1000).collect::<String>();
-                            app.preview_content = Some(PreviewContent::text(preview_text));
-                        }
-                        Err(_) => {
-                            // For binary files or files that can't be read
-                            app.preview_content = Some(PreviewContent::text(format!(
-                                "Binary file: {} bytes",
-                                entry.size
-                            )));
-                        }
-                    }
+                Err(_) => {
+                    // For binary files or files that can't be read
+                    app.preview_content = Some(PreviewContent::text(format!(
+                        "Binary file: {} bytes",
+                        entry.size
+                    )));
                 }
             }
         }
-    } else {
-        app.preview_content = None; // No content to display
-        app.cached_preview_path = None; // Clear cache in app if no file is selected
     }
 }

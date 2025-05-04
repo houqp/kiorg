@@ -2,6 +2,9 @@ use std::path::PathBuf;
 use std::sync::mpsc::Receiver;
 use std::sync::{Arc, Mutex};
 
+/// Type alias for the async preview content receiver
+pub type PreviewReceiver = Option<Arc<Mutex<Receiver<Result<PreviewContent, String>>>>>;
+
 /// Represents different types of preview content that can be displayed in the right panel
 #[derive(Clone, Debug)]
 pub enum PreviewContent {
@@ -11,11 +14,10 @@ pub enum PreviewContent {
     Image(String),
     /// Zip file content with a list of entries
     Zip(Vec<ZipEntry>),
+    /// PDF content with rendered page images and metadata
+    Pdf(egui::widgets::ImageSource<'static>),
     /// Loading state with path being loaded and optional receiver for async loading
-    Loading(
-        PathBuf,
-        Option<Arc<Mutex<Receiver<Result<Vec<ZipEntry>, String>>>>>,
-    ),
+    Loading(PathBuf, PreviewReceiver),
 }
 
 /// Represents an entry in a zip file
@@ -61,8 +63,13 @@ impl PreviewContent {
     /// Creates a new loading preview content with a receiver for async updates
     pub fn loading_with_receiver(
         path: impl Into<PathBuf>,
-        receiver: Receiver<Result<Vec<ZipEntry>, String>>,
+        receiver: Receiver<Result<PreviewContent, String>>,
     ) -> Self {
         PreviewContent::Loading(path.into(), Some(Arc::new(Mutex::new(receiver))))
+    }
+
+    /// Creates a new PDF image preview content
+    pub fn pdf(image: egui::widgets::ImageSource<'static>) -> Self {
+        PreviewContent::Pdf(image)
     }
 }

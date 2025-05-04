@@ -1,0 +1,2 @@
+[env]
+STANDARD_FONTS = { value = "pdf_fonts", relative = true }
