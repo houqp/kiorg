@@ -30,8 +30,7 @@ pub struct Tab {
     pub parent_entries: Vec<DirEntry>,
     pub selected_index: usize,
     pub parent_selected_index: usize,
-    // TODO: rename this, confusing with selected_index
-    pub selected_entries: std::collections::HashSet<PathBuf>,
+    pub marked_entries: std::collections::HashSet<PathBuf>,
     // History of visited directories
     pub history: Vec<PathBuf>,
     pub history_position: usize,
@@ -87,7 +86,7 @@ impl Tab {
             parent_entries: Vec::new(),
             selected_index: 0,
             parent_selected_index: 0,
-            selected_entries: std::collections::HashSet::new(),
+            marked_entries: std::collections::HashSet::new(),
             history: Vec::new(),
             history_position: 0,
         };
@@ -112,7 +111,7 @@ impl Tab {
             parent_entries: Vec::new(),
             selected_index: 0,
             parent_selected_index: 0,
-            selected_entries: std::collections::HashSet::new(),
+            marked_entries: std::collections::HashSet::new(),
             history: Vec::new(),
             history_position: 0,
         };

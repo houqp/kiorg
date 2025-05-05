@@ -281,7 +281,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                             .unwrap_or(usize::MAX); // Should always find
 
                         let is_selected = original_index == tab_ref.selected_index;
-                        let is_in_selection = tab_ref.selected_entries.contains(&entry.path);
+                        let is_marked = tab_ref.marked_entries.contains(&entry.path);
                         let being_opened = match app.files_being_opened.get(&entry.path) {
                             Some(signal) => {
                                 match signal.load(std::sync::atomic::Ordering::Relaxed) {
@@ -306,7 +306,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                                 colors: &app.colors,
                                 rename_mode: rename_mode && is_selected,
                                 new_name: &mut app.new_name,
-                                is_marked: is_in_selection,
+                                is_marked: is_marked,
                                 is_bookmarked: app.bookmarks.contains(&entry.path),
                                 is_being_opened: being_opened,
                                 search_query: current_search_query,

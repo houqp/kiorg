@@ -86,10 +86,10 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: Shortcut
         ShortcutAction::SelectEntry => {
             let tab = app.tab_manager.current_tab_mut();
             if let Some(entry) = tab.entries.get(tab.selected_index) {
-                if tab.selected_entries.contains(&entry.path) {
-                    tab.selected_entries.remove(&entry.path);
+                if tab.marked_entries.contains(&entry.path) {
+                    tab.marked_entries.remove(&entry.path);
                 } else {
-                    tab.selected_entries.insert(entry.path.clone());
+                    tab.marked_entries.insert(entry.path.clone());
                 }
             }
         }

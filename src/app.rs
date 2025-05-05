@@ -111,7 +111,7 @@ pub struct Kiorg {
     // Popup management
     pub show_popup: Option<PopupType>,
 
-    // TODO: replace rename_mode with Option<new_name>?
+    // TODO: move new_name into PopupType::Rename?
     pub new_name: String,
     pub bookmark_selected_index: usize, // Store bookmark selection index in app state
     pub entry_to_delete: Option<PathBuf>,
@@ -270,28 +270,28 @@ impl Kiorg {
         }
     }
 
-    fn get_selected_entries(&mut self) -> Vec<PathBuf> {
+    fn get_marked_entries(&mut self) -> Vec<PathBuf> {
         let tab = self.tab_manager.current_tab_mut();
-        if tab.selected_entries.is_empty() {
+        if tab.marked_entries.is_empty() {
             if let Some(entry) = tab.selected_entry() {
                 vec![entry.path.clone()]
             } else {
                 vec![]
             }
         } else {
-            tab.selected_entries.iter().cloned().collect()
+            tab.marked_entries.iter().cloned().collect()
         }
     }
 
     pub fn cut_selected_entries(&mut self) {
-        let paths = self.get_selected_entries();
+        let paths = self.get_marked_entries();
         if !paths.is_empty() {
             self.clipboard = Some((paths, true));
         }
     }
 
     pub fn copy_selected_entries(&mut self) {
-        let paths = self.get_selected_entries();
+        let paths = self.get_marked_entries();
         if !paths.is_empty() {
             self.clipboard = Some((paths, false));
         }
