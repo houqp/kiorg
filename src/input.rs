@@ -165,7 +165,14 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: Shortcut
         }
         ShortcutAction::OpenTerminal => {
             let path = app.tab_manager.current_tab_mut().current_path.clone();
-            app.terminal_ctx = Some(terminal::TerminalContext::new(ctx, path));
+            match terminal::TerminalContext::new(ctx, path) {
+                Ok(terminal_ctx) => {
+                    app.terminal_ctx = Some(terminal_ctx);
+                }
+                Err(error) => {
+                    app.toasts.error(error);
+                }
+            }
         }
         ShortcutAction::ShowHelp => {
             // Toggle help popup

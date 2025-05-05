@@ -10,11 +10,12 @@ pub struct TerminalContext {
 }
 
 impl TerminalContext {
-    pub fn new(ctx: &egui::Context, working_directory: std::path::PathBuf) -> Self {
-        let system_shell = std::env::var("SHELL")
-            .expect("SHELL variable is not defined")
-            .to_string();
+    pub fn new(ctx: &egui::Context, working_directory: std::path::PathBuf) -> Result<Self, String> {
+        let system_shell =
+            std::env::var("SHELL").map_err(|e| format!("SHELL variable is not defined: {}", e))?;
+
         let (pty_proxy_sender, pty_proxy_receiver) = std::sync::mpsc::channel();
+
         let terminal_backend = egui_term::TerminalBackend::new(
             0,
             ctx.clone(),
@@ -25,13 +26,12 @@ impl TerminalContext {
                 ..Default::default()
             },
         )
-        // TODO: propagate error to UI
-        .expect("Failed to create terminal backend");
+        .map_err(|e| format!("Failed to create terminal backend: {}", e))?;
 
-        Self {
+        Ok(Self {
             terminal_backend,
             pty_proxy_receiver,
-        }
+        })
     }
 }
 

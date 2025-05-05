@@ -265,12 +265,8 @@ fn try_extract_epub_cover<R: std::io::Read + std::io::Seek>(
     doc: &mut epub::doc::EpubDoc<R>,
 ) -> Option<egui::widgets::ImageSource<'static>> {
     // Try to get the cover image
-    let cover_result = doc.get_cover();
-    if cover_result.is_none() {
-        return None;
-    }
-
-    let (cover_data, mime_type) = cover_result.unwrap();
+    let cover_result = doc.get_cover()?;
+    let (cover_data, mime_type) = cover_result;
     let texture_id = format!(
         "bytes://epub_cover_{}.{}",
         doc.metadata
@@ -290,15 +286,13 @@ fn try_extract_epub_cover<R: std::io::Read + std::io::Seek>(
 fn format_metadata_key(key: &str) -> String {
     // Handle common prefixes like "dc:"
     let clean_key = if key.contains(':') {
-        key.split(':').last().unwrap_or(key)
+        key.split(':').next_back().unwrap_or(key)
     } else {
         key
     };
 
     // Split by underscores, hyphens, or spaces
-    let words: Vec<&str> = clean_key
-        .split(|c| c == '_' || c == '-' || c == ' ')
-        .collect();
+    let words: Vec<&str> = clean_key.split(['_', '-', ' ']).collect();
 
     // Capitalize each word
     let capitalized: Vec<String> = words
