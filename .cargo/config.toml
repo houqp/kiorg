@@ -1,2 +1,2 @@
 [env]
-STANDARD_FONTS = { value = "pdf_fonts", relative = true }
+STANDARD_FONTS = { value = "assets/pdf_fonts", relative = true }
