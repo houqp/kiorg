@@ -6,7 +6,24 @@ on:
   pull_request:
     branches: [ main ]
 
+env:
+  CARGO_TERM_COLOR: always
+
 jobs:
+  format:
+    name: Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
   build-and-test:
     name: Build and Test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -27,7 +44,7 @@ jobs:
       with:
         submodules: recursive
 
-    # # Install Linux dependencies
+    # Install Linux dependencies
     # - name: Install Linux dependencies
     #   if: matrix.os == 'ubuntu-latest'
     #   run: |
@@ -46,10 +63,7 @@ jobs:
       run: cargo clippy -- -D warnings
 
     - name: Build
-      run: cargo build --verbose
+      run: cargo build
 
     - name: Run tests
-      run: cargo test --verbose
-
-    - name: Build release
-      run: cargo build --release --verbose
+      run: cargo test

@@ -235,8 +235,8 @@ fn test_multiple_shortcuts_display() {
 
     // Check for separator
     assert!(
-        move_down_display.contains(" / "),
-        "Multiple shortcuts should be separated by ' / ', got: {}",
+        move_down_display.contains(" or "),
+        "Multiple shortcuts should be separated by ' or ', got: {}",
         move_down_display
     );
 }
