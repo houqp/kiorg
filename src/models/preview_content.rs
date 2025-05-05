@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::mpsc::Receiver;
 use std::sync::{Arc, Mutex};
@@ -16,6 +17,11 @@ pub enum PreviewContent {
     Zip(Vec<ZipEntry>),
     /// PDF content with rendered page images and metadata
     Pdf(egui::widgets::ImageSource<'static>),
+    /// EPUB book metadata and optional cover image
+    Epub(
+        HashMap<String, Vec<String>>,
+        Option<egui::widgets::ImageSource<'static>>,
+    ),
     /// Loading state with path being loaded and optional receiver for async loading
     Loading(PathBuf, PreviewReceiver),
 }
@@ -71,5 +77,13 @@ impl PreviewContent {
     /// Creates a new PDF image preview content
     pub fn pdf(image: egui::widgets::ImageSource<'static>) -> Self {
         PreviewContent::Pdf(image)
+    }
+
+    /// Creates a new EPUB preview content with metadata and optional cover image
+    pub fn epub(
+        metadata: HashMap<String, Vec<String>>,
+        cover_image: Option<egui::widgets::ImageSource<'static>>,
+    ) -> Self {
+        PreviewContent::Epub(metadata, cover_image)
     }
 }

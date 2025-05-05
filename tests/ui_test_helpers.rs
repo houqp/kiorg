@@ -67,6 +67,102 @@ pub fn create_test_zip(path: &PathBuf) -> PathBuf {
     path.clone()
 }
 
+/// Create a minimal test EPUB file
+pub fn create_test_epub(path: &PathBuf) -> PathBuf {
+    use std::io::Write;
+    use zip::write::FileOptions;
+
+    let file = std::fs::File::create(path).unwrap();
+    let mut zip = zip::ZipWriter::new(file);
+
+    // Use explicit type annotation to fix the compiler error
+    let options = FileOptions::default()
+        .compression_method(zip::CompressionMethod::Stored)
+        .unix_permissions(0o755) as FileOptions<'_, ()>;
+
+    // Add mimetype file (required for EPUB)
+    zip.start_file("mimetype", options).unwrap();
+    zip.write_all(b"application/epub+zip").unwrap();
+
+    // Add META-INF directory and container.xml
+    zip.add_directory("META-INF", options).unwrap();
+    zip.start_file("META-INF/container.xml", options).unwrap();
+    zip.write_all(
+        br#"<?xml version="1.0" encoding="UTF-8"?>
+<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+    <rootfiles>
+        <rootfile full-path="content.opf" media-type="application/oebps-package+xml"/>
+    </rootfiles>
+</container>"#,
+    )
+    .unwrap();
+
+    // Add content.opf with metadata
+    zip.start_file("content.opf", options).unwrap();
+    zip.write_all(
+        br#"<?xml version="1.0" encoding="UTF-8"?>
+<package xmlns="http://www.idpf.org/2007/opf" version="2.0" unique-identifier="BookId">
+    <metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf">
+        <dc:title>Test EPUB Book</dc:title>
+        <dc:creator>Test Author</dc:creator>
+        <dc:language>en</dc:language>
+        <dc:identifier id="BookId">urn:uuid:12345678-1234-1234-1234-123456789012</dc:identifier>
+        <dc:publisher>Test Publisher</dc:publisher>
+        <dc:date>2023-01-01</dc:date>
+    </metadata>
+    <manifest>
+        <item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>
+        <item id="content" href="content.html" media-type="application/xhtml+xml"/>
+    </manifest>
+    <spine toc="ncx">
+        <itemref idref="content"/>
+    </spine>
+</package>"#,
+    )
+    .unwrap();
+
+    // Add a simple content file
+    zip.start_file("content.html", options).unwrap();
+    zip.write_all(
+        br#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Test EPUB</title>
+</head>
+<body>
+    <h1>Test EPUB Content</h1>
+    <p>This is a test EPUB file for testing purposes.</p>
+</body>
+</html>"#,
+    )
+    .unwrap();
+
+    // Add a simple TOC file
+    zip.start_file("toc.ncx", options).unwrap();
+    zip.write_all(
+        br#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE ncx PUBLIC "-//NISO//DTD ncx 2005-1//EN" "http://www.daisy.org/z3986/2005/ncx-2005-1.dtd">
+<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
+    <head>
+        <meta name="dtb:uid" content="urn:uuid:12345678-1234-1234-1234-123456789012"/>
+    </head>
+    <docTitle><text>Test EPUB Book</text></docTitle>
+    <navMap>
+        <navPoint id="navpoint-1" playOrder="1">
+            <navLabel><text>Start</text></navLabel>
+            <content src="content.html"/>
+        </navPoint>
+    </navMap>
+</ncx>"#,
+    )
+    .unwrap();
+
+    zip.finish().unwrap();
+    assert!(path.exists());
+    path.clone()
+}
+
 // Wrapper to hold both the harness and the config temp directory to prevent premature cleanup
 pub struct TestHarness<'a> {
     pub harness: Harness<'a, Kiorg>,
