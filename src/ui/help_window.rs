@@ -34,8 +34,8 @@ pub fn show_help_window(ctx: &egui::Context, show_help: &mut bool, colors: &AppC
                                 "Go to parent directory",
                             ),
                             (ShortcutAction::OpenDirectory, "Open directory"),
-                            (ShortcutAction::GoToFirstEntry, "Go to first entry"),
-                            (ShortcutAction::GoToLastEntry, "Go to last entry"),
+                            (ShortcutAction::GoToFirstEntry, "Jump to the first entry"),
+                            (ShortcutAction::GoToLastEntry, "Jump to the last entry"),
                             (ShortcutAction::GoBackInHistory, "Go back in history"),
                             (ShortcutAction::GoForwardInHistory, "Go forward in history"),
                         ];

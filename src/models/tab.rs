@@ -129,7 +129,7 @@ impl Tab {
         }
 
         // Don't add if it's the same as the current path at the end of history
-        if self.history.last().map_or(true, |last| *last != path) {
+        if self.history.last().is_none_or(|last| *last != path) {
             self.history.push(path);
             self.history_position = self.history.len();
         }
