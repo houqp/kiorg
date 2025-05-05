@@ -72,6 +72,17 @@ pub(crate) fn handle_key_press(ctx: &Context, app: &mut Kiorg) -> bool {
                 let tab = app.tab_manager.current_tab_mut();
                 let new_path = tab.current_path.join(entry_name);
 
+                // Check if a file or directory with the same name already exists
+                if new_path.exists() {
+                    // Show error message and keep the popup open
+                    app.toasts.error(format!(
+                        "Cannot create '{}': Entry with the same name already exists",
+                        entry_name.escape_default()
+                    ));
+                    // Don't close the popup so the user can modify the name
+                    return true; // Input handled
+                }
+
                 let result = if entry_name.ends_with('/') {
                     // Create directory
                     // Ensure parent directories exist before creating the final one
@@ -100,8 +111,8 @@ pub(crate) fn handle_key_press(ctx: &Context, app: &mut Kiorg) -> bool {
                         entry_name.escape_default(),
                         e
                     ));
-                    // Optionally: Keep the popup open on error?
-                    // For now, it closes regardless.
+                    // Keep the popup open on error so the user can try again
+                    return true; // Input handled
                 } else {
                     // --- Start: Preserve Selection After Creation ---
                     // Store the path of the newly created entry

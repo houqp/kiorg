@@ -46,10 +46,18 @@ pub fn handle_clipboard_operations(
 
         if is_cut {
             if let Err(e) = std::fs::rename(&path, &new_path) {
-                toasts.error(format!("Failed to move: {e}"));
+                toasts.error(format!(
+                    "Failed to move {} to {}: {e}",
+                    path.to_string_lossy(),
+                    new_path.to_string_lossy()
+                ));
             }
         } else if let Err(e) = std::fs::copy(&path, &new_path) {
-            toasts.error(format!("Failed to copy: {e}"));
+            toasts.error(format!(
+                "Failed to copy {} to {}: {e}",
+                path.to_string_lossy(),
+                new_path.to_string_lossy()
+            ));
         }
     }
     true

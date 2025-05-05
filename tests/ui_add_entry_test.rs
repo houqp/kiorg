@@ -2,7 +2,7 @@ mod ui_test_helpers;
 
 use egui::Key;
 use tempfile::tempdir;
-use ui_test_helpers::create_harness;
+use ui_test_helpers::{create_harness, create_test_files};
 
 #[test]
 fn test_add_file_and_directory() {
@@ -275,5 +275,101 @@ fn test_add_entry_cancel() {
     assert!(
         !temp_dir.path().join(partial_name).exists(),
         "No entry should have been created after cancelling"
+    );
+}
+
+#[test]
+fn test_add_entry_name_conflict() {
+    // Create a temporary directory for testing
+    let temp_dir = tempdir().unwrap();
+
+    // Create test files that will cause conflicts
+    let existing_file = "existing_file.txt";
+    let existing_dir = "existing_dir";
+    create_test_files(&[
+        temp_dir.path().join(existing_file),
+        temp_dir.path().join(existing_dir),
+    ]);
+
+    let mut harness = create_harness(&temp_dir);
+
+    // --- Test 1: Try to create a file with a name that already exists ---
+
+    // Press 'a' to activate add mode
+    harness.press_key(Key::A);
+    harness.step();
+    assert!(
+        harness.state().new_entry_name.is_some(),
+        "Add mode should be active"
+    );
+
+    // Input the existing file name
+    harness
+        .input_mut()
+        .events
+        .push(egui::Event::Text(existing_file.to_string()));
+    harness.step();
+
+    // Press Enter to attempt creation
+    harness.press_key(Key::Enter);
+    harness.step();
+
+    // Verify add mode is still active (popup remains open)
+    assert!(
+        harness.state().new_entry_name.is_some(),
+        "Add mode should still be active after name conflict"
+    );
+
+    // Verify the error message was shown (we can't directly check toast content in tests)
+    // But we can verify the popup is still open with the same content
+    assert_eq!(
+        harness.state().new_entry_name.as_ref().unwrap(),
+        existing_file,
+        "Input field should still contain the conflicting name"
+    );
+
+    // Press Escape to cancel
+    harness.press_key(Key::Escape);
+    harness.step();
+
+    // --- Test 2: Try to create a directory with a name that already exists ---
+
+    // Press 'a' to activate add mode
+    harness.press_key(Key::A);
+    harness.step();
+
+    // Input the existing directory name with trailing slash
+    let dir_input = format!("{}/", existing_dir);
+    harness
+        .input_mut()
+        .events
+        .push(egui::Event::Text(dir_input.clone()));
+    harness.step();
+
+    // Press Enter to attempt creation
+    harness.press_key(Key::Enter);
+    harness.step();
+
+    // Verify add mode is still active (popup remains open)
+    assert!(
+        harness.state().new_entry_name.is_some(),
+        "Add mode should still be active after directory name conflict"
+    );
+
+    // Verify the input field still contains the conflicting name
+    assert_eq!(
+        harness.state().new_entry_name.as_ref().unwrap(),
+        &dir_input,
+        "Input field should still contain the conflicting directory name"
+    );
+
+    // Press Escape to cancel
+    harness.press_key(Key::Escape);
+    harness.step();
+
+    // Verify add mode is now inactive
+    assert!(
+        harness.state().new_entry_name.is_none(),
+        "Add mode should be inactive after cancellation"
     );
 }
