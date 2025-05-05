@@ -32,6 +32,9 @@ pub struct Tab {
     pub parent_selected_index: usize,
     // TODO: rename this, confusing with selected_index
     pub selected_entries: std::collections::HashSet<PathBuf>,
+    // History of visited directories
+    pub history: Vec<PathBuf>,
+    pub history_position: usize,
 }
 
 // Private helper function for sorting DirEntry slices
@@ -78,14 +81,19 @@ impl TabState {
 
 impl Tab {
     pub fn new(path: PathBuf) -> Self {
-        Self {
-            current_path: path,
+        let mut tab = Self {
+            current_path: path.clone(),
             entries: Vec::new(),
             parent_entries: Vec::new(),
             selected_index: 0,
             parent_selected_index: 0,
             selected_entries: std::collections::HashSet::new(),
-        }
+            history: Vec::new(),
+            history_position: 0,
+        };
+        // Add the initial path to history
+        tab.add_to_history(path);
+        tab
     }
 
     // Convert Tab to TabState for serialization
@@ -97,13 +105,53 @@ impl Tab {
 
     // Create Tab from TabState
     pub fn from_state(state: TabState) -> Self {
-        Self {
+        let path = state.current_path.clone();
+        let mut tab = Self {
             current_path: state.current_path,
             entries: Vec::new(),
             parent_entries: Vec::new(),
             selected_index: 0,
             parent_selected_index: 0,
             selected_entries: std::collections::HashSet::new(),
+            history: Vec::new(),
+            history_position: 0,
+        };
+        // Add the initial path to history
+        tab.add_to_history(path);
+        tab
+    }
+
+    // Add a path to the history
+    pub fn add_to_history(&mut self, path: PathBuf) {
+        // If we're not at the end of the history, truncate the forward history
+        if self.history_position < self.history.len() {
+            self.history.truncate(self.history_position);
+        }
+
+        // Don't add if it's the same as the current path at the end of history
+        if self.history.last().map_or(true, |last| *last != path) {
+            self.history.push(path);
+            self.history_position = self.history.len();
+        }
+    }
+
+    // Go back in history
+    pub fn history_back(&mut self) -> Option<PathBuf> {
+        if self.history_position > 1 {
+            self.history_position -= 1;
+            Some(self.history[self.history_position - 1].clone())
+        } else {
+            None
+        }
+    }
+
+    // Go forward in history
+    pub fn history_forward(&mut self) -> Option<PathBuf> {
+        if self.history_position < self.history.len() {
+            self.history_position += 1;
+            Some(self.history[self.history_position - 1].clone())
+        } else {
+            None
         }
     }
 
@@ -299,7 +347,7 @@ impl TabManager {
         false
     }
 
-    pub fn current_tab(&mut self) -> &mut Tab {
+    pub fn current_tab_mut(&mut self) -> &mut Tab {
         &mut self.tabs[self.current_tab_index]
     }
 
@@ -308,12 +356,12 @@ impl TabManager {
     }
 
     pub fn reset_selection(&mut self) {
-        let tab = self.current_tab();
+        let tab = self.current_tab_mut();
         tab.selected_index = 0;
     }
 
     pub fn select_child(&mut self, child: &PathBuf) -> bool {
-        let tab = self.current_tab();
+        let tab = self.current_tab_mut();
         if child.parent().is_some_and(|p| p == tab.current_path) {
             if let Some(pos) = tab.entries.iter().position(|e| &e.path == child) {
                 tab.update_selection(pos);
@@ -355,7 +403,7 @@ impl TabManager {
         let sort_column = self.sort_column;
         let sort_order = self.sort_order;
 
-        let tab = self.current_tab();
+        let tab = self.current_tab_mut();
         let current_path = tab.current_path.clone(); // Get current path from the tab
 
         // Path changed or first load, perform full refresh

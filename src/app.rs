@@ -245,7 +245,7 @@ impl Kiorg {
     }
 
     pub fn set_selection(&mut self, index: usize) {
-        let tab = self.tab_manager.current_tab();
+        let tab = self.tab_manager.current_tab_mut();
         if tab.selected_index == index {
             return;
         }
@@ -255,7 +255,7 @@ impl Kiorg {
     }
 
     pub fn delete_selected_entry(&mut self) {
-        let tab = self.tab_manager.current_tab();
+        let tab = self.tab_manager.current_tab_mut();
         if let Some(entry) = tab.selected_entry() {
             self.entry_to_delete = Some(entry.path.clone());
             self.show_popup = Some(PopupType::Delete);
@@ -263,7 +263,7 @@ impl Kiorg {
     }
 
     pub fn rename_selected_entry(&mut self) {
-        let tab = self.tab_manager.current_tab();
+        let tab = self.tab_manager.current_tab_mut();
         if let Some(entry) = tab.selected_entry() {
             self.new_name = entry.name.clone();
             self.show_popup = Some(PopupType::Rename);
@@ -271,7 +271,7 @@ impl Kiorg {
     }
 
     fn get_selected_entries(&mut self) -> Vec<PathBuf> {
-        let tab = self.tab_manager.current_tab();
+        let tab = self.tab_manager.current_tab_mut();
         if tab.selected_entries.is_empty() {
             if let Some(entry) = tab.selected_entry() {
                 vec![entry.path.clone()]
@@ -298,7 +298,7 @@ impl Kiorg {
     }
 
     pub fn move_selection(&mut self, delta: isize) {
-        let tab = self.tab_manager.current_tab();
+        let tab = self.tab_manager.current_tab_mut();
         let entries = tab.get_filtered_entries_with_indices(&self.search_bar.query); // Get filtered entries with original indices
 
         if entries.is_empty() {
@@ -332,8 +332,8 @@ impl Kiorg {
         }
     }
 
-    pub fn navigate_to_dir(&mut self, mut path: PathBuf) {
-        let tab = self.tab_manager.current_tab();
+    fn navigate_to_dir_without_history(&mut self, mut path: PathBuf) {
+        let tab = self.tab_manager.current_tab_mut();
         // Swap current_path with path and store the swapped path as prev_path
         std::mem::swap(&mut tab.current_path, &mut path);
         self.prev_path = Some(path);
@@ -344,6 +344,25 @@ impl Kiorg {
             .watch(tab.current_path.as_path(), RecursiveMode::NonRecursive)
             .expect("Failed to watch path");
         self.refresh_entries();
+    }
+
+    pub fn navigate_to_dir(&mut self, path: PathBuf) {
+        self.navigate_to_dir_without_history(path.clone());
+        self.tab_manager.current_tab_mut().add_to_history(path);
+    }
+
+    pub fn navigate_history_back(&mut self) {
+        let tab = self.tab_manager.current_tab_mut();
+        if let Some(path) = tab.history_back() {
+            self.navigate_to_dir_without_history(path);
+        }
+    }
+
+    pub fn navigate_history_forward(&mut self) {
+        let tab = self.tab_manager.current_tab_mut();
+        if let Some(path) = tab.history_forward() {
+            self.navigate_to_dir_without_history(path);
+        }
     }
 
     pub fn open_file(&mut self, path: PathBuf) {

@@ -9,7 +9,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui) {
             ui.with_layout(egui::Layout::left_to_right(egui::Align::LEFT), |ui| {
                 if let Some(message) = path_nav::draw_path_navigation(
                     ui,
-                    &app.tab_manager.current_tab().current_path,
+                    &app.tab_manager.current_tab_mut().current_path,
                     &app.colors,
                 ) {
                     match message {

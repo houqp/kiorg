@@ -142,6 +142,8 @@ pub enum ShortcutAction {
     OpenDirectoryOrFile,
     GoToFirstEntry,
     GoToLastEntry,
+    GoBackInHistory,
+    GoForwardInHistory,
 
     // File operations
     DeleteEntry,
@@ -228,6 +230,17 @@ pub fn default_shortcuts() -> Shortcuts {
     add_shortcut(
         KeyboardShortcut::new("g").with_shift(),
         ShortcutAction::GoToLastEntry,
+    );
+
+    // History navigation
+    add_shortcut(
+        KeyboardShortcut::new("o").with_ctrl(),
+        ShortcutAction::GoBackInHistory,
+    );
+
+    add_shortcut(
+        KeyboardShortcut::new("i").with_ctrl(),
+        ShortcutAction::GoForwardInHistory,
     );
 
     // File operations

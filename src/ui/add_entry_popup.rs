@@ -68,7 +68,7 @@ pub(crate) fn handle_key_press(ctx: &Context, app: &mut Kiorg) -> bool {
     // Handle confirmation
     if ctx.input(|i| i.key_pressed(Key::Enter)) {
         if !app.new_entry_name.is_empty() {
-            let tab = app.tab_manager.current_tab();
+            let tab = app.tab_manager.current_tab_mut();
             let new_path = tab.current_path.join(&app.new_entry_name);
 
             let result = if app.new_entry_name.ends_with('/') {

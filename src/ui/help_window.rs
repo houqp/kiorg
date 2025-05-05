@@ -36,6 +36,8 @@ pub fn show_help_window(ctx: &egui::Context, show_help: &mut bool, colors: &AppC
                             (ShortcutAction::OpenDirectory, "Open directory"),
                             (ShortcutAction::GoToFirstEntry, "Go to first entry"),
                             (ShortcutAction::GoToLastEntry, "Go to last entry"),
+                            (ShortcutAction::GoBackInHistory, "Go back in history"),
+                            (ShortcutAction::GoForwardInHistory, "Go forward in history"),
                         ];
 
                         for (action, description) in navigation_actions {

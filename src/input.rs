@@ -55,7 +55,7 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: Shortcut
             }
         }
         ShortcutAction::GoToFirstEntry => {
-            let tab = app.tab_manager.current_tab();
+            let tab = app.tab_manager.current_tab_mut();
             if !tab.entries.is_empty() {
                 tab.update_selection(0);
                 app.ensure_selected_visible = true;
@@ -64,7 +64,7 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: Shortcut
             app.last_lowercase_g_pressed_ms = 0;
         }
         ShortcutAction::GoToLastEntry => {
-            let tab = app.tab_manager.current_tab();
+            let tab = app.tab_manager.current_tab_mut();
             if !tab.entries.is_empty() {
                 tab.update_selection(tab.entries.len() - 1);
                 app.ensure_selected_visible = true;
@@ -84,7 +84,7 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: Shortcut
             app.new_entry_name.clear();
         }
         ShortcutAction::SelectEntry => {
-            let tab = app.tab_manager.current_tab();
+            let tab = app.tab_manager.current_tab_mut();
             if let Some(entry) = tab.entries.get(tab.selected_index) {
                 if tab.selected_entries.contains(&entry.path) {
                     tab.selected_entries.remove(&entry.path);
@@ -100,7 +100,7 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: Shortcut
             app.cut_selected_entries();
         }
         ShortcutAction::PasteEntry => {
-            let tab = app.tab_manager.current_tab();
+            let tab = app.tab_manager.current_tab_mut();
             if center_panel::handle_clipboard_operations(
                 &mut app.clipboard,
                 &tab.current_path,
@@ -164,7 +164,7 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: Shortcut
             app.show_bookmarks = !app.show_bookmarks;
         }
         ShortcutAction::OpenTerminal => {
-            let path = app.tab_manager.current_tab().current_path.clone();
+            let path = app.tab_manager.current_tab_mut().current_path.clone();
             app.terminal_ctx = Some(terminal::TerminalContext::new(ctx, path));
         }
         ShortcutAction::ShowHelp => {
@@ -180,6 +180,12 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: Shortcut
         }
         ShortcutAction::ActivateSearch => {
             app.search_bar.activate();
+        }
+        ShortcutAction::GoBackInHistory => {
+            app.navigate_history_back();
+        }
+        ShortcutAction::GoForwardInHistory => {
+            app.navigate_history_forward();
         }
     }
 }
@@ -215,7 +221,7 @@ fn process_key(
         }
         Some(PopupType::Rename) => {
             if key == Key::Enter {
-                let tab = app.tab_manager.current_tab();
+                let tab = app.tab_manager.current_tab_mut();
                 if let Some(entry) = tab.entries.get(tab.selected_index) {
                     let parent = entry.path.parent().unwrap_or(&tab.current_path);
                     let new_path = parent.join(&app.new_name);

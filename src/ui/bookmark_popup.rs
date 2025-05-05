@@ -244,7 +244,7 @@ pub fn show_bookmark_popup(
 /// Returns true if the bookmark was added, false if it was removed
 pub fn toggle_bookmark(app: &mut Kiorg) {
     let bookmarks = &mut app.bookmarks;
-    let tab = app.tab_manager.current_tab();
+    let tab = app.tab_manager.current_tab_mut();
     let selected_entry = match tab.selected_entry() {
         Some(entry) => entry,
         None => return, // No selected entry
