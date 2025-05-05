@@ -20,7 +20,7 @@ fn test_text_file_preview() {
 
     // Select the text file
     {
-        let tab = harness.state_mut().tab_manager.current_tab();
+        let tab = harness.state_mut().tab_manager.current_tab_mut();
         let text_index = tab
             .entries
             .iter()
@@ -64,7 +64,7 @@ fn test_binary_file_preview() {
 
     // Select the binary file
     {
-        let tab = harness.state_mut().tab_manager.current_tab();
+        let tab = harness.state_mut().tab_manager.current_tab_mut();
         let binary_index = tab
             .entries
             .iter()
@@ -107,7 +107,7 @@ fn test_directory_preview() {
 
     // Select the directory
     {
-        let tab = harness.state_mut().tab_manager.current_tab();
+        let tab = harness.state_mut().tab_manager.current_tab_mut();
         let dir_index = tab
             .entries
             .iter()
@@ -150,7 +150,7 @@ fn test_image_preview() {
 
     // Select the image file
     {
-        let tab = harness.state_mut().tab_manager.current_tab();
+        let tab = harness.state_mut().tab_manager.current_tab_mut();
         let image_index = tab
             .entries
             .iter()
@@ -193,7 +193,7 @@ fn test_zip_preview() {
 
     // Select the zip file
     {
-        let tab = harness.state_mut().tab_manager.current_tab();
+        let tab = harness.state_mut().tab_manager.current_tab_mut();
         let zip_index = tab
             .entries
             .iter()
@@ -267,7 +267,7 @@ fn test_loading_preview() {
 
     // Select the zip file
     {
-        let tab = harness.state_mut().tab_manager.current_tab();
+        let tab = harness.state_mut().tab_manager.current_tab_mut();
         let zip_index = tab
             .entries
             .iter()

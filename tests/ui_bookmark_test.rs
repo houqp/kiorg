@@ -35,7 +35,7 @@ fn test_bookmark_feature() {
             .tab_manager
             .toggle_sort(kiorg::models::tab::SortColumn::Name); // Sets Name/Ascending
                                                                 // sort_all_tabs is called implicitly by toggle_sort now
-        let tab = harness.state_mut().tab_manager.current_tab();
+        let tab = harness.state_mut().tab_manager.current_tab_mut();
         tab.selected_index = 0; // Select dir1
     }
     harness.step();
@@ -75,7 +75,7 @@ fn test_bookmark_feature() {
 
     // Select the second directory
     {
-        let tab = harness.state_mut().tab_manager.current_tab();
+        let tab = harness.state_mut().tab_manager.current_tab_mut();
         tab.selected_index = 1; // Select dir2
     }
     harness.step();
@@ -93,7 +93,7 @@ fn test_bookmark_feature() {
 
     // Try to bookmark a file (should not work)
     {
-        let tab = harness.state_mut().tab_manager.current_tab();
+        let tab = harness.state_mut().tab_manager.current_tab_mut();
         tab.selected_index = 2; // Select test1.txt
     }
     harness.press_key(Key::B);

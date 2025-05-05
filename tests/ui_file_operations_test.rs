@@ -237,7 +237,7 @@ fn test_copy_paste_same_directory() {
     let mut harness = create_harness(&temp_dir);
 
     // Make sure we're selecting the first file (test1.txt)
-    let tab = harness.state_mut().tab_manager.current_tab();
+    let tab = harness.state_mut().tab_manager.current_tab_mut();
     tab.selected_index = 0;
 
     // Copy test1.txt

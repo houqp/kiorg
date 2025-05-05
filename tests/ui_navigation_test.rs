@@ -64,7 +64,7 @@ fn test_g_shortcuts_empty_list() {
 
     // Clear entries
     {
-        let tab = harness.state_mut().tab_manager.current_tab();
+        let tab = harness.state_mut().tab_manager.current_tab_mut();
         tab.entries.clear();
     }
 
@@ -351,7 +351,7 @@ fn test_enter_directory() {
 
     // Select the directory
     {
-        let tab = harness.state_mut().tab_manager.current_tab();
+        let tab = harness.state_mut().tab_manager.current_tab_mut();
         tab.selected_index = 0; // Select dir1
     }
     harness.step();
@@ -404,7 +404,7 @@ fn test_image_preview() {
 
     // Select the image file
     {
-        let tab = harness.state_mut().tab_manager.current_tab();
+        let tab = harness.state_mut().tab_manager.current_tab_mut();
         // Find the index of the image file
         let image_index = tab
             .entries
@@ -475,7 +475,7 @@ fn test_zip_preview() {
 
     // Select the zip file
     {
-        let tab = harness.state_mut().tab_manager.current_tab();
+        let tab = harness.state_mut().tab_manager.current_tab_mut();
         // Find the index of the zip file
         let zip_index = tab
             .entries
@@ -556,7 +556,7 @@ fn test_open_directory_vs_open_directory_or_file() {
     {
         // Select the text file (index 1)
         {
-            let tab = harness.state_mut().tab_manager.current_tab();
+            let tab = harness.state_mut().tab_manager.current_tab_mut();
             tab.selected_index = 1; // Select test1.txt
         }
         harness.step();
@@ -596,7 +596,7 @@ fn test_open_directory_vs_open_directory_or_file() {
     {
         // Select the text file (index 1)
         {
-            let tab = harness.state_mut().tab_manager.current_tab();
+            let tab = harness.state_mut().tab_manager.current_tab_mut();
             tab.selected_index = 1; // Select test1.txt
         }
         harness.step();
@@ -617,7 +617,7 @@ fn test_open_directory_vs_open_directory_or_file() {
     {
         // Select the directory (index 0)
         {
-            let tab = harness.state_mut().tab_manager.current_tab();
+            let tab = harness.state_mut().tab_manager.current_tab_mut();
             tab.selected_index = 0; // Select dir1
         }
         harness.step();

@@ -37,6 +37,7 @@
 * Configurable keyboard shortcuts through TOML config files
 * 'g' namespace key similar to Vim for special shortcut combinations
 * Soft/hard link files display with dedicated icons
+* Directory history navigation with Ctrl+O (back) and Ctrl+I (forward) within each tab
 
 ### What's left to build
 
@@ -48,5 +49,5 @@
 * In rename mode, start the cursor after the extension
 * Renaming a file doesn't clear the image rendering cache, so it still displays the old image
 * Open file with alternative commands leveraging open::commands and open::with_command
-* ctrl+o and ctrl+i to go backward and forward
 * render PDF preview using pdfium_render or pathfinder_rasterize
+* Add debounce to preview to reduce io and compute
