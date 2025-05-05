@@ -54,7 +54,13 @@ pub fn draw_table_header(ui: &mut Ui, params: &mut TableHeaderParams) -> egui::R
     // --- Draw Modified Column ---
     let mod_col_rect =
         egui::Rect::from_min_size(cursor, egui::vec2(MODIFIED_DATE_WIDTH, HEADER_ROW_HEIGHT));
-    draw_header_column(ui, params, mod_col_rect, "Modified", SortColumn::Modified);
+    draw_header_column(
+        ui,
+        params,
+        mod_col_rect,
+        "Date Modified",
+        SortColumn::Modified,
+    );
     cursor.x += MODIFIED_DATE_WIDTH + INTER_COLUMN_PADDING; // Advance cursor including padding
 
     // --- Draw Size Column ---
