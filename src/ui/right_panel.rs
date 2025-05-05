@@ -1,6 +1,3 @@
-use std::collections::HashSet;
-use std::sync::OnceLock;
-
 use egui::{Image, RichText, Ui};
 use pathfinder_geometry::transform2d::Transform2F;
 use pdf_render::{render_page, Cache, SceneBackend};
@@ -8,40 +5,6 @@ use pdf_render::{render_page, Cache, SceneBackend};
 use crate::app::Kiorg;
 use crate::models::preview_content::PreviewContent;
 use crate::ui::style::{section_title_text, HEADER_ROW_HEIGHT};
-
-/// Global HashSet of supported image extensions for efficient lookups
-static IMAGE_EXTENSIONS: OnceLock<HashSet<String>> = OnceLock::new();
-
-/// Global HashSet of supported zip extensions for efficient lookups
-static ZIP_EXTENSIONS: OnceLock<HashSet<String>> = OnceLock::new();
-
-/// Global HashSet of supported PDF extensions for efficient lookups
-static PDF_EXTENSIONS: OnceLock<HashSet<String>> = OnceLock::new();
-
-/// Get the set of supported image extensions
-fn get_image_extensions() -> &'static HashSet<String> {
-    IMAGE_EXTENSIONS.get_or_init(|| {
-        ["jpg", "jpeg", "png", "gif", "bmp", "webp", "svg"]
-            .iter()
-            .map(|&s| s.to_string())
-            .collect()
-    })
-}
-
-/// Get the set of supported zip extensions
-fn get_zip_extensions() -> &'static HashSet<String> {
-    ZIP_EXTENSIONS.get_or_init(|| {
-        ["zip", "jar", "war", "ear"]
-            .iter()
-            .map(|&s| s.to_string())
-            .collect()
-    })
-}
-
-/// Get the set of supported PDF extensions
-fn get_pdf_extensions() -> &'static HashSet<String> {
-    PDF_EXTENSIONS.get_or_init(|| ["pdf"].iter().map(|&s| s.to_string()).collect())
-}
 
 const PANEL_SPACING: f32 = 10.0;
 
@@ -339,13 +302,16 @@ pub fn update_preview_cache(app: &mut Kiorg, _ctx: &egui::Context) {
         .path
         .extension()
         .and_then(|e| e.to_str())
-        .map(|e| e.to_lowercase());
+        .map(|e| e.to_lowercase())
+        .unwrap_or_else(|| "__unknown__".to_string());
 
-    match ext {
-        Some(ext) if get_image_extensions().contains(&ext) => {
+    match ext.as_str() {
+        // Image extensions
+        "jpg" | "jpeg" | "png" | "gif" | "bmp" | "webp" | "svg" => {
             app.preview_content = Some(PreviewContent::image(entry.path));
         }
-        Some(ext) if get_zip_extensions().contains(&ext) => {
+        // Zip extensions
+        "zip" | "jar" | "war" | "ear" => {
             // Handle zip files asynchronously
             let path = entry.path.clone();
 
@@ -365,7 +331,8 @@ pub fn update_preview_cache(app: &mut Kiorg, _ctx: &egui::Context) {
                 let _ = sender.send(preview_result);
             });
         }
-        Some(ext) if get_pdf_extensions().contains(&ext) => {
+        // PDF extension
+        "pdf" => {
             // Handle PDF files asynchronously
             let path = entry.path.clone();
 
@@ -383,6 +350,7 @@ pub fn update_preview_cache(app: &mut Kiorg, _ctx: &egui::Context) {
                 let _ = sender.send(preview_result);
             });
         }
+        // All other files
         _ => {
             match std::fs::read_to_string(&entry.path) {
                 Ok(content) => {
