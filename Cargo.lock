@@ -1598,6 +1598,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "egui_zhcn_fonts"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "23009129c28cd5fdab3b93c8990bf35009979582cc2fdd207d2e34cfdf2351b6"
+dependencies = [
+ "egui",
+ "findfont",
+]
+
+[[package]]
 name = "ehttp"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1836,6 +1846,12 @@ dependencies = [
  "libredox",
  "windows-sys 0.59.0",
 ]
+
+[[package]]
+name = "findfont"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "95d8c4882f6b4581d37ff397b1fc538a70ef65b6e170c39b46836da8936f9737"
 
 [[package]]
 name = "flate2"
@@ -2859,6 +2875,7 @@ dependencies = [
  "egui_extras",
  "egui_kittest",
  "egui_term",
+ "egui_zhcn_fonts",
  "epub",
  "file_type",
  "humansize",

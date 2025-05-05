@@ -63,6 +63,7 @@ fn main() -> Result<(), eframe::Error> {
         options,
         Box::new(|cc| {
             egui_extras::install_image_loaders(&cc.egui_ctx);
+            egui_zhcn_fonts::add_sys_ui_fonts(&cc.egui_ctx);
             Ok(Box::new(Kiorg::new(cc, initial_dir)))
         }),
     )
