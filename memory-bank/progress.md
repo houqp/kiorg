@@ -50,4 +50,5 @@
 * Renaming a file doesn't clear the image rendering cache, so it still displays the old image
 * Open file with alternative commands leveraging open::commands and open::with_command
 * render PDF preview using pdfium_render or pathfinder_rasterize
+  * see <https://github.com/servo/pathfinder/issues/157>
 * Add debounce to preview to reduce io and compute
