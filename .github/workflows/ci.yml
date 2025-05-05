@@ -34,28 +34,22 @@ jobs:
     #     sudo apt-get update
     #     sudo apt-get install -y ${{ matrix.dependencies }}
 
-    # Install Rust toolchain
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@stable
       with:
         components: clippy
 
-    # Cache dependencies
     - name: Cache dependencies
       uses: Swatinem/rust-cache@v2
 
-    # Check code formatting
-    - name: Check code formatting
+    - name: Clippy
       run: cargo clippy -- -D warnings
 
-    # Build
     - name: Build
       run: cargo build --verbose
 
-    # Run tests
     - name: Run tests
       run: cargo test --verbose
 
-    # Build release version
     - name: Build release
       run: cargo build --release --verbose
