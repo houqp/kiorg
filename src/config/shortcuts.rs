@@ -307,6 +307,10 @@ pub fn default_shortcuts() -> Shortcuts {
     add_shortcut(KeyboardShortcut::new("q"), ShortcutAction::Exit);
 
     add_shortcut(KeyboardShortcut::new("/"), ShortcutAction::ActivateSearch);
+    add_shortcut(
+        KeyboardShortcut::new("f").with_ctrl(),
+        ShortcutAction::ActivateSearch,
+    );
 
     shortcuts
 }
@@ -465,6 +469,6 @@ pub mod shortcuts_helpers {
                 parts.join("+")
             })
             .collect::<Vec<_>>()
-            .join(" / ")
+            .join(" or ")
     }
 }
