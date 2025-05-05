@@ -125,8 +125,6 @@ pub struct Kiorg {
 
     pub add_mode: bool,
     pub new_entry_name: String, // name for newly created file/directory
-    // TODO: is this neeeded if we already have add_mode?
-    pub add_focus: bool,
 
     // Track files that are currently being opened
     pub files_being_opened: HashMap<PathBuf, Arc<AtomicBool>>,
@@ -213,7 +211,6 @@ impl Kiorg {
             search_bar: SearchBar::new(),
             add_mode: false,
             new_entry_name: String::new(),
-            add_focus: false,
             files_being_opened: HashMap::new(),
             error_sender,
             error_receiver,

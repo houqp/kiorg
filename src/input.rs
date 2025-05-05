@@ -80,7 +80,6 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: Shortcut
         }
         ShortcutAction::AddEntry => {
             app.add_mode = true;
-            app.add_focus = true; // Request focus for the input field
             app.new_entry_name.clear();
         }
         ShortcutAction::SelectEntry => {

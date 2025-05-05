@@ -35,11 +35,9 @@ pub fn draw(ctx: &egui::Context, app: &mut Kiorg) {
 
                         let response = ui.add(text_edit);
 
-                        // Request focus only once when the popup opens
-                        if app.add_focus {
-                            response.request_focus();
-                            app.add_focus = false; // Reset the focus flag
-                        }
+                        // Always request focus when the popup is shown
+                        // This is safe because draw() is only called when add_mode is true
+                        response.request_focus();
                     });
                 });
         });
@@ -61,7 +59,6 @@ pub(crate) fn handle_key_press(ctx: &Context, app: &mut Kiorg) -> bool {
     if ctx.input(|i| i.key_pressed(Key::Escape)) {
         app.add_mode = false;
         app.new_entry_name.clear();
-        app.add_focus = false;
         return true; // Input handled
     }
 
@@ -112,7 +109,6 @@ pub(crate) fn handle_key_press(ctx: &Context, app: &mut Kiorg) -> bool {
         }
         app.add_mode = false;
         app.new_entry_name.clear();
-        app.add_focus = false;
         return true; // Input handled
     }
 
