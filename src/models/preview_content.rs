@@ -6,6 +6,17 @@ use std::sync::{Arc, Mutex};
 /// Type alias for the async preview content receiver
 pub type PreviewReceiver = Option<Arc<Mutex<Receiver<Result<PreviewContent, String>>>>>;
 
+/// Metadata for document-type files (PDF, EPUB, etc.)
+#[derive(Clone, Debug)]
+pub struct DocMeta {
+    /// Document title
+    pub title: String,
+    /// Document metadata (key-value pairs)
+    pub metadata: HashMap<String, String>,
+    /// Optional cover image or first page
+    pub cover: Option<egui::widgets::ImageSource<'static>>,
+}
+
 /// Represents different types of preview content that can be displayed in the right panel
 #[derive(Clone, Debug)]
 pub enum PreviewContent {
@@ -15,13 +26,8 @@ pub enum PreviewContent {
     Image(String),
     /// Zip file content with a list of entries
     Zip(Vec<ZipEntry>),
-    /// PDF content with rendered page images and metadata
-    Pdf(egui::widgets::ImageSource<'static>),
-    /// EPUB book metadata and optional cover image
-    Epub(
-        HashMap<String, Vec<String>>,
-        Option<egui::widgets::ImageSource<'static>>,
-    ),
+    /// Document content with metadata and cover image
+    Doc(DocMeta),
     /// Loading state with path being loaded and optional receiver for async loading
     Loading(PathBuf, PreviewReceiver),
 }
@@ -74,16 +80,87 @@ impl PreviewContent {
         PreviewContent::Loading(path.into(), Some(Arc::new(Mutex::new(receiver))))
     }
 
-    /// Creates a new PDF image preview content
-    pub fn pdf(image: egui::widgets::ImageSource<'static>) -> Self {
-        PreviewContent::Pdf(image)
+    /// Creates a new PDF document preview content with title, metadata, and image
+    pub fn pdf(
+        image: egui::widgets::ImageSource<'static>,
+        metadata: HashMap<String, String>,
+        title: Option<String>,
+    ) -> Self {
+        // Use provided title or default
+        let title = title.unwrap_or_else(|| "__Untitled__".to_string());
+
+        PreviewContent::Doc(DocMeta {
+            title,
+            metadata,
+            cover: Some(image),
+        })
+    }
+
+    /// Creates a new PDF document preview content with metadata (extracts title from metadata)
+    pub fn pdf_from_metadata(
+        image: egui::widgets::ImageSource<'static>,
+        mut metadata: HashMap<String, String>,
+    ) -> Self {
+        // Extract title from metadata or use default
+        let title = metadata
+            .remove("Title")
+            .unwrap_or_else(|| "__Untitled__".to_string());
+
+        PreviewContent::Doc(DocMeta {
+            title,
+            metadata,
+            cover: Some(image),
+        })
     }
 
     /// Creates a new EPUB preview content with metadata and optional cover image
     pub fn epub(
-        metadata: HashMap<String, Vec<String>>,
+        mut metadata: HashMap<String, Vec<String>>,
         cover_image: Option<egui::widgets::ImageSource<'static>>,
     ) -> Self {
-        PreviewContent::Epub(metadata, cover_image)
+        // Extract title from metadata
+        let title = Self::extract_epub_book_title(&metadata);
+
+        // Remove title keys from metadata since we've extracted the title
+        metadata.remove("title");
+        metadata.remove("dc:title");
+
+        // Convert multi-value metadata to single-value by joining with commas
+        let single_metadata = metadata
+            .into_iter()
+            .filter(|(key, _)| key != "cover") // Filter out cover as it's handled separately
+            .map(|(key, values)| {
+                let value = if values.len() > 1 {
+                    values.join(", ")
+                } else if !values.is_empty() {
+                    values[0].clone()
+                } else {
+                    "N/A".to_string()
+                };
+                (key, value)
+            })
+            .collect();
+
+        PreviewContent::Doc(DocMeta {
+            title,
+            metadata: single_metadata,
+            cover: cover_image,
+        })
+    }
+
+    /// Helper function to extract book title from EPUB metadata
+    fn extract_epub_book_title(metadata: &HashMap<String, Vec<String>>) -> String {
+        // Check for title in various possible metadata keys
+        let title_keys = ["title", "dc:title"];
+
+        for key in title_keys.iter() {
+            if let Some(values) = metadata.get(*key) {
+                if !values.is_empty() {
+                    return values[0].clone();
+                }
+            }
+        }
+        // If no title found, return a default
+        "__Untitled__".to_string()
     }
 }

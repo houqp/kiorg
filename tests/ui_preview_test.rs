@@ -80,7 +80,7 @@ fn test_binary_file_preview() {
     match &harness.state().preview_content {
         Some(PreviewContent::Text(text)) => {
             assert!(
-                text.contains("Binary file:") && text.contains("bytes"),
+                text.contains("File type:") && text.contains("bytes"),
                 "Preview content should indicate it's a binary file with size"
             );
         }

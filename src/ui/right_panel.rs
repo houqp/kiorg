@@ -2,7 +2,6 @@ use egui::{Image, RichText, Ui};
 use file_type::FileType;
 use pathfinder_geometry::transform2d::Transform2F;
 use pdf_render::{render_page, Cache, SceneBackend};
-use std::collections::HashMap;
 
 use crate::app::Kiorg;
 use crate::models::preview_content::PreviewContent;
@@ -55,26 +54,25 @@ pub fn draw(app: &mut Kiorg, ctx: &egui::Context, ui: &mut Ui, width: f32, heigh
                                 .maintain_aspect_ratio(true),
                         );
                     }
-                    Some(PreviewContent::Pdf(img_source)) => {
-                        let image = Image::new(img_source)
-                            .max_size(egui::vec2(available_width, available_height))
-                            .maintain_aspect_ratio(true);
-                        ui.add(image);
-                    }
-                    Some(PreviewContent::Epub(metadata, cover_image)) => {
-                        // Extract book title from metadata
-                        let title = extract_epub_book_title(&metadata);
-
-                        // Display book title as header
-                        ui.label(RichText::new(title).color(colors.fg).strong().size(20.0));
+                    Some(PreviewContent::Doc(doc_meta)) => {
+                        // Display document title
+                        ui.label(
+                            RichText::new(&doc_meta.title)
+                                .color(colors.fg)
+                                .strong()
+                                .size(20.0),
+                        );
                         ui.add_space(10.0);
 
                         // Display cover image if available (centered)
-                        if let Some(cover) = cover_image {
+                        if let Some(cover) = &doc_meta.cover {
                             ui.vertical_centered(|ui| {
                                 ui.add(
-                                    Image::new(cover)
-                                        .max_size(egui::vec2(available_width, available_height))
+                                    Image::new(cover.clone())
+                                        .max_size(egui::vec2(
+                                            available_width,
+                                            available_height * 0.6,
+                                        ))
                                         .maintain_aspect_ratio(true),
                                 );
                             });
@@ -82,35 +80,26 @@ pub fn draw(app: &mut Kiorg, ctx: &egui::Context, ui: &mut Ui, width: f32, heigh
                         }
 
                         // Create a table for metadata
-                        egui::Grid::new("epub_metadata_grid")
+                        egui::Grid::new("doc_metadata_grid")
                             .num_columns(2)
                             .spacing([10.0, 6.0])
                             .striped(true)
                             .show(ui, |ui| {
                                 // Sort keys for consistent display
-                                let mut sorted_keys: Vec<&String> = metadata
-                                    .keys()
-                                    .filter(|k| !k.ends_with("title") && k.as_str() != "cover") // Filter out title keys
-                                    .collect();
+                                let mut sorted_keys: Vec<&String> =
+                                    doc_meta.metadata.keys().collect();
                                 sorted_keys.sort();
 
                                 // Display each metadata field in a table row
                                 for key in sorted_keys {
-                                    if let Some(values) = metadata.get(key) {
-                                        // Format the key with proper capitalization
+                                    if let Some(value) = doc_meta.metadata.get(key) {
+                                        // Format the key with proper capitalization for display
                                         let display_key = format_metadata_key(key);
                                         ui.label(RichText::new(display_key).color(colors.fg));
-
-                                        // Join multiple values with commas
-                                        let value_text = if values.len() > 1 {
-                                            values.join(", ")
-                                        } else if !values.is_empty() {
-                                            values[0].clone()
-                                        } else {
-                                            "N/A".to_string()
-                                        };
-
-                                        ui.label(RichText::new(value_text).color(colors.fg));
+                                        ui.add(
+                                            egui::Label::new(RichText::new(value).color(colors.fg))
+                                                .wrap(),
+                                        );
                                         ui.end_row();
                                     }
                                 }
@@ -254,16 +243,8 @@ fn read_zip_entries(
     Ok(entries)
 }
 
-/// Extract metadata and cover image from an EPUB file
-fn read_epub_metadata(
-    path: &std::path::Path,
-) -> Result<
-    (
-        HashMap<String, Vec<String>>,
-        Option<egui::widgets::ImageSource<'static>>,
-    ),
-    String,
-> {
+/// Extract metadata and cover image from an EPUB file and return as PreviewContent
+fn read_epub_metadata(path: &std::path::Path) -> Result<PreviewContent, String> {
     use epub::doc::EpubDoc;
 
     // Open the EPUB file
@@ -275,24 +256,8 @@ fn read_epub_metadata(
     // Try to extract cover image
     let cover_image = try_extract_epub_cover(&mut doc);
 
-    // Return the metadata and cover image
-    Ok((metadata, cover_image))
-}
-
-/// Extract book title from EPUB metadata
-fn extract_epub_book_title(metadata: &HashMap<String, Vec<String>>) -> String {
-    // Check for title in various possible metadata keys
-    let title_keys = ["title", "dc:title"];
-
-    for key in title_keys.iter() {
-        if let Some(values) = metadata.get(*key) {
-            if !values.is_empty() {
-                return values[0].clone();
-            }
-        }
-    }
-    // If no title found, return a default
-    "Unknown Book Title".to_string()
+    // Return the PreviewContent directly
+    Ok(PreviewContent::epub(metadata, cover_image))
 }
 
 /// Try to extract cover image from an EPUB document
@@ -355,14 +320,68 @@ fn format_metadata_key(key: &str) -> String {
     capitalized.join(" ")
 }
 
-fn render_pdf_page(
-    path: &std::path::Path,
-    page_number: u32,
-) -> Result<egui::widgets::ImageSource<'static>, String> {
+fn render_pdf_page(path: &std::path::Path, page_number: u32) -> Result<PreviewContent, String> {
     let file = pdf::file::FileOptions::uncached()
         .open(path)
         .map_err(|e| format!("Failed to open PDF file: {}", e))?;
     let resolver = file.resolver();
+
+    // Extract metadata
+    let mut metadata = std::collections::HashMap::new();
+
+    // Get PDF version
+    if let Ok(version) = file.version() {
+        let version_str = format!("{:?}", version).trim_matches('"').to_string();
+        metadata.insert("PDF Version".to_string(), version_str);
+    }
+
+    fn format_pdf_date(date: &pdf::primitive::Date) -> String {
+        format!(
+            "{}-{}-{} {}:{}:{}",
+            date.year, date.month, date.day, date.hour, date.minute, date.second
+        )
+    }
+
+    // Get document info if available
+    let mut title = None;
+    if let Some(ref info) = file.trailer.info_dict {
+        // Extract common metadata fields
+        if let Some(v) = &info.title {
+            title = Some(v.to_string_lossy());
+        }
+        if let Some(author) = &info.author {
+            metadata.insert("Author".to_string(), author.to_string_lossy());
+        }
+        if let Some(subject) = &info.subject {
+            metadata.insert("Subject".to_string(), subject.to_string_lossy());
+        }
+        if let Some(keywords) = &info.keywords {
+            metadata.insert("Keywords".to_string(), keywords.to_string_lossy());
+        }
+        if let Some(creator) = &info.creator {
+            metadata.insert("Creator".to_string(), creator.to_string_lossy());
+        }
+        if let Some(producer) = &info.producer {
+            metadata.insert("Producer".to_string(), producer.to_string_lossy());
+        }
+        if let Some(creation_date) = &info.creation_date {
+            metadata.insert("Creation Date".to_string(), format_pdf_date(creation_date));
+        }
+        if let Some(mod_date) = &info.mod_date {
+            metadata.insert("Modification Date".to_string(), format_pdf_date(mod_date));
+        }
+    }
+
+    // Get catalog information
+    let catalog = file.get_root();
+    if let Some(ref version) = catalog.version {
+        metadata.insert("PDF Catalog Version".to_string(), version.to_string());
+    }
+
+    // Get page count
+    metadata.insert("Page Count".to_string(), file.num_pages().to_string());
+
+    // Get the page for rendering
     let page = file
         .get_page(page_number)
         .map_err(|e| format!("Failed to get page {}: {}", page_number, e))?;
@@ -391,7 +410,9 @@ fn render_pdf_page(
         let svg_bytes: egui::load::Bytes = svg_data.into();
         let img_source =
             egui::widgets::ImageSource::from((format!("bytes:://{:?}.svg", path), svg_bytes));
-        Ok(img_source)
+
+        // Return PreviewContent directly
+        Ok(PreviewContent::pdf(img_source, metadata, title))
     }
 
     // Rasterize the scene to an RGBA image using the pathfinder_rasterize crate
@@ -502,8 +523,7 @@ pub fn update_preview_cache(app: &mut Kiorg, _ctx: &egui::Context) {
 
             // Spawn a thread to load the EPUB file
             std::thread::spawn(move || {
-                let preview_result = read_epub_metadata(&path)
-                    .map(|(metadata, cover)| PreviewContent::epub(metadata, cover));
+                let preview_result = read_epub_metadata(&path);
                 let _ = sender.send(preview_result);
             });
         }
@@ -522,7 +542,7 @@ pub fn update_preview_cache(app: &mut Kiorg, _ctx: &egui::Context) {
             ));
 
             std::thread::spawn(move || {
-                let preview_result = render_pdf_page(&path, 0).map(PreviewContent::pdf);
+                let preview_result = render_pdf_page(&path, 0);
                 let _ = sender.send(preview_result);
             });
         }

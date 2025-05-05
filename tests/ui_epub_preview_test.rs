@@ -46,20 +46,25 @@ fn test_epub_preview() {
     // Try multiple steps to allow async loading to complete
     for _ in 0..20 {
         match &harness.state().preview_content {
-            Some(PreviewContent::Epub(metadata, _cover_image)) => {
+            Some(PreviewContent::Doc(doc_meta)) => {
                 // Verify EPUB metadata
-                assert!(!metadata.is_empty(), "EPUB metadata should not be empty");
+                assert!(
+                    !doc_meta.metadata.is_empty(),
+                    "EPUB metadata should not be empty"
+                );
 
                 // Check for expected metadata fields
-                let title = metadata.get("title").or_else(|| metadata.get("dc:title"));
-                let creator = metadata
+                let creator = doc_meta
+                    .metadata
                     .get("creator")
-                    .or_else(|| metadata.get("dc:creator"));
-                let language = metadata
+                    .or_else(|| doc_meta.metadata.get("dc:creator"));
+                let language = doc_meta
+                    .metadata
                     .get("language")
-                    .or_else(|| metadata.get("dc:language"));
+                    .or_else(|| doc_meta.metadata.get("dc:language"));
 
-                assert!(title.is_some(), "Title should be in the EPUB metadata");
+                // Title is now stored in the title field, not in metadata
+                assert!(!doc_meta.title.is_empty(), "Title should not be empty");
                 assert!(creator.is_some(), "Creator should be in the EPUB metadata");
                 assert!(
                     language.is_some(),
@@ -67,16 +72,14 @@ fn test_epub_preview() {
                 );
 
                 // Check specific values
-                if let Some(title_values) = title {
-                    assert!(
-                        title_values.iter().any(|v| v.contains("Test EPUB Book")),
-                        "Title should contain 'Test EPUB Book'"
-                    );
-                }
+                assert!(
+                    doc_meta.title.contains("Test EPUB Book"),
+                    "Title should contain 'Test EPUB Book'"
+                );
 
-                if let Some(creator_values) = creator {
+                if let Some(creator_value) = creator {
                     assert!(
-                        creator_values.iter().any(|v| v.contains("Test Author")),
+                        creator_value.contains("Test Author"),
                         "Creator should contain 'Test Author'"
                     );
                 }
