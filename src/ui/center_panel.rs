@@ -371,7 +371,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
     // Handle context menu action captured from closures
     match context_menu_action {
         ContextMenuAction::Add => {
-            app.add_mode = true;
+            app.new_entry_name = Some(String::new());
         }
         ContextMenuAction::Paste => {
             let current_path = &app.tab_manager.current_tab_ref().current_path;

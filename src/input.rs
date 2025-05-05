@@ -79,8 +79,7 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: Shortcut
             app.rename_selected_entry();
         }
         ShortcutAction::AddEntry => {
-            app.add_mode = true;
-            app.new_entry_name.clear();
+            app.new_entry_name = Some(String::new());
         }
         ShortcutAction::SelectEntry => {
             let tab = app.tab_manager.current_tab_mut();

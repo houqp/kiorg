@@ -123,8 +123,7 @@ pub struct Kiorg {
     pub notify_fs_change: Arc<AtomicBool>,
     pub fs_watcher: notify::RecommendedWatcher,
 
-    pub add_mode: bool,
-    pub new_entry_name: String, // name for newly created file/directory
+    pub new_entry_name: Option<String>, // None when not in add mode, Some when in add mode
 
     // Track files that are currently being opened
     pub files_being_opened: HashMap<PathBuf, Arc<AtomicBool>>,
@@ -209,8 +208,7 @@ impl Kiorg {
             show_bookmarks: false,
             bookmark_selected_index: 0,
             search_bar: SearchBar::new(),
-            add_mode: false,
-            new_entry_name: String::new(),
+            new_entry_name: None,
             files_being_opened: HashMap::new(),
             error_sender,
             error_receiver,
@@ -392,7 +390,7 @@ impl Kiorg {
         }
 
         // Prioritize Add Mode Input
-        if add_entry_popup::handle_key_press(ctx, self) {
+        if self.new_entry_name.is_some() && add_entry_popup::handle_key_press(ctx, self) {
             return;
         }
 
@@ -639,7 +637,7 @@ impl eframe::App for Kiorg {
         search_bar::draw(ctx, self);
 
         // Show add entry popup if needed
-        if self.add_mode {
+        if self.new_entry_name.is_some() {
             add_entry_popup::draw(ctx, self);
         }
 

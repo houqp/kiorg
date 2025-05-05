@@ -20,7 +20,10 @@ fn test_add_file_and_directory() {
     // Press 'a' to activate add mode
     harness.press_key(Key::A);
     harness.step();
-    assert!(harness.state().add_mode, "Add mode should be active");
+    assert!(
+        harness.state().new_entry_name.is_some(),
+        "Add mode should be active"
+    );
 
     // Input the file name
     harness
@@ -29,7 +32,7 @@ fn test_add_file_and_directory() {
         .push(egui::Event::Text(file_name.to_string()));
     harness.step();
     assert_eq!(
-        harness.state().new_entry_name,
+        harness.state().new_entry_name.as_ref().unwrap(),
         file_name,
         "Input field should contain the file name"
     );
@@ -71,7 +74,10 @@ fn test_add_file_and_directory() {
             "UI entry should be marked as a file"
         );
     }
-    assert!(!harness.state().add_mode, "Add mode should be inactive");
+    assert!(
+        harness.state().new_entry_name.is_none(),
+        "Add mode should be inactive"
+    );
 
     // --- Test 2: Add a directory ---
     let dir_name_input = "new_dir/"; // Input includes trailing slash
@@ -81,7 +87,10 @@ fn test_add_file_and_directory() {
     // Press 'a' to activate add mode
     harness.press_key(Key::A);
     harness.step();
-    assert!(harness.state().add_mode, "Add mode should be active");
+    assert!(
+        harness.state().new_entry_name.is_some(),
+        "Add mode should be active"
+    );
 
     // Input the directory name
     harness
@@ -90,7 +99,7 @@ fn test_add_file_and_directory() {
         .push(egui::Event::Text(dir_name_input.to_string()));
     harness.step();
     assert_eq!(
-        harness.state().new_entry_name,
+        harness.state().new_entry_name.as_ref().unwrap(),
         dir_name_input,
         "Input field should contain the directory name"
     );
@@ -132,7 +141,10 @@ fn test_add_file_and_directory() {
             "UI entry should be marked as a directory"
         );
     }
-    assert!(!harness.state().add_mode, "Add mode should be inactive");
+    assert!(
+        harness.state().new_entry_name.is_none(),
+        "Add mode should be inactive"
+    );
 
     // --- Test 3: Add a file with 'q' ---
     let file_name_q = "quick_file.txt";
@@ -231,7 +243,10 @@ fn test_add_entry_cancel() {
     // Press 'a' to activate add mode
     harness.press_key(Key::A);
     harness.step();
-    assert!(harness.state().add_mode, "Add mode should be active");
+    assert!(
+        harness.state().new_entry_name.is_some(),
+        "Add mode should be active"
+    );
 
     // Input some text
     let partial_name = "partial_name";
@@ -241,7 +256,7 @@ fn test_add_entry_cancel() {
         .push(egui::Event::Text(partial_name.to_string()));
     harness.step();
     assert_eq!(
-        harness.state().new_entry_name,
+        harness.state().new_entry_name.as_ref().unwrap(),
         partial_name,
         "Input field should contain partial name"
     );
@@ -251,10 +266,9 @@ fn test_add_entry_cancel() {
     harness.step();
 
     // Verify add mode is inactive and input is cleared
-    assert!(!harness.state().add_mode, "Add mode should be inactive");
     assert!(
-        harness.state().new_entry_name.is_empty(),
-        "Input field should be cleared after cancel"
+        harness.state().new_entry_name.is_none(),
+        "Add mode should be inactive"
     );
 
     // Verify no file/directory was created
