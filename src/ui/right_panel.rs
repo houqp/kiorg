@@ -1,4 +1,5 @@
 use egui::{Image, RichText, Ui};
+use file_type::FileType;
 use pathfinder_geometry::transform2d::Transform2F;
 use pdf_render::{render_page, Cache, SceneBackend};
 use std::collections::HashMap;
@@ -534,10 +535,27 @@ pub fn update_preview_cache(app: &mut Kiorg, _ctx: &egui::Context) {
                     app.preview_content = Some(PreviewContent::text(preview_text));
                 }
                 Err(_) => {
-                    // For binary files or files that can't be read
+                    // For binary files or files that can't be read as text
+                    // Try to detect the file type using file_type crate
+                    let file_type_info = match FileType::try_from_file(&entry.path) {
+                        Ok(file_type) => {
+                            let media_types = file_type.media_types().join(", ");
+                            let extensions = file_type.extensions().join(", ");
+
+                            if !media_types.is_empty() {
+                                format!("File type: {} ({})", media_types, extensions)
+                            } else if !extensions.is_empty() {
+                                format!("File type: {}", extensions)
+                            } else {
+                                "Unknown file type".to_string()
+                            }
+                        }
+                        Err(_) => "Unknown file type".to_string(),
+                    };
+
                     app.preview_content = Some(PreviewContent::text(format!(
-                        "Binary file: {} bytes",
-                        entry.size
+                        "{}\n\nSize: {} bytes",
+                        file_type_info, entry.size
                     )));
                 }
             }

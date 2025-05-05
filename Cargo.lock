@@ -1817,6 +1817,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "file_type"
+version = "0.8.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a463c5a8c1d775e4cde89f8fbe047a3d6969fa66557fbc6223ef6644f476506d"
+dependencies = [
+ "phf",
+]
+
+[[package]]
 name = "filetime"
 version = "0.2.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2851,6 +2860,7 @@ dependencies = [
  "egui_kittest",
  "egui_term",
  "epub",
+ "file_type",
  "humansize",
  "image 0.25.6",
  "notify",
