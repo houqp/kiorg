@@ -34,6 +34,8 @@
 * SVG preview using the resvg crate
 * Image previews using egui's Image widget with direct URI source paths
 * Zip file preview showing contained files and folders
+* PDF preview with metadata display and rendered first page
+* EPUB preview with metadata display and cover image
 * Configurable keyboard shortcuts through TOML config files
 * 'g' namespace key similar to Vim for special shortcut combinations
 * Soft/hard link files display with dedicated icons
