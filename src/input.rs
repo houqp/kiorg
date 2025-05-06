@@ -278,6 +278,12 @@ fn process_key(
         None => {}
     }
 
+    // Handle ESC key to clear search filter when search is active but not focused
+    if key == Key::Escape && app.search_bar.query.is_some() && !app.search_bar.focus {
+        app.search_bar.close();
+        return;
+    }
+
     // Get shortcuts from config or use defaults
     let shortcuts = match &app.config.shortcuts {
         Some(shortcuts) => shortcuts,

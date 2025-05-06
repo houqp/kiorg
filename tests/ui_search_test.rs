@@ -158,3 +158,76 @@ fn test_search_cleared_on_directory_change() {
         harness.state().search_bar.query
     );
 }
+
+#[test]
+fn test_search_cleared_on_escape() {
+    // Create a temporary directory for testing
+    let temp_dir = tempdir().unwrap();
+    create_test_files(&[
+        temp_dir.path().join("test1.txt"),
+        temp_dir.path().join("test2.txt"),
+        temp_dir.path().join("another.log"),
+    ]);
+
+    let mut harness = create_harness(&temp_dir);
+
+    // Ensure consistent sort order for reliable selection
+    harness.ensure_sorted_by_name_ascending();
+
+    // Activate search
+    harness.press_key(Key::Slash);
+    harness.step();
+
+    // Input search query "test"
+    harness
+        .input_mut()
+        .events
+        .push(egui::Event::Text("test".to_string()));
+    harness.step();
+
+    // Verify search bar has the query
+    assert!(
+        harness.state().search_bar.query.is_some(),
+        "Search bar should have query after input"
+    );
+    assert_eq!(
+        harness.state().search_bar.query.as_deref(),
+        Some("test"),
+        "Search query should be 'test'"
+    );
+
+    // Press Enter to apply the filter
+    harness.press_key(Key::Enter);
+    harness.step();
+
+    // Verify search query is still active after pressing Enter
+    assert!(
+        harness.state().search_bar.query.is_some(),
+        "Search query should still be active after pressing Enter"
+    );
+    assert_eq!(
+        harness.state().search_bar.query.as_deref(),
+        Some("test"),
+        "Search query should still be 'test' after pressing Enter"
+    );
+
+    // Verify that the selection is updated to the first matching entry
+    let tab = harness.state().tab_manager.current_tab_ref();
+    let selected_entry = &tab.entries[tab.selected_index];
+    assert!(
+        selected_entry.name.contains("test"),
+        "Selected entry should match the search query. Selected: {}",
+        selected_entry.name
+    );
+
+    // Press Escape to clear the search
+    harness.press_key(Key::Escape);
+    harness.step();
+
+    // Verify search query is cleared (is None) after pressing Escape
+    assert!(
+        harness.state().search_bar.query.is_none(),
+        "Search query should be None after pressing Escape. Actual: {:?}",
+        harness.state().search_bar.query
+    );
+}
