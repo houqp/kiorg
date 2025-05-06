@@ -7,7 +7,7 @@ use ui_test_helpers::{create_harness, create_test_files};
 fn test_unmark_cut_file() {
     // Create a temporary directory with test files
     let temp_dir = tempfile::tempdir().unwrap();
-    
+
     // Create test files and directories
     let test_files = create_test_files(&[
         temp_dir.path().join("dir1"),
@@ -49,13 +49,14 @@ fn test_unmark_cut_file() {
     {
         let app = harness.state();
         assert!(app.clipboard.is_some(), "Clipboard should contain cut file");
-        if let Some((paths, is_cut)) = &app.clipboard {
-            assert!(is_cut, "Clipboard operation should be cut");
+        if let Some(kiorg::app::Clipboard::Cut(paths)) = &app.clipboard {
             assert_eq!(paths.len(), 1, "Clipboard should contain exactly one file");
             assert_eq!(
                 paths[0], test_files[2],
                 "Clipboard should contain test1.txt"
             );
+        } else {
+            panic!("Clipboard should contain a Cut operation");
         }
     }
 
@@ -67,19 +68,22 @@ fn test_unmark_cut_file() {
     {
         let app = harness.state();
         let tab = app.tab_manager.current_tab_ref();
-        
+
         // File should be unmarked
         assert!(
             !tab.marked_entries.contains(&test_files[2]),
             "test1.txt should be unmarked"
         );
-        
+
         // Clipboard should be empty or the file should be removed from it
-        if let Some((paths, _)) = &app.clipboard {
-            assert!(
-                !paths.contains(&test_files[2]),
-                "test1.txt should be removed from clipboard"
-            );
+        match &app.clipboard {
+            Some(kiorg::app::Clipboard::Cut(paths)) | Some(kiorg::app::Clipboard::Copy(paths)) => {
+                assert!(
+                    !paths.contains(&test_files[2]),
+                    "test1.txt should be removed from clipboard"
+                );
+            }
+            None => {}
         }
     }
 }

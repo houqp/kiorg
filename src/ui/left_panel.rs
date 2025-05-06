@@ -42,20 +42,23 @@ pub fn draw(app: &Kiorg, ui: &mut Ui, width: f32, height: f32) -> Option<PathBuf
                 for (i, entry) in parent_entries.iter().enumerate() {
                     let is_bookmarked = bookmarks.contains(&entry.path);
                     // Check if this entry is in the clipboard as a cut or copy operation
-                    let (is_in_cut_clipboard, is_in_copy_clipboard) =
-                        if let Some((ref paths, is_cut)) = app.clipboard {
+                    let (is_in_cut_clipboard, is_in_copy_clipboard) = match &app.clipboard {
+                        Some(crate::app::Clipboard::Cut(paths)) => {
                             if paths.contains(&entry.path) {
-                                if is_cut {
-                                    (true, false)
-                                } else {
-                                    (false, true)
-                                }
+                                (true, false)
                             } else {
                                 (false, false)
                             }
-                        } else {
-                            (false, false)
-                        };
+                        }
+                        Some(crate::app::Clipboard::Copy(paths)) => {
+                            if paths.contains(&entry.path) {
+                                (false, true)
+                            } else {
+                                (false, false)
+                            }
+                        }
+                        None => (false, false),
+                    };
                     let response = file_list::draw_parent_entry_row(
                         ui,
                         entry,

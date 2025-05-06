@@ -35,15 +35,18 @@ fn copy_dir_recursively(src: &std::path::Path, dst: &std::path::Path) -> std::io
     Ok(())
 }
 
+use crate::app::Clipboard;
+
 /// Handles clipboard paste operations (copy/cut)
 /// Returns true if any operation was performed
 pub fn handle_clipboard_operations(
-    clipboard: &mut Option<(Vec<PathBuf>, bool)>,
+    clipboard: &mut Option<Clipboard>,
     current_path: &std::path::Path,
     toasts: &mut egui_notify::Toasts,
 ) -> bool {
     let (paths, is_cut) = match clipboard.take() {
-        Some((paths, is_cut)) => (paths, is_cut),
+        Some(Clipboard::Copy(paths)) => (paths, false),
+        Some(Clipboard::Cut(paths)) => (paths, true),
         _ => return false, // No clipboard operation to perform
     };
 
@@ -342,20 +345,23 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                         };
 
                         // Check if this entry is in the clipboard as a cut or copy operation
-                        let (is_in_cut_clipboard, is_in_copy_clipboard) =
-                            if let Some((ref paths, is_cut)) = app.clipboard {
+                        let (is_in_cut_clipboard, is_in_copy_clipboard) = match &app.clipboard {
+                            Some(Clipboard::Cut(paths)) => {
                                 if paths.contains(&entry.path) {
-                                    if is_cut {
-                                        (true, false)
-                                    } else {
-                                        (false, true)
-                                    }
+                                    (true, false)
                                 } else {
                                     (false, false)
                                 }
-                            } else {
-                                (false, false)
-                            };
+                            }
+                            Some(Clipboard::Copy(paths)) => {
+                                if paths.contains(&entry.path) {
+                                    (false, true)
+                                } else {
+                                    (false, false)
+                                }
+                            }
+                            None => (false, false),
+                        };
 
                         // Draw the row and get its response and potential new name
                         // Destructure the tuple returned by draw_entry_row

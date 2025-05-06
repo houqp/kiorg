@@ -19,6 +19,13 @@ pub enum PopupType {
     Rename,
 }
 
+/// Clipboard operation types
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Clipboard {
+    Copy(Vec<PathBuf>),
+    Cut(Vec<PathBuf>),
+}
+
 // Constants
 const STATE_FILE_NAME: &str = "state.json";
 
@@ -115,7 +122,7 @@ pub struct Kiorg {
     pub new_name: String,
     pub bookmark_selected_index: usize, // Store bookmark selection index in app state
     pub entry_to_delete: Option<PathBuf>,
-    pub clipboard: Option<(Vec<PathBuf>, bool)>, // (paths, is_cut)
+    pub clipboard: Option<Clipboard>,
     pub show_bookmarks: bool,
     pub search_bar: SearchBar,
     pub terminal_ctx: Option<terminal::TerminalContext>,
@@ -299,14 +306,14 @@ impl Kiorg {
             tab.marked_entries.clear();
 
             // Update the cut buffer with only the newly selected file
-            self.clipboard = Some((vec![selected_path], true));
+            self.clipboard = Some(Clipboard::Cut(vec![selected_path]));
             return;
         }
 
         // Otherwise, proceed with the normal behavior
         let paths = self.get_marked_entries();
         if !paths.is_empty() {
-            self.clipboard = Some((paths, true));
+            self.clipboard = Some(Clipboard::Cut(paths));
         }
     }
 
@@ -331,14 +338,14 @@ impl Kiorg {
             tab.marked_entries.clear();
 
             // Update the clipboard with only the newly selected file
-            self.clipboard = Some((vec![selected_path], false));
+            self.clipboard = Some(Clipboard::Copy(vec![selected_path]));
             return;
         }
 
         // Otherwise, proceed with the normal behavior
         let paths = self.get_marked_entries();
         if !paths.is_empty() {
-            self.clipboard = Some((paths, false));
+            self.clipboard = Some(Clipboard::Copy(paths));
         }
     }
 

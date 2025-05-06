@@ -52,8 +52,7 @@ fn test_copy_directory() {
             app.clipboard.is_some(),
             "Clipboard should contain copied directory"
         );
-        if let Some((paths, is_cut)) = &app.clipboard {
-            assert!(!is_cut, "Clipboard operation should be copy");
+        if let Some(kiorg::app::Clipboard::Copy(paths)) = &app.clipboard {
             assert_eq!(
                 paths.len(),
                 1,
@@ -63,6 +62,8 @@ fn test_copy_directory() {
                 paths[0], test_files[0],
                 "Clipboard should contain source_dir"
             );
+        } else {
+            panic!("Clipboard should contain a Copy operation");
         }
     }
 

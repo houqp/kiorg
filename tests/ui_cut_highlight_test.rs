@@ -35,13 +35,14 @@ fn test_cut_file_highlight() {
     {
         let app = harness.state();
         assert!(app.clipboard.is_some(), "Clipboard should contain cut file");
-        if let Some((paths, is_cut)) = &app.clipboard {
-            assert!(is_cut, "Clipboard operation should be cut");
+        if let Some(kiorg::app::Clipboard::Cut(paths)) = &app.clipboard {
             assert_eq!(paths.len(), 1, "Clipboard should contain exactly one file");
             assert_eq!(
                 paths[0], test_files[2],
                 "Clipboard should contain test1.txt"
             );
+        } else {
+            panic!("Clipboard should contain a Cut operation");
         }
     }
 
@@ -54,10 +55,9 @@ fn test_cut_file_highlight() {
         let entry = &tab.entries[tab.selected_index];
 
         // Check if this entry is in the clipboard as a cut operation
-        let is_in_cut_clipboard = if let Some((ref paths, is_cut)) = app.clipboard {
-            is_cut && paths.contains(&entry.path)
-        } else {
-            false
+        let is_in_cut_clipboard = match &app.clipboard {
+            Some(kiorg::app::Clipboard::Cut(paths)) => paths.contains(&entry.path),
+            _ => false,
         };
 
         assert!(

@@ -90,14 +90,18 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: Shortcut
                     tab.marked_entries.remove(path);
 
                     // If this entry is in the clipboard as a cut or copy operation, remove it
-                    if let Some((ref mut paths, _)) = app.clipboard {
-                        // Remove the path from the clipboard's paths list
-                        paths.retain(|p| p != path);
+                    match &mut app.clipboard {
+                        Some(crate::app::Clipboard::Cut(paths))
+                        | Some(crate::app::Clipboard::Copy(paths)) => {
+                            // Remove the path from the clipboard's paths list
+                            paths.retain(|p| p != path);
 
-                        // If the clipboard's paths list becomes empty, set the clipboard to None
-                        if paths.is_empty() {
-                            app.clipboard = None;
+                            // If the clipboard's paths list becomes empty, set the clipboard to None
+                            if paths.is_empty() {
+                                app.clipboard = None;
+                            }
                         }
+                        None => {}
                     }
                 } else {
                     // Mark the entry
