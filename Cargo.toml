@@ -9,6 +9,10 @@ repository = "https://github.com/houqp/kiorg"
 name = "kiorg"
 path = "src/lib.rs"
 
+[[bin]]
+name = "kiorg"
+path = "src/main.rs"
+
 [dependencies]
 eframe = "0.31.1"
 egui = "0.31.1"
@@ -40,3 +44,8 @@ pathfinder_export = { git = "https://github.com/servo/pathfinder" }
 [dev-dependencies]
 egui_kittest = { version = "0.31.1", features = ["eframe"] }
 tempfile = "3.8"
+
+[package.metadata.bundle]
+name = "Kiorg"
+icon = ["assets/icon.png"]
+osx_url_schemes = ["com.kiorg.kiorg"]
