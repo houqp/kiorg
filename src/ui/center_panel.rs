@@ -9,6 +9,32 @@ use crate::ui::file_list::{self, TableHeaderParams, ROW_HEIGHT};
 // TODO: make this configurable
 const PADDING_ROWS: usize = 3;
 
+/// Recursively copy a directory from src to dst
+fn copy_dir_recursively(src: &std::path::Path, dst: &std::path::Path) -> std::io::Result<()> {
+    // Create the destination directory if it doesn't exist
+    if !dst.exists() {
+        std::fs::create_dir_all(dst)?;
+    }
+
+    // Iterate through the source directory entries
+    for entry in std::fs::read_dir(src)? {
+        let entry = entry?;
+        let entry_path = entry.path();
+        let file_name = entry.file_name();
+        let dst_path = dst.join(file_name);
+
+        if entry_path.is_dir() {
+            // Recursively copy subdirectories
+            copy_dir_recursively(&entry_path, &dst_path)?;
+        } else {
+            // Copy files
+            std::fs::copy(&entry_path, &dst_path)?;
+        }
+    }
+
+    Ok(())
+}
+
 /// Handles clipboard paste operations (copy/cut)
 /// Returns true if any operation was performed
 pub fn handle_clipboard_operations(
@@ -52,12 +78,23 @@ pub fn handle_clipboard_operations(
                     new_path.to_string_lossy()
                 ));
             }
-        } else if let Err(e) = std::fs::copy(&path, &new_path) {
-            toasts.error(format!(
-                "Failed to copy {} to {}: {e}",
-                path.to_string_lossy(),
-                new_path.to_string_lossy()
-            ));
+        } else {
+            // Handle copying differently based on whether it's a file or directory
+            if path.is_dir() {
+                if let Err(e) = copy_dir_recursively(&path, &new_path) {
+                    toasts.error(format!(
+                        "Failed to copy directory {} to {}: {e}",
+                        path.to_string_lossy(),
+                        new_path.to_string_lossy()
+                    ));
+                }
+            } else if let Err(e) = std::fs::copy(&path, &new_path) {
+                toasts.error(format!(
+                    "Failed to copy file {} to {}: {e}",
+                    path.to_string_lossy(),
+                    new_path.to_string_lossy()
+                ));
+            }
         }
     }
     true
