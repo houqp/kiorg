@@ -134,6 +134,7 @@ pub struct EntryRowParams<'a> {
     pub is_bookmarked: bool,
     pub is_being_opened: bool,
     pub is_in_cut_clipboard: bool,
+    pub is_in_copy_clipboard: bool,
     pub search_query: &'a Option<String>,
 }
 
@@ -199,6 +200,7 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
         is_bookmarked,
         is_being_opened,
         is_in_cut_clipboard,
+        is_in_copy_clipboard,
         search_query,
     } = params;
 
@@ -275,6 +277,9 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
         let name_color = if is_in_cut_clipboard {
             // Use error color (red) for cut files
             colors.error
+        } else if is_in_copy_clipboard {
+            // Use success color (green) for copied files
+            colors.success
         } else if entry.is_dir {
             colors.fg_folder
         } else {
@@ -408,6 +413,7 @@ pub fn draw_parent_entry_row(
     colors: &AppColors,
     is_bookmarked: bool,
     is_in_cut_clipboard: bool,
+    is_in_copy_clipboard: bool,
 ) -> egui::Response {
     let (rect, response) = ui.allocate_exact_size(
         egui::vec2(ui.available_width(), ROW_HEIGHT),
@@ -437,6 +443,9 @@ pub fn draw_parent_entry_row(
     let name_color = if is_in_cut_clipboard {
         // Use error color (red) for cut files
         colors.error
+    } else if is_in_copy_clipboard {
+        // Use success color (green) for copied files
+        colors.success
     } else if entry.is_dir {
         colors.fg_folder
     } else {

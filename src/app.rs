@@ -311,6 +311,31 @@ impl Kiorg {
     }
 
     pub fn copy_selected_entries(&mut self) {
+        let tab = self.tab_manager.current_tab_mut();
+
+        // Check if we're copying a single unmarked file while other files are marked
+        let should_clear_marked = if let Some(entry) = tab.selected_entry() {
+            let selected_path = &entry.path;
+
+            // If the selected file is not marked but there are other marked files
+            !tab.marked_entries.contains(selected_path) && !tab.marked_entries.is_empty()
+        } else {
+            false
+        };
+
+        if should_clear_marked {
+            // Get the selected entry path before clearing marked entries
+            let selected_path = tab.selected_entry().unwrap().path.clone();
+
+            // Clear all marked entries
+            tab.marked_entries.clear();
+
+            // Update the clipboard with only the newly selected file
+            self.clipboard = Some((vec![selected_path], false));
+            return;
+        }
+
+        // Otherwise, proceed with the normal behavior
         let paths = self.get_marked_entries();
         if !paths.is_empty() {
             self.clipboard = Some((paths, false));
