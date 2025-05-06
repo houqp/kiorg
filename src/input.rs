@@ -84,10 +84,26 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: Shortcut
         ShortcutAction::SelectEntry => {
             let tab = app.tab_manager.current_tab_mut();
             if let Some(entry) = tab.entries.get(tab.selected_index) {
-                if tab.marked_entries.contains(&entry.path) {
-                    tab.marked_entries.remove(&entry.path);
+                let path = &entry.path;
+                if tab.marked_entries.contains(path) {
+                    // Unmark the entry
+                    tab.marked_entries.remove(path);
+
+                    // If this entry is in the clipboard as a cut operation, remove it
+                    if let Some((ref mut paths, is_cut)) = app.clipboard {
+                        if is_cut {
+                            // Remove the path from the clipboard's paths list
+                            paths.retain(|p| p != path);
+
+                            // If the clipboard's paths list becomes empty, set the clipboard to None
+                            if paths.is_empty() {
+                                app.clipboard = None;
+                            }
+                        }
+                    }
                 } else {
-                    tab.marked_entries.insert(entry.path.clone());
+                    // Mark the entry
+                    tab.marked_entries.insert(path.clone());
                 }
             }
         }

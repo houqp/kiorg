@@ -133,6 +133,7 @@ pub struct EntryRowParams<'a> {
     pub is_marked: bool,
     pub is_bookmarked: bool,
     pub is_being_opened: bool,
+    pub is_in_cut_clipboard: bool,
     pub search_query: &'a Option<String>,
 }
 
@@ -197,6 +198,7 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
         is_marked,
         is_bookmarked,
         is_being_opened,
+        is_in_cut_clipboard,
         search_query,
     } = params;
 
@@ -270,7 +272,10 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
         });
     } else {
         let name_text = truncate_text(&entry.name, name_width);
-        let name_color = if entry.is_dir {
+        let name_color = if is_in_cut_clipboard {
+            // Use error color (red) for cut files
+            colors.error
+        } else if entry.is_dir {
             colors.fg_folder
         } else {
             colors.fg
@@ -402,6 +407,7 @@ pub fn draw_parent_entry_row(
     is_selected: bool,
     colors: &AppColors,
     is_bookmarked: bool,
+    is_in_cut_clipboard: bool,
 ) -> egui::Response {
     let (rect, response) = ui.allocate_exact_size(
         egui::vec2(ui.available_width(), ROW_HEIGHT),
@@ -428,7 +434,10 @@ pub fn draw_parent_entry_row(
 
     // Name with truncation
     let name_text = truncate_text(&entry.name, name_width);
-    let name_color = if entry.is_dir {
+    let name_color = if is_in_cut_clipboard {
+        // Use error color (red) for cut files
+        colors.error
+    } else if entry.is_dir {
         colors.fg_folder
     } else {
         colors.fg

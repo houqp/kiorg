@@ -304,6 +304,13 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                             None => false,
                         };
 
+                        // Check if this entry is in the clipboard as a cut operation
+                        let is_in_cut_clipboard = if let Some((ref paths, is_cut)) = app.clipboard {
+                            is_cut && paths.contains(&entry.path)
+                        } else {
+                            false
+                        };
+
                         // Draw the row and get its response and potential new name
                         // Destructure the tuple returned by draw_entry_row
                         let row_response = file_list::draw_entry_row(
@@ -317,6 +324,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                                 is_marked,
                                 is_bookmarked: app.bookmarks.contains(&entry.path),
                                 is_being_opened: being_opened,
+                                is_in_cut_clipboard,
                                 search_query: current_search_query,
                             },
                         );

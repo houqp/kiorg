@@ -41,12 +41,19 @@ pub fn draw(app: &Kiorg, ui: &mut Ui, width: f32, height: f32) -> Option<PathBuf
                 // Draw all rows
                 for (i, entry) in parent_entries.iter().enumerate() {
                     let is_bookmarked = bookmarks.contains(&entry.path);
+                    // Check if this entry is in the clipboard as a cut operation
+                    let is_in_cut_clipboard = if let Some((ref paths, is_cut)) = app.clipboard {
+                        is_cut && paths.contains(&entry.path)
+                    } else {
+                        false
+                    };
                     let response = file_list::draw_parent_entry_row(
                         ui,
                         entry,
                         i == parent_selected_index,
                         colors,
                         is_bookmarked,
+                        is_in_cut_clipboard,
                     );
                     if response.clicked() {
                         path_to_navigate = Some(entry.path.clone());
