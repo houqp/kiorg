@@ -509,62 +509,20 @@ pub fn update_preview_cache(app: &mut Kiorg, _ctx: &egui::Context) {
         // Zip extensions
         "zip" | "jar" | "war" | "ear" => {
             // Handle zip files asynchronously
-            let path = entry.path.clone();
-
-            // Create a channel for communication
-            let (sender, receiver) = std::sync::mpsc::channel();
-
-            // Set the initial loading state
-            app.preview_content = Some(PreviewContent::loading_with_receiver(
-                path.clone(),
-                receiver,
-            ));
-
-            // Spawn a thread to load the zip file
-            std::thread::spawn(move || {
+            load_preview_async(app, entry.path.clone(), |path| {
                 let result = read_zip_entries(&path);
-                let preview_result = result.map(PreviewContent::zip);
-                let _ = sender.send(preview_result);
+                result.map(PreviewContent::zip)
             });
         }
         // EPUB extension
         "epub" => {
             // Handle EPUB files asynchronously
-            let path = entry.path.clone();
-
-            // Create a channel for communication
-            let (sender, receiver) = std::sync::mpsc::channel();
-
-            // Set the initial loading state with the receiver
-            app.preview_content = Some(PreviewContent::loading_with_receiver(
-                path.clone(),
-                receiver,
-            ));
-
-            // Spawn a thread to load the EPUB file
-            std::thread::spawn(move || {
-                let preview_result = read_epub_metadata(&path);
-                let _ = sender.send(preview_result);
-            });
+            load_preview_async(app, entry.path.clone(), |path| read_epub_metadata(&path));
         }
         // PDF extension
         "pdf" => {
             // Handle PDF files asynchronously
-            let path = entry.path.clone();
-
-            // Create a channel for communication
-            let (sender, receiver) = std::sync::mpsc::channel();
-
-            // Set the initial loading state with the receiver
-            app.preview_content = Some(PreviewContent::loading_with_receiver(
-                path.clone(),
-                receiver,
-            ));
-
-            std::thread::spawn(move || {
-                let preview_result = render_pdf_page(&path, 0);
-                let _ = sender.send(preview_result);
-            });
+            load_preview_async(app, entry.path.clone(), |path| render_pdf_page(&path, 0));
         }
         // All other files
         _ => {
@@ -580,22 +538,41 @@ pub fn update_preview_cache(app: &mut Kiorg, _ctx: &egui::Context) {
                     let path = entry.path.clone();
                     let size = entry.size;
 
-                    // Create a channel for communication
-                    let (sender, receiver) = std::sync::mpsc::channel();
-
-                    // Set the initial loading state with the receiver
-                    app.preview_content = Some(PreviewContent::loading_with_receiver(
-                        path.clone(),
-                        receiver,
-                    ));
-
-                    // Spawn a thread to detect the file type
-                    std::thread::spawn(move || {
-                        let preview_result = detect_file_type(&path, size);
-                        let _ = sender.send(preview_result);
-                    });
+                    load_preview_async(app, path, move |path| detect_file_type(&path, size));
                 }
             }
         }
     }
+}
+
+/// Helper function to load preview content asynchronously
+///
+/// This function handles the common pattern of:
+/// - Creating a channel for communication
+/// - Setting up the loading state with receiver
+/// - Spawning a thread to process the file
+/// - Sending the result back through the channel
+///
+/// # Arguments
+/// * `app` - The application state
+/// * `path` - The path to the file to load
+/// * `processor` - A closure that processes the file and returns a Result<PreviewContent, String>
+fn load_preview_async<F>(app: &mut Kiorg, path: std::path::PathBuf, processor: F)
+where
+    F: FnOnce(std::path::PathBuf) -> Result<PreviewContent, String> + Send + 'static,
+{
+    // Create a channel for communication
+    let (sender, receiver) = std::sync::mpsc::channel();
+
+    // Set the initial loading state with the receiver
+    app.preview_content = Some(PreviewContent::loading_with_receiver(
+        path.clone(),
+        receiver,
+    ));
+
+    // Spawn a thread to process the file
+    std::thread::spawn(move || {
+        let preview_result = processor(path);
+        let _ = sender.send(preview_result);
+    });
 }
