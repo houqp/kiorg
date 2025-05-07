@@ -253,10 +253,22 @@ pub fn default_shortcuts() -> Shortcuts {
     add_shortcut(KeyboardShortcut::new("space"), ShortcutAction::SelectEntry);
 
     add_shortcut(KeyboardShortcut::new("y"), ShortcutAction::CopyEntry);
+    add_shortcut(
+        KeyboardShortcut::new("c").with_ctrl(),
+        ShortcutAction::CopyEntry,
+    );
 
     add_shortcut(KeyboardShortcut::new("x"), ShortcutAction::CutEntry);
+    add_shortcut(
+        KeyboardShortcut::new("x").with_ctrl(),
+        ShortcutAction::CutEntry,
+    );
 
     add_shortcut(KeyboardShortcut::new("p"), ShortcutAction::PasteEntry);
+    add_shortcut(
+        KeyboardShortcut::new("v").with_ctrl(),
+        ShortcutAction::PasteEntry,
+    );
 
     // Tabs
     add_shortcut(KeyboardShortcut::new("t"), ShortcutAction::CreateTab);

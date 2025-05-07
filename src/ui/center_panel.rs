@@ -204,7 +204,7 @@ fn show_context_menu(ui: &mut Ui, can_paste: bool, has_selection: bool) -> Conte
     ui.separator();
 
     if ui
-        .add_enabled(has_selection, egui::Button::new("Copy (yy)"))
+        .add_enabled(has_selection, egui::Button::new("Copy (y)"))
         .clicked()
     {
         action = ContextMenuAction::Copy;
