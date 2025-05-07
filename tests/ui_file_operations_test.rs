@@ -76,6 +76,9 @@ fn test_delete_shortcut() {
     harness.step();
     harness.press_key(Key::Enter);
     harness.step();
+    // confirm twice
+    harness.press_key(Key::Enter);
+    harness.step();
 
     // Verify dir1 and all its contents were deleted recursively
     assert!(!test_files[0].exists(), "dir1 should be deleted");

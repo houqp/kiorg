@@ -236,9 +236,9 @@ fn process_key(
         }
         Some(PopupType::Delete) => {
             if key == Key::Enter {
-                app.confirm_delete();
+                crate::ui::delete_popup::confirm_delete(app);
             } else if is_cancel_keys(key) {
-                app.cancel_delete();
+                crate::ui::delete_popup::cancel_delete(app);
             }
             return;
         }

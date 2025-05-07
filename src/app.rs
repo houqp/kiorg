@@ -33,7 +33,7 @@ use crate::config::{self, colors::AppColors};
 use crate::input;
 use crate::models::tab::{TabManager, TabManagerState};
 use crate::ui::add_entry_popup; // Import the new module
-use crate::ui::delete_popup::DeletePopup;
+use crate::ui::delete_popup::{self, DeleteConfirmResult, DeleteConfirmState};
 use crate::ui::exit_popup;
 use crate::ui::search_bar::{self, SearchBar};
 use crate::ui::separator;
@@ -122,6 +122,7 @@ pub struct Kiorg {
     pub new_name: String,
     pub bookmark_selected_index: usize, // Store bookmark selection index in app state
     pub entry_to_delete: Option<PathBuf>,
+    pub delete_popup_state: DeleteConfirmState, // State for delete confirmation popup
     pub clipboard: Option<Clipboard>,
     pub show_bookmarks: bool,
     pub search_bar: SearchBar,
@@ -212,6 +213,7 @@ impl Kiorg {
             new_name: String::new(),
             clipboard: None,
             entry_to_delete: None,
+            delete_popup_state: DeleteConfirmState::Initial, // Initialize delete popup state
             show_bookmarks: false,
             bookmark_selected_index: 0,
             search_bar: SearchBar::new(),
@@ -478,49 +480,35 @@ impl Kiorg {
         (left_width, center_width, right_width)
     }
 
-    pub fn confirm_delete(&mut self) {
-        if let Some(path) = self.entry_to_delete.clone() {
-            if let Err(error) = DeletePopup::perform_delete(&path, || {
-                self.refresh_entries();
-            }) {
-                self.toasts.error(error);
-            }
-        }
-        self.show_popup = None;
-        self.entry_to_delete = None;
-    }
-
-    pub fn cancel_delete(&mut self) {
-        self.show_popup = None;
-        self.entry_to_delete = None;
-    }
-
     fn handle_delete_confirmation(&mut self, ctx: &egui::Context) {
         if self.show_popup != Some(PopupType::Delete) || self.entry_to_delete.is_none() {
             return;
         }
 
-        let mut should_confirm = false;
-        let mut should_cancel = false;
         let mut show_delete_confirm = true; // Temporary variable for compatibility
 
-        DeletePopup::handle_delete_confirmation(
+        let result = delete_popup::handle_delete_confirmation(
             ctx,
             &mut show_delete_confirm,
             &self.entry_to_delete,
             &self.colors,
-            || should_confirm = true,
-            || should_cancel = true,
+            &mut self.delete_popup_state,
         );
 
         if !show_delete_confirm {
             self.show_popup = None;
         }
 
-        if should_confirm {
-            self.confirm_delete();
-        } else if should_cancel {
-            self.cancel_delete();
+        match result {
+            DeleteConfirmResult::Confirm => {
+                delete_popup::confirm_delete(self);
+            }
+            DeleteConfirmResult::Cancel => {
+                delete_popup::cancel_delete(self);
+            }
+            DeleteConfirmResult::None => {
+                // No action taken yet
+            }
         }
     }
 
@@ -652,9 +640,39 @@ impl eframe::App for Kiorg {
         };
 
         // Show delete confirmation window if needed
+        // TODO: write a test for triggering delete popup from right click
         // NOTE: important to keep it before the center panel so the popup can
         // be triggered through the right click context menu
-        self.handle_delete_confirmation(ctx);
+        //
+        // Handle popups based on the show_popup field
+        match self.show_popup {
+            Some(PopupType::Help) => {
+                let mut keep_open = true;
+                help_window::show_help_window(ctx, &mut keep_open, &self.colors);
+                if !keep_open {
+                    self.show_popup = None;
+                }
+            }
+            Some(PopupType::About) => {
+                about_popup::show_about_popup(ctx, self);
+            }
+            Some(PopupType::Exit) => {
+                let mut keep_open = true;
+                exit_popup::show(ctx, &mut keep_open, &self.colors);
+                if !keep_open {
+                    self.show_popup = None;
+                }
+            }
+            Some(PopupType::Delete) => {
+                self.handle_delete_confirmation(ctx);
+            }
+            Some(PopupType::Rename) => {
+                // The rename popup is handled in the UI by the text edit field
+                // in center_panel.rs, so we don't need to do anything here
+                // except keep the popup state active
+            }
+            None => {}
+        }
 
         egui::CentralPanel::default().show(ctx, |ui| {
             let total_available_height = ui.available_height();
@@ -696,36 +714,6 @@ impl eframe::App for Kiorg {
         // Show add entry popup if needed
         if self.new_entry_name.is_some() {
             add_entry_popup::draw(ctx, self);
-        }
-
-        // Handle popups based on the show_popup field
-        match self.show_popup {
-            Some(PopupType::Help) => {
-                let mut keep_open = true;
-                help_window::show_help_window(ctx, &mut keep_open, &self.colors);
-                if !keep_open {
-                    self.show_popup = None;
-                }
-            }
-            Some(PopupType::About) => {
-                about_popup::show_about_popup(ctx, self);
-            }
-            Some(PopupType::Exit) => {
-                let mut keep_open = true;
-                exit_popup::show(ctx, &mut keep_open, &self.colors);
-                if !keep_open {
-                    self.show_popup = None;
-                }
-            }
-            Some(PopupType::Delete) => {
-                self.handle_delete_confirmation(ctx);
-            }
-            Some(PopupType::Rename) => {
-                // The rename popup is handled in the UI by the text edit field
-                // in center_panel.rs, so we don't need to do anything here
-                // except keep the popup state active
-            }
-            None => {}
         }
 
         if self.shutdown_requested {
