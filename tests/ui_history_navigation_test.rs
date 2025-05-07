@@ -26,9 +26,6 @@ fn test_directory_history_navigation() {
     // Start the harness
     let mut harness = create_harness(&temp_dir);
 
-    // Ensure consistent sort order for reliable selection
-    harness.ensure_sorted_by_name_ascending();
-
     // Verify initial state
     let initial_path = harness
         .state()

@@ -23,13 +23,28 @@ fn find_entry_index(harness: &ui_test_helpers::TestHarness, name: &str) -> Optio
 
 // Helper function to wait for FS events and update UI
 fn wait_and_step(harness: &mut ui_test_helpers::TestHarness) {
-    // Wait a bit for filesystem events to propagate and be picked up by notify
-    // Reduced sleep time as individual tests are faster
-    thread::sleep(Duration::from_millis(200));
-    // Check that the notification flag was set before the UI processes it
+    // Wait for filesystem events to propagate and be picked up by notify
+    // Check in a loop with short intervals to avoid unnecessary waiting
+    let max_iterations = 20;
+    let sleep_duration = Duration::from_millis(50);
+    let mut iterations = 0;
+
+    while iterations < max_iterations {
+        if harness.state().notify_fs_change.load(Ordering::Relaxed) {
+            // Flag is set, we can proceed
+            break;
+        }
+        // Sleep for a short interval before checking again
+        thread::sleep(sleep_duration);
+        iterations += 1;
+    }
+
+    // After the loop, assert that the flag was eventually set
     assert!(
-        harness.state().notify_fs_change.load(Ordering::Relaxed), // Load the atomic value
-        "notify_fs_change should be true after FS event and sleep"
+        harness.state().notify_fs_change.load(Ordering::Relaxed),
+        "notify_fs_change should be true after waiting for {} iterations of {}ms",
+        max_iterations,
+        sleep_duration.as_millis()
     );
     harness.step(); // Process events and update UI (should consume the flag)
     harness.step(); // Another step might be needed for async updates
@@ -39,7 +54,6 @@ fn wait_and_step(harness: &mut ui_test_helpers::TestHarness) {
 fn test_external_file_addition() {
     let temp_dir = tempdir().unwrap();
     let mut harness = create_harness(&temp_dir);
-    harness.ensure_sorted_by_name_ascending();
 
     let file_name = "external_file.txt";
     let file_path = temp_dir.path().join(file_name);
@@ -66,7 +80,6 @@ fn test_external_file_addition() {
 fn test_external_directory_addition() {
     let temp_dir = tempdir().unwrap();
     let mut harness = create_harness(&temp_dir);
-    harness.ensure_sorted_by_name_ascending();
 
     let dir_name = "external_dir";
     let dir_path = temp_dir.path().join(dir_name);
@@ -93,7 +106,6 @@ fn test_external_directory_addition() {
 fn test_external_file_modification() {
     let temp_dir = tempdir().unwrap();
     let mut harness = create_harness(&temp_dir);
-    harness.ensure_sorted_by_name_ascending();
 
     let mod_file_name = "modifiable_file.txt";
     let mod_file_path = temp_dir.path().join(mod_file_name);
@@ -140,7 +152,6 @@ fn test_external_file_modification() {
 fn test_external_file_removal() {
     let temp_dir = tempdir().unwrap();
     let mut harness = create_harness(&temp_dir);
-    harness.ensure_sorted_by_name_ascending();
 
     let rem_file_name = "removable_file.txt";
     let rem_file_path = temp_dir.path().join(rem_file_name);
@@ -168,7 +179,6 @@ fn test_external_file_removal() {
 fn test_external_directory_removal() {
     let temp_dir = tempdir().unwrap();
     let mut harness = create_harness(&temp_dir);
-    harness.ensure_sorted_by_name_ascending();
 
     let rem_dir_name = "removable_dir";
     let rem_dir_path = temp_dir.path().join(rem_dir_name);

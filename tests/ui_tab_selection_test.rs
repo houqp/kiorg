@@ -23,9 +23,6 @@ fn test_tab_selection_preserved_at_runtime() {
     // Start the harness
     let mut harness = create_harness(&temp_dir);
 
-    // Ensure consistent sort order for reliable selection
-    harness.ensure_sorted_by_name_ascending();
-
     // Create a second tab
     harness.press_key(Key::T);
     harness.step();

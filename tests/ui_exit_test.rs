@@ -2,7 +2,7 @@ mod ui_test_helpers;
 
 use egui::Key;
 use tempfile::tempdir;
-use ui_test_helpers::create_harness;
+use ui_test_helpers::{create_harness, create_test_files};
 
 #[test]
 fn test_exit_shortcut() {
@@ -115,29 +115,34 @@ fn test_exit_saves_state() {
     // Create a temporary directory for testing
     let temp_dir = tempdir().unwrap();
 
-    // Create a temporary directory for config
-    let config_temp_dir = tempdir().unwrap();
-    let config_dir = config_temp_dir.path().to_path_buf();
+    // Create test directories and files
+    let test_dirs =
+        create_test_files(&[temp_dir.path().join("dir1"), temp_dir.path().join("dir2")]);
 
-    // Create a test harness with the custom config directory
-    let ctx = egui::Context::default();
-    let cc = eframe::CreationContext::_new_kittest(ctx.clone());
-    let app = kiorg::Kiorg::new_with_config_dir(
-        &cc,
-        Some(temp_dir.path().to_path_buf()),
-        Some(config_dir.clone()),
-    );
-    let mut harness = egui_kittest::Harness::builder()
-        .with_size(egui::Vec2::new(800.0, 600.0))
-        .with_max_steps(20)
-        .build_eframe(|_cc| app);
+    let mut harness = create_harness(&temp_dir);
 
-    // Run one step to initialize
+    // Get the config directory path for later verification
+    let config_dir = harness.state().config_dir_override.clone().unwrap();
+
+    {
+        let tab = harness.state_mut().tab_manager.current_tab_mut();
+        tab.selected_index = 0; // Select dir1
+    }
     harness.step();
 
-    // Create a bookmark to have some state to save
-    let bookmark_path = temp_dir.path().to_path_buf();
-    harness.state_mut().bookmarks.push(bookmark_path.clone());
+    // Bookmark the directory with 'b' shortcut
+    harness.press_key(Key::B);
+    harness.step();
+
+    // Verify bookmark was added
+    {
+        let app = harness.state();
+        assert_eq!(app.bookmarks.len(), 1, "Should have one bookmark");
+        assert!(
+            app.bookmarks[0].ends_with("dir1"),
+            "Bookmark should be dir1"
+        );
+    }
 
     // Press 'q' to request exit (shows exit popup)
     harness.press_key(Key::Q);
@@ -168,10 +173,19 @@ fn test_exit_saves_state() {
         "state.json should exist after exit"
     );
 
-    // Verify the state file contains our bookmark
-    let state_content = std::fs::read_to_string(&state_file_path).unwrap();
+    // Verify bookmarks.txt was created
+    let bookmarks_file_path = config_dir.join("bookmarks.txt");
     assert!(
-        state_content.contains(&bookmark_path.to_string_lossy().to_string()),
-        "state.json should contain the bookmark path"
+        bookmarks_file_path.exists(),
+        "bookmarks.txt should exist after exit"
+    );
+
+    // Verify the bookmarks file contains our bookmark
+    let bookmarks_content = std::fs::read_to_string(&bookmarks_file_path).unwrap();
+    let bookmark_path = test_dirs[0].clone(); // dir1 path
+    let path_str = bookmark_path.to_string_lossy().to_string();
+    assert!(
+        bookmarks_content.contains(&path_str),
+        "Bookmarks file should contain the path for dir1"
     );
 }

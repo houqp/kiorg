@@ -3,6 +3,8 @@ name: CI
 on:
   push:
     branches: [ main ]
+    tags:
+      - 'v*'
   pull_request:
     branches: [ main ]
 
@@ -24,8 +26,22 @@ jobs:
       - name: Check formatting
         run: cargo fmt --all -- --check
 
-  build-and-test:
-    name: Build and Test (${{ matrix.os }})
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Clippy
+        run: cargo clippy -- -D warnings
+
+  test:
+    name: Test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -39,17 +55,113 @@ jobs:
 
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@stable
-      with:
-        components: clippy
 
     - name: Cache dependencies
       uses: Swatinem/rust-cache@v2
 
-    - name: Clippy
-      run: cargo clippy -- -D warnings
-
-    - name: Build
-      run: cargo build
-
     - name: Run tests
       run: cargo test
+
+  bundle-linux:
+    name: Bundle Packaging (Linux)
+    # needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Cache dependencies
+      uses: Swatinem/rust-cache@v2
+
+    - name: Install cargo-bundle
+      run: cargo install cargo-bundle
+
+    - name: Build release binary
+      run: |
+        cargo build --release
+        cd target/release
+        zip -r ../../kiorg-x86_64-linux.zip kiorg
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: kiorg-x86_64-linux.zip
+        path: kiorg-x86_64-linux.zip
+        if-no-files-found: error
+
+  bundle-macos:
+    name: Bundle Packaging (macOS)
+    #needs: build-and-test
+    runs-on: macos-15
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Cache dependencies
+      uses: Swatinem/rust-cache@v2
+
+    - name: Install cargo-bundle
+      run: cargo install cargo-bundle
+
+    - name: Build release binary
+      run: |
+        cargo build --release
+        cd target/release
+        zip -r ../../kiorg-arm64-macos.zip kiorg
+
+    - name: Create bundle
+      run: |
+        cargo bundle --release
+        cd target/release/bundle/osx
+        # Create DMG using hdiutil
+        hdiutil create -volname "Kiorg" -srcfolder Kiorg.app -ov -format UDZO ../../../Kiorg.dmg
+
+    - name: Upload macOS CLI binary
+      uses: actions/upload-artifact@v4
+      with:
+        name: kiorg-arm64-macos.zip
+        path: kiorg-arm64-macos.zip
+        if-no-files-found: error
+
+    - name: Upload DMG artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Kiorg.dmg
+        path: target/Kiorg.dmg
+        if-no-files-found: error
+
+  bundle-windows:
+    name: Bundle Packaging (Windows)
+    # needs: build-and-test
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Cache dependencies
+      uses: Swatinem/rust-cache@v2
+
+    - name: Build release binary
+      run: |
+        cargo build --release
+        cd target\release
+        Compress-Archive -Path kiorg.exe -DestinationPath ..\..\kiorg-x86_64-windows.zip
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: kiorg-x86_64-windows.zip
+        path: kiorg-x86_64-windows.zip
+        if-no-files-found: error

@@ -32,9 +32,6 @@ fn test_delete_shortcut() {
 
     let mut harness = create_harness(&temp_dir);
 
-    // Ensure consistent sort order for reliable selection
-    harness.ensure_sorted_by_name_ascending();
-
     // Test file deletion first
     // Move down twice to select test1.txt (after dir1 and dir2)
     harness.press_key(Key::J);
@@ -181,9 +178,6 @@ fn test_copy_paste_shortcuts() {
 
     let mut harness = create_harness(&temp_dir);
 
-    // Ensure consistent sort order for reliable selection
-    harness.ensure_sorted_by_name_ascending();
-
     // Move down twice to select test1.txt (after dir1 and dir2)
     harness.press_key(Key::J);
     harness.step();
@@ -277,9 +271,6 @@ fn test_cut_paste_shortcuts() {
     ]);
 
     let mut harness = create_harness(&temp_dir);
-
-    // Ensure consistent sort order for reliable selection
-    harness.ensure_sorted_by_name_ascending();
 
     // Move down twice to select test1.txt (after dir1 and dir2)
     harness.press_key(Key::J);

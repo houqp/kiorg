@@ -19,9 +19,6 @@ fn test_rename_preserves_selected_index() {
 
     let mut harness = create_harness(&temp_dir);
 
-    // Ensure consistent sort order for reliable selection
-    harness.ensure_sorted_by_name_ascending();
-
     // Move down to select file2.txt (index 1)
     harness.press_key(Key::J);
     harness.step();

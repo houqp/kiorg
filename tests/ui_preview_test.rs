@@ -16,7 +16,6 @@ fn test_text_file_preview() {
 
     // Start the harness
     let mut harness = create_harness(&temp_dir);
-    harness.ensure_sorted_by_name_ascending();
 
     // Select the text file
     {
@@ -60,7 +59,6 @@ fn test_binary_file_preview() {
 
     // Start the harness
     let mut harness = create_harness(&temp_dir);
-    harness.ensure_sorted_by_name_ascending();
 
     // Select the binary file
     {
@@ -103,7 +101,6 @@ fn test_directory_preview() {
 
     // Start the harness
     let mut harness = create_harness(&temp_dir);
-    harness.ensure_sorted_by_name_ascending();
 
     // Select the directory
     {
@@ -146,7 +143,6 @@ fn test_image_preview() {
 
     // Start the harness
     let mut harness = create_harness(&temp_dir);
-    harness.ensure_sorted_by_name_ascending();
 
     // Select the image file
     {
@@ -189,7 +185,6 @@ fn test_zip_preview() {
 
     // Start the harness
     let mut harness = create_harness(&temp_dir);
-    harness.ensure_sorted_by_name_ascending();
 
     // Select the zip file
     {
@@ -263,7 +258,6 @@ fn test_loading_preview() {
 
     // Start the harness
     let mut harness = create_harness(&temp_dir);
-    harness.ensure_sorted_by_name_ascending();
 
     // Select the zip file
     {

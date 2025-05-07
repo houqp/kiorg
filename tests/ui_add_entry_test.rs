@@ -10,9 +10,6 @@ fn test_add_file_and_directory() {
     let temp_dir = tempdir().unwrap();
     let mut harness = create_harness(&temp_dir);
 
-    // Ensure consistent sort order for reliable selection and verification
-    harness.ensure_sorted_by_name_ascending();
-
     // --- Test 1: Add a file ---
     let file_name = "new_file.txt";
     let expected_file_path = temp_dir.path().join(file_name);

@@ -34,9 +34,6 @@ fn test_copy_directory() {
 
     let mut harness = create_harness(&temp_dir);
 
-    // Ensure consistent sort order for reliable selection
-    harness.ensure_sorted_by_name_ascending();
-
     // Select source_dir (should be the first entry)
     let tab = harness.state_mut().tab_manager.current_tab_mut();
     tab.selected_index = 0;
@@ -153,9 +150,6 @@ fn test_copy_directory_to_same_parent() {
     ]);
 
     let mut harness = create_harness(&temp_dir);
-
-    // Ensure consistent sort order for reliable selection
-    harness.ensure_sorted_by_name_ascending();
 
     // Select source_dir (should be the first entry)
     let tab = harness.state_mut().tab_manager.current_tab_mut();

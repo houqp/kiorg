@@ -196,10 +196,14 @@ pub fn create_harness<'a>(temp_dir: &tempfile::TempDir) -> TestHarness<'a> {
     let mut harness = harness;
     harness.step();
 
-    TestHarness {
+    let mut harness = TestHarness {
         harness,
         _config_temp_dir: config_temp_dir,
-    }
+    };
+    // Ensure consistent sort order for reliable selection and verification
+    harness.ensure_sorted_by_name_ascending();
+
+    harness
 }
 
 impl<'a> TestHarness<'a> {

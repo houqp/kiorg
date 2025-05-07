@@ -16,9 +16,6 @@ fn test_search_edit_existing_query() {
 
     let mut harness = create_harness(&temp_dir);
 
-    // Ensure consistent sort order for reliable selection
-    harness.ensure_sorted_by_name_ascending();
-
     // Activate search
     harness.press_key(Key::Slash);
     harness.step();
@@ -63,21 +60,23 @@ fn test_search_resets_selection() {
     let temp_dir = tempdir().unwrap();
     create_test_files(&[
         temp_dir.path().join("apple.txt"),
-        temp_dir.path().join("banana.txt"), // index 1
         temp_dir.path().join("apricot.txt"),
+        temp_dir.path().join("banana.txt"), // index 2
     ]);
 
     let mut harness = create_harness(&temp_dir);
 
-    // Select the second entry (banana.txt)
+    // Select the third entry (banana.txt)
+    harness.press_key(Key::J);
+    harness.step();
     harness.press_key(Key::J);
     harness.step();
     assert_eq!(
         harness.state().tab_manager.current_tab_ref().selected_index,
-        1
+        2
     );
     assert_eq!(
-        harness.state().tab_manager.current_tab_ref().entries[1].name,
+        harness.state().tab_manager.current_tab_ref().entries[2].name,
         "banana.txt"
     );
 
@@ -113,9 +112,6 @@ fn test_search_cleared_on_directory_change() {
     ]);
 
     let mut harness = create_harness(&temp_dir);
-
-    // Ensure consistent sort order for reliable selection
-    harness.ensure_sorted_by_name_ascending();
 
     // Activate search
     harness.press_key(Key::Slash);
@@ -170,9 +166,6 @@ fn test_search_cleared_on_escape() {
     ]);
 
     let mut harness = create_harness(&temp_dir);
-
-    // Ensure consistent sort order for reliable selection
-    harness.ensure_sorted_by_name_ascending();
 
     // Activate search
     harness.press_key(Key::Slash);

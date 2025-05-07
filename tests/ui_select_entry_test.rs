@@ -16,9 +16,6 @@ fn test_select_entry_shortcut() {
 
     let mut harness = create_harness(&temp_dir);
 
-    // Ensure consistent sort order for reliable selection
-    harness.ensure_sorted_by_name_ascending();
-
     // Initially, no files should be selected (marked)
     {
         let tab = harness.state().tab_manager.current_tab_ref();
@@ -120,9 +117,6 @@ fn test_select_entry_with_operations() {
     ]);
 
     let mut harness = create_harness(&temp_dir);
-
-    // Ensure consistent sort order for reliable selection
-    harness.ensure_sorted_by_name_ascending();
 
     // Select both files
     {

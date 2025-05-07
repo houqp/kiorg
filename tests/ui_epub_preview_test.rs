@@ -20,9 +20,7 @@ fn test_epub_preview() {
 
     let _test_files = vec![epub_path, text_path]; // Keep references to prevent cleanup
 
-    // Start the harness
     let mut harness = create_harness(&temp_dir);
-    harness.ensure_sorted_by_name_ascending();
 
     // Select the EPUB file
     {
@@ -45,6 +43,7 @@ fn test_epub_preview() {
 
     // Try multiple steps to allow async loading to complete
     for _ in 0..20 {
+        std::thread::sleep(std::time::Duration::from_millis(50));
         match &harness.state().preview_content {
             Some(PreviewContent::Doc(doc_meta)) => {
                 // Verify EPUB metadata

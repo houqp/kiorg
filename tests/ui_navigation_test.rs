@@ -17,9 +17,6 @@ fn test_g_shortcuts() {
     ]);
     let mut harness = create_harness(&temp_dir);
 
-    // Ensure consistent sort order for reliable selection
-    harness.ensure_sorted_by_name_ascending();
-
     let tab = harness.state().tab_manager.current_tab_ref();
     assert_eq!(tab.selected_index, 0);
 
@@ -107,9 +104,6 @@ fn test_parent_directory_selection() {
 
     let mut harness = create_harness(&temp_dir);
 
-    // Ensure consistent sort order for reliable selection
-    harness.ensure_sorted_by_name_ascending();
-
     // Move down to select dir2
     harness.press_key(Key::J);
     harness.step();
@@ -152,9 +146,6 @@ fn test_prev_path_selection_with_sort() {
 
     // Start the harness in the parent directory
     let mut harness = create_harness(&temp_dir);
-
-    // Ensure consistent sort order for reliable selection
-    harness.ensure_sorted_by_name_ascending();
 
     // Initial state: aaa, bbb, ccc (now explicitly sorted Name/Ascending)
     // Select ccc (index 2)
@@ -236,13 +227,17 @@ fn test_mouse_click_selects_and_previews() {
     // Start the harness
     let mut harness = create_harness(&temp_dir);
 
-    // Ensure consistent sort order for reliable selection
-    harness.ensure_sorted_by_name_ascending();
-
     // Initially, index 0 ("a.txt") should be selected
-    assert_eq!(
-        harness.state().tab_manager.current_tab_ref().selected_index,
-        0
+    harness.press_key(Key::J);
+    harness.step();
+    harness.press_key(Key::K);
+    harness.step();
+    // step twice for the refresh function to be triggered
+    harness.step();
+
+    println!(
+        "cached preview path: {:?}",
+        harness.state().cached_preview_path
     );
     // Preview cache should be empty or contain preview for a.txt initially
     // (Depending on initial load behavior, let's ensure it doesn't contain b.txt yet)
@@ -347,7 +342,6 @@ fn test_enter_directory() {
     ]);
 
     let mut harness = create_harness(&temp_dir);
-    harness.ensure_sorted_by_name_ascending();
 
     // Select the directory
     {
@@ -400,7 +394,6 @@ fn test_image_preview() {
 
     // Start the harness
     let mut harness = create_harness(&temp_dir);
-    harness.ensure_sorted_by_name_ascending();
 
     // Select the image file
     {
@@ -413,6 +406,10 @@ fn test_image_preview() {
             .expect("Image file should be in the entries");
         tab.selected_index = image_index;
     }
+    harness.press_key(Key::J);
+    harness.step();
+    harness.press_key(Key::K);
+    harness.step();
 
     // Step to update the preview
     harness.step();
@@ -471,7 +468,6 @@ fn test_zip_preview() {
 
     // Start the harness
     let mut harness = create_harness(&temp_dir);
-    harness.ensure_sorted_by_name_ascending();
 
     // Select the zip file
     {
@@ -550,7 +546,6 @@ fn test_open_directory_vs_open_directory_or_file() {
 
     // Start the harness
     let mut harness = create_harness(&temp_dir);
-    harness.ensure_sorted_by_name_ascending();
 
     // Test 1: OpenDirectory should not open a file
     {

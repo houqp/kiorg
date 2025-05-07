@@ -19,9 +19,6 @@ fn test_cut_unmarked_file_clears_marked_files() {
 
     let mut harness = create_harness(&temp_dir);
 
-    // Ensure consistent sort order for reliable selection
-    harness.ensure_sorted_by_name_ascending();
-
     // Move down twice to select test1.txt (after dir1 and dir2)
     harness.press_key(Key::J);
     harness.step();
