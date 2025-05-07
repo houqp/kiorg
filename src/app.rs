@@ -40,7 +40,9 @@ use crate::ui::separator;
 use crate::ui::separator::SEPARATOR_PADDING;
 use crate::ui::terminal;
 use crate::ui::top_banner;
-use crate::ui::{about_popup, bookmark_popup, center_panel, help_window, left_panel, right_panel};
+use crate::ui::{
+    about_popup, bookmark_popup, center_panel, help_window, left_panel, rename_popup, right_panel,
+};
 use egui_notify::Toasts;
 
 // Layout constants
@@ -667,9 +669,8 @@ impl eframe::App for Kiorg {
                 self.handle_delete_confirmation(ctx);
             }
             Some(PopupType::Rename) => {
-                // The rename popup is handled in the UI by the text edit field
-                // in center_panel.rs, so we don't need to do anything here
-                // except keep the popup state active
+                // Draw the rename popup
+                rename_popup::draw(ctx, self);
             }
             None => {}
         }

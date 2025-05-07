@@ -315,7 +315,6 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                         return;
                     }
                     app.scroll_range = Some(row_range.clone());
-                    let rename_mode = app.show_popup == Some(crate::app::PopupType::Rename);
 
                     for row_index in row_range {
                         // Get the entry for the current visible row from the filtered list
@@ -371,8 +370,6 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                                 entry,
                                 is_selected,
                                 colors: &app.colors,
-                                rename_mode: rename_mode && is_selected,
-                                new_name: &mut app.new_name,
                                 is_marked,
                                 is_bookmarked: app.bookmarks.contains(&entry.path),
                                 is_being_opened: being_opened,

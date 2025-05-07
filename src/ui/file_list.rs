@@ -128,8 +128,6 @@ pub struct EntryRowParams<'a> {
     pub entry: &'a DirEntry,
     pub is_selected: bool,
     pub colors: &'a AppColors,
-    pub rename_mode: bool,
-    pub new_name: &'a mut String,
     pub is_marked: bool,
     pub is_bookmarked: bool,
     pub is_being_opened: bool,
@@ -194,8 +192,6 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
         entry,
         is_selected,
         colors,
-        rename_mode,
-        new_name,
         is_marked,
         is_bookmarked,
         is_being_opened,
@@ -247,83 +243,35 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
 
     // --- Draw Name Column ---
     let name_clip_rect = egui::Rect::from_min_size(cursor, egui::vec2(name_width, ROW_HEIGHT));
-    if rename_mode && is_selected {
-        ui.painter().with_clip_rect(name_clip_rect).text(
-            cursor + egui::vec2(0.0, ROW_HEIGHT / 2.0),
-            Align2::LEFT_CENTER,
-            "> ",
-            egui::FontId::proportional(14.0),
-            colors.highlight,
-        );
-        let rename_cursor_start = cursor.x + 14.0; // Width of "> " prefix
-
-        let text_edit = egui::TextEdit::singleline(new_name)
-            .desired_width(name_width - 14.0)
-            .font(egui::FontId::proportional(14.0))
-            .text_color(colors.highlight)
-            .frame(false);
-
-        // Define the rectangle for the text edit
-        let text_edit_rect = name_clip_rect.with_min_x(rename_cursor_start);
-
-        // Place the TextEdit widget within the specific rectangle using ui.put
-        let text_edit_response = ui.put(text_edit_rect, text_edit);
-
-        ui.ctx().memory_mut(|mem| {
-            mem.request_focus(text_edit_response.id); // Focus the TextEdit response ID
-        });
+    let name_text = truncate_text(&entry.name, name_width);
+    let name_color = if is_in_cut_clipboard {
+        // Use error color (red) for cut files
+        colors.error
+    } else if is_in_copy_clipboard {
+        // Use success color (green) for copied files
+        colors.success
+    } else if entry.is_dir {
+        colors.fg_folder
     } else {
-        let name_text = truncate_text(&entry.name, name_width);
-        let name_color = if is_in_cut_clipboard {
-            // Use error color (red) for cut files
-            colors.error
-        } else if is_in_copy_clipboard {
-            // Use success color (green) for copied files
-            colors.success
-        } else if entry.is_dir {
-            colors.fg_folder
-        } else {
-            colors.fg
-        };
+        colors.fg
+    };
 
-        let mut job = egui::text::LayoutJob {
-            text: name_text.clone(),
-            ..Default::default()
-        };
+    let mut job = egui::text::LayoutJob {
+        text: name_text.clone(),
+        ..Default::default()
+    };
 
-        // TODO: why would name_text ever be empty?
-        match (search_query, name_text.is_empty()) {
-            (Some(query), false) => {
-                let mut last_match_end = 0;
+    // TODO: why would name_text ever be empty?
+    match (search_query, name_text.is_empty()) {
+        (Some(query), false) => {
+            let mut last_match_end = 0;
 
-                for (start, matched_part) in name_text.match_indices(query) {
-                    let end = start + matched_part.len();
-                    // Add non-matching part before the match
-                    if start > last_match_end {
-                        job.append(
-                            &name_text[last_match_end..start],
-                            0.0,
-                            egui::TextFormat {
-                                color: name_color,
-                                ..Default::default()
-                            },
-                        );
-                    }
-                    // Add matching part
+            for (start, matched_part) in name_text.match_indices(query) {
+                let end = start + matched_part.len();
+                // Add non-matching part before the match
+                if start > last_match_end {
                     job.append(
-                        &name_text[start..end],
-                        0.0,
-                        egui::TextFormat {
-                            color: colors.highlight,
-                            ..Default::default()
-                        },
-                    );
-                    last_match_end = end;
-                }
-                // Add remaining non-matching part after the last match
-                if last_match_end < name_text.len() {
-                    job.append(
-                        &name_text[last_match_end..],
+                        &name_text[last_match_end..start],
                         0.0,
                         egui::TextFormat {
                             color: name_color,
@@ -331,22 +279,21 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
                         },
                     );
                 }
-                // If no matches were found, just add the whole text with normal color
-                if job.sections.is_empty() {
-                    job.append(
-                        &name_text,
-                        0.0,
-                        egui::TextFormat {
-                            color: colors.fg_light,
-                            ..Default::default()
-                        },
-                    ); // Show non-matches in gray
-                }
-            }
-            _ => {
-                // No search active, just add the whole text with normal color
+                // Add matching part
                 job.append(
-                    &name_text,
+                    &name_text[start..end],
+                    0.0,
+                    egui::TextFormat {
+                        color: colors.highlight,
+                        ..Default::default()
+                    },
+                );
+                last_match_end = end;
+            }
+            // Add remaining non-matching part after the last match
+            if last_match_end < name_text.len() {
+                job.append(
+                    &name_text[last_match_end..],
                     0.0,
                     egui::TextFormat {
                         color: name_color,
@@ -354,15 +301,37 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
                     },
                 );
             }
+            // If no matches were found, just add the whole text with normal color
+            if job.sections.is_empty() {
+                job.append(
+                    &name_text,
+                    0.0,
+                    egui::TextFormat {
+                        color: colors.fg_light,
+                        ..Default::default()
+                    },
+                ); // Show non-matches in gray
+            }
         }
-
-        let galley = ui.fonts(|f| f.layout_job(job));
-        let galley_pos = cursor + egui::vec2(0.0, ROW_HEIGHT / 2.0 - galley.size().y / 2.0); // Center vertically
-
-        ui.painter()
-            .with_clip_rect(name_clip_rect)
-            .galley(galley_pos, galley, name_color);
+        _ => {
+            // No search active, just add the whole text with normal color
+            job.append(
+                &name_text,
+                0.0,
+                egui::TextFormat {
+                    color: name_color,
+                    ..Default::default()
+                },
+            );
+        }
     }
+
+    let galley = ui.fonts(|f| f.layout_job(job));
+    let galley_pos = cursor + egui::vec2(0.0, ROW_HEIGHT / 2.0 - galley.size().y / 2.0); // Center vertically
+
+    ui.painter()
+        .with_clip_rect(name_clip_rect)
+        .galley(galley_pos, galley, name_color);
     cursor.x += name_width + INTER_COLUMN_PADDING; // Advance cursor including padding
 
     // --- Draw Modified Column ---
