@@ -436,6 +436,32 @@ fn render_pdf_page(path: &std::path::Path, page_number: u32) -> Result<PreviewCo
     // }
 }
 
+/// Detect file type asynchronously and return a PreviewContent
+fn detect_file_type(path: &std::path::Path, size: u64) -> Result<PreviewContent, String> {
+    // Try to detect the file type using file_type crate
+    let file_type_info = match FileType::try_from_file(path) {
+        Ok(file_type) => {
+            let media_types = file_type.media_types().join(", ");
+            let extensions = file_type.extensions().join(", ");
+
+            if !media_types.is_empty() {
+                format!("File type: {} ({})", media_types, extensions)
+            } else if !extensions.is_empty() {
+                format!("File type: {}", extensions)
+            } else {
+                "Unknown file type".to_string()
+            }
+        }
+        Err(_) => "Unknown file type".to_string(),
+    };
+
+    // Return the PreviewContent directly
+    Ok(PreviewContent::text(format!(
+        "{}\n\nSize: {} bytes",
+        file_type_info, size
+    )))
+}
+
 pub fn update_preview_cache(app: &mut Kiorg, _ctx: &egui::Context) {
     let tab = app.tab_manager.current_tab_ref();
     let selected_path = tab.entries.get(tab.selected_index).map(|e| e.path.clone());
@@ -550,27 +576,24 @@ pub fn update_preview_cache(app: &mut Kiorg, _ctx: &egui::Context) {
                 }
                 Err(_) => {
                     // For binary files or files that can't be read as text
-                    // Try to detect the file type using file_type crate
-                    let file_type_info = match FileType::try_from_file(&entry.path) {
-                        Ok(file_type) => {
-                            let media_types = file_type.media_types().join(", ");
-                            let extensions = file_type.extensions().join(", ");
+                    // Handle file type detection asynchronously
+                    let path = entry.path.clone();
+                    let size = entry.size;
 
-                            if !media_types.is_empty() {
-                                format!("File type: {} ({})", media_types, extensions)
-                            } else if !extensions.is_empty() {
-                                format!("File type: {}", extensions)
-                            } else {
-                                "Unknown file type".to_string()
-                            }
-                        }
-                        Err(_) => "Unknown file type".to_string(),
-                    };
+                    // Create a channel for communication
+                    let (sender, receiver) = std::sync::mpsc::channel();
 
-                    app.preview_content = Some(PreviewContent::text(format!(
-                        "{}\n\nSize: {} bytes",
-                        file_type_info, entry.size
-                    )));
+                    // Set the initial loading state with the receiver
+                    app.preview_content = Some(PreviewContent::loading_with_receiver(
+                        path.clone(),
+                        receiver,
+                    ));
+
+                    // Spawn a thread to detect the file type
+                    std::thread::spawn(move || {
+                        let preview_result = detect_file_type(&path, size);
+                        let _ = sender.send(preview_result);
+                    });
                 }
             }
         }
