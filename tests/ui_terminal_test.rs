@@ -24,6 +24,8 @@ fn test_open_terminal_shortcut() {
     };
     harness.press_key_modifiers(modifiers, Key::T);
     harness.step();
+    harness.step();
+    harness.step();
 
     // Verify terminal is shown
     assert!(

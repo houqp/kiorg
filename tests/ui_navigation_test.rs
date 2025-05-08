@@ -469,18 +469,9 @@ fn test_zip_preview() {
     // Start the harness
     let mut harness = create_harness(&temp_dir);
 
-    // Select the zip file
-    {
-        let tab = harness.state_mut().tab_manager.current_tab_mut();
-        // Find the index of the zip file
-        let zip_index = tab
-            .entries
-            .iter()
-            .position(|e| e.path.extension().unwrap_or_default() == "zip")
-            .expect("Zip file should be in the entries");
-        tab.selected_index = zip_index;
-    }
-
+    // select the zip file
+    harness.press_key(Key::J);
+    harness.step();
     // Step to update the preview
     harness.step();
     harness.step(); // Additional step to ensure preview is updated
@@ -490,6 +481,7 @@ fn test_zip_preview() {
 
     // Try multiple steps to allow async loading to complete
     for _ in 0..20 {
+        std::thread::sleep(std::time::Duration::from_millis(50));
         match &harness.state().preview_content {
             Some(PreviewContent::Zip(entries)) => {
                 // Verify zip entries

@@ -2,7 +2,6 @@ use clap::Parser;
 use eframe::egui;
 use std::fs;
 use std::path::PathBuf;
-use tracing::info;
 use tracing_subscriber::{fmt, EnvFilter};
 
 use kiorg::app::Kiorg;

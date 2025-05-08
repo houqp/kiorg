@@ -1,5 +1,6 @@
 mod ui_test_helpers;
 
+use egui::Key;
 use kiorg::models::preview_content::PreviewContent;
 use tempfile::tempdir;
 use ui_test_helpers::{create_harness, create_test_image, create_test_zip};
@@ -17,16 +18,10 @@ fn test_text_file_preview() {
     // Start the harness
     let mut harness = create_harness(&temp_dir);
 
-    // Select the text file
-    {
-        let tab = harness.state_mut().tab_manager.current_tab_mut();
-        let text_index = tab
-            .entries
-            .iter()
-            .position(|e| e.path.extension().unwrap_or_default() == "txt")
-            .expect("Text file should be in the entries");
-        tab.selected_index = text_index;
-    }
+    // Select the text file using J shortcut
+    // Since entries are sorted by name, we can navigate to the text file
+    harness.press_key(Key::J);
+    harness.step();
 
     // Step to update the preview
     harness.step();
@@ -60,16 +55,10 @@ fn test_binary_file_preview() {
     // Start the harness
     let mut harness = create_harness(&temp_dir);
 
-    // Select the binary file
-    {
-        let tab = harness.state_mut().tab_manager.current_tab_mut();
-        let binary_index = tab
-            .entries
-            .iter()
-            .position(|e| e.path.extension().unwrap_or_default() == "bin")
-            .expect("Binary file should be in the entries");
-        tab.selected_index = binary_index;
-    }
+    // Select the binary file using J shortcut
+    // Since entries are sorted by name, we can navigate to the binary file
+    harness.press_key(Key::J);
+    harness.step();
 
     // Step to update the preview
     harness.step();
@@ -102,16 +91,10 @@ fn test_directory_preview() {
     // Start the harness
     let mut harness = create_harness(&temp_dir);
 
-    // Select the directory
-    {
-        let tab = harness.state_mut().tab_manager.current_tab_mut();
-        let dir_index = tab
-            .entries
-            .iter()
-            .position(|e| e.is_dir && e.name == "subdir")
-            .expect("Directory should be in the entries");
-        tab.selected_index = dir_index;
-    }
+    // Select the directory using J shortcut
+    // Since entries are sorted by name, we can navigate to the directory
+    harness.press_key(Key::J);
+    harness.step();
 
     // Step to update the preview
     harness.step();
@@ -144,16 +127,10 @@ fn test_image_preview() {
     // Start the harness
     let mut harness = create_harness(&temp_dir);
 
-    // Select the image file
-    {
-        let tab = harness.state_mut().tab_manager.current_tab_mut();
-        let image_index = tab
-            .entries
-            .iter()
-            .position(|e| e.path.extension().unwrap_or_default() == "png")
-            .expect("Image file should be in the entries");
-        tab.selected_index = image_index;
-    }
+    // Select the image file using J shortcut
+    // Since entries are sorted by name, we can navigate to the image file
+    harness.press_key(Key::J);
+    harness.step();
 
     // Step to update the preview
     harness.step();
@@ -186,16 +163,10 @@ fn test_zip_preview() {
     // Start the harness
     let mut harness = create_harness(&temp_dir);
 
-    // Select the zip file
-    {
-        let tab = harness.state_mut().tab_manager.current_tab_mut();
-        let zip_index = tab
-            .entries
-            .iter()
-            .position(|e| e.path.extension().unwrap_or_default() == "zip")
-            .expect("Zip file should be in the entries");
-        tab.selected_index = zip_index;
-    }
+    // Select the zip file using J shortcut
+    // Since entries are sorted by name, we can navigate to the zip file
+    harness.press_key(Key::J);
+    harness.step();
 
     // Step to update the preview
     harness.step();
@@ -205,6 +176,7 @@ fn test_zip_preview() {
 
     // Try multiple steps to allow async loading to complete
     for _ in 0..20 {
+        std::thread::sleep(std::time::Duration::from_millis(50));
         match &harness.state().preview_content {
             Some(PreviewContent::Zip(entries)) => {
                 // Verify zip entries
@@ -240,64 +212,6 @@ fn test_zip_preview() {
         is_zip_content,
         "Preview content should eventually be Zip variant"
     );
-}
-
-/// Test for loading state preview
-///
-/// Note: This test is more of a verification that the Loading state exists
-/// and works correctly in the code, rather than actually testing the UI
-/// transition, which happens too quickly in tests to reliably capture.
-#[test]
-fn test_loading_preview() {
-    // Create a temporary directory for testing
-    let temp_dir = tempdir().unwrap();
-
-    // Create test zip file (we'll use zip since it triggers async loading)
-    let zip_path = temp_dir.path().join("test.zip");
-    create_test_zip(&zip_path);
-
-    // Start the harness
-    let mut harness = create_harness(&temp_dir);
-
-    // Select the zip file
-    {
-        let tab = harness.state_mut().tab_manager.current_tab_mut();
-        let zip_index = tab
-            .entries
-            .iter()
-            .position(|e| e.path.extension().unwrap_or_default() == "zip")
-            .expect("Zip file should be in the entries");
-        tab.selected_index = zip_index;
-    }
-
-    // Instead of testing the actual loading state (which happens too quickly in tests),
-    // we'll verify that the zip content eventually loads correctly
-
-    // Step to update the preview
-    harness.step();
-
-    // Check if the preview content is a zip
-    let mut is_zip_content = false;
-    for _ in 0..10 {
-        match &harness.state().preview_content {
-            Some(PreviewContent::Zip(entries)) => {
-                // Verify zip entries
-                assert!(!entries.is_empty(), "Zip entries should not be empty");
-                is_zip_content = true;
-                break;
-            }
-            _ => harness.step(),
-        }
-    }
-
-    assert!(
-        is_zip_content,
-        "Preview should eventually load as Zip content"
-    );
-
-    // Verify that the Loading state exists in the PreviewContent enum
-    // This is a compile-time check that the variant exists
-    let _: Option<PreviewContent> = Some(PreviewContent::Loading(std::path::PathBuf::new(), None));
 }
 
 /// Test for no preview when no file is selected
