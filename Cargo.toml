@@ -33,6 +33,8 @@ egui-notify = "0"
 epub = "2"
 file_type = "0"
 egui_zhcn_fonts = "0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # for pdf rendering
 pdf_render = { git = "https://github.com/pdf-rs/pdf_render.git", rev = "9a31988b091495c65a54236fd6cdce8f1fa2afd0", features = ["embed"] }

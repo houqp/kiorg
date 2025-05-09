@@ -2,6 +2,8 @@ use clap::Parser;
 use eframe::egui;
 use std::fs;
 use std::path::PathBuf;
+use tracing::info;
+use tracing_subscriber::{fmt, EnvFilter};
 
 use kiorg::app::Kiorg;
 
@@ -12,7 +14,20 @@ struct Args {
     directory: Option<PathBuf>,
 }
 
+fn init_tracing() {
+    // Get log level from environment variable or use "info" as default
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+
+    // Initialize the tracing subscriber
+    fmt::fmt()
+        .with_env_filter(env_filter)
+        .with_target(true)
+        .init();
+}
+
 fn main() -> Result<(), eframe::Error> {
+    init_tracing();
+
     let args = Args::parse();
 
     // If a directory is provided, validate and canonicalize it
