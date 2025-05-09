@@ -245,22 +245,9 @@ fn process_key(
         }
         Some(PopupType::Rename) => {
             if key == Key::Enter {
-                let tab = app.tab_manager.current_tab_mut();
-                if let Some(entry) = tab.entries.get(tab.selected_index) {
-                    let parent = entry.path.parent().unwrap_or(&tab.current_path);
-                    let new_path = parent.join(&app.new_name);
-
-                    if let Err(e) = std::fs::rename(&entry.path, &new_path) {
-                        app.toasts.error(format!("Failed to rename: {e}"));
-                    } else {
-                        app.refresh_entries();
-                    }
-                }
-                app.show_popup = None;
-                app.new_name.clear();
+                crate::ui::rename_popup::handle_rename_confirmation(app, ctx);
             } else if key == Key::Escape {
-                app.show_popup = None;
-                app.new_name.clear();
+                crate::ui::rename_popup::close_rename_popup(app, ctx);
             }
             return;
         }

@@ -15,7 +15,8 @@ struct Args {
 
 fn init_tracing() {
     // Get log level from environment variable or use "info" as default
-    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+    let env_filter = EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| EnvFilter::new("info,font=error,pdf_render=error"));
 
     // Initialize the tracing subscriber
     fmt::fmt()

@@ -34,17 +34,11 @@ fn test_rename_preserves_selected_index() {
     harness.press_key(Key::R);
     harness.step();
 
-    // Clear existing text first
-    for _ in 0..".txt".len() {
-        harness.press_key(Key::Backspace);
-        harness.step();
-    }
-
     // Simulate text input for the new name
     harness
         .input_mut()
         .events
-        .push(egui::Event::Text("_renamed.txt".to_string()));
+        .push(egui::Event::Text("_renamed".to_string()));
     harness.step();
 
     // Press Enter to confirm rename

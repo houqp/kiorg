@@ -48,7 +48,6 @@
 * Fuzzy directory jump (integrate with fzf)
 * Case-sensitive/insensitive search toggle
 * Regular expression search support
-* In rename mode, start the cursor after the extension
 * Renaming a file doesn't clear the image rendering cache, so it still displays the old image
 * Open file with alternative commands leveraging open::commands and open::with_command
 * render PDF preview using pdfium_render or pathfinder_rasterize

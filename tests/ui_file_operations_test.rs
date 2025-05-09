@@ -124,17 +124,11 @@ fn test_rename_shortcut() {
         "Rename popup should be open"
     );
 
-    // Press 'delete' to clear any existing text
-    for _ in 0..".txt".len() {
-        harness.press_key(Key::Backspace);
-        harness.step();
-    }
-
     // Clear any existing text and simulate text input for the new name
     harness
         .input_mut()
         .events
-        .push(egui::Event::Text("_renamed.txt".to_string()));
+        .push(egui::Event::Text("_renamed".to_string()));
     harness.step();
 
     // Press Enter to confirm rename

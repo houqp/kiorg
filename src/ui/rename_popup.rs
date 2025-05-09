@@ -1,8 +1,49 @@
 use crate::app::Kiorg;
 use crate::app::PopupType;
-use egui::{Context, Frame, Key, TextEdit};
+use egui::{Context, Frame, TextEdit};
 
 use super::window_utils::new_center_popup_window;
+
+/// Find the position before the file extension in a filename
+/// Returns the position (in characters) where the extension starts, or the end of the string if no extension
+fn find_extension_position(filename: &str) -> usize {
+    // Find the last dot in the filename
+    if let Some(dot_pos) = filename.rfind('.') {
+        // Make sure it's not a hidden file (starting with a dot)
+        if dot_pos > 0 {
+            // Convert byte position to character position
+            return filename[..dot_pos].chars().count();
+        }
+    }
+    // No extension found, return the end of the string (in characters)
+    filename.chars().count()
+}
+
+const RENAME_POPUP_INITIALIZED: &str = "rename_popup_initialized";
+
+/// Helper function to handle rename confirmation
+pub fn handle_rename_confirmation(app: &mut Kiorg, ctx: &Context) {
+    let tab = app.tab_manager.current_tab_mut();
+    if let Some(entry) = tab.entries.get(tab.selected_index) {
+        let parent = entry.path.parent().unwrap_or(&tab.current_path);
+        let new_path = parent.join(&app.new_name);
+
+        if let Err(e) = std::fs::rename(&entry.path, &new_path) {
+            app.toasts.error(format!("Failed to rename: {e}"));
+        } else {
+            app.refresh_entries();
+        }
+    }
+    close_rename_popup(app, ctx);
+}
+
+/// Helper function to handle rename cancellation
+pub fn close_rename_popup(app: &mut Kiorg, ctx: &Context) {
+    // Just clean up without performing the rename
+    app.show_popup = None;
+    app.new_name.clear();
+    clear_popup_initialization_flag(ctx);
+}
 
 /// Draw the rename popup dialog
 pub fn draw(ctx: &egui::Context, app: &mut Kiorg) {
@@ -29,57 +70,74 @@ pub fn draw(ctx: &egui::Context, app: &mut Kiorg) {
 
                     // Horizontal layout for input and close button
                     ui.horizontal(|ui| {
-                        // Text input field
+                        // Store the original name to detect if this is the first frame
+                        let is_first_frame = ui.memory(|mem| {
+                            !mem.data
+                                .get_temp::<bool>(egui::Id::new(RENAME_POPUP_INITIALIZED))
+                                .unwrap_or(false)
+                        });
+
+                        // Find the position before the file extension
+                        let cursor_pos = find_extension_position(&app.new_name);
+                        // Create a TextEdit widget with custom cursor position
                         let text_edit = TextEdit::singleline(&mut app.new_name)
                             .hint_text("Enter new name...")
                             .desired_width(f32::INFINITY) // Take available width
                             .frame(false); // No frame, like search bar
-
                         let response = ui.add(text_edit);
 
                         // Always request focus when the popup is shown
                         response.request_focus();
+
+                        // If this is the first frame, set the cursor position using the stored value
+                        if is_first_frame {
+                            if let Some(mut state) = TextEdit::load_state(ui.ctx(), response.id) {
+                                let cursor = egui::text::CCursor::new(cursor_pos);
+                                let cursor_range = egui::text::CCursorRange::one(cursor);
+                                state.cursor.set_char_range(Some(cursor_range));
+                                state.store(ui.ctx(), response.id);
+                            }
+                            // Mark that we've initialized the popup
+                            ui.memory_mut(|mem| {
+                                mem.data
+                                    .insert_temp(egui::Id::new(RENAME_POPUP_INITIALIZED), true);
+                            });
+                        }
                     });
                 });
         });
 
     if !keep_open {
-        app.show_popup = None;
-        app.new_name.clear();
+        close_rename_popup(app, ctx); // Cancel if window is closed
     }
 }
 
-/// Handle key presses for the rename popup
-/// Note: This is already handled in input.rs, but we keep this here for completeness
-pub fn handle_key_press(ctx: &Context, app: &mut Kiorg) -> bool {
-    if app.show_popup != Some(PopupType::Rename) {
-        return false;
+pub fn clear_popup_initialization_flag(ctx: &Context) {
+    ctx.memory_mut(|mem| {
+        mem.data
+            .insert_temp::<bool>(egui::Id::new(RENAME_POPUP_INITIALIZED), false);
+    });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_find_extension_position() {
+        // Test with ASCII characters
+        assert_eq!(find_extension_position("file.txt"), 4);
+        assert_eq!(find_extension_position("file.name.txt"), 9);
+        assert_eq!(find_extension_position("file"), 4);
+        assert_eq!(find_extension_position(".hidden"), 7);
+
+        // Test with Chinese characters
+        assert_eq!(find_extension_position("文件.txt"), 2);
+        assert_eq!(find_extension_position("文件名称.doc"), 4);
+        assert_eq!(find_extension_position("文件名称"), 4);
+
+        // Test with mixed characters
+        assert_eq!(find_extension_position("file名称.txt"), 6);
+        assert_eq!(find_extension_position("文件name.doc"), 6);
     }
-
-    // Check for Enter key to confirm rename
-    if ctx.input(|i| i.key_pressed(Key::Enter)) {
-        let tab = app.tab_manager.current_tab_mut();
-        if let Some(entry) = tab.entries.get(tab.selected_index) {
-            let parent = entry.path.parent().unwrap_or(&tab.current_path);
-            let new_path = parent.join(&app.new_name);
-
-            if let Err(e) = std::fs::rename(&entry.path, &new_path) {
-                app.toasts.error(format!("Failed to rename: {e}"));
-            } else {
-                app.refresh_entries();
-            }
-        }
-        app.show_popup = None;
-        app.new_name.clear();
-        return true;
-    }
-
-    // Check for Escape key to cancel rename
-    if ctx.input(|i| i.key_pressed(Key::Escape)) {
-        app.show_popup = None;
-        app.new_name.clear();
-        return true;
-    }
-
-    false
 }
