@@ -67,15 +67,16 @@ pub(crate) fn handle_key_press(ctx: &Context, app: &mut Kiorg) -> bool {
     // Handle confirmation
     if ctx.input(|i| i.key_pressed(Key::Enter)) {
         // We know new_entry_name is Some because we checked above
-        if let Some(entry_name) = &app.new_entry_name {
+        if let Some(entry_name) = app.new_entry_name.clone() {
             if !entry_name.is_empty() {
-                let tab = app.tab_manager.current_tab_mut();
-                let new_path = tab.current_path.join(entry_name);
+                // Get the current path and create the new path
+                let current_path = app.tab_manager.current_tab_ref().current_path.clone();
+                let new_path = current_path.join(&entry_name);
 
                 // Check if a file or directory with the same name already exists
                 if new_path.exists() {
                     // Show error message and keep the popup open
-                    app.toasts.error(format!(
+                    app.notify_error(format!(
                         "Cannot create '{}': Entry with the same name already exists",
                         entry_name.escape_default()
                     ));
@@ -86,14 +87,14 @@ pub(crate) fn handle_key_press(ctx: &Context, app: &mut Kiorg) -> bool {
                 let result = if entry_name.ends_with('/') {
                     // Create directory
                     // Ensure parent directories exist before creating the final one
-                    let parent = new_path.parent().unwrap_or(&tab.current_path);
+                    let parent = new_path.parent().unwrap_or(&current_path);
                     fs::create_dir_all(parent).and_then(|_| fs::create_dir(&new_path))
                 } else {
                     // Create file
                     // Ensure parent directories exist before creating the file
                     if let Some(parent) = new_path.parent() {
                         if let Err(e) = fs::create_dir_all(parent) {
-                            app.toasts.error(format!(
+                            app.notify_error(format!(
                                 "Failed to create parent directories for '{}': {}",
                                 entry_name.escape_default(),
                                 e
@@ -105,21 +106,24 @@ pub(crate) fn handle_key_press(ctx: &Context, app: &mut Kiorg) -> bool {
                     fs::File::create(&new_path).map(|_| ()) // Discard the File handle
                 };
 
-                if let Err(e) = result {
-                    app.toasts.error(format!(
-                        "Failed to create '{}': {}",
-                        entry_name.escape_default(),
-                        e
-                    ));
-                    // Keep the popup open on error so the user can try again
-                    return true; // Input handled
-                } else {
-                    // --- Start: Preserve Selection After Creation ---
-                    // Store the path of the newly created entry
-                    let created_path = tab.current_path.join(entry_name);
-                    app.prev_path = Some(created_path); // Use prev_path to select the new entry
-                                                        // --- End: Preserve Selection After Creation ---
-                    app.refresh_entries();
+                match result {
+                    Err(e) => {
+                        app.notify_error(format!(
+                            "Failed to create '{}': {}",
+                            entry_name.escape_default(),
+                            e
+                        ));
+                        // Keep the popup open on error so the user can try again
+                        return true; // Input handled
+                    }
+                    Ok(_) => {
+                        // --- Start: Preserve Selection After Creation ---
+                        // Store the path of the newly created entry
+                        let created_path = current_path.join(&entry_name);
+                        app.prev_path = Some(created_path); // Use prev_path to select the new entry
+                                                            // --- End: Preserve Selection After Creation ---
+                        app.refresh_entries();
+                    }
                 }
             }
         }

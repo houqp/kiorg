@@ -29,7 +29,7 @@ pub fn handle_rename_confirmation(app: &mut Kiorg, ctx: &Context) {
         let new_path = parent.join(&app.new_name);
 
         if let Err(e) = std::fs::rename(&entry.path, &new_path) {
-            app.toasts.error(format!("Failed to rename: {e}"));
+            app.notify_error(format!("Failed to rename: {e}"));
         } else {
             app.refresh_entries();
         }

@@ -34,8 +34,8 @@ pub fn show_about_popup(ctx: &Context, app: &mut Kiorg) {
                     .clicked()
                 {
                     if let Err(e) = open::that(repo_url) {
-                        // Call toasts directly
-                        app.toasts.error(format!("Failed to open URL: {}", e));
+                        // Call notify_error wrapper
+                        app.notify_error(format!("Failed to open URL: {}", e));
                     }
                 }
                 ui.add_space(10.0);

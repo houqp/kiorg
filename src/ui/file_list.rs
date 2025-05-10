@@ -95,8 +95,8 @@ fn draw_header_column(
     let text_color = if is_sorted {
         params.colors.highlight
     } else {
-        // Use gray as base, hover will change cursor, not color here
-        params.colors.fg_light
+        // hover will change cursor, not color here
+        params.colors.link_text
     };
 
     let header_text = format!("{}{}", text, sort_indicator);

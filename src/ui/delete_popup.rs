@@ -106,7 +106,7 @@ pub fn confirm_delete(app: &mut crate::app::Kiorg) {
         if let Err(error) = perform_delete(&path, || {
             app.refresh_entries();
         }) {
-            app.toasts.error(error);
+            app.notify_error(error);
         }
 
         cancel_delete(app);

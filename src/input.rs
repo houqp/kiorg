@@ -187,7 +187,7 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: Shortcut
                 }
                 Err(error) => {
                     tracing::error!(err = ?error, "error creating terminal");
-                    app.toasts.error(error);
+                    app.notify_error(error);
                 }
             }
         }

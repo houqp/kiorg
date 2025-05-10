@@ -147,6 +147,13 @@ pub struct Kiorg {
 }
 
 impl Kiorg {
+    /// Display an error notification with a consistent timeout
+    pub fn notify_error<T: ToString>(&mut self, message: T) {
+        self.toasts
+            .error(message.to_string())
+            .duration(Some(std::time::Duration::from_secs(20)));
+    }
+
     pub fn new(cc: &eframe::CreationContext<'_>, initial_dir: Option<PathBuf>) -> Self {
         Self::new_with_config_dir(cc, initial_dir, None)
     }
@@ -629,7 +636,7 @@ impl eframe::App for Kiorg {
         // Process all pending error messages
         while let Ok(error_message) = self.error_receiver.try_recv() {
             // Add the error to the toasts
-            self.toasts.error(error_message);
+            self.notify_error(error_message);
         }
 
         // Update preview cache only if selection changed
@@ -659,8 +666,7 @@ impl eframe::App for Kiorg {
                     &self.bookmarks,
                     self.config_dir_override.as_ref(),
                 ) {
-                    self.toasts
-                        .error(format!("Failed to save bookmarks: {}", e));
+                    self.notify_error(format!("Failed to save bookmarks: {}", e));
                 }
             }
             bookmark_popup::BookmarkAction::None => {}
