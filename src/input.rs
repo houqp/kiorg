@@ -229,9 +229,9 @@ fn process_key(
     match app.show_popup {
         Some(PopupType::Exit) => {
             if key == Key::Enter {
-                app.shutdown_requested = true;
+                crate::ui::exit_popup::confirm_exit(app);
             } else if is_cancel_keys(key) {
-                app.show_popup = None;
+                crate::ui::exit_popup::cancel_exit(app);
             }
             return;
         }

@@ -1,7 +1,7 @@
 use egui::{Context, RichText};
 use std::path::{Path, PathBuf};
 
-use super::window_utils::new_center_popup_window;
+use super::popup_utils::{show_confirm_popup, ConfirmResult};
 use crate::config::colors::AppColors;
 
 /// Confirmation state for the delete popup
@@ -14,15 +14,7 @@ pub enum DeleteConfirmState {
 }
 
 /// Result of the delete confirmation dialog
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum DeleteConfirmResult {
-    /// User confirmed the deletion
-    Confirm,
-    /// User canceled the deletion
-    Cancel,
-    /// No action taken yet
-    None,
-}
+pub type DeleteConfirmResult = ConfirmResult;
 
 /// Handle the delete confirmation process and show the popup
 pub fn handle_delete_confirmation(
@@ -37,75 +29,50 @@ pub fn handle_delete_confirmation(
     }
 
     let path = entry_to_delete.as_ref().unwrap();
-    let mut show_popup = *show_delete_confirm;
-    let mut result = DeleteConfirmResult::None;
 
-    if let Some(response) = new_center_popup_window("Delete Confirmation")
-        .open(&mut show_popup)
-        .show(ctx, |ui| {
-            ui.vertical_centered(|ui| {
-                ui.add_space(10.0);
+    match *state {
+        DeleteConfirmState::Initial => {
+            // Initial confirmation for any file or directory
+            show_confirm_popup(
+                ctx,
+                "Delete Confirmation",
+                show_delete_confirm,
+                colors,
+                |ui| {
+                    ui.vertical_centered(|ui| {
+                        ui.label(path.display().to_string());
+                    });
+                },
+                "Delete (Enter)",
+                "Cancel (Esc)",
+            )
+        }
+        DeleteConfirmState::RecursiveConfirm => {
+            // Second confirmation specifically for directories
+            show_confirm_popup(
+                ctx,
+                "Delete Confirmation",
+                show_delete_confirm,
+                colors,
+                |ui| {
+                    ui.vertical_centered(|ui| {
+                        ui.label("Are you SURE you want to delete");
 
-                let (confirm_clicked, cancel_clicked) = match *state {
-                    DeleteConfirmState::Initial => {
-                        // First confirmation for any file or directory
-                        ui.label(format!("Delete {}?", path.display()));
+                        // Highlight the filename with a background
+                        ui.label(RichText::new(format!("{}", path.display())).strong());
 
-                        let confirm_clicked = ui
-                            .link(
-                                RichText::new("Press Enter to confirm").color(colors.highlight),
-                            )
-                            .clicked();
-                        let cancel_clicked = ui
-                            .link(RichText::new("Press Esc to cancel").color(colors.fg_light))
-                            .clicked();
+                        ui.label("and ALL its contents recursively?");
 
-                        (confirm_clicked, cancel_clicked)
-                    }
-                    DeleteConfirmState::RecursiveConfirm => {
-                        // Second confirmation specifically for directories
                         ui.label(
-                            RichText::new(format!(
-                                "Are you SURE you want to delete {} and ALL its contents recursively?",
-                                path.display()
-                            ))
-                            .strong(),
+                            RichText::new("This action cannot be undone!").color(colors.error),
                         );
-                        ui.label("This action cannot be undone!");
-
-                        let confirm_clicked = ui
-                            .link(
-                                RichText::new("Press Enter to confirm recursive deletion")
-                                    .color(colors.highlight),
-                            )
-                            .clicked();
-                        let cancel_clicked = ui
-                            .link(RichText::new("Press Esc to cancel").color(colors.fg_light))
-                            .clicked();
-
-                        (confirm_clicked, cancel_clicked)
-                    }
-                };
-
-                if confirm_clicked {
-                    result = DeleteConfirmResult::Confirm;
-                } else if cancel_clicked {
-                    result = DeleteConfirmResult::Cancel;
-                }
-
-                ui.add_space(10.0);
-            });
-        })
-    {
-        *show_delete_confirm = !response.response.clicked_elsewhere();
-
-        // If clicked elsewhere, treat as cancel
-        if !*show_delete_confirm && result == DeleteConfirmResult::None {
-            result = DeleteConfirmResult::Cancel;
+                    });
+                },
+                "Delete (Enter)",
+                "Cancel (Esc)",
+            )
         }
     }
-
-    result
 }
 
 /// Helper function to perform the actual deletion
@@ -142,10 +109,7 @@ pub fn confirm_delete(app: &mut crate::app::Kiorg) {
             app.toasts.error(error);
         }
 
-        // Reset state after deletion
-        app.show_popup = None;
-        app.entry_to_delete = None;
-        app.delete_popup_state = DeleteConfirmState::Initial;
+        cancel_delete(app);
     }
 }
 

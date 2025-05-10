@@ -16,4 +16,5 @@ pub mod style;
 pub mod terminal;
 pub mod top_banner;
 
+pub mod popup_utils;
 mod window_utils;

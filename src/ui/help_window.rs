@@ -184,12 +184,7 @@ pub fn show_help_window(ctx: &egui::Context, show_help: &mut bool, colors: &AppC
             ui.separator(); // Horizontal separator below columns
 
             ui.vertical_centered(|ui| {
-                if ui
-                    .link(RichText::new("Press ? or Enter to close").color(colors.fg_light))
-                    .clicked()
-                {
-                    *show_help = false;
-                }
+                ui.label(RichText::new("Press ? or Enter to close").color(colors.fg_light))
             });
         });
 

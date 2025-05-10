@@ -659,11 +659,8 @@ impl eframe::App for Kiorg {
                 about_popup::show_about_popup(ctx, self);
             }
             Some(PopupType::Exit) => {
-                let mut keep_open = true;
-                exit_popup::show(ctx, &mut keep_open, &self.colors);
-                if !keep_open {
-                    self.show_popup = None;
-                }
+                // Draw the exit popup
+                exit_popup::draw(ctx, self);
             }
             Some(PopupType::Delete) => {
                 self.handle_delete_confirmation(ctx);
