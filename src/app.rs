@@ -166,18 +166,43 @@ impl Kiorg {
         cc.egui_ctx.set_visuals(colors.to_visuals());
 
         // Determine the initial path and tab manager
-        let (tab_manager, initial_path) = match initial_dir {
+        let (tab_manager, initial_path) = match &initial_dir {
             // If initial directory is provided, use it
             Some(path) => {
+                // For explicitly provided paths, validate and exit if invalid
+                if !path.exists() {
+                    eprintln!("Error: Directory '{}' does not exist", path.display());
+                    std::process::exit(1);
+                }
+                if !path.is_dir() {
+                    eprintln!("Error: '{}' is not a directory", path.display());
+                    std::process::exit(1);
+                }
+
                 let tab_manager = TabManager::new_with_config(path.clone(), Some(&config));
-                (tab_manager, path)
+                (tab_manager, path.clone())
             }
             // If no initial directory is provided, try to load from saved state
             None => {
                 if let Some(tab_manager) = Self::load_app_state(config_dir_override.as_ref()) {
                     // Use the saved state's path
                     let path = tab_manager.current_tab_ref().current_path.clone();
-                    (tab_manager, path)
+
+                    // Verify that the saved path still exists
+                    if !path.exists() || !path.is_dir() {
+                        // If saved path doesn't exist, fall back to current directory
+                        tracing::error!(
+                            "Saved path in state '{}' is invalid, falling back to current directory",
+                            path.display()
+                        );
+                        let fallback_path =
+                            std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+                        let fallback_tab_manager =
+                            TabManager::new_with_config(fallback_path.clone(), Some(&config));
+                        (fallback_tab_manager, fallback_path)
+                    } else {
+                        (tab_manager, path)
+                    }
                 } else {
                     // No saved state, use current directory
                     let path = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));

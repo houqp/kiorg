@@ -52,4 +52,6 @@
 * Open file with alternative commands leveraging open::commands and open::with_command
 * render PDF preview using pdfium_render or pathfinder_rasterize
   * see <https://github.com/servo/pathfinder/issues/157>
-* Add debounce to preview to reduce io and compute
+* Add debounce to preview with a delay to reduce io and compute
+* Support deleting entries in batch
+* Improve styling in popup and buttons
