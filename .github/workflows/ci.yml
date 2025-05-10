@@ -92,8 +92,9 @@ jobs:
     - name: Cache dependencies
       uses: Swatinem/rust-cache@v2
 
+    - uses: cargo-bins/cargo-binstall@v1.12.4
     - name: Install cargo-bundle
-      run: cargo install cargo-bundle
+      run: cargo binstall cargo-bundle
 
     - name: Build release binary
       run: |
@@ -123,8 +124,9 @@ jobs:
     - name: Cache dependencies
       uses: Swatinem/rust-cache@v2
 
+    - uses: cargo-bins/cargo-binstall@v1.12.4
     - name: Install cargo-bundle
-      run: cargo install cargo-bundle
+      run: cargo binstall cargo-bundle
 
     - name: Build release binary
       run: |
