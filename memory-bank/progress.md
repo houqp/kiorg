@@ -54,4 +54,4 @@
   * see <https://github.com/servo/pathfinder/issues/157>
 * Add debounce to preview with a delay to reduce io and compute
 * Support deleting entries in batch
-* Improve styling in popup and buttons
+* Support drag and drop

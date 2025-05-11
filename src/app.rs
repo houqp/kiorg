@@ -82,6 +82,12 @@ fn create_fs_watcher(watch_dir: &Path) -> (notify::RecommendedWatcher, Arc<Atomi
     (fs_watcher, notify_fs_change)
 }
 
+/// Returns the fallback directory path to use when no valid path is available.
+/// Uses the user's home directory, with a fallback to "." if that fails.
+fn fallback_initial_dir() -> PathBuf {
+    dirs::home_dir().unwrap_or_else(|| PathBuf::from("."))
+}
+
 /// Serializable app state structure
 #[derive(Serialize, Deserialize)]
 pub struct AppState {
@@ -197,13 +203,12 @@ impl Kiorg {
 
                     // Verify that the saved path still exists
                     if !path.exists() || !path.is_dir() {
-                        // If saved path doesn't exist, fall back to current directory
+                        // If saved path doesn't exist, fall back to home directory
                         tracing::error!(
-                            "Saved path in state '{}' is invalid, falling back to current directory",
+                            "Saved path in state '{}' is invalid, falling back to home directory",
                             path.display()
                         );
-                        let fallback_path =
-                            std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+                        let fallback_path = fallback_initial_dir();
                         let fallback_tab_manager =
                             TabManager::new_with_config(fallback_path.clone(), Some(&config));
                         (fallback_tab_manager, fallback_path)
@@ -211,8 +216,8 @@ impl Kiorg {
                         (tab_manager, path)
                     }
                 } else {
-                    // No saved state, use current directory
-                    let path = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+                    // No saved state, use fallback directory
+                    let path = fallback_initial_dir();
                     let tab_manager = TabManager::new_with_config(path.clone(), Some(&config));
                     (tab_manager, path)
                 }

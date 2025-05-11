@@ -87,7 +87,19 @@ pub fn get_kiorg_config_dir(override_path: Option<&PathBuf>) -> PathBuf {
     match override_path {
         Some(dir) => dir.clone(),
         None => {
-            let dir = dirs_next::config_dir().unwrap_or_else(|| PathBuf::from("."));
+            // For macOS, prioritize ~/.config/kiorg for easier config management and terminal access
+            #[cfg(target_os = "macos")]
+            {
+                if let Some(home_dir) = dirs::home_dir() {
+                    let xdg_config_dir = home_dir.join(".config").join("kiorg");
+                    if xdg_config_dir.exists() {
+                        return xdg_config_dir;
+                    }
+                }
+            }
+
+            // Fall back to the standard config directory
+            let dir = dirs::config_dir().expect("Failed to look up config directory");
             dir.join("kiorg")
         }
     }

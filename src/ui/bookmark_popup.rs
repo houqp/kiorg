@@ -1,4 +1,3 @@
-use dirs_next as dirs;
 use egui::Context;
 use std::error::Error;
 use std::fs;
@@ -7,18 +6,7 @@ use std::path::PathBuf; // Removed unused Path
 
 use super::window_utils::new_center_popup_window;
 use crate::app::Kiorg;
-
-// Get the path to the kiorg config directory
-fn get_kiorg_config_dir(override_path: Option<&PathBuf>) -> PathBuf {
-    match override_path {
-        Some(dir) => dir.clone(),
-        None => {
-            let mut dir = dirs::config_dir().unwrap_or_else(|| PathBuf::from(".config")); // Use .config as fallback
-            dir.push("kiorg");
-            dir
-        }
-    }
-}
+use crate::config::get_kiorg_config_dir;
 
 // Get the full path to the bookmarks file
 fn get_bookmarks_file_path(config_dir_override: Option<&PathBuf>) -> PathBuf {

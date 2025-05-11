@@ -44,7 +44,7 @@ fn test_fallback_to_current_dir_when_saved_path_nonexistent() {
     );
 
     // The app should have fallen back to the current directory
-    let expected_path = std::env::current_dir().unwrap();
+    let expected_path = dirs::home_dir().unwrap();
     assert_eq!(
         current_path, expected_path,
         "App should fall back to current directory when saved path doesn't exist"
