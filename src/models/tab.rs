@@ -34,6 +34,8 @@ pub struct Tab {
     // History of visited directories
     pub history: Vec<PathBuf>,
     pub history_position: usize,
+    // Reverse index mapping DirEntry path to index in entries (private)
+    path_to_index: std::collections::HashMap<PathBuf, usize>,
 }
 
 // Private helper function for sorting DirEntry slices
@@ -89,6 +91,7 @@ impl Tab {
             marked_entries: std::collections::HashSet::new(),
             history: Vec::new(),
             history_position: 0,
+            path_to_index: std::collections::HashMap::new(),
         };
         // Add the initial path to history
         tab.add_to_history(path);
@@ -114,6 +117,7 @@ impl Tab {
             marked_entries: std::collections::HashSet::new(),
             history: Vec::new(),
             history_position: 0,
+            path_to_index: std::collections::HashMap::new(),
         };
         // Add the initial path to history
         tab.add_to_history(path);
@@ -166,6 +170,11 @@ impl Tab {
         } else {
             Some(&self.entries[self.selected_index])
         }
+    }
+
+    // Get the index of an entry by its path using the reverse index
+    pub fn get_index_by_path(&self, path: &PathBuf) -> Option<usize> {
+        self.path_to_index.get(path).copied()
     }
 
     // Returns the index of the first entry that matches the current search query
@@ -354,6 +363,11 @@ impl TabManager {
         &self.tabs[self.current_tab_index]
     }
 
+    // Get the index of an entry by its path in the current tab
+    pub fn get_entry_index_by_path(&self, path: &PathBuf) -> Option<usize> {
+        self.current_tab_ref().get_index_by_path(path)
+    }
+
     pub fn reset_selection(&mut self) {
         let tab = self.current_tab_mut();
         tab.selected_index = 0;
@@ -430,6 +444,12 @@ impl TabManager {
         tab.entries = read_dir_entries(&current_path); // Read entries for the current path
                                                        // Sort entries using the global sort settings
         sort_entries_by(&mut tab.entries, sort_column, sort_order);
+
+        // Build the reverse index mapping paths to indices
+        tab.path_to_index.clear();
+        for (index, entry) in tab.entries.iter().enumerate() {
+            tab.path_to_index.insert(entry.path.clone(), index);
+        }
 
         // Reset selection index if it's out of bounds (can happen after rehydrating from TabState)
         if tab.selected_index >= tab.entries.len() && !tab.entries.is_empty() {

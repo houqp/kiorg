@@ -285,12 +285,11 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
 
                 if app.ensure_selected_visible {
                     if let Some(selected_entry) = tab_ref.selected_entry() {
+                        // Find the position of the selected entry in the filtered list
                         let filtered_index = filtered_entries
                             .iter()
-                            .enumerate()
-                            .find(|(_, entry)| entry.path == selected_entry.path)
-                            .expect("selected entry not in filtered list")
-                            .0;
+                            .position(|entry| entry.path == selected_entry.path)
+                            .expect("selected entry not in filtered list");
 
                         scroll_area = scroll_by_filtered_index(
                             scroll_area,
@@ -320,12 +319,11 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                         // Get the entry for the current visible row from the filtered list
                         let entry = &filtered_entries[row_index];
 
-                        // Find the original index in the full `entries` list for selection state
-                        let original_index = tab_ref
-                            .entries
-                            .iter()
-                            .position(|e| e.path == entry.path)
-                            .unwrap_or(usize::MAX); // Should always find
+                        // Use the TabManager's method to find the original index in constant time
+                        let original_index = app
+                            .tab_manager
+                            .get_entry_index_by_path(&entry.path)
+                            .expect("selected entry not found in tab");
 
                         let is_selected = original_index == tab_ref.selected_index;
                         let is_marked = tab_ref.marked_entries.contains(&entry.path);

@@ -186,7 +186,6 @@ pub fn create_harness_with_config_dir<'a>(
     let ctx = egui::Context::default();
     let cc = eframe::CreationContext::_new_kittest(ctx.clone());
 
-    // Create the app with the test config directory override
     let app = Kiorg::new_with_config_dir(
         &cc,
         Some(temp_dir.path().to_path_buf()),
