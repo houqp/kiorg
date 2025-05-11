@@ -172,6 +172,13 @@ pub struct TestHarness<'a> {
 pub fn create_harness<'a>(temp_dir: &tempfile::TempDir) -> TestHarness<'a> {
     // Create a separate temporary directory for config files
     let config_temp_dir = tempdir().unwrap();
+    create_harness_with_config_dir(temp_dir, config_temp_dir)
+}
+
+pub fn create_harness_with_config_dir<'a>(
+    temp_dir: &tempfile::TempDir,
+    config_temp_dir: tempfile::TempDir,
+) -> TestHarness<'a> {
     let test_config_dir = config_temp_dir.path().to_path_buf();
     std::fs::create_dir_all(&test_config_dir).unwrap();
 
@@ -184,7 +191,8 @@ pub fn create_harness<'a>(temp_dir: &tempfile::TempDir) -> TestHarness<'a> {
         &cc,
         Some(temp_dir.path().to_path_buf()),
         Some(test_config_dir),
-    );
+    )
+    .expect("Failed to create Kiorg app");
 
     // Create a test harness with more steps to ensure all events are processed
     let harness = Harness::builder()

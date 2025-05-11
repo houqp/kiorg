@@ -79,7 +79,15 @@ fn main() -> Result<(), eframe::Error> {
         Box::new(|cc| {
             egui_extras::install_image_loaders(&cc.egui_ctx);
             egui_zhcn_fonts::add_sys_ui_fonts(&cc.egui_ctx);
-            Ok(Box::new(Kiorg::new(cc, initial_dir)))
+
+            // Create the app, handling any errors
+            match Kiorg::new(cc, initial_dir) {
+                Ok(app) => Ok(Box::new(app)),
+                Err(e) => {
+                    eprintln!("Error initializing Kiorg: {}", e);
+                    std::process::exit(1);
+                }
+            }
         }),
     )
 }

@@ -404,7 +404,6 @@ pub mod shortcuts_helpers {
             _ => return None, // Unsupported key
         };
 
-        // Search through all actions and their shortcuts
         for (action, shortcuts_list) in shortcuts {
             // Check if any shortcut in the list matches the current key and modifiers
             for shortcut in shortcuts_list {

@@ -3,11 +3,57 @@ use notify::Watcher;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use std::collections::HashMap;
+use std::error::Error;
+use std::fmt;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
 use crate::models::preview_content::PreviewContent;
+
+/// Error type for Kiorg application
+#[derive(Debug)]
+pub enum KiorgError {
+    /// Configuration error
+    ConfigError(config::ConfigError),
+    /// Directory does not exist
+    DirectoryNotFound(PathBuf),
+    /// Path is not a directory
+    NotADirectory(PathBuf),
+    /// File system watcher error
+    WatcherError(String),
+    /// Other error
+    Other(String),
+}
+
+impl fmt::Display for KiorgError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            KiorgError::ConfigError(e) => write!(f, "Configuration error: {}", e),
+            KiorgError::DirectoryNotFound(path) => {
+                write!(f, "Directory not found: {}", path.display())
+            }
+            KiorgError::NotADirectory(path) => write!(f, "Not a directory: {}", path.display()),
+            KiorgError::WatcherError(e) => write!(f, "File system watcher error: {}", e),
+            KiorgError::Other(e) => write!(f, "{}", e),
+        }
+    }
+}
+
+impl Error for KiorgError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            KiorgError::ConfigError(e) => Some(e),
+            _ => None,
+        }
+    }
+}
+
+impl From<config::ConfigError> for KiorgError {
+    fn from(err: config::ConfigError) -> Self {
+        KiorgError::ConfigError(err)
+    }
+}
 
 /// Popup types that can be shown in the application
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -54,13 +100,29 @@ const RIGHT_PANEL_RATIO: f32 = 0.25;
 const LEFT_PANEL_MIN_WIDTH: f32 = 150.0;
 const RIGHT_PANEL_MIN_WIDTH: f32 = 200.0;
 
-fn create_fs_watcher(watch_dir: &Path) -> (notify::RecommendedWatcher, Arc<AtomicBool>) {
+fn create_fs_watcher(
+    watch_dir: &Path,
+) -> Result<(notify::RecommendedWatcher, Arc<AtomicBool>), std::io::Error> {
     let notify_fs_change = Arc::new(AtomicBool::new(false));
     let (tx, rx) = std::sync::mpsc::channel::<notify::Result<notify::Event>>();
-    let mut fs_watcher = notify::recommended_watcher(tx).expect("Failed to create watcher");
-    fs_watcher
-        .watch(watch_dir, RecursiveMode::NonRecursive)
-        .expect("Failed to watch path");
+
+    let mut fs_watcher = match notify::recommended_watcher(tx) {
+        Ok(watcher) => watcher,
+        Err(e) => {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                e.to_string(),
+            ))
+        }
+    };
+
+    if let Err(e) = fs_watcher.watch(watch_dir, RecursiveMode::NonRecursive) {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            format!("Failed to watch path: {}", e),
+        ));
+    }
+
     let notify_fs_change_clone = notify_fs_change.clone();
     std::thread::spawn(move || loop {
         for res in &rx {
@@ -79,7 +141,8 @@ fn create_fs_watcher(watch_dir: &Path) -> (notify::RecommendedWatcher, Arc<Atomi
             }
         }
     });
-    (fs_watcher, notify_fs_change)
+
+    Ok((fs_watcher, notify_fs_change))
 }
 
 /// Returns the fallback directory path to use when no valid path is available.
@@ -153,14 +216,10 @@ pub struct Kiorg {
 }
 
 impl Kiorg {
-    /// Display an error notification with a consistent timeout
-    pub fn notify_error<T: ToString>(&mut self, message: T) {
-        self.toasts
-            .error(message.to_string())
-            .duration(Some(std::time::Duration::from_secs(20)));
-    }
-
-    pub fn new(cc: &eframe::CreationContext<'_>, initial_dir: Option<PathBuf>) -> Self {
+    pub fn new(
+        cc: &eframe::CreationContext<'_>,
+        initial_dir: Option<PathBuf>,
+    ) -> Result<Self, KiorgError> {
         Self::new_with_config_dir(cc, initial_dir, None)
     }
 
@@ -168,9 +227,9 @@ impl Kiorg {
         cc: &eframe::CreationContext<'_>,
         initial_dir: Option<PathBuf>,
         config_dir_override: Option<PathBuf>,
-    ) -> Self {
-        let config = config::load_config_with_override(config_dir_override.as_ref())
-            .expect("Invalid config");
+    ) -> Result<Self, KiorgError> {
+        let config = config::load_config_with_override(config_dir_override.as_ref())?;
+
         let colors = match &config.colors {
             Some(color_scheme) => AppColors::from_config(color_scheme),
             None => AppColors::default(),
@@ -182,14 +241,12 @@ impl Kiorg {
         let (tab_manager, initial_path) = match &initial_dir {
             // If initial directory is provided, use it
             Some(path) => {
-                // For explicitly provided paths, validate and exit if invalid
+                // For explicitly provided paths, validate and return error if invalid
                 if !path.exists() {
-                    eprintln!("Error: Directory '{}' does not exist", path.display());
-                    std::process::exit(1);
+                    return Err(KiorgError::DirectoryNotFound(path.clone()));
                 }
                 if !path.is_dir() {
-                    eprintln!("Error: '{}' is not a directory", path.display());
-                    std::process::exit(1);
+                    return Err(KiorgError::NotADirectory(path.clone()));
                 }
 
                 let tab_manager = TabManager::new_with_config(path.clone(), Some(&config));
@@ -224,10 +281,11 @@ impl Kiorg {
             }
         };
 
-        // Create file system watcher
-        let (fs_watcher, notify_fs_change) = create_fs_watcher(initial_path.as_path());
+        let (fs_watcher, notify_fs_change) = match create_fs_watcher(initial_path.as_path()) {
+            Ok(watcher) => watcher,
+            Err(e) => return Err(KiorgError::WatcherError(e.to_string())),
+        };
 
-        // Load bookmarks
         let bookmarks = bookmark_popup::load_bookmarks(config_dir_override.as_ref());
 
         // Create a channel for error messages
@@ -268,7 +326,14 @@ impl Kiorg {
         };
 
         app.refresh_entries();
-        app
+        Ok(app)
+    }
+
+    /// Display an error notification with a consistent timeout
+    pub fn notify_error<T: ToString>(&mut self, message: T) {
+        self.toasts
+            .error(message.to_string())
+            .duration(Some(std::time::Duration::from_secs(20)));
     }
 
     pub fn refresh_entries(&mut self) {
@@ -433,9 +498,15 @@ impl Kiorg {
         // Reset scroll_range to None when navigating to a new directory
         self.scroll_range = None;
         self.search_bar.close();
-        self.fs_watcher
+
+        // Watch the new directory
+        if let Err(e) = self
+            .fs_watcher
             .watch(tab.current_path.as_path(), RecursiveMode::NonRecursive)
-            .expect("Failed to watch path");
+        {
+            self.notify_error(format!("Failed to watch directory: {}", e));
+        }
+
         self.refresh_entries();
     }
 

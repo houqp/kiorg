@@ -107,7 +107,8 @@ fn test_tab_selection_not_persisted() {
             &cc,
             Some(test_dir_path.clone()),
             Some(config_dir_path.clone()),
-        );
+        )
+        .expect("Failed to create Kiorg app");
 
         // Create a test harness
         let mut harness = egui_kittest::Harness::builder()
@@ -224,7 +225,8 @@ fn test_tab_selection_not_persisted() {
             &cc,
             None, // Use None to load from saved state
             Some(config_dir_path.clone()),
-        );
+        )
+        .expect("Failed to create Kiorg app");
 
         // Create a test harness
         let mut harness = egui_kittest::Harness::builder()

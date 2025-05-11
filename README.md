@@ -1,8 +1,11 @@
 # Kiorg
 
-![Kiorg Logo](assets/icon.png)
+<p align="center">
+  <img src="assets/icon.png" alt="Kiorg Logo" width="200px">
+</p>
 
-Kiorg is a performance focused cross-platform file management app with Vim-inspired key bindings, built using the [egui](https://www.egui.rs/#demo) framework.
+Kiorg is a performance focused cross-platform file manager with Vim-inspired key
+bindings. It is built using the [egui](https://www.egui.rs/#demo) framework.
 
 ## Key Features
 
@@ -24,3 +27,30 @@ Kiorg uses TOML configuration files stored in the user's config directory:
 * Linux: `~/.config/kiorg/`
 * macOS: `~/.config/kiorg/` (if it exists) or `~/Library/Application Support/kiorg/`
 * Windows: `%APPDATA%\kiorg\`
+
+### Sample Configuration
+
+```toml
+# Sort preference configuration (optional)
+[sort_preference]
+column = "Name"             # Sort column: "Name", "Modified", "Size", or "None"
+order = "Ascending"         # Sort order: "Ascending" or "Descending"
+
+# Override default shortcuts (optional)
+[shortcuts]
+MoveDown = [
+  { key = "j" },
+  { key = "down" }
+]
+MoveUp = [
+  { key = "k" },
+  { key = "up" }
+]
+DeleteEntry = [
+  { key = "d" }
+]
+ActivateSearch = [
+  { key = "/" },
+  { key = "f", ctrl = true }
+]
+```

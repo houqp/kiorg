@@ -2,6 +2,7 @@ use egui::{Key, Modifiers};
 use std::fs;
 use std::path::PathBuf;
 use tempfile::tempdir;
+use ui_test_helpers::create_harness_with_config_dir;
 
 use crate::ui_test_helpers::create_harness;
 
@@ -256,26 +257,22 @@ fn test_modifier_shortcuts() {
     let config_dir = config_temp_dir.path().to_path_buf();
 
     // Create a TOML config file with custom shortcuts using modifiers
+    // Include both the default MoveUp shortcut and a custom MoveDown shortcut
     let toml_content = r##"
 # Custom shortcuts configuration with modifiers
 [[shortcuts.MoveDown]]
-key = "d"
+key = "u"
 ctrl = true
+
+[[shortcuts.MoveUp]]
+key = "m"
 "##;
 
     // Write the config file
     create_config_file(&config_dir, toml_content);
 
     // Create the test harness
-    let mut harness = create_harness(&temp_dir);
-
-    // Override the config directory to use our custom one
-    harness.state_mut().config_dir_override = Some(config_dir.clone());
-
-    // Reload the config from the custom directory
-    harness.state_mut().config =
-        kiorg::config::load_config_with_override(Some(&config_dir)).expect("Failed to load config");
-    harness.state_mut().refresh_entries();
+    let mut harness = create_harness_with_config_dir(&temp_dir, config_temp_dir);
     harness.step();
 
     // Verify initial selection is at index 0
@@ -285,7 +282,7 @@ ctrl = true
     );
 
     // Press 'd' without Ctrl - should not move
-    harness.press_key(Key::D);
+    harness.press_key(Key::U);
     harness.step();
     assert_eq!(
         harness.state().tab_manager.current_tab_ref().selected_index,
@@ -297,7 +294,7 @@ ctrl = true
         ctrl: true,
         ..Default::default()
     };
-    harness.press_key_modifiers(modifiers, Key::D);
+    harness.press_key_modifiers(modifiers, Key::U);
     harness.step();
 
     // Verify selection moved down to index 1
@@ -305,4 +302,130 @@ ctrl = true
         harness.state().tab_manager.current_tab_ref().selected_index,
         1
     );
+
+    // Move back to index 0 using the explicitly defined MoveUp shortcut
+    harness.press_key(Key::M);
+    harness.step();
+
+    // Verify selection is back at index 0
+    assert_eq!(
+        harness.state().tab_manager.current_tab_ref().selected_index,
+        0
+    );
+}
+
+#[test]
+fn test_shortcut_merging() {
+    // Create a temporary directory for the test files
+    let temp_dir = tempdir().unwrap();
+
+    // Create some test files in the temp directory
+    let file1 = temp_dir.path().join("file1.txt");
+    let file2 = temp_dir.path().join("file2.txt");
+    let file3 = temp_dir.path().join("file3.txt");
+
+    std::fs::write(&file1, "test content").unwrap();
+    std::fs::write(&file2, "test content").unwrap();
+    std::fs::write(&file3, "test content").unwrap();
+
+    // Create a temporary directory for the config
+    let config_temp_dir = tempdir().unwrap();
+    let config_dir = config_temp_dir.path().to_path_buf();
+
+    // Create a TOML config file with only one custom shortcut
+    // This should override just the MoveDown action while keeping all other default shortcuts
+    let toml_content = r##"
+# Custom shortcuts configuration with only one action
+[[shortcuts.MoveDown]]
+key = "n"
+"##;
+    // Write the config file
+    create_config_file(&config_dir, toml_content);
+
+    // Create the test harness
+    let mut harness = create_harness_with_config_dir(&temp_dir, config_temp_dir);
+
+    harness.step();
+    // Verify initial selection is at index 0
+    assert_eq!(
+        harness.state().tab_manager.current_tab_ref().selected_index,
+        0
+    );
+
+    // Test that the custom shortcut for MoveDown works
+    harness.press_key(Key::N);
+    harness.step();
+
+    // Verify selection moved down to index 1
+    assert_eq!(
+        harness.state().tab_manager.current_tab_ref().selected_index,
+        1
+    );
+
+    // Test that the default shortcut for MoveUp still works
+    // This verifies that default shortcuts for actions not overridden by the user are preserved
+    harness.press_key(Key::K);
+    harness.step();
+
+    // Verify selection moved back up to index 0
+    assert_eq!(
+        harness.state().tab_manager.current_tab_ref().selected_index,
+        0
+    );
+
+    // The original 'j' key should no longer work for moving down
+    // since it was replaced by the custom 'n' shortcut
+    harness.press_key(Key::J);
+    harness.step();
+
+    // Selection should still be at index 0
+    assert_eq!(
+        harness.state().tab_manager.current_tab_ref().selected_index,
+        0
+    );
+}
+
+#[test]
+fn test_shortcut_conflict_detection() {
+    // Create a temporary directory for the config
+    let config_temp_dir = tempdir().unwrap();
+    let config_dir = config_temp_dir.path().to_path_buf();
+
+    // Create a TOML config file with conflicting shortcuts
+    // Both MoveDown and DeleteEntry are assigned to the same shortcut (d key)
+    let toml_content = r##"
+# Config with conflicting shortcuts
+[[shortcuts.MoveDown]]
+key = "d"
+
+[[shortcuts.DeleteEntry]]
+key = "d"
+"##;
+
+    // Write the config file
+    create_config_file(&config_dir, toml_content);
+
+    // Try to load the config and expect a ShortcutConflictError
+    let result = kiorg::config::load_config_with_override(Some(&config_dir));
+
+    // Verify that we got a ShortcutConflictError
+    assert!(
+        result.is_err(),
+        "Should return an error for conflicting shortcuts"
+    );
+
+    // Check that the error is a ShortcutConflictError
+    if let Err(kiorg::config::ConfigError::ShortcutConflict(conflict)) = result {
+        // Verify the conflicting shortcut details
+        assert_eq!(conflict.shortcut.key, "d");
+        assert!(
+            (conflict.action1 == kiorg::config::shortcuts::ShortcutAction::MoveDown
+                && conflict.action2 == kiorg::config::shortcuts::ShortcutAction::DeleteEntry)
+                || (conflict.action1 == kiorg::config::shortcuts::ShortcutAction::DeleteEntry
+                    && conflict.action2 == kiorg::config::shortcuts::ShortcutAction::MoveDown),
+            "Error should identify the correct conflicting actions"
+        );
+    } else {
+        panic!("Expected ShortcutConflictError, got: {:?}", result);
+    }
 }
