@@ -154,7 +154,7 @@ pub fn draw(app: &mut Kiorg, ctx: &egui::Context, ui: &mut Ui, width: f32, heigh
                             ui.label(
                                 RichText::new(format!(
                                     "Loading preview contents for {}...",
-                                    path.display()
+                                    path.file_name().unwrap_or_default().to_string_lossy()
                                 ))
                                 .color(colors.fg),
                             );
@@ -437,7 +437,7 @@ fn render_pdf_page(path: &std::path::Path, page_number: u32) -> Result<PreviewCo
 }
 
 /// Detect file type asynchronously and return a PreviewContent
-fn detect_file_type(path: &std::path::Path, size: u64) -> Result<PreviewContent, String> {
+fn render_generic_file(path: &std::path::Path, size: u64) -> Result<PreviewContent, String> {
     // Try to detect the file type using file_type crate
     let file_type_info = match FileType::try_from_file(path) {
         Ok(file_type) => {
@@ -457,8 +457,10 @@ fn detect_file_type(path: &std::path::Path, size: u64) -> Result<PreviewContent,
 
     // Return the PreviewContent directly
     Ok(PreviewContent::text(format!(
-        "{}\n\nSize: {} bytes",
-        file_type_info, size
+        "{}\n\n{}\n\nSize: {} bytes",
+        path.file_name().unwrap_or_default().to_string_lossy(),
+        file_type_info,
+        size
     )))
 }
 
@@ -489,7 +491,7 @@ pub fn update_preview_cache(app: &mut Kiorg, _ctx: &egui::Context) {
     if entry.is_dir {
         app.preview_content = Some(PreviewContent::text(format!(
             "Directory: {}",
-            entry.path.display()
+            entry.path.file_name().unwrap_or_default().to_string_lossy()
         )));
         return;
     }
@@ -538,7 +540,7 @@ pub fn update_preview_cache(app: &mut Kiorg, _ctx: &egui::Context) {
                     let path = entry.path.clone();
                     let size = entry.size;
 
-                    load_preview_async(app, path, move |path| detect_file_type(&path, size));
+                    load_preview_async(app, path, move |path| render_generic_file(&path, size));
                 }
             }
         }
