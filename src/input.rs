@@ -57,18 +57,32 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: Shortcut
         ShortcutAction::GoToFirstEntry => {
             let tab = app.tab_manager.current_tab_mut();
             if !tab.entries.is_empty() {
-                tab.update_selection(0);
-                app.ensure_selected_visible = true;
-                app.selection_changed = true;
+                // Get filtered entries with their original indices
+                let filtered_entries = tab.get_filtered_entries_with_indices(&app.search_bar.query);
+
+                if !filtered_entries.is_empty() {
+                    // Get the original index of the first filtered entry
+                    let first_filtered_index = filtered_entries[0].1;
+                    tab.update_selection(first_filtered_index);
+                    app.ensure_selected_visible = true;
+                    app.selection_changed = true;
+                }
             }
             app.last_lowercase_g_pressed_ms = 0;
         }
         ShortcutAction::GoToLastEntry => {
             let tab = app.tab_manager.current_tab_mut();
             if !tab.entries.is_empty() {
-                tab.update_selection(tab.entries.len() - 1);
-                app.ensure_selected_visible = true;
-                app.selection_changed = true;
+                // Get filtered entries with their original indices
+                let filtered_entries = tab.get_filtered_entries_with_indices(&app.search_bar.query);
+
+                if !filtered_entries.is_empty() {
+                    // Get the original index of the last filtered entry
+                    let last_filtered_index = filtered_entries[filtered_entries.len() - 1].1;
+                    tab.update_selection(last_filtered_index);
+                    app.ensure_selected_visible = true;
+                    app.selection_changed = true;
+                }
             }
             app.last_lowercase_g_pressed_ms = 0;
         }

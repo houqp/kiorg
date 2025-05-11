@@ -43,7 +43,6 @@
 
 ### What's left to build
 
-* cache directory list
 * Shortcut to toggle sort
 * Fuzzy directory jump (integrate with fzf)
 * Case-sensitive/insensitive search toggle
@@ -55,3 +54,4 @@
 * Add debounce to preview with a delay to reduce io and compute
 * Support deleting entries in batch
 * Support drag and drop
+* Support ctrl-d and ctrl-u for page down and page up
