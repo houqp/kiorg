@@ -1,5 +1,6 @@
 use egui::Key;
 
+#[path = "mod/ui_test_helpers.rs"]
 mod ui_test_helpers;
 use ui_test_helpers::{create_harness, create_test_files};
 

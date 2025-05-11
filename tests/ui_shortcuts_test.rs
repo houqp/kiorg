@@ -5,6 +5,7 @@ use tempfile::tempdir;
 
 use crate::ui_test_helpers::create_harness;
 
+#[path = "mod/ui_test_helpers.rs"]
 mod ui_test_helpers;
 
 // Helper function to create a config.toml file with custom TOML content

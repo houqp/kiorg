@@ -3,8 +3,9 @@ use serde_json::Value;
 use std::fs;
 use tempfile::tempdir;
 
-use crate::ui_test_helpers::{create_harness, create_test_files};
+use ui_test_helpers::{create_harness, create_test_files};
 
+#[path = "mod/ui_test_helpers.rs"]
 mod ui_test_helpers;
 
 /// Test that tab selection is preserved when switching between tabs at runtime

@@ -1,3 +1,4 @@
+#[path = "mod/ui_test_helpers.rs"]
 mod ui_test_helpers;
 
 use std::{
