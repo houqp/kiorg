@@ -27,7 +27,6 @@ clap = { version = "4.5.1", features = ["derive"] }
 egui_term = { git = "https://github.com/houqp/egui_term.git", rev = "b8b4a1b79e10e07bd64d8104449e8904b466b3cd" }
 notify = "8"
 egui_extras = { version = "0", features = ["all_loaders"] }
-image = { version = "0"}
 zip = "2"
 egui-notify = "0"
 epub = "2"
@@ -35,6 +34,10 @@ file_type = "0"
 egui_zhcn_fonts = "0"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# image handling
+image = { version = "0"}
+kamadak-exif = "0"
 
 # for pdf rendering
 pdf_render = { git = "https://github.com/pdf-rs/pdf_render.git", rev = "9a31988b091495c65a54236fd6cdce8f1fa2afd0", features = ["embed"] }

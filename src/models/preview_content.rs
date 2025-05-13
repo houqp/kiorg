@@ -17,13 +17,38 @@ pub struct DocMeta {
     pub cover: Option<egui::widgets::ImageSource<'static>>,
 }
 
+/// Metadata for image files
+#[derive(Clone)]
+pub struct ImageMeta {
+    /// Image title (usually filename)
+    pub title: String,
+    /// Image metadata (key-value pairs)
+    pub metadata: HashMap<String, String>,
+    /// EXIF metadata (key-value pairs), stored separately from regular metadata
+    pub exif_data: Option<HashMap<String, String>>,
+    /// Texture handle for the image
+    pub texture: egui::TextureHandle,
+}
+
+// Manual implementation of Debug for ImageMeta since TextureHandle doesn't implement Debug
+impl std::fmt::Debug for ImageMeta {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ImageMeta")
+            .field("title", &self.title)
+            .field("metadata", &self.metadata)
+            .field("exif_data", &self.exif_data)
+            .field("texture", &"TextureHandle")
+            .finish()
+    }
+}
+
 /// Represents different types of preview content that can be displayed in the right panel
 #[derive(Clone, Debug)]
 pub enum PreviewContent {
     /// Text content to be displayed
     Text(String),
-    /// Image content with URI to the image file
-    Image(String),
+    /// Image content with metadata
+    Image(ImageMeta),
     /// Zip file content with a list of entries
     Zip(Vec<ZipEntry>),
     /// Document content with metadata and cover image
@@ -49,17 +74,19 @@ impl PreviewContent {
         PreviewContent::Text(content.into())
     }
 
-    /// Creates a new image preview content from a path
-    pub fn image(path: impl Into<PathBuf>) -> Self {
-        let path = path.into();
-        // Create a file URI for the image
-        let file_uri = format!("file://{}", path.display());
-        PreviewContent::Image(file_uri)
-    }
-
-    /// Creates a new image preview content directly from a URI
-    pub fn image_uri(uri: impl Into<String>) -> Self {
-        PreviewContent::Image(uri.into())
+    /// Creates a new image preview content with a texture handle
+    pub fn image(
+        title: impl Into<String>,
+        metadata: HashMap<String, String>,
+        texture: egui::TextureHandle,
+        exif_data: Option<HashMap<String, String>>,
+    ) -> Self {
+        PreviewContent::Image(ImageMeta {
+            title: title.into(),
+            metadata,
+            exif_data,
+            texture,
+        })
     }
 
     /// Creates a new zip preview content from a list of entries

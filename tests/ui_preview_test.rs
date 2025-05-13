@@ -138,10 +138,11 @@ fn test_image_preview() {
 
     // Check if the preview content is an image
     match &harness.state().preview_content {
-        Some(PreviewContent::Image(uri)) => {
+        Some(PreviewContent::Image(image_meta)) => {
+            // Verify that metadata is present
             assert!(
-                uri.contains("file://") && uri.contains(".png"),
-                "Image URI should contain file:// protocol and .png extension"
+                !image_meta.metadata.is_empty(),
+                "Image metadata should not be empty"
             );
         }
         Some(other) => {
@@ -198,6 +199,9 @@ fn test_zip_preview() {
             Some(PreviewContent::Loading(..)) => {
                 // Still loading, try another step
                 harness.step();
+            }
+            Some(PreviewContent::Image(_)) => {
+                panic!("Preview content should be Zip or Loading variant, not Image");
             }
             Some(other) => {
                 panic!(

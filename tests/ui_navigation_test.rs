@@ -300,6 +300,7 @@ fn test_mouse_click_selects_and_previews() {
                 "Preview content should contain 'Content of b.txt'"
             );
         }
+
         Some(PreviewContent::Image(_)) => {
             panic!("Preview content should be Text variant, not Image")
         }
@@ -418,10 +419,11 @@ fn test_image_preview() {
 
     // Check if the preview content is an image
     match &harness.state().preview_content {
-        Some(PreviewContent::Image(uri)) => {
+        Some(PreviewContent::Image(image_meta)) => {
+            // Verify that metadata is present
             assert!(
-                uri.contains("file://") && uri.contains(".png"),
-                "Image URI should contain file:// protocol and .png extension"
+                !image_meta.metadata.is_empty(),
+                "Image metadata should not be empty"
             );
         }
         Some(PreviewContent::Loading(..)) => {
@@ -433,13 +435,17 @@ fn test_image_preview() {
                 }
             }
             // Check again after waiting
-            if let Some(PreviewContent::Image(uri)) = &harness.state().preview_content {
-                assert!(
-                    uri.contains("file://") && uri.contains(".png"),
-                    "Image URI should contain file:// protocol and .png extension after loading"
-                );
-            } else {
-                panic!("Preview content should be Image variant after loading completes");
+            match &harness.state().preview_content {
+                Some(PreviewContent::Image(image_meta)) => {
+                    // Verify that metadata is present
+                    assert!(
+                        !image_meta.metadata.is_empty(),
+                        "Image metadata should not be empty"
+                    );
+                }
+                _ => {
+                    panic!("Preview content should be Image variant after loading completes");
+                }
             }
         }
         Some(PreviewContent::Doc(_)) => {
@@ -506,6 +512,9 @@ fn test_zip_preview() {
             }
             Some(PreviewContent::Doc(_)) => {
                 panic!("Preview content should be Zip or Loading variant, not Doc");
+            }
+            Some(PreviewContent::Image(_)) => {
+                panic!("Preview content should be Zip or Loading variant, not Image");
             }
             Some(other) => {
                 panic!(
