@@ -661,6 +661,7 @@ fn read_image_with_metadata(
             ImageFormat::Farbfeld => "Farbfeld".to_string(),
             ImageFormat::Avif => "AVIF".to_string(),
             ImageFormat::Qoi => "QOI".to_string(),
+            ImageFormat::Pcx => "PCX".to_string(),
             _ => format!("{:?}", format),
         };
         metadata.insert("Format".to_string(), format_name);
@@ -724,9 +725,9 @@ fn read_image_with_metadata(
 }
 
 /// Detect file type asynchronously and return a PreviewContent
-fn render_generic_file(path: &std::path::Path, size: u64) -> Result<PreviewContent, String> {
+fn render_generic_file(path: std::path::PathBuf, size: u64) -> Result<PreviewContent, String> {
     // Try to detect the file type using file_type crate
-    let file_type_info = match FileType::try_from_file(path) {
+    let file_type_info = match FileType::try_from_file(&path) {
         Ok(file_type) => {
             let media_types = file_type.media_types().join(", ");
             let extensions = file_type.extensions().join(", ");
@@ -745,7 +746,10 @@ fn render_generic_file(path: &std::path::Path, size: u64) -> Result<PreviewConte
     // Return the PreviewContent directly
     Ok(PreviewContent::text(format!(
         "{}\n\n{}\n\nSize: {} bytes",
-        path.file_name().unwrap_or_default().to_string_lossy(),
+        path.as_path()
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy(),
         file_type_info,
         size
     )))
@@ -819,22 +823,49 @@ pub fn update_preview_cache(app: &mut Kiorg, ctx: &egui::Context) {
         }
         // All other files
         _ => {
-            match std::fs::read_to_string(&entry.path) {
-                Ok(content) => {
-                    // Only show first 1000 characters for text files
-                    let preview_text = content.chars().take(1000).collect::<String>();
-                    app.preview_content = Some(PreviewContent::text(preview_text));
-                }
-                Err(_) => {
-                    // For binary files or files that can't be read as text
-                    // Handle file type detection asynchronously
-                    let path = entry.path.clone();
-                    let size = entry.size;
+            let size = entry.size;
+            if size == 0 {
+                app.preview_content = Some(PreviewContent::text("Empty file".to_string()));
+                return;
+            }
+            load_preview_async(app, entry.path, move |path| try_load_utf8_str(path, size));
+        }
+    }
+}
 
-                    load_preview_async(app, path, move |path| render_generic_file(&path, size));
-                }
+fn try_load_utf8_str(path: std::path::PathBuf, file_size: u64) -> Result<PreviewContent, String> {
+    use std::io::Read;
+
+    // TODO: reuse the buffer between file reads
+    let mut bytes: Vec<u8> = vec![0; std::cmp::min(1000, file_size as usize)];
+
+    let mut file = match std::fs::File::open(&path) {
+        Ok(file) => file,
+        Err(e) => return Ok(PreviewContent::text(format!("Error opening file: {}", e))),
+    };
+    let bytes_read = match file.read(&mut bytes) {
+        Ok(bytes_read) => bytes_read,
+        Err(e) => return Ok(PreviewContent::text(format!("Error reading file: {}", e))),
+    };
+    let content = match std::str::from_utf8(&bytes[..bytes_read]) {
+        Ok(content) => Some(content.to_string()),
+        Err(e) => {
+            // Extract valid UTF-8 up to the error
+            let valid_up_to = e.valid_up_to();
+
+            // If we have a substantial amount of valid UTF-8 (within 4 bytes of 1000),
+            // use from_utf8_lossy to display what we can
+            if valid_up_to > bytes_read - 4 {
+                Some(String::from_utf8_lossy(&bytes[..valid_up_to]).to_string())
+            } else {
+                None
             }
         }
+    };
+
+    match content {
+        Some(content) => Ok(PreviewContent::text(content)),
+        None => render_generic_file(path, file_size),
     }
 }
 
