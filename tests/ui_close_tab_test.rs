@@ -51,7 +51,7 @@ fn test_close_current_tab_shortcut() {
         ctrl: true,
         ..Default::default()
     };
-    harness.press_key_modifiers(modifiers, Key::C);
+    harness.press_key_modifiers(modifiers, Key::Q);
     harness.step();
 
     // Verify we now have two tabs
@@ -75,7 +75,7 @@ fn test_close_current_tab_shortcut() {
     }
 
     // Close the current tab again
-    harness.press_key_modifiers(modifiers, Key::C);
+    harness.press_key_modifiers(modifiers, Key::Q);
     harness.step();
 
     // Verify we now have one tab
@@ -99,7 +99,7 @@ fn test_close_current_tab_shortcut() {
     }
 
     // Try to close the last tab (should not close)
-    harness.press_key_modifiers(modifiers, Key::C);
+    harness.press_key_modifiers(modifiers, Key::Q);
     harness.step();
 
     // Verify we still have one tab (can't close the last tab)
@@ -176,7 +176,7 @@ fn test_close_tab_preserves_other_tabs() {
         ctrl: true,
         ..Default::default()
     };
-    harness.press_key_modifiers(modifiers, Key::C);
+    harness.press_key_modifiers(modifiers, Key::Q);
     harness.step();
 
     // Verify we're now on the second tab

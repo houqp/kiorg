@@ -292,7 +292,7 @@ pub fn default_shortcuts() -> Shortcuts {
     add_shortcut(KeyboardShortcut::new("9"), ShortcutAction::SwitchToTab9);
 
     add_shortcut(
-        KeyboardShortcut::new("c").with_ctrl(),
+        KeyboardShortcut::new("q").with_ctrl(),
         ShortcutAction::CloseCurrentTab,
     );
 
@@ -333,6 +333,69 @@ use std::sync::OnceLock;
 pub fn get_default_shortcuts() -> &'static Shortcuts {
     static DEFAULT_SHORTCUTS: OnceLock<Shortcuts> = OnceLock::new();
     DEFAULT_SHORTCUTS.get_or_init(default_shortcuts)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    #[test]
+    fn test_default_shortcuts_no_conflicts() {
+        // Get the default shortcuts
+        let shortcuts = default_shortcuts();
+
+        // Create a map to track which shortcut is assigned to which action
+        let mut shortcut_map: HashMap<KeyboardShortcut, Vec<ShortcutAction>> = HashMap::new();
+
+        // Populate the map
+        for (action, shortcuts_list) in &shortcuts {
+            for shortcut in shortcuts_list {
+                shortcut_map
+                    .entry(shortcut.clone())
+                    .or_default()
+                    .push(*action);
+            }
+        }
+
+        // Check for conflicts (shortcuts assigned to multiple actions)
+        let mut conflicts = Vec::new();
+        for (shortcut, actions) in &shortcut_map {
+            if actions.len() > 1 {
+                conflicts.push((shortcut.clone(), actions.clone()));
+            }
+        }
+
+        // Format error message if conflicts are found
+        if !conflicts.is_empty() {
+            let mut error_msg = String::from("Conflicts found in default shortcuts:\n");
+            for (shortcut, actions) in conflicts {
+                let mut shortcut_str = format!("Key: {}", shortcut.key);
+                if shortcut.shift {
+                    shortcut_str.push_str(", Shift");
+                }
+                if shortcut.ctrl {
+                    shortcut_str.push_str(", Ctrl");
+                }
+                if shortcut.alt {
+                    shortcut_str.push_str(", Alt");
+                }
+                if shortcut.mac_cmd {
+                    shortcut_str.push_str(", Cmd");
+                }
+                if shortcut.namespace {
+                    shortcut_str.push_str(", Namespace");
+                }
+
+                error_msg.push_str(&format!("\n{} is assigned to: ", shortcut_str));
+                for action in actions {
+                    error_msg.push_str(&format!("{:?}, ", action));
+                }
+            }
+
+            panic!("{}", error_msg);
+        }
+    }
 }
 
 // Helper functions for the Shortcuts type
