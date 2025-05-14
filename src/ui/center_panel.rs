@@ -1,6 +1,7 @@
 use egui::Ui;
 use std::path::PathBuf;
 
+use crate::app::Clipboard;
 use crate::app::Kiorg;
 use crate::config;
 use crate::config::SortPreference;
@@ -34,8 +35,6 @@ fn copy_dir_recursively(src: &std::path::Path, dst: &std::path::Path) -> std::io
 
     Ok(())
 }
-
-use crate::app::Clipboard;
 
 /// Handles clipboard paste operations (copy/cut)
 /// Returns true if any operation was performed

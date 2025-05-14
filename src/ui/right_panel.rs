@@ -1,17 +1,11 @@
-use egui::{Image, RichText, Ui};
-use file_type::FileType;
-use image::ImageDecoder;
-use image::{GenericImageView, ImageFormat};
-use pathfinder_geometry::transform2d::Transform2F;
-use pdf_render::{render_page, Cache, SceneBackend};
-use std::collections::HashMap;
+use egui::{RichText, Ui};
 
 use crate::app::Kiorg;
 use crate::models::preview_content::PreviewContent;
+use crate::ui::preview;
 use crate::ui::style::{section_title_text, HEADER_ROW_HEIGHT};
 
 const PANEL_SPACING: f32 = 10.0;
-const METADATA_KEY_COLUMN_WIDTH: f32 = 100.0;
 
 /// Draws the right panel (preview).
 pub fn draw(app: &mut Kiorg, ctx: &egui::Context, ui: &mut Ui, width: f32, height: f32) {
@@ -19,8 +13,68 @@ pub fn draw(app: &mut Kiorg, ctx: &egui::Context, ui: &mut Ui, width: f32, heigh
     // let tab = app.tab_manager.current_tab_ref();
     let colors = &app.colors;
 
+    // Handle the loading case separately to avoid borrowing app in the closure
+    let mut is_loading = false;
+    let mut loading_path = None;
+    let mut loading_receiver = None;
+
     // Clone the preview content to avoid borrow issues
-    let preview_content = app.preview_content.clone();
+    // TODO: avoid the full clone here
+    let preview_content = match &app.preview_content {
+        Some(PreviewContent::Loading(path, receiver)) => {
+            is_loading = true;
+            loading_path = Some(path.clone());
+            loading_receiver = receiver.clone();
+            None
+        }
+        other => other.clone(),
+    };
+
+    // Process loading state outside the UI closure
+    if is_loading {
+        if let (Some(_path), Some(receiver)) = (&loading_path, &loading_receiver) {
+            // Check if we have a receiver to poll for results
+            let receiver_opt = Some(receiver.clone());
+            let receiver = match receiver_opt {
+                Some(receiver) => receiver,
+                None => {
+                    // We can't process the loading state, so render empty
+                    preview::text::render_empty(ui, colors);
+                    return;
+                }
+            };
+
+            // Try to get a lock on the receiver
+            let receiver_lock = match receiver.lock() {
+                Ok(lock) => lock,
+                Err(_) => {
+                    // We can't process the loading state, so render empty
+                    preview::text::render_empty(ui, colors);
+                    return;
+                }
+            };
+
+            // Try to receive the result without blocking
+            if let Ok(result) = receiver_lock.try_recv() {
+                // Request a repaint to update the UI with the result
+                ctx.request_repaint();
+                // Update the preview content with the result
+                match result {
+                    Ok(content) => {
+                        // Set the preview content directly with the received content
+                        app.preview_content = Some(content);
+                        // We've updated the content, so we're no longer loading
+                        is_loading = false;
+                    }
+                    Err(e) => {
+                        app.preview_content =
+                            Some(PreviewContent::text(format!("Error loading file: {}", e)));
+                        is_loading = false;
+                    }
+                }
+            }
+        }
+    }
 
     ui.vertical(|ui| {
         ui.set_min_width(width);
@@ -47,224 +101,9 @@ pub fn draw(app: &mut Kiorg, ctx: &egui::Context, ui: &mut Ui, width: f32, heigh
                 let available_height = available_height - PANEL_SPACING * 2.0;
 
                 // Draw preview content based on the enum variant
-                match preview_content {
-                    Some(PreviewContent::Text(text)) => {
-                        ui.label(RichText::new(text).color(colors.fg));
-                    }
-                    Some(PreviewContent::Image(image_meta)) => {
-                        // Display image title
-                        ui.label(
-                            RichText::new(&image_meta.title)
-                                .color(colors.fg)
-                                .strong()
-                                .size(20.0),
-                        );
-                        ui.add_space(10.0);
-
-                        // Display image (centered)
-                        ui.vertical_centered(|ui| {
-                            ui.add(
-                                Image::new(&image_meta.texture)
-                                    .max_size(egui::vec2(available_width, available_height * 0.6))
-                                    .maintain_aspect_ratio(true),
-                            );
-                        });
-                        ui.add_space(15.0);
-
-                        // Create a table for regular metadata
-                        ui.label(
-                            RichText::new("Image Metadata")
-                                .color(colors.fg_folder)
-                                .strong()
-                                .size(14.0),
-                        );
-                        ui.add_space(5.0);
-                        egui::Grid::new("image_metadata_grid")
-                            .num_columns(2)
-                            .spacing([10.0, 6.0])
-                            .striped(true)
-                            .show(ui, |ui| {
-                                // Sort keys for consistent display
-                                let mut sorted_keys: Vec<&String> =
-                                    image_meta.metadata.keys().collect();
-                                sorted_keys.sort();
-
-                                // Display each metadata field in a table row
-                                for key in sorted_keys {
-                                    if let Some(value) = image_meta.metadata.get(key) {
-                                        ui.with_layout(
-                                            egui::Layout::left_to_right(egui::Align::LEFT),
-                                            |ui| {
-                                                ui.set_min_width(METADATA_KEY_COLUMN_WIDTH);
-                                                ui.set_max_width(METADATA_KEY_COLUMN_WIDTH);
-                                                ui.add(
-                                                    egui::Label::new(
-                                                        RichText::new(key).color(colors.fg),
-                                                    )
-                                                    .wrap(),
-                                                );
-                                            },
-                                        );
-                                        ui.add(
-                                            egui::Label::new(RichText::new(value).color(colors.fg))
-                                                .wrap(),
-                                        );
-                                        ui.end_row();
-                                    }
-                                }
-                            });
-
-                        // Display EXIF data in a separate table if available
-                        if let Some(exif_data) = &image_meta.exif_data {
-                            ui.add_space(15.0);
-                            ui.label(
-                                RichText::new("EXIF Data")
-                                    .color(colors.fg_folder)
-                                    .strong()
-                                    .size(14.0),
-                            );
-                            ui.add_space(5.0);
-                            egui::Grid::new("exif_data_grid")
-                                .num_columns(2)
-                                .spacing([10.0, 6.0])
-                                .striped(true)
-                                .show(ui, |ui| {
-                                    // Sort keys for consistent display
-                                    let mut sorted_keys: Vec<&String> = exif_data.keys().collect();
-                                    sorted_keys.sort();
-
-                                    // Display each EXIF field in a table row
-                                    for key in sorted_keys {
-                                        if let Some(value) = exif_data.get(key) {
-                                            ui.with_layout(
-                                                egui::Layout::left_to_right(egui::Align::LEFT),
-                                                |ui| {
-                                                    ui.set_min_width(METADATA_KEY_COLUMN_WIDTH);
-                                                    ui.set_max_width(METADATA_KEY_COLUMN_WIDTH);
-                                                    ui.add(
-                                                        egui::Label::new(
-                                                            RichText::new(key).color(colors.fg),
-                                                        )
-                                                        .wrap(),
-                                                    );
-                                                },
-                                            );
-                                            ui.add(
-                                                egui::Label::new(
-                                                    RichText::new(value).color(colors.fg),
-                                                )
-                                                .wrap(),
-                                            );
-                                            ui.end_row();
-                                        }
-                                    }
-                                });
-                        }
-                    }
-                    Some(PreviewContent::Doc(doc_meta)) => {
-                        // Display document title
-                        ui.label(
-                            RichText::new(&doc_meta.title)
-                                .color(colors.fg)
-                                .strong()
-                                .size(20.0),
-                        );
-                        ui.add_space(10.0);
-
-                        // Display cover image if available (centered)
-                        if let Some(cover) = &doc_meta.cover {
-                            ui.vertical_centered(|ui| {
-                                ui.add(
-                                    Image::new(cover.clone())
-                                        .max_size(egui::vec2(
-                                            available_width,
-                                            available_height * 0.6,
-                                        ))
-                                        .maintain_aspect_ratio(true),
-                                );
-                            });
-                            ui.add_space(15.0);
-                        }
-
-                        egui::Grid::new("doc_metadata_grid")
-                            .num_columns(2)
-                            .spacing([10.0, 6.0])
-                            .striped(true)
-                            .show(ui, |ui| {
-                                // Sort keys for consistent display
-                                let mut sorted_keys: Vec<&String> =
-                                    doc_meta.metadata.keys().collect();
-                                sorted_keys.sort();
-
-                                // Display each metadata field in a table row
-                                for key in sorted_keys {
-                                    if let Some(value) = doc_meta.metadata.get(key) {
-                                        // Format the key with proper capitalization for display
-                                        let display_key = format_metadata_key(key);
-                                        ui.with_layout(
-                                            egui::Layout::left_to_right(egui::Align::LEFT),
-                                            |ui| {
-                                                ui.set_min_width(METADATA_KEY_COLUMN_WIDTH);
-                                                ui.set_max_width(METADATA_KEY_COLUMN_WIDTH);
-                                                ui.add(
-                                                    egui::Label::new(
-                                                        RichText::new(display_key).color(colors.fg),
-                                                    )
-                                                    .wrap(),
-                                                );
-                                            },
-                                        );
-                                        ui.add(
-                                            egui::Label::new(RichText::new(value).color(colors.fg))
-                                                .wrap(),
-                                        );
-                                        ui.end_row();
-                                    }
-                                }
-                            });
-                    }
-                    Some(PreviewContent::Zip(entries)) => {
-                        // Display zip file contents
-                        ui.label(
-                            RichText::new("Zip Archive Contents:")
-                                .color(colors.fg)
-                                .strong(),
-                        );
-                        ui.add_space(5.0);
-
-                        // Constants for the list
-                        // TODO: calculate the correct row height
-                        const ROW_HEIGHT: f32 = 10.0;
-
-                        // Get the total number of entries
-                        let total_rows = entries.len();
-
-                        // Use show_rows for better performance
-                        egui::ScrollArea::vertical()
-                            .id_salt("zip_entries_scroll")
-                            .auto_shrink([false; 2])
-                            .show_rows(ui, ROW_HEIGHT, total_rows, |ui, row_range| {
-                                // Set width for the content area
-                                let available_width = ui.available_width();
-                                ui.set_min_width(available_width);
-
-                                // Display entries in the visible range
-                                for row_index in row_range {
-                                    let entry = &entries[row_index];
-                                    // Create a visual indicator for directories
-                                    let entry_text = if entry.is_dir {
-                                        RichText::new(format!("📁 {}", entry.name)).strong()
-                                    } else {
-                                        RichText::new(format!("📄 {}", entry.name))
-                                    };
-
-                                    ui.label(entry_text.color(colors.fg));
-                                }
-                            });
-                    }
-
-                    Some(PreviewContent::Loading(path, receiver_opt)) => {
-                        // Display loading indicator
+                if is_loading {
+                    // Display loading indicator
+                    if let Some(path) = &loading_path {
                         ui.vertical_centered(|ui| {
                             ui.add_space(20.0);
                             ui.spinner();
@@ -277,35 +116,37 @@ pub fn draw(app: &mut Kiorg, ctx: &egui::Context, ui: &mut Ui, width: f32, heigh
                                 .color(colors.fg),
                             );
                         });
-
-                        // Check if we have a receiver to poll for results
-                        let receiver = match receiver_opt {
-                            Some(receiver) => receiver,
-                            None => return,
-                        };
-                        // Try to get a lock on the receiver
-                        let receiver = receiver.lock().expect("failed to obtain lock");
-                        // Try to receive the result without blocking
-                        if let Ok(result) = receiver.try_recv() {
-                            // Request a repaint to update the UI with the result
-                            ctx.request_repaint();
-                            // Update the preview content with the result
-                            match result {
-                                Ok(content) => {
-                                    // Set the preview content directly with the received content
-                                    app.preview_content = Some(content);
-                                }
-                                Err(e) => {
-                                    app.preview_content = Some(PreviewContent::text(format!(
-                                        "Error loading file: {}",
-                                        e
-                                    )));
-                                }
-                            }
-                        }
                     }
-                    None => {
-                        ui.label(RichText::new("No file selected").color(colors.fg));
+                } else {
+                    match preview_content {
+                        Some(PreviewContent::Text(ref text)) => {
+                            preview::text::render(ui, text, colors);
+                        }
+                        Some(PreviewContent::Image(ref image_meta)) => {
+                            preview::image::render(
+                                ui,
+                                image_meta,
+                                colors,
+                                available_width,
+                                available_height,
+                            );
+                        }
+                        Some(PreviewContent::Doc(ref doc_meta)) => {
+                            preview::doc::render(
+                                ui,
+                                doc_meta,
+                                colors,
+                                available_width,
+                                available_height,
+                            );
+                        }
+                        Some(PreviewContent::Zip(ref entries)) => {
+                            preview::zip::render(ui, entries, colors);
+                        }
+                        None => {
+                            preview::text::render_empty(ui, colors);
+                        }
+                        _ => {} // Other cases already handled
                     }
                 }
             });
@@ -313,590 +154,7 @@ pub fn draw(app: &mut Kiorg, ctx: &egui::Context, ui: &mut Ui, width: f32, heigh
         // Draw help text in its own row at the bottom
         ui.with_layout(egui::Layout::right_to_left(egui::Align::BOTTOM), |ui| {
             ui.add_space(2.0);
-            ui.label(RichText::new("? for help").color(colors.fg_light));
+            ui.label(egui::RichText::new("? for help").color(colors.fg_light));
         });
-    });
-}
-
-/// Read entries from a zip file and return them as a vector of ZipEntry
-fn read_zip_entries(
-    path: &std::path::Path,
-) -> Result<Vec<crate::models::preview_content::ZipEntry>, String> {
-    use std::fs::File;
-    use zip::ZipArchive;
-
-    // Open the zip file
-    let file = File::open(path).map_err(|e| format!("Failed to open zip file: {}", e))?;
-
-    // Create a zip archive from the file
-    let mut archive =
-        ZipArchive::new(file).map_err(|e| format!("Failed to read zip archive: {}", e))?;
-
-    // Create a vector to store the entries
-    let mut entries = Vec::new();
-
-    // Process each file in the archive
-    for i in 0..archive.len() {
-        let file = archive
-            .by_index(i)
-            .map_err(|e| format!("Failed to read zip entry: {}", e))?;
-
-        // Create a ZipEntry from the file
-        let entry = crate::models::preview_content::ZipEntry {
-            name: file.name().to_string(),
-            size: file.size(),
-            is_dir: file.is_dir(),
-        };
-
-        entries.push(entry);
-    }
-
-    // Sort entries: directories first, then files, both alphabetically
-    entries.sort_by(|a, b| match (a.is_dir, b.is_dir) {
-        (true, false) => std::cmp::Ordering::Less,
-        (false, true) => std::cmp::Ordering::Greater,
-        _ => a.name.cmp(&b.name),
-    });
-
-    Ok(entries)
-}
-
-/// Extract metadata and cover image from an EPUB file and return as PreviewContent
-fn read_epub_metadata(path: &std::path::Path) -> Result<PreviewContent, String> {
-    use epub::doc::EpubDoc;
-
-    // Open the EPUB file
-    let mut doc = EpubDoc::new(path).map_err(|e| format!("Failed to open EPUB file: {}", e))?;
-
-    // Get metadata
-    let metadata = doc.metadata.clone();
-
-    // Try to extract cover image
-    let cover_image = try_extract_epub_cover(&mut doc);
-
-    // Return the PreviewContent directly
-    Ok(PreviewContent::epub(metadata, cover_image))
-}
-
-/// Try to extract cover image from an EPUB document
-fn try_extract_epub_cover<R: std::io::Read + std::io::Seek>(
-    doc: &mut epub::doc::EpubDoc<R>,
-) -> Option<egui::widgets::ImageSource<'static>> {
-    // Try to get the cover image
-    let cover_result = doc.get_cover()?;
-    let (cover_data, mime_type) = cover_result;
-    let texture_id = format!(
-        "bytes://epub_cover_{}.{}",
-        doc.metadata
-            .get("identifier")
-            .map(|v| v[0].clone())
-            .unwrap_or_else(|| {
-                let now = std::time::SystemTime::now();
-                let datetime: chrono::DateTime<chrono::Utc> = now.into();
-                datetime.format("%Y-%m-%d_%H:%M:%S").to_string()
-            }),
-        mime_type,
-    );
-    Some(egui::widgets::ImageSource::from((texture_id, cover_data)))
-}
-
-/// Format metadata key for display by capitalizing words and removing prefixes
-fn format_metadata_key(key: &str) -> String {
-    // Handle common prefixes like "dc:"
-    let clean_key = if key.contains(':') {
-        key.split(':').next_back().unwrap_or(key)
-    } else {
-        key
-    };
-
-    // Split by underscores, hyphens, or spaces
-    let words: Vec<&str> = clean_key.split(['_', '-', ' ']).collect();
-
-    // Capitalize each word
-    let capitalized: Vec<String> = words
-        .iter()
-        .map(|word| {
-            if word.is_empty() {
-                String::new()
-            } else {
-                let mut chars = word.chars();
-                match chars.next() {
-                    None => String::new(),
-                    Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
-                }
-            }
-        })
-        .collect();
-
-    // Join with spaces
-    capitalized.join(" ")
-}
-
-fn render_pdf_page(path: &std::path::Path, page_number: u32) -> Result<PreviewContent, String> {
-    let file = pdf::file::FileOptions::uncached()
-        .open(path)
-        .map_err(|e| format!("Failed to open PDF file: {}", e))?;
-    let resolver = file.resolver();
-
-    // Extract metadata
-    let mut metadata = std::collections::HashMap::new();
-
-    // Get PDF version
-    if let Ok(version) = file.version() {
-        let version_str = format!("{:?}", version).trim_matches('"').to_string();
-        metadata.insert("PDF Version".to_string(), version_str);
-    }
-
-    fn format_pdf_date(date: &pdf::primitive::Date) -> String {
-        format!(
-            "{}-{}-{} {}:{}:{}",
-            date.year, date.month, date.day, date.hour, date.minute, date.second
-        )
-    }
-
-    // Get document info if available
-    let mut title = None;
-    if let Some(ref info) = file.trailer.info_dict {
-        // Extract common metadata fields
-        if let Some(v) = &info.title {
-            title = Some(v.to_string_lossy());
-        }
-        if let Some(author) = &info.author {
-            metadata.insert("Author".to_string(), author.to_string_lossy());
-        }
-        if let Some(subject) = &info.subject {
-            metadata.insert("Subject".to_string(), subject.to_string_lossy());
-        }
-        if let Some(keywords) = &info.keywords {
-            metadata.insert("Keywords".to_string(), keywords.to_string_lossy());
-        }
-        if let Some(creator) = &info.creator {
-            metadata.insert("Creator".to_string(), creator.to_string_lossy());
-        }
-        if let Some(producer) = &info.producer {
-            metadata.insert("Producer".to_string(), producer.to_string_lossy());
-        }
-        if let Some(creation_date) = &info.creation_date {
-            metadata.insert("Creation Date".to_string(), format_pdf_date(creation_date));
-        }
-        if let Some(mod_date) = &info.mod_date {
-            metadata.insert("Modification Date".to_string(), format_pdf_date(mod_date));
-        }
-    }
-
-    // Get catalog information
-    let catalog = file.get_root();
-    if let Some(ref version) = catalog.version {
-        metadata.insert("PDF Catalog Version".to_string(), version.to_string());
-    }
-
-    // Get page count
-    metadata.insert("Page Count".to_string(), file.num_pages().to_string());
-
-    // Get the page for rendering
-    let page = file
-        .get_page(page_number)
-        .map_err(|e| format!("Failed to get page {}: {}", page_number, e))?;
-
-    let mut cache = Cache::new();
-    let mut backend = SceneBackend::new(&mut cache);
-
-    let dpi = 150.0; // Adjust DPI as needed for quality vs performance
-
-    render_page(
-        &mut backend,
-        &resolver,
-        &page,
-        Transform2F::from_scale(dpi / 25.4),
-    )
-    .map_err(|e| format!("Failed to render page: {}", e))?;
-
-    let scene = backend.finish();
-
-    {
-        use pathfinder_export::Export;
-        use pathfinder_export::FileFormat;
-
-        let mut svg_data = Vec::new();
-        scene.export(&mut svg_data, FileFormat::SVG).unwrap();
-        let svg_bytes: egui::load::Bytes = svg_data.into();
-        let img_source =
-            egui::widgets::ImageSource::from((format!("bytes:://{:?}.svg", path), svg_bytes));
-
-        // Return PreviewContent directly
-        Ok(PreviewContent::pdf(img_source, metadata, title))
-    }
-
-    // Rasterize the scene to an RGBA image using the pathfinder_rasterize crate
-    // {
-    // use pathfinder_rasterize::Rasterizer;
-    // let image = Rasterizer::new().rasterize(scene, None);
-
-    // // Convert the RGBA image to egui's TextureHandle
-    // let width = image.width();
-    // let height = image.height();
-    // let size = [width, height];
-
-    // // Get raw pixel data
-    // let pixels_data = image.data();
-
-    // // Create a ColorImage from the raw RGBA data
-    // let color_image = egui::ColorImage::from_rgba_unmultiplied(size, pixels_data);
-
-    // // Create a texture from the color image
-    // let texture_handle: egui::TextureHandle = ctx.load_texture(
-    //     format!("pdf_page_{}_{}", page_number, path.display()),
-    //     color_image,
-    //     egui::TextureOptions::default(),
-    // );
-
-    // Ok(texture_handle)
-    // }
-}
-
-/// Read image file, extract metadata, and create a PreviewContent
-///
-/// This function:
-/// 1. Reads the image file and extracts metadata
-/// 2. Creates a texture from the image data
-/// 3. Returns a PreviewContent::Image with the texture
-///
-/// # Arguments
-/// * `path` - The path to the image file
-/// * `ctx` - The egui context for creating textures
-fn read_image_with_metadata(
-    path: &std::path::Path,
-    ctx: &egui::Context,
-) -> Result<PreviewContent, String> {
-    // Get the filename for the title
-    let title = path
-        .file_name()
-        .unwrap_or_default()
-        .to_string_lossy()
-        .to_string();
-
-    // Create a HashMap to store metadata
-    let mut metadata = HashMap::new();
-
-    // Open the image file
-    let mut decoder = image::ImageReader::open(path)
-        .map_err(|e| format!("failed to open image: {e}"))?
-        .into_decoder()
-        .map_err(|e| format!("failed to create decoder for image: {e}"))?;
-    let exif_bytes = decoder
-        .exif_metadata()
-        .map_err(|e| format!("failed to extract exif metadata: {e}"))?;
-    let orientation = decoder
-        .orientation()
-        .map_err(|e| format!("failed to get image orientation: {e}"))?;
-    let mut img = match image::DynamicImage::from_decoder(decoder) {
-        Ok(img) => img,
-        Err(e) => return Err(format!("Failed to decode image: {e}")),
-    };
-
-    img.apply_orientation(orientation);
-
-    // Create a separate HashMap for EXIF data
-    let mut exif_data = None;
-
-    if let Some(v) = exif_bytes {
-        let (fields, _) =
-            exif::parse_exif(v.as_ref()).map_err(|e| format!("failed to parse EXIF data: {e}"))?;
-
-        // Only create the HashMap if we have EXIF data
-        if !fields.is_empty() {
-            let mut exif_map = HashMap::new();
-            for field in fields {
-                exif_map.insert(
-                    format!("{}", field.tag),
-                    format!("{}", field.display_value()),
-                );
-            }
-            exif_data = Some(exif_map);
-        }
-    }
-
-    // Extract basic image information
-    let dimensions = img.dimensions();
-    metadata.insert(
-        "Dimensions".to_string(),
-        format!("{}x{} pixels", dimensions.0, dimensions.1),
-    );
-
-    // Get color type
-    metadata.insert("Color Type".to_string(), format!("{:?}", img.color()));
-
-    // Add color depth information
-    match img.color() {
-        image::ColorType::Rgb8 | image::ColorType::Rgba8 => {
-            metadata.insert("Bit Depth".to_string(), "8 bits per channel".to_string());
-        }
-        image::ColorType::Rgb16 | image::ColorType::Rgba16 => {
-            metadata.insert("Bit Depth".to_string(), "16 bits per channel".to_string());
-        }
-        image::ColorType::L8 | image::ColorType::La8 => {
-            metadata.insert("Bit Depth".to_string(), "8 bits (grayscale)".to_string());
-        }
-        image::ColorType::L16 | image::ColorType::La16 => {
-            metadata.insert("Bit Depth".to_string(), "16 bits (grayscale)".to_string());
-        }
-        _ => {
-            // Other color types
-        }
-    }
-
-    // Try to get format-specific information
-    if let Some(format) = image::ImageFormat::from_path(path).ok() {
-        // Format the image format in a more readable way
-        let format_name = match format {
-            ImageFormat::Jpeg => "JPEG".to_string(),
-            ImageFormat::Png => "PNG".to_string(),
-            ImageFormat::Gif => "GIF".to_string(),
-            ImageFormat::WebP => "WebP".to_string(),
-            ImageFormat::Tiff => "TIFF".to_string(),
-            ImageFormat::Bmp => "BMP".to_string(),
-            ImageFormat::Ico => "ICO".to_string(),
-            ImageFormat::Tga => "TGA".to_string(),
-            ImageFormat::Dds => "DDS".to_string(),
-            ImageFormat::Farbfeld => "Farbfeld".to_string(),
-            ImageFormat::Avif => "AVIF".to_string(),
-            ImageFormat::Qoi => "QOI".to_string(),
-            ImageFormat::Pcx => "PCX".to_string(),
-            _ => format!("{:?}", format),
-        };
-        metadata.insert("Format".to_string(), format_name);
-
-        // Add format-specific metadata
-        match format {
-            ImageFormat::Jpeg => {
-                // For JPEG, we could extract EXIF data here if needed
-                // This would require an additional crate like 'exif'
-            }
-            ImageFormat::Png => {
-                // For PNG, we could extract additional metadata
-            }
-            ImageFormat::Gif => {
-                // For GIF, we can check if it's animated by examining the file
-                // A simple heuristic: try to read the file and check if it has multiple frames
-                if let Ok(file_content) = std::fs::read(path) {
-                    // Look for multiple image descriptors in the GIF file
-                    // This is a very simplified approach - not 100% reliable
-                    // The byte sequence 0x2C (image descriptor marker) appears for each frame
-                    let image_descriptor_count = file_content
-                        .windows(2)
-                        .filter(|window| window[0] == 0x2C)
-                        .count();
-
-                    if image_descriptor_count > 1 {
-                        metadata.insert("Animation".to_string(), "Animated GIF".to_string());
-                    }
-                }
-            }
-            _ => {}
-        }
-    }
-
-    // Add file size
-    if let Ok(metadata_os) = std::fs::metadata(path) {
-        let size = metadata_os.len();
-        metadata.insert(
-            "File Size".to_string(),
-            humansize::format_size(size, humansize::BINARY),
-        );
-    }
-
-    // Convert the image to RGBA8 format for egui
-    let rgba8_img = img.to_rgba8();
-    let dimensions = rgba8_img.dimensions();
-
-    // Create egui::ColorImage from the image data
-    let size = [dimensions.0 as _, dimensions.1 as _];
-    let pixels = rgba8_img.as_flat_samples();
-    let color_image = egui::ColorImage::from_rgba_unmultiplied(size, pixels.as_slice());
-
-    // Create a unique texture ID based on the path
-    let texture_id = format!("image_{}", path.display());
-
-    // Create a texture from the color image
-    let texture = ctx.load_texture(texture_id, color_image, egui::TextureOptions::default());
-
-    // Create the image preview content with the texture and exif data
-    Ok(PreviewContent::image(title, metadata, texture, exif_data))
-}
-
-/// Detect file type asynchronously and return a PreviewContent
-fn render_generic_file(path: std::path::PathBuf, size: u64) -> Result<PreviewContent, String> {
-    // Try to detect the file type using file_type crate
-    let file_type_info = match FileType::try_from_file(&path) {
-        Ok(file_type) => {
-            let media_types = file_type.media_types().join(", ");
-            let extensions = file_type.extensions().join(", ");
-
-            if !media_types.is_empty() {
-                format!("File type: {} ({})", media_types, extensions)
-            } else if !extensions.is_empty() {
-                format!("File type: {}", extensions)
-            } else {
-                "Unknown file type".to_string()
-            }
-        }
-        Err(_) => "Unknown file type".to_string(),
-    };
-
-    // Return the PreviewContent directly
-    Ok(PreviewContent::text(format!(
-        "{}\n\n{}\n\nSize: {} bytes",
-        path.as_path()
-            .file_name()
-            .unwrap_or_default()
-            .to_string_lossy(),
-        file_type_info,
-        size
-    )))
-}
-
-pub fn update_preview_cache(app: &mut Kiorg, ctx: &egui::Context) {
-    let tab = app.tab_manager.current_tab_ref();
-    let selected_path = tab.entries.get(tab.selected_index).map(|e| e.path.clone());
-
-    // Check if the selected file is the same as the cached one in app
-    if selected_path.as_ref() == app.cached_preview_path.as_ref() {
-        return; // Cache hit, no need to update
-    }
-
-    // Cache miss, update the preview content in app
-    let maybe_entry = selected_path.as_ref().and_then(|p| {
-        tab.entries.iter().find(|entry| &entry.path == p).cloned() // Clone the entry data if found
-    });
-    app.cached_preview_path = selected_path; // Update the cached path in app regardless
-
-    let entry = match maybe_entry {
-        Some(entry) => entry,
-        None => {
-            app.preview_content = None; // No content to display
-            app.cached_preview_path = None; // Clear cache in app if no file is selected
-            return;
-        } // No entry selected, clear the preview content
-    };
-
-    if entry.is_dir {
-        app.preview_content = Some(PreviewContent::text(format!(
-            "Directory: {}",
-            entry.path.file_name().unwrap_or_default().to_string_lossy()
-        )));
-        return;
-    }
-
-    let ext = entry
-        .path
-        .extension()
-        .and_then(|e| e.to_str())
-        .map(|e| e.to_lowercase())
-        .unwrap_or_else(|| "__unknown__".to_string());
-
-    match ext.as_str() {
-        // Image extensions
-        "jpg" | "jpeg" | "png" | "gif" | "bmp" | "webp" | "svg" => {
-            // Handle image files asynchronously with a blocking render function
-            let ctx_clone = ctx.clone();
-            load_preview_async(app, entry.path.clone(), move |path| {
-                read_image_with_metadata(&path, &ctx_clone)
-            });
-        }
-        // Zip extensions
-        "zip" | "jar" | "war" | "ear" => {
-            // Handle zip files asynchronously
-            load_preview_async(app, entry.path.clone(), |path| {
-                let result = read_zip_entries(&path);
-                result.map(PreviewContent::zip)
-            });
-        }
-        // EPUB extension
-        "epub" => {
-            // Handle EPUB files asynchronously
-            load_preview_async(app, entry.path.clone(), |path| read_epub_metadata(&path));
-        }
-        // PDF extension
-        "pdf" => {
-            // Handle PDF files asynchronously
-            load_preview_async(app, entry.path.clone(), |path| render_pdf_page(&path, 0));
-        }
-        // All other files
-        _ => {
-            let size = entry.size;
-            if size == 0 {
-                app.preview_content = Some(PreviewContent::text("Empty file".to_string()));
-                return;
-            }
-            load_preview_async(app, entry.path, move |path| try_load_utf8_str(path, size));
-        }
-    }
-}
-
-fn try_load_utf8_str(path: std::path::PathBuf, file_size: u64) -> Result<PreviewContent, String> {
-    use std::io::Read;
-
-    // TODO: reuse the buffer between file reads
-    let mut bytes: Vec<u8> = vec![0; std::cmp::min(1000, file_size as usize)];
-
-    let mut file = match std::fs::File::open(&path) {
-        Ok(file) => file,
-        Err(e) => return Ok(PreviewContent::text(format!("Error opening file: {}", e))),
-    };
-    let bytes_read = match file.read(&mut bytes) {
-        Ok(bytes_read) => bytes_read,
-        Err(e) => return Ok(PreviewContent::text(format!("Error reading file: {}", e))),
-    };
-    let content = match std::str::from_utf8(&bytes[..bytes_read]) {
-        Ok(content) => Some(content.to_string()),
-        Err(e) => {
-            // Extract valid UTF-8 up to the error
-            let valid_up_to = e.valid_up_to();
-
-            // If we have a substantial amount of valid UTF-8 (within 4 bytes of 1000),
-            // use from_utf8_lossy to display what we can
-            if valid_up_to > bytes_read - 4 {
-                Some(String::from_utf8_lossy(&bytes[..valid_up_to]).to_string())
-            } else {
-                None
-            }
-        }
-    };
-
-    match content {
-        Some(content) => Ok(PreviewContent::text(content)),
-        None => render_generic_file(path, file_size),
-    }
-}
-
-/// Helper function to load preview content asynchronously
-///
-/// This function handles the common pattern of:
-/// - Creating a channel for communication
-/// - Setting up the loading state with receiver
-/// - Spawning a thread to process the file
-/// - Sending the result back through the channel
-///
-/// # Arguments
-/// * `app` - The application state
-/// * `path` - The path to the file to load
-/// * `processor` - A closure that processes the file and returns a Result<PreviewContent, String>
-fn load_preview_async<F>(app: &mut Kiorg, path: std::path::PathBuf, processor: F)
-where
-    F: FnOnce(std::path::PathBuf) -> Result<PreviewContent, String> + Send + 'static,
-{
-    // Create a channel for communication
-    let (sender, receiver) = std::sync::mpsc::channel();
-
-    // Set the initial loading state with the receiver
-    app.preview_content = Some(PreviewContent::loading_with_receiver(
-        path.clone(),
-        receiver,
-    ));
-
-    // Spawn a thread to process the file
-    std::thread::spawn(move || {
-        let preview_result = processor(path);
-        let _ = sender.send(preview_result);
     });
 }

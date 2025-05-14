@@ -74,6 +74,14 @@ fn sort_entries_by(entries: &mut [DirEntry], sort_column: SortColumn, sort_order
     };
 }
 
+// Build the reverse index mapping paths to indices
+fn refresh_path_to_index(tab: &mut Tab) {
+    tab.path_to_index.clear();
+    for (index, entry) in tab.entries.iter().enumerate() {
+        tab.path_to_index.insert(entry.path.clone(), index);
+    }
+}
+
 impl TabState {
     pub fn new(path: PathBuf) -> Self {
         Self { current_path: path }
@@ -444,12 +452,7 @@ impl TabManager {
         tab.entries = read_dir_entries(&current_path); // Read entries for the current path
                                                        // Sort entries using the global sort settings
         sort_entries_by(&mut tab.entries, sort_column, sort_order);
-
-        // Build the reverse index mapping paths to indices
-        tab.path_to_index.clear();
-        for (index, entry) in tab.entries.iter().enumerate() {
-            tab.path_to_index.insert(entry.path.clone(), index);
-        }
+        refresh_path_to_index(tab);
 
         // Reset selection index if it's out of bounds (can happen after rehydrating from TabState)
         if tab.selected_index >= tab.entries.len() && !tab.entries.is_empty() {

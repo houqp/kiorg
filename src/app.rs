@@ -10,6 +10,7 @@ use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
 use crate::models::preview_content::PreviewContent;
+use crate::ui::preview;
 
 /// Error type for Kiorg application
 #[derive(Debug)]
@@ -717,7 +718,7 @@ impl eframe::App for Kiorg {
 
         // Update preview cache only if selection changed
         if self.selection_changed {
-            right_panel::update_preview_cache(self, ctx);
+            preview::update_cache(self, ctx);
             self.selection_changed = false; // Reset flag after update
         }
 
