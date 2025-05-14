@@ -371,6 +371,16 @@ impl TabManager {
         &self.tabs[self.current_tab_index]
     }
 
+    // Get the current tab index
+    pub fn get_current_tab_index(&self) -> usize {
+        self.current_tab_index
+    }
+
+    // Get the total number of tabs
+    pub fn get_tab_count(&self) -> usize {
+        self.tabs.len()
+    }
+
     // Get the index of an entry by its path in the current tab
     pub fn get_entry_index_by_path(&self, path: &PathBuf) -> Option<usize> {
         self.current_tab_ref().get_index_by_path(path)

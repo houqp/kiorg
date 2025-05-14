@@ -225,6 +225,24 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: Shortcut
         ShortcutAction::GoForwardInHistory => {
             app.navigate_history_forward();
         }
+        ShortcutAction::SwitchToNextTab => {
+            let current_index = app.tab_manager.get_current_tab_index();
+            let total_tabs = app.tab_manager.get_tab_count();
+            if total_tabs > 1 {
+                let next_index = (current_index + 1) % total_tabs;
+                app.tab_manager.switch_to_tab(next_index);
+                app.refresh_entries();
+            }
+        }
+        ShortcutAction::SwitchToPreviousTab => {
+            let current_index = app.tab_manager.get_current_tab_index();
+            let total_tabs = app.tab_manager.get_tab_count();
+            if total_tabs > 1 {
+                let prev_index = (current_index + total_tabs - 1) % total_tabs;
+                app.tab_manager.switch_to_tab(prev_index);
+                app.refresh_entries();
+            }
+        }
     }
 }
 

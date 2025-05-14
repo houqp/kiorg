@@ -113,6 +113,11 @@ pub fn show_help_window(ctx: &egui::Context, show_help: &mut bool, colors: &AppC
                         let tab_actions = [
                             (ShortcutAction::CreateTab, "Create new tab"),
                             (ShortcutAction::CloseCurrentTab, "Close current tab"),
+                            (
+                                ShortcutAction::SwitchToPreviousTab,
+                                "Switch to previous tab",
+                            ),
+                            (ShortcutAction::SwitchToNextTab, "Switch to next tab"),
                         ];
 
                         for (action, description) in tab_actions {

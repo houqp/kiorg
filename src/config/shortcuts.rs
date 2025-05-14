@@ -111,6 +111,8 @@ impl KeyboardShortcut {
             "down" | "arrow_down" => Some(Key::ArrowDown),
             "?" | "question" | "questionmark" => Some(Key::Questionmark),
             "/" | "slash" => Some(Key::Slash),
+            "[" => Some(Key::OpenBracket),
+            "]" => Some(Key::CloseBracket),
             _ => None,
         }
     }
@@ -166,6 +168,8 @@ pub enum ShortcutAction {
     SwitchToTab8,
     SwitchToTab9,
     CloseCurrentTab,
+    SwitchToNextTab,
+    SwitchToPreviousTab,
 
     // Bookmarks
     ToggleBookmark,
@@ -324,6 +328,13 @@ pub fn default_shortcuts() -> Shortcuts {
         ShortcutAction::ActivateSearch,
     );
 
+    // Add new shortcuts for switching to preview tab and next/previous tab
+    add_shortcut(KeyboardShortcut::new("]"), ShortcutAction::SwitchToNextTab);
+    add_shortcut(
+        KeyboardShortcut::new("["),
+        ShortcutAction::SwitchToPreviousTab,
+    );
+
     shortcuts
 }
 
@@ -464,6 +475,8 @@ pub mod shortcuts_helpers {
             Key::ArrowDown => "down",
             Key::Questionmark => "?",
             Key::Slash => "/",
+            Key::OpenBracket => "[",
+            Key::CloseBracket => "]",
             _ => return None, // Unsupported key
         };
 
