@@ -407,16 +407,11 @@ impl TabManager {
             self.sort_order = SortOrder::Descending;
         }
 
-        // Re-sort all tabs with the new sort settings
-        self.sort_all_tabs();
-    }
-
-    pub fn sort_all_tabs(&mut self) {
-        // Apply sorting to all tabs
-        for tab in &mut self.tabs {
-            sort_entries_by(&mut tab.entries, self.sort_column, self.sort_order);
-            sort_entries_by(&mut tab.parent_entries, self.sort_column, self.sort_order);
-        }
+        let (column, order) = (self.sort_column, self.sort_order);
+        let tab = self.current_tab_mut();
+        sort_entries_by(&mut tab.entries, column, order);
+        sort_entries_by(&mut tab.parent_entries, column, order);
+        refresh_path_to_index(tab);
     }
 
     pub fn refresh_entries(&mut self) {
