@@ -193,7 +193,7 @@ pub struct Kiorg {
     // TODO: move new_name into PopupType::Rename?
     pub new_name: String,
     pub bookmark_selected_index: usize, // Store bookmark selection index in app state
-    pub entry_to_delete: Option<PathBuf>,
+    pub entries_to_delete: Vec<PathBuf>, // Changed from Option<PathBuf> to Vec<PathBuf> for bulk deletion
     pub delete_popup_state: DeleteConfirmState, // State for delete confirmation popup
     pub clipboard: Option<Clipboard>,
     pub show_bookmarks: bool,
@@ -310,7 +310,7 @@ impl Kiorg {
             show_popup: None,
             new_name: String::new(),
             clipboard: None,
-            entry_to_delete: None,
+            entries_to_delete: Vec::new(), // Initialize empty vector for entries to delete
             delete_popup_state: DeleteConfirmState::Initial, // Initialize delete popup state
             show_bookmarks: false,
             bookmark_selected_index: 0,
@@ -365,10 +365,20 @@ impl Kiorg {
 
     pub fn delete_selected_entry(&mut self) {
         let tab = self.tab_manager.current_tab_mut();
-        if let Some(entry) = tab.selected_entry() {
-            self.entry_to_delete = Some(entry.path.clone());
-            self.show_popup = Some(PopupType::Delete);
+
+        // Check if there are marked entries
+        if !tab.marked_entries.is_empty() {
+            // Use marked entries for bulk deletion
+            self.entries_to_delete = tab.marked_entries.iter().cloned().collect();
+        } else if let Some(entry) = tab.selected_entry() {
+            // Fall back to the currently selected entry if no entries are marked
+            self.entries_to_delete = vec![entry.path.clone()];
+        } else {
+            // No entries to delete
+            return;
         }
+
+        self.show_popup = Some(PopupType::Delete);
     }
 
     pub fn rename_selected_entry(&mut self) {
@@ -592,7 +602,7 @@ impl Kiorg {
     }
 
     fn handle_delete_confirmation(&mut self, ctx: &egui::Context) {
-        if self.show_popup != Some(PopupType::Delete) || self.entry_to_delete.is_none() {
+        if self.show_popup != Some(PopupType::Delete) || self.entries_to_delete.is_empty() {
             return;
         }
 
@@ -601,7 +611,7 @@ impl Kiorg {
         let result = delete_popup::handle_delete_confirmation(
             ctx,
             &mut show_delete_confirm,
-            &self.entry_to_delete,
+            &self.entries_to_delete,
             &self.colors,
             &mut self.delete_popup_state,
         );

@@ -169,14 +169,20 @@ enum ContextMenuAction {
     Delete,
     Copy,
     Cut,
+    BulkDelete, // New action for bulk deletion
 }
 
 /// Helper function to build the context menu items and return the chosen action.
-/// Takes a boolean indicating if pasting is possible and if a file is selected.
-fn show_context_menu(ui: &mut Ui, can_paste: bool, has_selection: bool) -> ContextMenuAction {
+/// Takes a boolean indicating if pasting is possible, if a file is selected, and if there are marked entries.
+fn show_context_menu(
+    ui: &mut Ui,
+    can_paste: bool,
+    has_selection: bool,
+    has_marked_entries: bool,
+) -> ContextMenuAction {
     let mut action = ContextMenuAction::None;
 
-    if ui.button("Add new file/directory (a)").clicked() {
+    if ui.button("(a) Add new file/directory").clicked() {
         action = ContextMenuAction::Add;
         ui.close_menu();
     }
@@ -185,25 +191,34 @@ fn show_context_menu(ui: &mut Ui, can_paste: bool, has_selection: bool) -> Conte
     ui.separator();
 
     if ui
-        .add_enabled(has_selection, egui::Button::new("Rename (r)"))
+        .add_enabled(has_selection, egui::Button::new("(r) Rename"))
         .clicked()
     {
         action = ContextMenuAction::Rename;
         ui.close_menu();
     }
 
-    if ui
-        .add_enabled(has_selection, egui::Button::new("Delete (d)"))
-        .clicked()
-    {
-        action = ContextMenuAction::Delete;
-        ui.close_menu();
+    // Show bulk delete option when there are marked entries
+    if has_marked_entries {
+        // TODO: do we need to add enabled
+        if ui.button("(d) Delete all marked items").clicked() {
+            action = ContextMenuAction::BulkDelete;
+            ui.close_menu();
+        }
+    } else {
+        if ui
+            .add_enabled(has_selection, egui::Button::new("(d) Delete"))
+            .clicked()
+        {
+            action = ContextMenuAction::Delete;
+            ui.close_menu();
+        }
     }
 
     ui.separator();
 
     if ui
-        .add_enabled(has_selection, egui::Button::new("Copy (y)"))
+        .add_enabled(has_selection, egui::Button::new("(y) Copy"))
         .clicked()
     {
         action = ContextMenuAction::Copy;
@@ -211,7 +226,7 @@ fn show_context_menu(ui: &mut Ui, can_paste: bool, has_selection: bool) -> Conte
     }
 
     if ui
-        .add_enabled(has_selection, egui::Button::new("Cut (x)"))
+        .add_enabled(has_selection, egui::Button::new("(x) Cut"))
         .clicked()
     {
         action = ContextMenuAction::Cut;
@@ -220,7 +235,7 @@ fn show_context_menu(ui: &mut Ui, can_paste: bool, has_selection: bool) -> Conte
 
     // Use the passed boolean directly
     if ui
-        .add_enabled(can_paste, egui::Button::new("Paste (p)"))
+        .add_enabled(can_paste, egui::Button::new("(p) Paste"))
         .clicked()
     {
         action = ContextMenuAction::Paste;
@@ -391,8 +406,13 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                             new_selected_index = Some(original_index);
                             // Capture the action, don't perform it yet
                             // Pass only the necessary booleans, not the whole app
-                            context_menu_action =
-                                show_context_menu(menu_ui, app.clipboard.is_some(), true);
+                            let has_marked_entries = !tab_ref.marked_entries.is_empty();
+                            context_menu_action = show_context_menu(
+                                menu_ui,
+                                app.clipboard.is_some(),
+                                true,
+                                has_marked_entries,
+                            );
                         });
                     } // End row loop
                 }); // End show_rows
@@ -409,7 +429,9 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
             // Capture the action, don't perform it yet
             // Pass only the necessary booleans, not the whole app
             // For background context menu, no file is selected
-            context_menu_action = show_context_menu(menu_ui, app.clipboard.is_some(), false);
+            let has_marked_entries = !app.tab_manager.current_tab_ref().marked_entries.is_empty();
+            context_menu_action =
+                show_context_menu(menu_ui, app.clipboard.is_some(), false, has_marked_entries);
         });
     }
 
@@ -446,6 +468,10 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
             app.rename_selected_entry();
         }
         ContextMenuAction::Delete => {
+            app.delete_selected_entry();
+        }
+        ContextMenuAction::BulkDelete => {
+            // Same as Delete, but explicitly for marked entries
             app.delete_selected_entry();
         }
         ContextMenuAction::Copy => {
