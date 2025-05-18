@@ -63,7 +63,7 @@ pub enum PopupType {
     Help,
     Exit,
     Delete,
-    Rename,
+    Rename(String),   // New name for the file/directory being renamed
     OpenWith(String), // Command to use when opening a file with a custom command
 }
 
@@ -191,9 +191,6 @@ pub struct Kiorg {
 
     // Popup management
     pub show_popup: Option<PopupType>,
-
-    // TODO: move new_name into PopupType::Rename?
-    pub new_name: String,
     pub bookmark_selected_index: usize, // Store bookmark selection index in app state
     pub entries_to_delete: Vec<PathBuf>, // Changed from Option<PathBuf> to Vec<PathBuf> for bulk deletion
     pub delete_popup_state: DeleteConfirmState, // State for delete confirmation popup
@@ -310,7 +307,6 @@ impl Kiorg {
             preview_content: None,
             scroll_range: None,
             show_popup: None,
-            new_name: String::new(),
             clipboard: None,
             entries_to_delete: Vec::new(), // Initialize empty vector for entries to delete
             delete_popup_state: DeleteConfirmState::Initial, // Initialize delete popup state
@@ -386,8 +382,7 @@ impl Kiorg {
     pub fn rename_selected_entry(&mut self) {
         let tab = self.tab_manager.current_tab_mut();
         if let Some(entry) = tab.selected_entry() {
-            self.new_name = entry.name.clone();
-            self.show_popup = Some(PopupType::Rename);
+            self.show_popup = Some(PopupType::Rename(entry.name.clone()));
         }
     }
 
@@ -785,7 +780,7 @@ impl eframe::App for Kiorg {
             Some(PopupType::Delete) => {
                 self.handle_delete_confirmation(ctx);
             }
-            Some(PopupType::Rename) => {
+            Some(PopupType::Rename(_)) => {
                 // Draw the rename popup
                 rename_popup::draw(ctx, self);
             }

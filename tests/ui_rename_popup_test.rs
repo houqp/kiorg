@@ -35,19 +35,15 @@ fn test_rename_popup() {
     harness.press_key(Key::R);
     harness.step();
 
-    // Verify the rename popup is shown
-    assert_eq!(
-        harness.state().show_popup,
-        Some(kiorg::app::PopupType::Rename),
-        "Rename popup should be open"
-    );
-
-    // Verify the new_name field is initialized with the current filename
-    assert_eq!(
-        harness.state().new_name,
-        "file2.txt",
-        "new_name should be initialized with the current filename"
-    );
+    // Verify the rename popup is shown with the correct filename
+    if let Some(kiorg::app::PopupType::Rename(name)) = &harness.state().show_popup {
+        assert_eq!(
+            name, "file2.txt",
+            "Rename popup should contain the current filename"
+        );
+    } else {
+        panic!("Rename popup should be open with the filename");
+    }
 
     // Simulate text input for the new name
     harness
@@ -100,19 +96,15 @@ fn test_rename_popup() {
     harness.press_key(Key::R);
     harness.step();
 
-    // Verify the rename popup is shown
-    assert_eq!(
-        harness.state().show_popup,
-        Some(kiorg::app::PopupType::Rename),
-        "Rename popup should be open"
-    );
-
-    // Verify the new_name field is initialized with the current filename
-    assert_eq!(
-        harness.state().new_name,
-        "file3.txt",
-        "new_name should be initialized with the current filename"
-    );
+    // Verify the rename popup is shown with the correct filename
+    if let Some(kiorg::app::PopupType::Rename(name)) = &harness.state().show_popup {
+        assert_eq!(
+            name, "file3.txt",
+            "Rename popup should contain the current filename"
+        );
+    } else {
+        panic!("Rename popup should be open with the filename");
+    }
 
     // Simulate text input for the new name
     harness

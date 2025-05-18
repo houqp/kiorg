@@ -284,7 +284,7 @@ fn process_key(
             }
             return;
         }
-        Some(PopupType::Rename) => {
+        Some(PopupType::Rename(_)) => {
             if key == Key::Enter {
                 crate::ui::rename_popup::handle_rename_confirmation(app, ctx);
             } else if key == Key::Escape {

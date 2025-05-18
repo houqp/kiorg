@@ -119,11 +119,11 @@ fn test_rename_shortcut() {
     harness.step();
 
     // verify we are in rename mode
-    assert_eq!(
-        harness.state().show_popup,
-        Some(kiorg::app::PopupType::Rename),
-        "Rename popup should be open"
-    );
+    if let Some(kiorg::app::PopupType::Rename(_)) = &harness.state().show_popup {
+        // Rename popup is open, which is what we want
+    } else {
+        panic!("Rename popup should be open");
+    }
 
     // Clear any existing text and simulate text input for the new name
     harness
