@@ -56,7 +56,11 @@ pub fn show_help_window(ctx: &egui::Context, show_help: &mut bool, colors: &AppC
                     let table = egui::Grid::new("file_op_help_grid");
                     table.show(ui, |ui| {
                         let file_actions = [
-                            (ShortcutAction::OpenDirectoryOrFile, "Open file/directory"),
+                            (ShortcutAction::OpenDirectoryOrFile, "Open file"),
+                            (
+                                ShortcutAction::OpenWithCommand,
+                                "Open file with custom command",
+                            ),
                             (
                                 ShortcutAction::DeleteEntry,
                                 "Delete selected file/directory",

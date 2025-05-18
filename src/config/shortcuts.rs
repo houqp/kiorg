@@ -159,6 +159,7 @@ pub enum ShortcutAction {
     CopyEntry,
     CutEntry,
     PasteEntry,
+    OpenWithCommand,
 
     // Tabs
     CreateTab,
@@ -449,6 +450,12 @@ pub fn default_shortcuts() -> Shortcuts {
     add_shortcut(
         KeyboardShortcut::new("["),
         ShortcutAction::SwitchToPreviousTab,
+    );
+
+    // Add shortcut for opening files with custom command
+    add_shortcut(
+        KeyboardShortcut::new("o").with_shift(),
+        ShortcutAction::OpenWithCommand,
     );
 
     shortcuts

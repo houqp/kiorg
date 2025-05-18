@@ -243,6 +243,16 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: Shortcut
                 app.refresh_entries();
             }
         }
+        ShortcutAction::OpenWithCommand => {
+            let tab = app.tab_manager.current_tab_ref();
+            if let Some(selected_entry) = tab.selected_entry() {
+                if !selected_entry.is_dir {
+                    // Show the open with popup
+                    app.open_with_command.clear();
+                    app.show_popup = Some(PopupType::OpenWith);
+                }
+            }
+        }
     }
 }
 
@@ -280,6 +290,14 @@ fn process_key(
                 crate::ui::rename_popup::handle_rename_confirmation(app, ctx);
             } else if key == Key::Escape {
                 crate::ui::rename_popup::close_rename_popup(app, ctx);
+            }
+            return;
+        }
+        Some(PopupType::OpenWith) => {
+            if key == Key::Enter {
+                crate::ui::open_with_popup::confirm_open_with(app);
+            } else if key == Key::Escape {
+                crate::ui::open_with_popup::close_popup(app);
             }
             return;
         }

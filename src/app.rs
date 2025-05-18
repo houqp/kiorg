@@ -64,6 +64,7 @@ pub enum PopupType {
     Exit,
     Delete,
     Rename,
+    OpenWith,
 }
 
 /// Clipboard operation types
@@ -88,7 +89,8 @@ use crate::ui::separator::SEPARATOR_PADDING;
 use crate::ui::terminal;
 use crate::ui::top_banner;
 use crate::ui::{
-    about_popup, bookmark_popup, center_panel, help_window, left_panel, rename_popup, right_panel,
+    about_popup, bookmark_popup, center_panel, help_window, left_panel, open_with_popup,
+    rename_popup, right_panel,
 };
 use egui_notify::Toasts;
 
@@ -204,6 +206,7 @@ pub struct Kiorg {
     pub fs_watcher: notify::RecommendedWatcher,
 
     pub new_entry_name: Option<String>, // None when not in add mode, Some when in add mode
+    pub open_with_command: String,      // Command to use when opening a file with a custom command
 
     // Track files that are currently being opened
     pub files_being_opened: HashMap<PathBuf, Arc<AtomicBool>>,
@@ -316,6 +319,7 @@ impl Kiorg {
             bookmark_selected_index: 0,
             search_bar: SearchBar::new(),
             new_entry_name: None,
+            open_with_command: String::new(), // Initialize empty command string
             files_being_opened: HashMap::new(),
             error_sender,
             error_receiver,
@@ -574,6 +578,13 @@ impl Kiorg {
             return;
         }
 
+        // Prioritize Open With Input
+        if self.show_popup == Some(PopupType::OpenWith)
+            && open_with_popup::handle_key_press(ctx, self)
+        {
+            return;
+        }
+
         // Prioritize Search Mode Input
         if search_bar::handle_key_press(ctx, self) {
             return;
@@ -786,6 +797,10 @@ impl eframe::App for Kiorg {
             Some(PopupType::Rename) => {
                 // Draw the rename popup
                 rename_popup::draw(ctx, self);
+            }
+            Some(PopupType::OpenWith) => {
+                // Draw the open with popup
+                open_with_popup::draw(ctx, self);
             }
             None => {}
         }

@@ -7,6 +7,7 @@ pub mod exit_popup;
 pub mod file_list;
 pub mod help_window;
 pub mod left_panel;
+pub mod open_with_popup;
 pub mod path_nav;
 pub mod preview;
 pub mod rename_popup;
