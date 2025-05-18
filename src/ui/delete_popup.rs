@@ -20,7 +20,7 @@ pub type DeleteConfirmResult = ConfirmResult;
 pub fn handle_delete_confirmation(
     ctx: &Context,
     show_delete_confirm: &mut bool,
-    entries_to_delete: &Vec<PathBuf>,
+    entries_to_delete: &[PathBuf],
     colors: &AppColors,
     state: &mut DeleteConfirmState,
 ) -> DeleteConfirmResult {
@@ -99,8 +99,7 @@ pub fn handle_delete_confirmation(
 
                             // Show the first few entries as examples
                             let max_to_show = 5.min(entries_to_delete.len());
-                            for i in 0..max_to_show {
-                                let path = &entries_to_delete[i];
+                            for path in entries_to_delete.iter().take(max_to_show) {
                                 let name = path
                                     .file_name()
                                     .map(|n| n.to_string_lossy().to_string())

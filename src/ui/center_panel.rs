@@ -207,14 +207,12 @@ fn show_context_menu(
             action = ContextMenuAction::BulkDelete;
             ui.close_menu();
         }
-    } else {
-        if ui
-            .add_enabled(has_selection, egui::Button::new("Delete"))
-            .clicked()
-        {
-            action = ContextMenuAction::Delete;
-            ui.close_menu();
-        }
+    } else if ui
+        .add_enabled(has_selection, egui::Button::new("Delete"))
+        .clicked()
+    {
+        action = ContextMenuAction::Delete;
+        ui.close_menu();
     }
 
     // Add "Open with" option - only enabled for files, not directories

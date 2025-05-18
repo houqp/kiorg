@@ -47,7 +47,7 @@ pub fn draw(ctx: &egui::Context, app: &mut Kiorg) {
 
 /// Helper function to handle open with confirmation
 pub fn confirm_open_with(app: &mut Kiorg, command: String) {
-    if command.len() == 0 {
+    if command.is_empty() {
         app.notify_error("Cannot open file: No command provided");
         return;
     }
