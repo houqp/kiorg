@@ -532,26 +532,48 @@ impl Kiorg {
         }
     }
 
-    pub fn open_file(&mut self, path: PathBuf) {
+    /// Helper function to handle common file opening logic
+    fn open_file_internal<F, E>(&mut self, path: PathBuf, open_fn: F)
+    where
+        F: FnOnce() -> Result<(), E> + Send + 'static,
+        E: std::fmt::Display + 'static,
+        String: From<E>,
+    {
         // Add the file to the list of files being opened
         let signal = Arc::new(AtomicBool::new(true));
         self.files_being_opened.insert(path.clone(), signal.clone());
-
-        // Clone the path for the thread
-        let path_clone = path.clone();
 
         // Clone the error sender for the thread
         let error_sender = self.error_sender.clone();
 
         // Spawn a thread to open the file asynchronously
-        std::thread::spawn(move || match open::that(&path_clone) {
-            Ok(_) => {
-                signal.store(false, std::sync::atomic::Ordering::Relaxed);
+        std::thread::spawn(move || {
+            match open_fn() {
+                Ok(_) => {}
+                Err(e) => {
+                    // Send the error message back to the main thread
+                    let _ = error_sender.send(format!("{}", e));
+                }
             }
-            Err(e) => {
-                // Send the error message back to the main thread
-                let _ = error_sender.send(format!("Failed to open file: {}", e));
-            }
+            signal.store(false, std::sync::atomic::Ordering::Relaxed);
+        });
+    }
+
+    /// Open a file with the default application
+    pub fn open_file(&mut self, path: PathBuf) {
+        let path_clone = path.clone();
+        self.open_file_internal(path, move || {
+            open::that(&path_clone).map_err(|e| format!("Failed to open file: {}", e))
+        });
+    }
+
+    /// Open a file with a custom command
+    pub fn open_file_with_command(&mut self, path: PathBuf, command: String) {
+        let path_clone = path.clone();
+        let command_clone = command.clone();
+        self.open_file_internal(path, move || {
+            open::with(&path_clone, &command_clone)
+                .map_err(|e| format!("Failed to open file with '{}': {}", command_clone, e))
         });
     }
 

@@ -1,6 +1,5 @@
 use crate::app::{Kiorg, PopupType};
 use egui::{Frame, TextEdit};
-use std::path::PathBuf;
 
 use super::window_utils::new_center_popup_window;
 
@@ -48,6 +47,11 @@ pub fn draw(ctx: &egui::Context, app: &mut Kiorg) {
 
 /// Helper function to handle open with confirmation
 pub fn confirm_open_with(app: &mut Kiorg, command: String) {
+    if command.len() == 0 {
+        app.notify_error("Cannot open file: No command provided");
+        return;
+    }
+
     // Get the path and command before calling other functions to avoid borrow issues
     let path_to_open = {
         let tab = app.tab_manager.current_tab_ref();
@@ -58,7 +62,7 @@ pub fn confirm_open_with(app: &mut Kiorg, command: String) {
 
     // Only open the file if we have a valid path
     if let Some(path) = path_to_open {
-        open_file_with_command(app, path, command);
+        app.open_file_with_command(path, command);
     }
 
     close_popup(app);
@@ -67,22 +71,4 @@ pub fn confirm_open_with(app: &mut Kiorg, command: String) {
 /// Helper function to handle open with cancellation
 pub fn close_popup(app: &mut Kiorg) {
     app.show_popup = None;
-}
-
-/// Open a file with a custom command
-fn open_file_with_command(app: &mut Kiorg, path: PathBuf, command: String) {
-    // Clone the path for the thread
-    let path_clone = path.clone();
-
-    // Clone the error sender for the thread
-    let error_sender = app.error_sender.clone();
-
-    // Spawn a thread to open the file asynchronously
-    std::thread::spawn(move || match open::with(&path_clone, &command) {
-        Ok(_) => {}
-        Err(e) => {
-            // Send the error message back to the main thread
-            let _ = error_sender.send(format!("Failed to open file with '{}': {}", command, e));
-        }
-    });
 }

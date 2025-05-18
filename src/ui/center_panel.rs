@@ -170,6 +170,7 @@ enum ContextMenuAction {
     Copy,
     Cut,
     BulkDelete, // New action for bulk deletion
+    OpenWith,   // New action for opening with custom command
 }
 
 /// Helper function to build the context menu items and return the chosen action.
@@ -179,10 +180,11 @@ fn show_context_menu(
     can_paste: bool,
     has_selection: bool,
     has_marked_entries: bool,
+    is_file_selected: bool,
 ) -> ContextMenuAction {
     let mut action = ContextMenuAction::None;
 
-    if ui.button("(a) Add new file/directory").clicked() {
+    if ui.button("Add new file/directory").clicked() {
         action = ContextMenuAction::Add;
         ui.close_menu();
     }
@@ -191,7 +193,7 @@ fn show_context_menu(
     ui.separator();
 
     if ui
-        .add_enabled(has_selection, egui::Button::new("(r) Rename"))
+        .add_enabled(has_selection, egui::Button::new("Rename"))
         .clicked()
     {
         action = ContextMenuAction::Rename;
@@ -201,13 +203,13 @@ fn show_context_menu(
     // Show bulk delete option when there are marked entries
     if has_marked_entries {
         // TODO: do we need to add enabled
-        if ui.button("(d) Delete all marked items").clicked() {
+        if ui.button("Delete all marked items").clicked() {
             action = ContextMenuAction::BulkDelete;
             ui.close_menu();
         }
     } else {
         if ui
-            .add_enabled(has_selection, egui::Button::new("(d) Delete"))
+            .add_enabled(has_selection, egui::Button::new("Delete"))
             .clicked()
         {
             action = ContextMenuAction::Delete;
@@ -215,10 +217,19 @@ fn show_context_menu(
         }
     }
 
+    // Add "Open with" option - only enabled for files, not directories
+    if ui
+        .add_enabled(is_file_selected, egui::Button::new("Open with..."))
+        .clicked()
+    {
+        action = ContextMenuAction::OpenWith;
+        ui.close_menu();
+    }
+
     ui.separator();
 
     if ui
-        .add_enabled(has_selection, egui::Button::new("(y) Copy"))
+        .add_enabled(has_selection, egui::Button::new("Copy"))
         .clicked()
     {
         action = ContextMenuAction::Copy;
@@ -226,7 +237,7 @@ fn show_context_menu(
     }
 
     if ui
-        .add_enabled(has_selection, egui::Button::new("(x) Cut"))
+        .add_enabled(has_selection, egui::Button::new("Cut"))
         .clicked()
     {
         action = ContextMenuAction::Cut;
@@ -235,7 +246,7 @@ fn show_context_menu(
 
     // Use the passed boolean directly
     if ui
-        .add_enabled(can_paste, egui::Button::new("(p) Paste"))
+        .add_enabled(can_paste, egui::Button::new("Paste"))
         .clicked()
     {
         action = ContextMenuAction::Paste;
@@ -407,11 +418,13 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                             // Capture the action, don't perform it yet
                             // Pass only the necessary booleans, not the whole app
                             let has_marked_entries = !tab_ref.marked_entries.is_empty();
+                            let is_file_selected = !entry.is_dir;
                             context_menu_action = show_context_menu(
                                 menu_ui,
                                 app.clipboard.is_some(),
                                 true,
                                 has_marked_entries,
+                                is_file_selected,
                             );
                         });
                     } // End row loop
@@ -430,8 +443,13 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
             // Pass only the necessary booleans, not the whole app
             // For background context menu, no file is selected
             let has_marked_entries = !app.tab_manager.current_tab_ref().marked_entries.is_empty();
-            context_menu_action =
-                show_context_menu(menu_ui, app.clipboard.is_some(), false, has_marked_entries);
+            context_menu_action = show_context_menu(
+                menu_ui,
+                app.clipboard.is_some(),
+                false,
+                has_marked_entries,
+                false, // No file is selected in background context menu
+            );
         });
     }
 
@@ -479,6 +497,15 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
         }
         ContextMenuAction::Cut => {
             app.cut_selected_entries();
+        }
+        ContextMenuAction::OpenWith => {
+            // Show the open with popup with an empty command string
+            let tab = app.tab_manager.current_tab_ref();
+            if let Some(selected_entry) = tab.selected_entry() {
+                if !selected_entry.is_dir {
+                    app.show_popup = Some(crate::app::PopupType::OpenWith(String::new()));
+                }
+            }
         }
         ContextMenuAction::None => {} // Do nothing
     }
