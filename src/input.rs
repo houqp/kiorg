@@ -247,9 +247,8 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: Shortcut
             let tab = app.tab_manager.current_tab_ref();
             if let Some(selected_entry) = tab.selected_entry() {
                 if !selected_entry.is_dir {
-                    // Show the open with popup
-                    app.open_with_command.clear();
-                    app.show_popup = Some(PopupType::OpenWith);
+                    // Show the open with popup with an empty command string
+                    app.show_popup = Some(PopupType::OpenWith(String::new()));
                 }
             }
         }
@@ -268,7 +267,7 @@ fn process_key(
     }
 
     // Handle special modal states first based on the show_popup field
-    match app.show_popup {
+    match &app.show_popup {
         Some(PopupType::Exit) => {
             if key == Key::Enter {
                 crate::ui::exit_popup::confirm_exit(app);
@@ -293,9 +292,9 @@ fn process_key(
             }
             return;
         }
-        Some(PopupType::OpenWith) => {
+        Some(PopupType::OpenWith(cmd)) => {
             if key == Key::Enter {
-                crate::ui::open_with_popup::confirm_open_with(app);
+                crate::ui::open_with_popup::confirm_open_with(app, cmd.clone());
             } else if key == Key::Escape {
                 crate::ui::open_with_popup::close_popup(app);
             }
