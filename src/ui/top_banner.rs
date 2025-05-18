@@ -27,7 +27,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui) {
                     ui.set_min_width(150.0);
 
                     if ui.button("Bookmarks").clicked() {
-                        app.show_bookmarks = true;
+                        app.show_popup = Some(crate::app::PopupType::Bookmarks(0));
                         ui.close_menu();
                     }
 

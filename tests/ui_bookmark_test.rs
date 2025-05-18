@@ -22,7 +22,7 @@ fn test_bookmark_feature() {
     // Check initial state - no bookmarks
     harness.step();
     assert!(harness.state().bookmarks.is_empty());
-    assert!(!harness.state().show_bookmarks);
+    assert!(harness.state().show_popup.is_none());
 
     // Bookmark the directory with 'b'
     harness.press_key(Key::B);
@@ -46,7 +46,11 @@ fn test_bookmark_feature() {
     }
 
     // Verify bookmark popup is shown
-    assert!(harness.state().show_bookmarks);
+    if let Some(kiorg::app::PopupType::Bookmarks(_)) = harness.state().show_popup {
+        // Bookmark popup is shown
+    } else {
+        panic!("Bookmark popup should be shown");
+    }
 
     // Close bookmark popup with 'q'
     {
@@ -55,7 +59,7 @@ fn test_bookmark_feature() {
     }
 
     // Verify bookmark popup is closed
-    assert!(!harness.state().show_bookmarks);
+    assert!(harness.state().show_popup.is_none());
 
     // Select the second directory
     {
@@ -117,5 +121,5 @@ fn test_bookmark_feature() {
     harness.step();
 
     // Verify bookmark popup is closed
-    assert!(!harness.state().show_bookmarks);
+    assert!(harness.state().show_popup.is_none());
 }

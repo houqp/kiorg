@@ -66,6 +66,7 @@ pub enum PopupType {
     Rename(String),   // New name for the file/directory being renamed
     OpenWith(String), // Command to use when opening a file with a custom command
     AddEntry(String), // Name for the new file/directory being added
+    Bookmarks(usize), // Selected index in the bookmarks list
 }
 
 /// Clipboard operation types
@@ -192,11 +193,9 @@ pub struct Kiorg {
 
     // Popup management
     pub show_popup: Option<PopupType>,
-    pub bookmark_selected_index: usize, // Store bookmark selection index in app state
     pub entries_to_delete: Vec<PathBuf>, // Changed from Option<PathBuf> to Vec<PathBuf> for bulk deletion
     pub delete_popup_state: DeleteConfirmState, // State for delete confirmation popup
     pub clipboard: Option<Clipboard>,
-    pub show_bookmarks: bool,
     pub search_bar: SearchBar,
     pub terminal_ctx: Option<terminal::TerminalContext>,
     pub shutdown_requested: bool,
@@ -309,8 +308,6 @@ impl Kiorg {
             clipboard: None,
             entries_to_delete: Vec::new(), // Initialize empty vector for entries to delete
             delete_popup_state: DeleteConfirmState::Initial, // Initialize delete popup state
-            show_bookmarks: false,
-            bookmark_selected_index: 0,
             search_bar: SearchBar::new(),
             files_being_opened: HashMap::new(),
             error_sender,
@@ -569,11 +566,6 @@ impl Kiorg {
             return;
         }
 
-        // Don't process other keyboard input if the bookmark popup is active
-        if self.show_bookmarks {
-            return;
-        }
-
         input::process_input_events(self, ctx);
     }
 
@@ -726,29 +718,6 @@ impl eframe::App for Kiorg {
 
         self.process_input(ctx);
 
-        // Handle bookmark popup with the new approach
-        // Use the bookmark_selected_index field from Kiorg struct
-        let bookmark_action = bookmark_popup::show_bookmark_popup(
-            ctx,
-            &mut self.show_bookmarks,
-            &mut self.bookmarks,
-            &mut self.bookmark_selected_index,
-        );
-        // Process the bookmark action
-        match bookmark_action {
-            bookmark_popup::BookmarkAction::Navigate(path) => self.navigate_to_dir(path),
-            bookmark_popup::BookmarkAction::SaveBookmarks => {
-                // Save bookmarks when the popup signals a change (e.g., deletion)
-                if let Err(e) = bookmark_popup::save_bookmarks(
-                    &self.bookmarks,
-                    self.config_dir_override.as_ref(),
-                ) {
-                    self.notify_error(format!("Failed to save bookmarks: {}", e));
-                }
-            }
-            bookmark_popup::BookmarkAction::None => {}
-        };
-
         // Show delete confirmation window if needed
         // TODO: write a test for triggering delete popup from right click
         // NOTE: important to keep it before the center panel so the popup can
@@ -780,6 +749,28 @@ impl eframe::App for Kiorg {
             }
             Some(PopupType::AddEntry(_)) => {
                 add_entry_popup::draw(ctx, self);
+            }
+            Some(PopupType::Bookmarks(_)) => {
+                // Handle bookmark popup
+                let bookmark_action = bookmark_popup::show_bookmark_popup(
+                    ctx,
+                    &mut self.show_popup,
+                    &mut self.bookmarks,
+                );
+                // Process the bookmark action
+                match bookmark_action {
+                    bookmark_popup::BookmarkAction::Navigate(path) => self.navigate_to_dir(path),
+                    bookmark_popup::BookmarkAction::SaveBookmarks => {
+                        // Save bookmarks when the popup signals a change (e.g., deletion)
+                        if let Err(e) = bookmark_popup::save_bookmarks(
+                            &self.bookmarks,
+                            self.config_dir_override.as_ref(),
+                        ) {
+                            self.notify_error(format!("Failed to save bookmarks: {}", e));
+                        }
+                    }
+                    bookmark_popup::BookmarkAction::None => {}
+                };
             }
             None => {}
         }

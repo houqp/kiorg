@@ -190,8 +190,7 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: Shortcut
             bookmark_popup::toggle_bookmark(app);
         }
         ShortcutAction::ShowBookmarks => {
-            // Toggle bookmark popup visibility
-            app.show_bookmarks = !app.show_bookmarks;
+            app.show_popup = Some(PopupType::Bookmarks(0));
         }
         ShortcutAction::OpenTerminal => {
             let path = app.tab_manager.current_tab_mut().current_path.clone();
@@ -316,6 +315,10 @@ fn process_key(
             if add_entry_popup::handle_key_press(ctx, app) {
                 return;
             }
+        }
+        Some(PopupType::Bookmarks(_)) => {
+            // Bookmark popup input is handled in show_bookmark_popup
+            return;
         }
         None => {}
     }

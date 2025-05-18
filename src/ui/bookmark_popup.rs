@@ -132,16 +132,16 @@ fn display_bookmarks_grid(
 
 pub fn show_bookmark_popup(
     ctx: &Context,
-    show_bookmarks: &mut bool,
+    show_popup: &mut Option<crate::app::PopupType>,
     bookmarks: &mut Vec<PathBuf>,
-    selected_index: &mut usize,
 ) -> BookmarkAction {
-    if !*show_bookmarks {
-        return BookmarkAction::None;
-    }
+    // Extract the current selected index from the popup type, or return early if not showing bookmarks
+    let current_index = match show_popup {
+        Some(crate::app::PopupType::Bookmarks(index)) => *index,
+        _ => return BookmarkAction::None,
+    };
 
-    let mut show_popup = *show_bookmarks;
-    let mut current_index = *selected_index;
+    let mut current_index = current_index;
 
     // Ensure index is valid
     if !bookmarks.is_empty() {
@@ -152,7 +152,8 @@ pub fn show_bookmark_popup(
 
     // Handle keyboard navigation for closing the popup
     if ctx.input(|i| i.key_pressed(egui::Key::Q) || i.key_pressed(egui::Key::Escape)) {
-        show_popup = false;
+        *show_popup = None;
+        return BookmarkAction::None;
     }
 
     // Handle keyboard shortcut for deleting bookmarks
@@ -163,9 +164,12 @@ pub fn show_bookmark_popup(
 
     let mut navigate_to_path = None;
 
+    // Create a temporary boolean for the window's open state
+    let mut window_open = true;
+
     if let Some(response) = new_center_popup_window("Bookmarks")
         .default_pos(ctx.screen_rect().center()) // Position at screen center
-        .open(&mut show_popup)
+        .open(&mut window_open)
         .show(ctx, |ui| {
             if bookmarks.is_empty() {
                 ui.label("No bookmarks yet. Use 'b' to bookmark folders.");
@@ -206,23 +210,26 @@ pub fn show_bookmark_popup(
         // If we need to navigate, return the path
         if let Some(path) = navigate_to_path {
             action = BookmarkAction::Navigate(path);
-            show_popup = false;
+            *show_popup = None; // Close popup when navigating
+        } else {
+            // If we need to remove a bookmark, do it now
+            if let Some(path) = remove_bookmark_path {
+                bookmarks.retain(|p| p != &path);
+                action = BookmarkAction::SaveBookmarks;
+            }
+
+            // Update the popup state with the current index
+            if window_open && !response.response.clicked_elsewhere() {
+                *show_popup = Some(crate::app::PopupType::Bookmarks(current_index));
+            } else {
+                *show_popup = None;
+            }
         }
 
-        // If we need to remove a bookmark, do it now
-        if let Some(path) = remove_bookmark_path {
-            bookmarks.retain(|p| p != &path);
-            action = BookmarkAction::SaveBookmarks;
-        }
-
-        // Update the selected_index with our current_index
-        *selected_index = current_index;
-
-        *show_bookmarks = show_popup && !response.response.clicked_elsewhere();
         action
     } else {
-        *show_bookmarks = show_popup;
-        *selected_index = current_index;
+        // Window was closed
+        *show_popup = None;
         BookmarkAction::None
     }
 }
