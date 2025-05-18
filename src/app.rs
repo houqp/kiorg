@@ -65,6 +65,7 @@ pub enum PopupType {
     Delete,
     Rename(String),   // New name for the file/directory being renamed
     OpenWith(String), // Command to use when opening a file with a custom command
+    AddEntry(String), // Name for the new file/directory being added
 }
 
 /// Clipboard operation types
@@ -202,8 +203,6 @@ pub struct Kiorg {
     pub notify_fs_change: Arc<AtomicBool>,
     pub fs_watcher: notify::RecommendedWatcher,
 
-    pub new_entry_name: Option<String>, // None when not in add mode, Some when in add mode
-
     // Track files that are currently being opened
     pub files_being_opened: HashMap<PathBuf, Arc<AtomicBool>>,
 
@@ -313,7 +312,6 @@ impl Kiorg {
             show_bookmarks: false,
             bookmark_selected_index: 0,
             search_bar: SearchBar::new(),
-            new_entry_name: None,
             files_being_opened: HashMap::new(),
             error_sender,
             error_receiver,
@@ -566,11 +564,6 @@ impl Kiorg {
             return;
         }
 
-        // Prioritize Add Mode Input
-        if self.new_entry_name.is_some() && add_entry_popup::handle_key_press(ctx, self) {
-            return;
-        }
-
         // Prioritize Search Mode Input
         if search_bar::handle_key_press(ctx, self) {
             return;
@@ -774,19 +767,19 @@ impl eframe::App for Kiorg {
                 about_popup::show_about_popup(ctx, self);
             }
             Some(PopupType::Exit) => {
-                // Draw the exit popup
                 exit_popup::draw(ctx, self);
             }
             Some(PopupType::Delete) => {
                 self.handle_delete_confirmation(ctx);
             }
             Some(PopupType::Rename(_)) => {
-                // Draw the rename popup
                 rename_popup::draw(ctx, self);
             }
             Some(PopupType::OpenWith(_)) => {
-                // Draw the open with popup
                 open_with_popup::draw(ctx, self);
+            }
+            Some(PopupType::AddEntry(_)) => {
+                add_entry_popup::draw(ctx, self);
             }
             None => {}
         }
@@ -827,11 +820,6 @@ impl eframe::App for Kiorg {
         });
 
         search_bar::draw(ctx, self);
-
-        // Show add entry popup if needed
-        if self.new_entry_name.is_some() {
-            add_entry_popup::draw(ctx, self);
-        }
 
         if self.shutdown_requested {
             self.graceful_shutdown(ctx);

@@ -1,6 +1,6 @@
 use crate::config::shortcuts::{self, shortcuts_helpers, ShortcutAction};
 use crate::ui::terminal;
-use crate::ui::{bookmark_popup, center_panel};
+use crate::ui::{add_entry_popup, bookmark_popup, center_panel};
 use egui::{Key, Modifiers};
 
 use super::app::{Kiorg, PopupType};
@@ -93,7 +93,7 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: Shortcut
             app.rename_selected_entry();
         }
         ShortcutAction::AddEntry => {
-            app.new_entry_name = Some(String::new());
+            app.show_popup = Some(PopupType::AddEntry(String::new()));
         }
         ShortcutAction::SelectEntry => {
             let tab = app.tab_manager.current_tab_mut();
@@ -311,6 +311,11 @@ fn process_key(
                 app.show_popup = None;
             }
             return;
+        }
+        Some(PopupType::AddEntry(_)) => {
+            if add_entry_popup::handle_key_press(ctx, app) {
+                return;
+            }
         }
         None => {}
     }

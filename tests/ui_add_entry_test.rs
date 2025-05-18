@@ -18,10 +18,13 @@ fn test_add_file_and_directory() {
     // Press 'a' to activate add mode
     harness.press_key(Key::A);
     harness.step();
-    assert!(
-        harness.state().new_entry_name.is_some(),
-        "Add mode should be active"
-    );
+
+    // Check if add mode is active
+    if let Some(kiorg::app::PopupType::AddEntry(_)) = harness.state().show_popup {
+        // Add mode is active
+    } else {
+        panic!("Add mode should be active");
+    }
 
     // Input the file name
     harness
@@ -29,11 +32,13 @@ fn test_add_file_and_directory() {
         .events
         .push(egui::Event::Text(file_name.to_string()));
     harness.step();
-    assert_eq!(
-        harness.state().new_entry_name.as_ref().unwrap(),
-        file_name,
-        "Input field should contain the file name"
-    );
+
+    // Check if the input field contains the file name
+    if let Some(kiorg::app::PopupType::AddEntry(name)) = &harness.state().show_popup {
+        assert_eq!(name, file_name, "Input field should contain the file name");
+    } else {
+        panic!("Add mode should be active with the file name");
+    }
 
     // Press Enter to confirm creation
     harness.press_key(Key::Enter);
@@ -73,7 +78,7 @@ fn test_add_file_and_directory() {
         );
     }
     assert!(
-        harness.state().new_entry_name.is_none(),
+        harness.state().show_popup.is_none(),
         "Add mode should be inactive"
     );
 
@@ -85,10 +90,13 @@ fn test_add_file_and_directory() {
     // Press 'a' to activate add mode
     harness.press_key(Key::A);
     harness.step();
-    assert!(
-        harness.state().new_entry_name.is_some(),
-        "Add mode should be active"
-    );
+
+    // Check if add mode is active
+    if let Some(kiorg::app::PopupType::AddEntry(_)) = harness.state().show_popup {
+        // Add mode is active
+    } else {
+        panic!("Add mode should be active");
+    }
 
     // Input the directory name
     harness
@@ -96,11 +104,16 @@ fn test_add_file_and_directory() {
         .events
         .push(egui::Event::Text(dir_name_input.to_string()));
     harness.step();
-    assert_eq!(
-        harness.state().new_entry_name.as_ref().unwrap(),
-        dir_name_input,
-        "Input field should contain the directory name"
-    );
+
+    // Check if the input field contains the directory name
+    if let Some(kiorg::app::PopupType::AddEntry(name)) = &harness.state().show_popup {
+        assert_eq!(
+            name, dir_name_input,
+            "Input field should contain the directory name"
+        );
+    } else {
+        panic!("Add mode should be active with the directory name");
+    }
 
     // Press Enter to confirm creation
     harness.press_key(Key::Enter);
@@ -140,7 +153,7 @@ fn test_add_file_and_directory() {
         );
     }
     assert!(
-        harness.state().new_entry_name.is_none(),
+        harness.state().show_popup.is_none(),
         "Add mode should be inactive"
     );
 
@@ -241,10 +254,13 @@ fn test_add_entry_cancel() {
     // Press 'a' to activate add mode
     harness.press_key(Key::A);
     harness.step();
-    assert!(
-        harness.state().new_entry_name.is_some(),
-        "Add mode should be active"
-    );
+
+    // Check if add mode is active
+    if let Some(kiorg::app::PopupType::AddEntry(_)) = harness.state().show_popup {
+        // Add mode is active
+    } else {
+        panic!("Add mode should be active");
+    }
 
     // Input some text
     let partial_name = "partial_name";
@@ -253,11 +269,16 @@ fn test_add_entry_cancel() {
         .events
         .push(egui::Event::Text(partial_name.to_string()));
     harness.step();
-    assert_eq!(
-        harness.state().new_entry_name.as_ref().unwrap(),
-        partial_name,
-        "Input field should contain partial name"
-    );
+
+    // Check if the input field contains the partial name
+    if let Some(kiorg::app::PopupType::AddEntry(name)) = &harness.state().show_popup {
+        assert_eq!(
+            name, partial_name,
+            "Input field should contain partial name"
+        );
+    } else {
+        panic!("Add mode should be active with the partial name");
+    }
 
     // Press Escape to cancel
     harness.press_key(Key::Escape);
@@ -265,7 +286,7 @@ fn test_add_entry_cancel() {
 
     // Verify add mode is inactive and input is cleared
     assert!(
-        harness.state().new_entry_name.is_none(),
+        harness.state().show_popup.is_none(),
         "Add mode should be inactive"
     );
 
@@ -296,10 +317,13 @@ fn test_add_entry_name_conflict() {
     // Press 'a' to activate add mode
     harness.press_key(Key::A);
     harness.step();
-    assert!(
-        harness.state().new_entry_name.is_some(),
-        "Add mode should be active"
-    );
+
+    // Check if add mode is active
+    if let Some(kiorg::app::PopupType::AddEntry(_)) = harness.state().show_popup {
+        // Add mode is active
+    } else {
+        panic!("Add mode should be active");
+    }
 
     // Input the existing file name
     harness
@@ -313,18 +337,22 @@ fn test_add_entry_name_conflict() {
     harness.step();
 
     // Verify add mode is still active (popup remains open)
-    assert!(
-        harness.state().new_entry_name.is_some(),
-        "Add mode should still be active after name conflict"
-    );
+    if let Some(kiorg::app::PopupType::AddEntry(_)) = harness.state().show_popup {
+        // Add mode is still active
+    } else {
+        panic!("Add mode should still be active after name conflict");
+    }
 
     // Verify the error message was shown (we can't directly check toast content in tests)
     // But we can verify the popup is still open with the same content
-    assert_eq!(
-        harness.state().new_entry_name.as_ref().unwrap(),
-        existing_file,
-        "Input field should still contain the conflicting name"
-    );
+    if let Some(kiorg::app::PopupType::AddEntry(name)) = &harness.state().show_popup {
+        assert_eq!(
+            name, existing_file,
+            "Input field should still contain the conflicting name"
+        );
+    } else {
+        panic!("Add mode should be active with the conflicting name");
+    }
 
     // Press Escape to cancel
     harness.press_key(Key::Escape);
@@ -349,17 +377,21 @@ fn test_add_entry_name_conflict() {
     harness.step();
 
     // Verify add mode is still active (popup remains open)
-    assert!(
-        harness.state().new_entry_name.is_some(),
-        "Add mode should still be active after directory name conflict"
-    );
+    if let Some(kiorg::app::PopupType::AddEntry(_)) = harness.state().show_popup {
+        // Add mode is still active
+    } else {
+        panic!("Add mode should still be active after directory name conflict");
+    }
 
     // Verify the input field still contains the conflicting name
-    assert_eq!(
-        harness.state().new_entry_name.as_ref().unwrap(),
-        &dir_input,
-        "Input field should still contain the conflicting directory name"
-    );
+    if let Some(kiorg::app::PopupType::AddEntry(name)) = &harness.state().show_popup {
+        assert_eq!(
+            name, &dir_input,
+            "Input field should still contain the conflicting directory name"
+        );
+    } else {
+        panic!("Add mode should be active with the conflicting directory name");
+    }
 
     // Press Escape to cancel
     harness.press_key(Key::Escape);
@@ -367,7 +399,7 @@ fn test_add_entry_name_conflict() {
 
     // Verify add mode is now inactive
     assert!(
-        harness.state().new_entry_name.is_none(),
+        harness.state().show_popup.is_none(),
         "Add mode should be inactive after cancellation"
     );
 }
