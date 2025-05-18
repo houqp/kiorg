@@ -1,46 +1,37 @@
 #[path = "mod/ui_test_helpers.rs"]
 mod ui_test_helpers;
 
-use kiorg::config::shortcuts::{shortcuts_helpers, KeyboardShortcut, ShortcutAction};
-use std::collections::HashMap;
+use kiorg::config::shortcuts::{shortcuts_helpers, KeyboardShortcut, ShortcutAction, Shortcuts};
 
 #[test]
 fn test_arrow_key_display() {
     // Create a custom shortcuts map for testing
-    let mut shortcuts = HashMap::new();
+    let mut shortcuts = Shortcuts::new();
 
     // Add arrow key shortcuts
-    shortcuts.insert(
-        ShortcutAction::MoveUp,
-        vec![
-            KeyboardShortcut::new("up"),
-            KeyboardShortcut::new("arrow_up"),
-        ],
-    );
+    let up_shortcuts = vec![
+        KeyboardShortcut::new("up"),
+        KeyboardShortcut::new("arrow_up"),
+    ];
+    shortcuts.set_shortcuts(ShortcutAction::MoveUp, up_shortcuts.clone());
 
-    shortcuts.insert(
-        ShortcutAction::MoveDown,
-        vec![
-            KeyboardShortcut::new("down"),
-            KeyboardShortcut::new("arrow_down"),
-        ],
-    );
+    let down_shortcuts = vec![
+        KeyboardShortcut::new("down"),
+        KeyboardShortcut::new("arrow_down"),
+    ];
+    shortcuts.set_shortcuts(ShortcutAction::MoveDown, down_shortcuts.clone());
 
-    shortcuts.insert(
-        ShortcutAction::GoToParentDirectory,
-        vec![
-            KeyboardShortcut::new("left"),
-            KeyboardShortcut::new("arrow_left"),
-        ],
-    );
+    let left_shortcuts = vec![
+        KeyboardShortcut::new("left"),
+        KeyboardShortcut::new("arrow_left"),
+    ];
+    shortcuts.set_shortcuts(ShortcutAction::GoToParentDirectory, left_shortcuts.clone());
 
-    shortcuts.insert(
-        ShortcutAction::OpenDirectory,
-        vec![
-            KeyboardShortcut::new("right"),
-            KeyboardShortcut::new("arrow_right"),
-        ],
-    );
+    let right_shortcuts = vec![
+        KeyboardShortcut::new("right"),
+        KeyboardShortcut::new("arrow_right"),
+    ];
+    shortcuts.set_shortcuts(ShortcutAction::OpenDirectory, right_shortcuts.clone());
 
     // Test up arrow display
     let up_display = shortcuts_helpers::get_shortcut_display(&shortcuts, ShortcutAction::MoveUp);
@@ -81,18 +72,14 @@ fn test_arrow_key_display() {
 #[test]
 fn test_special_key_display() {
     // Create a custom shortcuts map for testing
-    let mut shortcuts = HashMap::new();
+    let mut shortcuts = Shortcuts::new();
 
     // Add special key shortcuts
-    shortcuts.insert(
-        ShortcutAction::OpenDirectoryOrFile,
-        vec![KeyboardShortcut::new("enter")],
-    );
+    let enter_shortcuts = vec![KeyboardShortcut::new("enter")];
+    shortcuts.set_shortcuts(ShortcutAction::OpenDirectoryOrFile, enter_shortcuts.clone());
 
-    shortcuts.insert(
-        ShortcutAction::SelectEntry,
-        vec![KeyboardShortcut::new("space")],
-    );
+    let space_shortcuts = vec![KeyboardShortcut::new("space")];
+    shortcuts.set_shortcuts(ShortcutAction::SelectEntry, space_shortcuts.clone());
 
     // Test enter key display
     let enter_display =
@@ -116,15 +103,14 @@ fn test_special_key_display() {
 #[test]
 fn test_regular_key_display() {
     // Create a custom shortcuts map for testing
-    let mut shortcuts = HashMap::new();
+    let mut shortcuts = Shortcuts::new();
 
     // Add regular key shortcuts
-    shortcuts.insert(ShortcutAction::AddEntry, vec![KeyboardShortcut::new("a")]);
+    let a_shortcuts = vec![KeyboardShortcut::new("a")];
+    shortcuts.set_shortcuts(ShortcutAction::AddEntry, a_shortcuts.clone());
 
-    shortcuts.insert(
-        ShortcutAction::DeleteEntry,
-        vec![KeyboardShortcut::new("d")],
-    );
+    let d_shortcuts = vec![KeyboardShortcut::new("d")];
+    shortcuts.set_shortcuts(ShortcutAction::DeleteEntry, d_shortcuts.clone());
 
     // Test regular key display
     let a_display = shortcuts_helpers::get_shortcut_display(&shortcuts, ShortcutAction::AddEntry);
@@ -146,36 +132,28 @@ fn test_regular_key_display() {
 #[test]
 fn test_shortcut_with_modifiers() {
     // Create a custom shortcuts map for testing
-    let mut shortcuts = HashMap::new();
+    let mut shortcuts = Shortcuts::new();
 
     // Add shortcuts with modifiers
-    shortcuts.insert(
-        ShortcutAction::CloseCurrentTab,
-        vec![KeyboardShortcut::new("c").with_ctrl()],
-    );
+    let ctrl_c_shortcuts = vec![KeyboardShortcut::new("c").with_ctrl()];
+    shortcuts.set_shortcuts(ShortcutAction::CloseCurrentTab, ctrl_c_shortcuts.clone());
 
-    shortcuts.insert(
-        ShortcutAction::ShowHelp,
-        vec![KeyboardShortcut::new("?").with_shift()],
-    );
+    let shift_question_shortcuts = vec![KeyboardShortcut::new("?").with_shift()];
+    shortcuts.set_shortcuts(ShortcutAction::ShowHelp, shift_question_shortcuts.clone());
 
-    shortcuts.insert(
-        ShortcutAction::OpenTerminal,
-        vec![KeyboardShortcut::new("t").with_shift()],
-    );
+    let shift_t_shortcuts = vec![KeyboardShortcut::new("t").with_shift()];
+    shortcuts.set_shortcuts(ShortcutAction::OpenTerminal, shift_t_shortcuts.clone());
 
     // Add a shortcut with multiple modifiers
-    shortcuts.insert(
-        ShortcutAction::Exit,
-        vec![KeyboardShortcut {
-            key: "q".to_string(),
-            shift: true,
-            ctrl: true,
-            alt: false,
-            mac_cmd: false,
-            namespace: false,
-        }],
-    );
+    let ctrl_shift_q_shortcuts = vec![KeyboardShortcut {
+        key: "q".to_string(),
+        shift: true,
+        ctrl: true,
+        alt: false,
+        mac_cmd: false,
+        namespace: false,
+    }];
+    shortcuts.set_shortcuts(ShortcutAction::Exit, ctrl_shift_q_shortcuts.clone());
 
     // Test Ctrl+C display
     let ctrl_c_display =
@@ -217,13 +195,11 @@ fn test_shortcut_with_modifiers() {
 #[test]
 fn test_multiple_shortcuts_display() {
     // Create a custom shortcuts map for testing
-    let mut shortcuts = HashMap::new();
+    let mut shortcuts = Shortcuts::new();
 
     // Add multiple shortcuts for the same action
-    shortcuts.insert(
-        ShortcutAction::MoveDown,
-        vec![KeyboardShortcut::new("j"), KeyboardShortcut::new("down")],
-    );
+    let move_down_shortcuts = vec![KeyboardShortcut::new("j"), KeyboardShortcut::new("down")];
+    shortcuts.set_shortcuts(ShortcutAction::MoveDown, move_down_shortcuts.clone());
 
     // Test multiple shortcuts display
     let move_down_display =
@@ -245,7 +221,7 @@ fn test_multiple_shortcuts_display() {
 #[test]
 fn test_no_shortcuts_display() {
     // Create an empty shortcuts map
-    let shortcuts = HashMap::new();
+    let shortcuts = Shortcuts::new();
 
     // Test display for action with no shortcuts
     let no_shortcut_display =

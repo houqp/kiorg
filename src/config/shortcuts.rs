@@ -113,7 +113,11 @@ impl KeyboardShortcut {
             "/" | "slash" => Some(Key::Slash),
             "[" => Some(Key::OpenBracket),
             "]" => Some(Key::CloseBracket),
-            _ => None,
+            "-" => Some(Key::Minus),
+            key => {
+                tracing::warn!("Unsupported key: {}", key);
+                None
+            }
         }
     }
 
@@ -182,17 +186,125 @@ pub enum ShortcutAction {
     ActivateSearch,
 }
 
-// Define a type alias for the shortcuts map to reduce nesting in config
-// Now keyed by ShortcutAction for more intuitive configuration
-pub type Shortcuts = HashMap<ShortcutAction, Vec<KeyboardShortcut>>;
+// Define a struct to represent an egui key combination for efficient lookups
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct EguiKeyCombo {
+    pub key: Key,
+    pub modifiers: Modifiers,
+    pub namespace: bool,
+}
+
+// Define a struct for the shortcuts map to reduce nesting in config
+// Contains both action->shortcuts mapping and shortcut->action mapping for efficient lookups
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+pub struct Shortcuts {
+    // Main mapping from action to list of shortcuts
+    #[serde(flatten)]
+    action_to_shortcuts: HashMap<ShortcutAction, Vec<KeyboardShortcut>>,
+    // Direct mapping from egui key combination to action for O(1) lookups
+    #[serde(skip)]
+    key_to_action: HashMap<EguiKeyCombo, ShortcutAction>,
+}
+
+impl Shortcuts {
+    pub fn new() -> Self {
+        Self {
+            action_to_shortcuts: HashMap::new(),
+            key_to_action: HashMap::new(),
+        }
+    }
+
+    pub fn get(&self, action: &ShortcutAction) -> Option<&Vec<KeyboardShortcut>> {
+        self.action_to_shortcuts.get(action)
+    }
+
+    // Add a shortcut for an action, updating both maps
+    pub fn add_shortcut(&mut self, shortcut: KeyboardShortcut, action: ShortcutAction) {
+        // Add to action_to_shortcuts map
+        self.action_to_shortcuts
+            .entry(action)
+            .or_default()
+            .push(shortcut.clone());
+
+        // Add to key_to_action map if possible
+        if let Some(egui_key) = shortcut.to_egui_key() {
+            let key_combo = EguiKeyCombo {
+                key: egui_key,
+                modifiers: Modifiers {
+                    alt: shortcut.alt,
+                    ctrl: shortcut.ctrl,
+                    shift: shortcut.shift,
+                    mac_cmd: shortcut.mac_cmd,
+                    command: shortcut.mac_cmd,
+                },
+                namespace: shortcut.namespace,
+            };
+            self.key_to_action.insert(key_combo, action);
+        }
+    }
+
+    // Set all shortcuts for an action, replacing any existing ones
+    pub fn set_shortcuts(&mut self, action: ShortcutAction, shortcuts: Vec<KeyboardShortcut>) {
+        // First, remove any existing shortcuts for this action from key_to_action
+        if let Some(existing_shortcuts) = self.action_to_shortcuts.get(&action) {
+            for shortcut in existing_shortcuts {
+                if let Some(egui_key) = shortcut.to_egui_key() {
+                    let key_combo = EguiKeyCombo {
+                        key: egui_key,
+                        modifiers: Modifiers {
+                            alt: shortcut.alt,
+                            ctrl: shortcut.ctrl,
+                            shift: shortcut.shift,
+                            mac_cmd: shortcut.mac_cmd,
+                            command: shortcut.mac_cmd,
+                        },
+                        namespace: shortcut.namespace,
+                    };
+                    self.key_to_action.remove(&key_combo);
+                }
+            }
+        }
+
+        // Now add the new shortcuts
+        self.action_to_shortcuts.insert(action, shortcuts.clone());
+
+        // Update key_to_action map
+        for shortcut in &shortcuts {
+            if let Some(egui_key) = shortcut.to_egui_key() {
+                let key_combo = EguiKeyCombo {
+                    key: egui_key,
+                    modifiers: Modifiers {
+                        alt: shortcut.alt,
+                        ctrl: shortcut.ctrl,
+                        shift: shortcut.shift,
+                        mac_cmd: shortcut.mac_cmd,
+                        command: shortcut.mac_cmd,
+                    },
+                    namespace: shortcut.namespace,
+                };
+                self.key_to_action.insert(key_combo, action);
+            }
+        }
+    }
+}
+
+// Implement IntoIterator for &Shortcuts to make it work with for loops
+impl<'a> IntoIterator for &'a Shortcuts {
+    type Item = (&'a ShortcutAction, &'a Vec<KeyboardShortcut>);
+    type IntoIter = std::collections::hash_map::Iter<'a, ShortcutAction, Vec<KeyboardShortcut>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.action_to_shortcuts.iter()
+    }
+}
 
 // Function to get default shortcuts
 pub fn default_shortcuts() -> Shortcuts {
-    let mut shortcuts: Shortcuts = HashMap::new();
+    let mut shortcuts = Shortcuts::new();
 
     // Helper function to add a shortcut
     let mut add_shortcut = |shortcut: KeyboardShortcut, action: ShortcutAction| {
-        shortcuts.entry(action).or_default().push(shortcut);
+        shortcuts.add_shortcut(shortcut, action);
     };
 
     // Navigation shortcuts
@@ -204,6 +316,10 @@ pub fn default_shortcuts() -> Shortcuts {
 
     add_shortcut(
         KeyboardShortcut::new("h"),
+        ShortcutAction::GoToParentDirectory,
+    );
+    add_shortcut(
+        KeyboardShortcut::new("-"),
         ShortcutAction::GoToParentDirectory,
     );
     add_shortcut(
@@ -420,96 +536,23 @@ pub mod shortcuts_helpers {
         modifiers: Modifiers,
         namespace: bool,
     ) -> Option<ShortcutAction> {
-        // Convert the egui Key to a string representation
-        let key_str = match key {
-            Key::A => "a",
-            Key::B => "b",
-            Key::C => "c",
-            Key::D => "d",
-            Key::E => "e",
-            Key::F => "f",
-            Key::G => "g",
-            Key::H => "h",
-            Key::I => "i",
-            Key::J => "j",
-            Key::K => "k",
-            Key::L => "l",
-            Key::M => "m",
-            Key::N => "n",
-            Key::O => "o",
-            Key::P => "p",
-            Key::Q => "q",
-            Key::R => "r",
-            Key::S => "s",
-            Key::T => "t",
-            Key::U => "u",
-            Key::V => "v",
-            Key::W => "w",
-            Key::X => "x",
-            Key::Y => "y",
-            Key::Z => "z",
-            Key::Num0 => "0",
-            Key::Num1 => "1",
-            Key::Num2 => "2",
-            Key::Num3 => "3",
-            Key::Num4 => "4",
-            Key::Num5 => "5",
-            Key::Num6 => "6",
-            Key::Num7 => "7",
-            Key::Num8 => "8",
-            Key::Num9 => "9",
-            Key::Escape => "escape",
-            Key::Enter => "enter",
-            Key::Space => "space",
-            Key::Tab => "tab",
-            Key::Backspace => "backspace",
-            Key::Insert => "insert",
-            Key::Delete => "delete",
-            Key::Home => "home",
-            Key::End => "end",
-            Key::PageUp => "pageup",
-            Key::PageDown => "pagedown",
-            Key::ArrowLeft => "left",
-            Key::ArrowRight => "right",
-            Key::ArrowUp => "up",
-            Key::ArrowDown => "down",
-            Key::Questionmark => "?",
-            Key::Slash => "/",
-            Key::OpenBracket => "[",
-            Key::CloseBracket => "]",
-            _ => return None, // Unsupported key
+        // Create a key combo for direct lookup
+        let key_combo = EguiKeyCombo {
+            key,
+            modifiers,
+            namespace,
         };
 
-        for (action, shortcuts_list) in shortcuts {
-            // Check if any shortcut in the list matches the current key and modifiers
-            for shortcut in shortcuts_list {
-                if shortcut.key == key_str
-                    && shortcut.shift == modifiers.shift
-                    && shortcut.ctrl == modifiers.ctrl
-                    && shortcut.alt == modifiers.alt
-                    && shortcut.mac_cmd == modifiers.mac_cmd
-                    && shortcut.namespace == namespace
-                {
-                    return Some(*action);
-                }
-            }
-        }
-
-        None
-    }
-
-    // Get all shortcuts for a specific action
-    pub fn get_shortcuts_for_action(
-        shortcuts: &Shortcuts,
-        action: ShortcutAction,
-    ) -> Vec<KeyboardShortcut> {
-        // Direct lookup in the HashMap
-        shortcuts.get(&action).cloned().unwrap_or_default()
+        // Use the direct key_to_action mapping for O(1) lookup
+        shortcuts.key_to_action.get(&key_combo).copied()
     }
 
     // Get a human-readable representation of shortcuts for an action
     pub fn get_shortcut_display(shortcuts: &Shortcuts, action: ShortcutAction) -> String {
-        let action_shortcuts = get_shortcuts_for_action(shortcuts, action);
+        let action_shortcuts = shortcuts
+            .get(&action)
+            .map(|v| v.as_slice())
+            .unwrap_or_else(|| &[]);
         if action_shortcuts.is_empty() {
             return String::from("Not assigned");
         }

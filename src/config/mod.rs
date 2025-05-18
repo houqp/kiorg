@@ -218,9 +218,9 @@ fn merge_shortcuts(
     }
 
     // If we get here, there are no conflicts, so apply the user shortcuts
-    for (action, shortcuts_list) in user_shortcuts {
+    for (action, shortcuts_list) in &user_shortcuts {
         // Replace the default shortcuts for this action with the user's shortcuts
-        default_shortcuts.insert(action, shortcuts_list);
+        default_shortcuts.set_shortcuts(*action, shortcuts_list.clone());
     }
 
     Ok(default_shortcuts)

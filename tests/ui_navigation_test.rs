@@ -134,6 +134,49 @@ fn test_parent_directory_selection() {
 }
 
 #[test]
+fn test_parent_directory_with_minus_key() {
+    // Create a temporary directory for testing
+    let temp_dir = tempdir().unwrap();
+
+    // Create test files and directories
+    let test_files = create_test_files(&[
+        temp_dir.path().join("dir1"),
+        temp_dir.path().join("dir2"),
+        temp_dir.path().join("test1.txt"),
+        temp_dir.path().join("test2.txt"),
+    ]);
+
+    let mut harness = create_harness(&temp_dir);
+
+    // Move down to select dir2
+    harness.press_key(Key::J);
+    harness.step();
+
+    // Navigate into dir2
+    harness.press_key(Key::L);
+    harness.step();
+
+    // Create a file in dir2
+    let dir2_file = test_files[1].join("dir2_file.txt");
+    std::fs::File::create(&dir2_file).unwrap();
+
+    // Move down to select dir2_file.txt
+    harness.press_key(Key::J);
+    harness.step();
+
+    // Navigate to parent directory using the minus key
+    harness.press_key(Key::Minus);
+    harness.step();
+
+    // Verify that dir2 is still selected
+    let tab = harness.state().tab_manager.current_tab_ref();
+    assert_eq!(
+        tab.entries[tab.selected_index].path, test_files[1],
+        "dir2 should be selected after navigating to parent directory with minus key"
+    );
+}
+
+#[test]
 fn test_prev_path_selection_with_sort() {
     // Create a temporary directory for testing
     let temp_dir = tempdir().unwrap();
