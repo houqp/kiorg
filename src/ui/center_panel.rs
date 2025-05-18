@@ -180,7 +180,6 @@ fn show_context_menu(
     can_paste: bool,
     has_selection: bool,
     has_marked_entries: bool,
-    is_file_selected: bool,
 ) -> ContextMenuAction {
     let mut action = ContextMenuAction::None;
 
@@ -215,9 +214,9 @@ fn show_context_menu(
         ui.close_menu();
     }
 
-    // Add "Open with" option - only enabled for files, not directories
+    // Add "Open with" option - enabled for both files and directories
     if ui
-        .add_enabled(is_file_selected, egui::Button::new("Open with..."))
+        .add_enabled(has_selection, egui::Button::new("Open with..."))
         .clicked()
     {
         action = ContextMenuAction::OpenWith;
@@ -416,13 +415,11 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                             // Capture the action, don't perform it yet
                             // Pass only the necessary booleans, not the whole app
                             let has_marked_entries = !tab_ref.marked_entries.is_empty();
-                            let is_file_selected = !entry.is_dir;
                             context_menu_action = show_context_menu(
                                 menu_ui,
                                 app.clipboard.is_some(),
                                 true,
                                 has_marked_entries,
-                                is_file_selected,
                             );
                         });
                     } // End row loop
@@ -444,9 +441,8 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
             context_menu_action = show_context_menu(
                 menu_ui,
                 app.clipboard.is_some(),
-                false,
-                has_marked_entries,
                 false, // No file is selected in background context menu
+                has_marked_entries,
             );
         });
     }
@@ -499,10 +495,9 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
         ContextMenuAction::OpenWith => {
             // Show the open with popup with an empty command string
             let tab = app.tab_manager.current_tab_ref();
-            if let Some(selected_entry) = tab.selected_entry() {
-                if !selected_entry.is_dir {
-                    app.show_popup = Some(crate::app::PopupType::OpenWith(String::new()));
-                }
+            if let Some(_selected_entry) = tab.selected_entry() {
+                // Now works for both files and directories
+                app.show_popup = Some(crate::app::PopupType::OpenWith(String::new()));
             }
         }
         ContextMenuAction::None => {} // Do nothing

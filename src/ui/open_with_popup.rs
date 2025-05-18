@@ -27,7 +27,7 @@ pub fn draw(ctx: &egui::Context, app: &mut Kiorg) {
                         ui.horizontal(|ui| {
                             // Text input field
                             let text_edit = TextEdit::singleline(command)
-                                .hint_text("Enter command to open file...")
+                                .hint_text("Enter command to open...")
                                 .desired_width(f32::INFINITY) // Take available width
                                 .frame(false); // No frame, like search bar
 
@@ -48,19 +48,17 @@ pub fn draw(ctx: &egui::Context, app: &mut Kiorg) {
 /// Helper function to handle open with confirmation
 pub fn confirm_open_with(app: &mut Kiorg, command: String) {
     if command.is_empty() {
-        app.notify_error("Cannot open file: No command provided");
+        app.notify_error("Cannot open: No command provided");
         return;
     }
 
     // Get the path and command before calling other functions to avoid borrow issues
     let path_to_open = {
         let tab = app.tab_manager.current_tab_ref();
-        tab.selected_entry()
-            .filter(|entry| !entry.is_dir)
-            .map(|entry| entry.path.clone())
+        tab.selected_entry().map(|entry| entry.path.clone())
     };
 
-    // Only open the file if we have a valid path
+    // Only open if we have a valid path
     if let Some(path) = path_to_open {
         app.open_file_with_command(path, command);
     }

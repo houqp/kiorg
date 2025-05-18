@@ -244,11 +244,10 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: Shortcut
         }
         ShortcutAction::OpenWithCommand => {
             let tab = app.tab_manager.current_tab_ref();
-            if let Some(selected_entry) = tab.selected_entry() {
-                if !selected_entry.is_dir {
-                    // Show the open with popup with an empty command string
-                    app.show_popup = Some(PopupType::OpenWith(String::new()));
-                }
+            if let Some(_selected_entry) = tab.selected_entry() {
+                // Show the open with popup with an empty command string
+                // Now works for both files and directories
+                app.show_popup = Some(PopupType::OpenWith(String::new()));
             }
         }
     }
