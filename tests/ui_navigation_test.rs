@@ -314,7 +314,7 @@ fn test_mouse_click_selects_and_previews() {
     });
 
     harness.step(); // Process the click and update state
-    harness.step(); // One more step to process the preview content
+    harness.step();
 
     // --- Assertions ---
     // 1. Check if the selected index is updated to 1 ("b.txt")
@@ -458,7 +458,6 @@ fn test_image_preview() {
 
     // Step to update the preview
     harness.step();
-    harness.step(); // Additional step to ensure preview is updated
 
     // Check if the preview content is an image
     match &harness.state().preview_content {
@@ -531,7 +530,7 @@ fn test_zip_preview() {
 
     // Try multiple steps to allow async loading to complete
     for _ in 0..20 {
-        std::thread::sleep(std::time::Duration::from_millis(50));
+        std::thread::sleep(std::time::Duration::from_millis(10));
         match &harness.state().preview_content {
             Some(PreviewContent::Zip(entries)) => {
                 // Verify zip entries

@@ -56,9 +56,6 @@ fn test_rename_popup() {
     harness.press_key(Key::Enter);
     harness.step();
 
-    // Add extra step to ensure rename operation completes
-    harness.step();
-
     // Verify the popup is closed
     assert_eq!(
         harness.state().show_popup,

@@ -237,12 +237,9 @@ fn test_pdf_preview_popup() {
     }
     harness.step();
 
-    // Step to update the preview
-    harness.step();
-
     // Wait for the document preview to load
     for _ in 0..20 {
-        thread::sleep(Duration::from_millis(50));
+        thread::sleep(Duration::from_millis(10));
         match harness.state().preview_content.as_ref() {
             Some(PreviewContent::Doc(_)) => break,
             Some(PreviewContent::Loading(..)) => harness.step(),
@@ -420,7 +417,7 @@ fn test_doc_preview_popup_page_count_metadata() {
 
     // Wait for the document preview to load
     for _ in 0..20 {
-        thread::sleep(Duration::from_millis(50));
+        thread::sleep(Duration::from_millis(10));
         match harness.state().preview_content.as_ref() {
             Some(PreviewContent::Doc(_)) => break,
             Some(PreviewContent::Loading(..)) => harness.step(),

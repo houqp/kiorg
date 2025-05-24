@@ -26,8 +26,8 @@ fn find_entry_index(harness: &ui_test_helpers::TestHarness, name: &str) -> Optio
 fn wait_and_step(harness: &mut ui_test_helpers::TestHarness) {
     // Wait for filesystem events to propagate and be picked up by notify
     // Check in a loop with short intervals to avoid unnecessary waiting
-    let max_iterations = 20;
-    let sleep_duration = Duration::from_millis(50);
+    let max_iterations = 100; // Increased iterations to account for shorter sleep
+    let sleep_duration = Duration::from_millis(5); // Reduced from 50ms to 5ms
     let mut iterations = 0;
 
     while iterations < max_iterations {
@@ -47,7 +47,6 @@ fn wait_and_step(harness: &mut ui_test_helpers::TestHarness) {
         max_iterations,
         sleep_duration.as_millis()
     );
-    harness.step(); // Process events and update UI (should consume the flag)
     harness.step(); // Another step might be needed for async updates
 }
 

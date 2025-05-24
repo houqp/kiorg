@@ -46,9 +46,6 @@ fn test_rename_preserves_selected_index() {
     harness.press_key(Key::Enter);
     harness.step();
 
-    // Add extra step to ensure rename operation completes
-    harness.step();
-
     // Verify the file was renamed
     assert!(test_files[0].exists(), "file1.txt should still exist");
     assert!(!test_files[1].exists(), "file2.txt should no longer exist");

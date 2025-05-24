@@ -37,14 +37,13 @@ fn test_epub_preview() {
 
     // Step to update the preview
     harness.step();
-    harness.step(); // Additional step to ensure preview is updated
 
     // Check if the preview content is an EPUB or loading
     let mut is_epub_content = false;
 
     // Try multiple steps to allow async loading to complete
     for _ in 0..20 {
-        std::thread::sleep(std::time::Duration::from_millis(50));
+        std::thread::sleep(std::time::Duration::from_millis(10));
         match &harness.state().preview_content {
             Some(PreviewContent::Doc(doc_meta)) => {
                 // Handle both PDF and EPUB variants, but we expect EPUB here

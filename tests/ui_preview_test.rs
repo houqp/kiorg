@@ -24,9 +24,6 @@ fn test_text_file_preview() {
     harness.press_key(Key::J);
     harness.step();
 
-    // Step to update the preview
-    harness.step();
-
     // Check if the preview content is text and contains the expected content
     match &harness.state().preview_content {
         Some(PreviewContent::Text(text)) => {
@@ -59,9 +56,6 @@ fn test_binary_file_preview() {
     // Select the binary file using J shortcut
     // Since entries are sorted by name, we can navigate to the binary file
     harness.press_key(Key::J);
-    harness.step();
-
-    // Step to update the preview
     harness.step();
 
     // Check if the preview content is text and indicates it's a binary file
@@ -97,9 +91,6 @@ fn test_directory_preview() {
     harness.press_key(Key::J);
     harness.step();
 
-    // Step to update the preview
-    harness.step();
-
     // Check if the preview content is text and indicates it's a directory
     match &harness.state().preview_content {
         Some(PreviewContent::Text(text)) => {
@@ -131,9 +122,6 @@ fn test_image_preview() {
     // Select the image file using J shortcut
     // Since entries are sorted by name, we can navigate to the image file
     harness.press_key(Key::J);
-    harness.step();
-
-    // Step to update the preview
     harness.step();
 
     // Check if the preview content is an image
@@ -170,15 +158,12 @@ fn test_zip_preview() {
     harness.press_key(Key::J);
     harness.step();
 
-    // Step to update the preview
-    harness.step();
-
     // Check if the preview content is a zip or loading
     let mut is_zip_content = false;
 
     // Try multiple steps to allow async loading to complete
     for _ in 0..20 {
-        std::thread::sleep(std::time::Duration::from_millis(50));
+        std::thread::sleep(std::time::Duration::from_millis(10));
         match &harness.state().preview_content {
             Some(PreviewContent::Zip(entries)) => {
                 // Verify zip entries
