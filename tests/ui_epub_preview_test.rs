@@ -47,48 +47,56 @@ fn test_epub_preview() {
         std::thread::sleep(std::time::Duration::from_millis(50));
         match &harness.state().preview_content {
             Some(PreviewContent::Doc(doc_meta)) => {
-                // Verify EPUB metadata
-                assert!(
-                    !doc_meta.metadata.is_empty(),
-                    "EPUB metadata should not be empty"
-                );
+                // Handle both PDF and EPUB variants, but we expect EPUB here
+                match doc_meta {
+                    kiorg::models::preview_content::DocMeta::Epub(epub_meta) => {
+                        // Verify EPUB metadata
+                        assert!(
+                            !epub_meta.metadata.is_empty(),
+                            "EPUB metadata should not be empty"
+                        );
 
-                // Check for expected metadata fields
-                let creator = doc_meta
-                    .metadata
-                    .get("creator")
-                    .or_else(|| doc_meta.metadata.get("dc:creator"));
-                let language = doc_meta
-                    .metadata
-                    .get("language")
-                    .or_else(|| doc_meta.metadata.get("dc:language"));
+                        // Check for expected metadata fields
+                        let creator = epub_meta
+                            .metadata
+                            .get("creator")
+                            .or_else(|| epub_meta.metadata.get("dc:creator"));
+                        let language = epub_meta
+                            .metadata
+                            .get("language")
+                            .or_else(|| epub_meta.metadata.get("dc:language"));
 
-                // Title is now stored in the title field, not in metadata
-                assert!(!doc_meta.title.is_empty(), "Title should not be empty");
-                assert!(creator.is_some(), "Creator should be in the EPUB metadata");
-                assert!(
-                    language.is_some(),
-                    "Language should be in the EPUB metadata"
-                );
+                        // Title is now stored in the title field, not in metadata
+                        assert!(!epub_meta.title.is_empty(), "Title should not be empty");
+                        assert!(creator.is_some(), "Creator should be in the EPUB metadata");
+                        assert!(
+                            language.is_some(),
+                            "Language should be in the EPUB metadata"
+                        );
 
-                // Check specific values
-                assert!(
-                    doc_meta.title.contains("Test EPUB Book"),
-                    "Title should contain 'Test EPUB Book'"
-                );
+                        // Check specific values
+                        assert!(
+                            epub_meta.title.contains("Test EPUB Book"),
+                            "Title should contain 'Test EPUB Book'"
+                        );
 
-                if let Some(creator_value) = creator {
-                    assert!(
-                        creator_value.contains("Test Author"),
-                        "Creator should contain 'Test Author'"
-                    );
+                        if let Some(creator_value) = creator {
+                            assert!(
+                                creator_value.contains("Test Author"),
+                                "Creator should contain 'Test Author'"
+                            );
+                        }
+
+                        // Cover image is optional, so we don't assert on it
+                        // Just check that the test runs without errors
+
+                        is_epub_content = true;
+                        break;
+                    }
+                    kiorg::models::preview_content::DocMeta::Pdf(_) => {
+                        panic!("Expected EPUB document but got PDF");
+                    }
                 }
-
-                // Cover image is optional, so we don't assert on it
-                // Just check that the test runs without errors
-
-                is_epub_content = true;
-                break;
             }
             Some(PreviewContent::Loading(..)) => {
                 // Still loading, try another step

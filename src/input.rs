@@ -1,6 +1,6 @@
 use crate::config::shortcuts::{self, shortcuts_helpers, ShortcutAction};
 use crate::ui::terminal;
-use crate::ui::{add_entry_popup, bookmark_popup, center_panel};
+use crate::ui::{add_entry_popup, bookmark_popup, center_panel, preview_popup};
 use egui::{Key, Modifiers};
 
 use super::app::{Kiorg, PopupType};
@@ -15,6 +15,9 @@ fn is_cancel_keys(key: Key) -> bool {
 // Helper function to handle a shortcut action
 fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: ShortcutAction) {
     match action {
+        ShortcutAction::ShowFilePreview => {
+            preview_popup::handle_show_file_preview(app, ctx);
+        }
         ShortcutAction::MoveDown => {
             app.move_selection(1);
         }
@@ -266,6 +269,12 @@ fn process_key(
 
     // Handle special modal states first based on the show_popup field
     match &app.show_popup {
+        Some(PopupType::Preview) => {
+            if is_cancel_keys(key) {
+                app.show_popup = None;
+            }
+            return;
+        }
         Some(PopupType::Exit) => {
             if key == Key::Enter {
                 crate::ui::exit_popup::confirm_exit(app);

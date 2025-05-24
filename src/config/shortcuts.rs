@@ -150,6 +150,8 @@ pub enum ShortcutAction {
     GoToLastEntry,
     GoBackInHistory,
     GoForwardInHistory,
+    SwitchToNextTab,
+    SwitchToPreviousTab,
 
     // File operations
     DeleteEntry,
@@ -173,18 +175,17 @@ pub enum ShortcutAction {
     SwitchToTab8,
     SwitchToTab9,
     CloseCurrentTab,
-    SwitchToNextTab,
-    SwitchToPreviousTab,
 
     // Bookmarks
     ToggleBookmark,
     ShowBookmarks,
 
-    // Utils
-    OpenTerminal,
-    ShowHelp,
-    Exit,
+    // UI interaction
     ActivateSearch,
+    ShowHelp,
+    OpenTerminal,
+    ShowFilePreview,
+    Exit,
 }
 
 // Define a struct to represent an egui key combination for efficient lookups
@@ -332,6 +333,12 @@ pub fn default_shortcuts() -> Shortcuts {
     add_shortcut(
         KeyboardShortcut::new("right"),
         ShortcutAction::OpenDirectory,
+    );
+
+    // Preview file in popup
+    add_shortcut(
+        KeyboardShortcut::new("k").with_shift(),
+        ShortcutAction::ShowFilePreview,
     );
     add_shortcut(
         KeyboardShortcut::new("enter"),

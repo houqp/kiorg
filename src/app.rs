@@ -67,6 +67,7 @@ pub enum PopupType {
     OpenWith(String), // Command to use when opening a file with a custom command
     AddEntry(String), // Name for the new file/directory being added
     Bookmarks(usize), // Selected index in the bookmarks list
+    Preview,          // Show file preview in a popup window
 }
 
 /// Clipboard operation types
@@ -92,7 +93,7 @@ use crate::ui::terminal;
 use crate::ui::top_banner;
 use crate::ui::{
     about_popup, bookmark_popup, center_panel, help_window, left_panel, open_with_popup,
-    rename_popup, right_panel,
+    preview_popup, rename_popup, right_panel,
 };
 use egui_notify::Toasts;
 
@@ -708,7 +709,7 @@ impl Kiorg {
 }
 
 impl eframe::App for Kiorg {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn update(&mut self, ctx: &egui::Context, _: &mut eframe::Frame) {
         // Store shortcuts in the context for the help window to access
         if let Some(shortcuts) = &self.config.shortcuts {
             ctx.data_mut(|d| d.insert_temp(egui::Id::new("shortcuts"), shortcuts.clone()));
@@ -793,6 +794,9 @@ impl eframe::App for Kiorg {
                     }
                     bookmark_popup::BookmarkAction::None => {}
                 };
+            }
+            Some(PopupType::Preview) => {
+                preview_popup::show_preview_popup(ctx, self);
             }
             None => {}
         }

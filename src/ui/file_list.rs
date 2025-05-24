@@ -431,7 +431,7 @@ pub fn draw_parent_entry_row(
     response
 }
 
-fn truncate_text(text: &str, available_width: f32) -> String {
+pub fn truncate_text(text: &str, available_width: f32) -> String {
     // Approximate width of a character in pixels
     let char_width = 8.0;
     let max_chars = (available_width / char_width) as usize;

@@ -62,6 +62,10 @@ pub fn show_help_window(ctx: &egui::Context, show_help: &mut bool, colors: &AppC
                                 "Open file with custom command",
                             ),
                             (
+                                ShortcutAction::ShowFilePreview,
+                                "Preview file in popup",
+                            ),
+                            (
                                 ShortcutAction::DeleteEntry,
                                 "Delete selected file/directory",
                             ),

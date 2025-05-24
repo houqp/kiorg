@@ -34,7 +34,6 @@
 ### Learnings and project insights
 
 - The importance of maintaining accurate and up-to-date documentation for long-term project success
-
 - The value of clear and concise communication within the development team
 - Persisting user preferences enhances the user experience significantly
 - The serde library makes it straightforward to serialize and deserialize Rust structs to and from TOML

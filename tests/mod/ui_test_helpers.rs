@@ -163,6 +163,100 @@ pub fn create_test_epub(path: &PathBuf) -> PathBuf {
     path.clone()
 }
 
+/// Create a minimal test PDF file with multiple pages
+pub fn create_test_pdf(path: &PathBuf, page_count: usize) -> PathBuf {
+    // Create a minimal multi-page PDF using a simple approach
+    // This creates a basic PDF structure with the specified number of pages
+    let pdf_content = create_minimal_pdf_content(page_count);
+    std::fs::write(path, pdf_content).unwrap();
+    assert!(path.exists());
+    path.clone()
+}
+
+/// Generate minimal PDF content with the specified number of pages
+fn create_minimal_pdf_content(page_count: usize) -> Vec<u8> {
+    // Create a properly structured PDF that PDFium can parse
+    let mut content = Vec::new();
+    let mut offsets = Vec::new();
+
+    // PDF Header
+    let header = b"%PDF-1.4\n";
+    content.extend_from_slice(header);
+
+    // Track object offsets for xref table
+    offsets.push(0); // Object 0 (free)
+
+    // Object 1: Catalog
+    offsets.push(content.len());
+    let catalog = format!("1 0 obj\n<<\n/Type /Catalog\n/Pages 2 0 R\n>>\nendobj\n");
+    content.extend_from_slice(catalog.as_bytes());
+
+    // Object 2: Pages
+    offsets.push(content.len());
+    let mut kids_refs = String::new();
+    for i in 0..page_count {
+        if i > 0 {
+            kids_refs.push(' ');
+        }
+        kids_refs.push_str(&format!("{} 0 R", 3 + i * 2));
+    }
+    let pages = format!(
+        "2 0 obj\n<<\n/Type /Pages\n/Count {}\n/Kids [{}]\n>>\nendobj\n",
+        page_count, kids_refs
+    );
+    content.extend_from_slice(pages.as_bytes());
+
+    // Create page objects and their content streams
+    for i in 0..page_count {
+        let page_obj_num = 3 + i * 2;
+        let content_obj_num = page_obj_num + 1;
+
+        // Page object
+        offsets.push(content.len());
+        let page_content_text = format!("(Page {})", i + 1);
+        let stream_content = format!("BT\n/F1 12 Tf\n72 720 Td\n{} Tj\nET\n", page_content_text);
+        let stream_length = stream_content.len();
+
+        let page = format!(
+            "{} 0 obj\n<<\n/Type /Page\n/Parent 2 0 R\n/MediaBox [0 0 612 792]\n/Contents {} 0 R\n/Resources <<\n/Font <<\n/F1 <<\n/Type /Font\n/Subtype /Type1\n/BaseFont /Helvetica\n>>\n>>\n>>\n>>\nendobj\n",
+            page_obj_num, content_obj_num
+        );
+        content.extend_from_slice(page.as_bytes());
+
+        // Content stream object
+        offsets.push(content.len());
+        let content_stream = format!(
+            "{} 0 obj\n<<\n/Length {}\n>>\nstream\n{}endstream\nendobj\n",
+            content_obj_num, stream_length, stream_content
+        );
+        content.extend_from_slice(content_stream.as_bytes());
+    }
+
+    // Cross-reference table
+    let xref_offset = content.len();
+    let mut xref = format!("xref\n0 {}\n", offsets.len());
+
+    // First entry (object 0) is always free
+    xref.push_str("0000000000 65535 f \n");
+
+    // Add entries for all other objects
+    for i in 1..offsets.len() {
+        xref.push_str(&format!("{:010} 00000 n \n", offsets[i]));
+    }
+
+    content.extend_from_slice(xref.as_bytes());
+
+    // Trailer
+    let trailer = format!(
+        "trailer\n<<\n/Size {}\n/Root 1 0 R\n>>\nstartxref\n{}\n%%EOF\n",
+        offsets.len(),
+        xref_offset
+    );
+    content.extend_from_slice(trailer.as_bytes());
+
+    content
+}
+
 // Wrapper to hold both the harness and the config temp directory to prevent premature cleanup
 pub struct TestHarness<'a> {
     pub harness: Harness<'a, Kiorg>,

@@ -6,15 +6,41 @@ use std::sync::{Arc, Mutex};
 /// Type alias for the async preview content receiver
 pub type PreviewReceiver = Option<Arc<Mutex<Receiver<Result<PreviewContent, String>>>>>;
 
-/// Metadata for document-type files (PDF, EPUB, etc.)
+/// Metadata for PDF documents
 #[derive(Clone, Debug)]
-pub struct DocMeta {
+pub struct PdfMeta {
     /// Document title
     pub title: String,
     /// Document metadata (key-value pairs)
     pub metadata: HashMap<String, String>,
-    /// Optional cover image or first page
-    pub cover: Option<egui::widgets::ImageSource<'static>>,
+    /// Cover image or first page
+    pub cover: egui::widgets::ImageSource<'static>,
+    /// Current page number (0-indexed)
+    pub current_page: usize,
+    /// Total number of pages in the PDF
+    pub page_count: usize,
+}
+
+/// Metadata for EPUB documents
+#[derive(Clone, Debug)]
+pub struct EpubMeta {
+    /// Document title
+    pub title: String,
+    /// Document metadata (key-value pairs)
+    pub metadata: HashMap<String, String>,
+    /// Cover image or first page
+    pub cover: egui::widgets::ImageSource<'static>,
+    /// Total number of pages in the EPUB
+    pub page_count: usize,
+}
+
+/// Enum for different document types
+#[derive(Clone, Debug)]
+pub enum DocMeta {
+    /// PDF document with page navigation support
+    Pdf(PdfMeta),
+    /// EPUB document without page navigation
+    Epub(EpubMeta),
 }
 
 /// Metadata for image files
@@ -112,38 +138,45 @@ impl PreviewContent {
         image: egui::widgets::ImageSource<'static>,
         metadata: HashMap<String, String>,
         title: Option<String>,
+        page_count: usize,
     ) -> Self {
         // Use provided title or default
         let title = title.unwrap_or_else(|| "__Untitled__".to_string());
 
-        PreviewContent::Doc(DocMeta {
+        PreviewContent::Doc(DocMeta::Pdf(PdfMeta {
             title,
             metadata,
-            cover: Some(image),
-        })
+            cover: image,
+            current_page: 0,
+            page_count,
+        }))
     }
 
     /// Creates a new PDF document preview content with metadata (extracts title from metadata)
     pub fn pdf_from_metadata(
         image: egui::widgets::ImageSource<'static>,
         mut metadata: HashMap<String, String>,
+        page_count: usize,
     ) -> Self {
         // Extract title from metadata or use default
         let title = metadata
             .remove("Title")
             .unwrap_or_else(|| "__Untitled__".to_string());
 
-        PreviewContent::Doc(DocMeta {
+        PreviewContent::Doc(DocMeta::Pdf(PdfMeta {
             title,
             metadata,
-            cover: Some(image),
-        })
+            cover: image,
+            current_page: 0,
+            page_count,
+        }))
     }
 
     /// Creates a new EPUB preview content with metadata and optional cover image
     pub fn epub(
         mut metadata: HashMap<String, Vec<String>>,
-        cover_image: Option<egui::widgets::ImageSource<'static>>,
+        cover_image: egui::widgets::ImageSource<'static>,
+        page_count: usize,
     ) -> Self {
         // Extract title from metadata
         let title = Self::extract_epub_book_title(&metadata);
@@ -168,11 +201,12 @@ impl PreviewContent {
             })
             .collect();
 
-        PreviewContent::Doc(DocMeta {
+        PreviewContent::Doc(DocMeta::Epub(EpubMeta {
             title,
             metadata: single_metadata,
             cover: cover_image,
-        })
+            page_count,
+        }))
     }
 
     /// Helper function to extract book title from EPUB metadata

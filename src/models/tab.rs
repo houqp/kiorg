@@ -336,10 +336,6 @@ impl TabManager {
     }
 
     pub fn add_tab(&mut self, path: PathBuf) {
-        self.add_tab_with_config(path, None);
-    }
-
-    pub fn add_tab_with_config(&mut self, path: PathBuf, _config: Option<&Config>) {
         self.tabs.push(Tab::new(path));
         self.current_tab_index = self.tabs.len() - 1;
     }

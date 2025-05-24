@@ -10,6 +10,7 @@ pub mod left_panel;
 pub mod open_with_popup;
 pub mod path_nav;
 pub mod preview;
+pub mod preview_popup;
 pub mod rename_popup;
 pub mod right_panel;
 pub mod search_bar;
