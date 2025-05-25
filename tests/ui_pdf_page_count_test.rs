@@ -37,11 +37,9 @@ fn test_pdf_page_count_in_preview_content() {
 
         dbg!(&harness.state().preview_content);
         // Check if PDF preview content is loaded
-        if let Some(PreviewContent::Doc(doc_meta)) = &harness.state().preview_content {
-            if matches!(doc_meta, kiorg::models::preview_content::DocMeta::Pdf(_)) {
-                pdf_loaded = true;
-                break;
-            }
+        if let Some(PreviewContent::Pdf(_)) = &harness.state().preview_content {
+            pdf_loaded = true;
+            break;
         }
     }
 
@@ -54,30 +52,26 @@ fn test_pdf_page_count_in_preview_content() {
     // The main goal is to test that IF a PDF loads, the page count is accessible
     // This verifies the code structure is correct for displaying page counts
     match &harness.state().preview_content {
-        Some(PreviewContent::Doc(doc_meta)) => {
-            match doc_meta {
-                kiorg::models::preview_content::DocMeta::Pdf(pdf_meta) => {
-                    // SUCCESS: PDF loaded and we can verify the page count field exists
-                    assert!(
-                        pdf_meta.page_count > 0,
-                        "PDF page count should be greater than 0 when loaded"
-                    );
+        Some(PreviewContent::Pdf(pdf_meta)) => {
+            // SUCCESS: PDF loaded and we can verify the page count field exists
+            assert!(
+                pdf_meta.page_count > 0,
+                "PDF page count should be greater than 0 when loaded"
+            );
 
-                    // Verify that the PDF metadata includes expected fields
-                    assert!(!pdf_meta.title.is_empty(), "PDF should have a title");
+            // Verify that the PDF metadata includes expected fields
+            assert!(!pdf_meta.title.is_empty(), "PDF should have a title");
 
-                    // Test passes - page count is available in the metadata
-                    // The UI rendering code in render_pdf_preview() will display this
-                    // as "Page Count: X" in the metadata grid
-                    println!(
-                        "✓ PDF loaded successfully with {} pages",
-                        pdf_meta.page_count
-                    );
-                }
-                kiorg::models::preview_content::DocMeta::Epub(_) => {
-                    panic!("Expected PDF preview content, got EPUB");
-                }
-            }
+            // Test passes - page count is available in the metadata
+            // The UI rendering code in render_pdf_preview() will display this
+            // as "Page Count: X" in the metadata grid
+            println!(
+                "✓ PDF loaded successfully with {} pages",
+                pdf_meta.page_count
+            );
+        }
+        Some(PreviewContent::Epub(_)) => {
+            panic!("Expected PDF preview content, got EPUB");
         }
         Some(PreviewContent::Text(_)) => {
             panic!("PDF should not be treated as an text");

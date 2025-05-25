@@ -68,18 +68,17 @@ fn test_image_preview_popup_shortcut() {
     match &harness.state().show_popup {
         Some(PopupType::Preview) => {
             // Check that the preview content has been loaded with initial page 0
-            if let Some(PreviewContent::Doc(doc_meta)) = &harness.state().preview_content {
-                match doc_meta {
-                    kiorg::models::preview_content::DocMeta::Pdf(pdf_meta) => {
-                        assert_eq!(
-                            pdf_meta.current_page, 0,
-                            "Preview popup should start at page 0"
-                        );
-                    }
-                    kiorg::models::preview_content::DocMeta::Epub(_) => {
-                        // EPUB doesn't have current_page, so nothing to check
-                    }
+            match &harness.state().preview_content {
+                Some(PreviewContent::Pdf(pdf_meta)) => {
+                    assert_eq!(
+                        pdf_meta.current_page, 0,
+                        "Preview popup should start at page 0"
+                    );
                 }
+                Some(PreviewContent::Epub(_)) => {
+                    // EPUB doesn't have current_page, so nothing to check
+                }
+                _ => {}
             }
         }
         other => panic!(
@@ -241,7 +240,7 @@ fn test_pdf_preview_popup() {
     for _ in 0..20 {
         thread::sleep(Duration::from_millis(10));
         match harness.state().preview_content.as_ref() {
-            Some(PreviewContent::Doc(_)) => break,
+            Some(PreviewContent::Pdf(_)) | Some(PreviewContent::Epub(_)) => break,
             Some(PreviewContent::Loading(..)) => harness.step(),
             _ => harness.step(),
         }
@@ -249,8 +248,8 @@ fn test_pdf_preview_popup() {
 
     // Verify document preview is loaded
     match harness.state().preview_content.as_ref() {
-        Some(PreviewContent::Doc(_)) => {}
-        other => panic!("Preview content should be Doc, got {:?}", other),
+        Some(PreviewContent::Pdf(_)) | Some(PreviewContent::Epub(_)) => {}
+        other => panic!("Preview content should be PDF or EPUB, got {:?}", other),
     }
 
     // Open preview popup with Shift+K
@@ -265,18 +264,17 @@ fn test_pdf_preview_popup() {
     match &harness.state().show_popup {
         Some(PopupType::Preview) => {
             // Check that the preview content has been loaded with initial page 0
-            if let Some(PreviewContent::Doc(doc_meta)) = &harness.state().preview_content {
-                match doc_meta {
-                    kiorg::models::preview_content::DocMeta::Pdf(pdf_meta) => {
-                        assert_eq!(
-                            pdf_meta.current_page, 0,
-                            "Preview popup should start at page 0"
-                        );
-                    }
-                    kiorg::models::preview_content::DocMeta::Epub(_) => {
-                        // EPUB doesn't have current_page, so nothing to check
-                    }
+            match &harness.state().preview_content {
+                Some(PreviewContent::Pdf(pdf_meta)) => {
+                    assert_eq!(
+                        pdf_meta.current_page, 0,
+                        "Preview popup should start at page 0"
+                    );
                 }
+                Some(PreviewContent::Epub(_)) => {
+                    // EPUB doesn't have current_page, so nothing to check
+                }
+                _ => {}
             }
         }
         other => panic!(
@@ -293,19 +291,18 @@ fn test_pdf_preview_popup() {
     match &harness.state().show_popup {
         Some(PopupType::Preview) => {
             // Check that the preview content has been loaded and page navigation works
-            if let Some(PreviewContent::Doc(doc_meta)) = &harness.state().preview_content {
-                match doc_meta {
-                    kiorg::models::preview_content::DocMeta::Pdf(pdf_meta) => {
-                        // Either we advanced to page 1 or we're still at page 0 if there's only one page
-                        assert!(
-                            pdf_meta.current_page <= 1,
-                            "Page should be 0 or 1 after pressing right arrow"
-                        );
-                    }
-                    kiorg::models::preview_content::DocMeta::Epub(_) => {
-                        // EPUB doesn't support page navigation
-                    }
+            match &harness.state().preview_content {
+                Some(PreviewContent::Pdf(pdf_meta)) => {
+                    // Either we advanced to page 1 or we're still at page 0 if there's only one page
+                    assert!(
+                        pdf_meta.current_page <= 1,
+                        "Page should be 0 or 1 after pressing right arrow"
+                    );
                 }
+                Some(PreviewContent::Epub(_)) => {
+                    // EPUB doesn't support page navigation
+                }
+                _ => {}
             }
         }
         other => panic!("Preview popup should still be shown, got {:?}", other),
@@ -318,18 +315,17 @@ fn test_pdf_preview_popup() {
     // Verify we're back at page 0
     match &harness.state().show_popup {
         Some(PopupType::Preview) => {
-            if let Some(PreviewContent::Doc(doc_meta)) = &harness.state().preview_content {
-                match doc_meta {
-                    kiorg::models::preview_content::DocMeta::Pdf(pdf_meta) => {
-                        assert_eq!(
-                            pdf_meta.current_page, 0,
-                            "Should be back at page 0 after pressing left arrow"
-                        );
-                    }
-                    kiorg::models::preview_content::DocMeta::Epub(_) => {
-                        // EPUB doesn't support page navigation
-                    }
+            match &harness.state().preview_content {
+                Some(PreviewContent::Pdf(pdf_meta)) => {
+                    assert_eq!(
+                        pdf_meta.current_page, 0,
+                        "Should be back at page 0 after pressing left arrow"
+                    );
                 }
+                Some(PreviewContent::Epub(_)) => {
+                    // EPUB doesn't support page navigation
+                }
+                _ => {}
             }
         }
         other => panic!("Preview popup should still be shown, got {:?}", other),
@@ -419,7 +415,7 @@ fn test_doc_preview_popup_page_count_metadata() {
     for _ in 0..20 {
         thread::sleep(Duration::from_millis(10));
         match harness.state().preview_content.as_ref() {
-            Some(PreviewContent::Doc(_)) => break,
+            Some(PreviewContent::Pdf(_)) | Some(PreviewContent::Epub(_)) => break,
             Some(PreviewContent::Loading(..)) => harness.step(),
             _ => harness.step(),
         }
@@ -427,8 +423,8 @@ fn test_doc_preview_popup_page_count_metadata() {
 
     // Verify document preview is loaded
     match harness.state().preview_content.as_ref() {
-        Some(PreviewContent::Doc(_)) => {}
-        other => panic!("Preview content should be Doc, got {:?}", other),
+        Some(PreviewContent::Pdf(_)) | Some(PreviewContent::Epub(_)) => {}
+        other => panic!("Preview content should be PDF or EPUB, got {:?}", other),
     }
 
     // Open preview popup with Shift+K
@@ -443,40 +439,39 @@ fn test_doc_preview_popup_page_count_metadata() {
     match &harness.state().show_popup {
         Some(PopupType::Preview) => {
             // Check that the preview content has Page Count metadata set correctly
-            if let Some(PreviewContent::Doc(doc_meta)) = &harness.state().preview_content {
-                match doc_meta {
-                    kiorg::models::preview_content::DocMeta::Pdf(pdf_meta) => {
-                        assert_eq!(
-                            pdf_meta.current_page, 0,
-                            "Preview popup should start at page 0"
-                        );
+            match &harness.state().preview_content {
+                Some(PreviewContent::Pdf(pdf_meta)) => {
+                    assert_eq!(
+                        pdf_meta.current_page, 0,
+                        "Preview popup should start at page 0"
+                    );
 
-                        // Most importantly: verify that page count is set as a native field
-                        // For PDF files, the page count should be at least 1
-                        let page_count = pdf_meta.page_count;
+                    // Most importantly: verify that page count is set as a native field
+                    // For PDF files, the page count should be at least 1
+                    let page_count = pdf_meta.page_count;
 
-                        assert!(
-                            page_count >= 1,
-                            "Page count should be at least 1 for valid document files"
-                        );
+                    assert!(
+                        page_count >= 1,
+                        "Page count should be at least 1 for valid document files"
+                    );
 
-                        // Verify that the metadata is not empty
-                        assert!(
-                            !pdf_meta.metadata.is_empty(),
-                            "Metadata should not be empty for document preview popup"
-                        );
-                    }
-                    kiorg::models::preview_content::DocMeta::Epub(epub_meta) => {
-                        // For EPUB files, we don't expect page count since EPUBs are reflowable
-                        // Just verify that the metadata is not empty
-                        assert!(
-                            !epub_meta.metadata.is_empty(),
-                            "Metadata should not be empty for document preview popup"
-                        );
-                    }
+                    // Verify that the metadata is not empty
+                    assert!(
+                        !pdf_meta.metadata.is_empty(),
+                        "Metadata should not be empty for document preview popup"
+                    );
                 }
-            } else {
-                panic!("Preview content should be Doc type for document file");
+                Some(PreviewContent::Epub(epub_meta)) => {
+                    // For EPUB files, we don't expect page count since EPUBs are reflowable
+                    // Just verify that the metadata is not empty
+                    assert!(
+                        !epub_meta.metadata.is_empty(),
+                        "Metadata should not be empty for document preview popup"
+                    );
+                }
+                _ => {
+                    panic!("Preview content should be PDF or EPUB type for document file");
+                }
             }
         }
         other => panic!(

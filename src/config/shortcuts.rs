@@ -152,6 +152,8 @@ pub enum ShortcutAction {
     GoForwardInHistory,
     SwitchToNextTab,
     SwitchToPreviousTab,
+    PageUp,
+    PageDown,
 
     // File operations
     DeleteEntry,
@@ -464,6 +466,17 @@ pub fn default_shortcuts() -> Shortcuts {
         KeyboardShortcut::new("o").with_shift(),
         ShortcutAction::OpenWithCommand,
     );
+
+    add_shortcut(
+        KeyboardShortcut::new("u").with_ctrl(),
+        ShortcutAction::PageUp,
+    );
+    add_shortcut(
+        KeyboardShortcut::new("d").with_ctrl(),
+        ShortcutAction::PageDown,
+    );
+    add_shortcut(KeyboardShortcut::new("pageup"), ShortcutAction::PageUp);
+    add_shortcut(KeyboardShortcut::new("pagedown"), ShortcutAction::PageDown);
 
     shortcuts
 }

@@ -1,7 +1,7 @@
 //! Document preview module (PDF, EPUB)
 
 use crate::config::colors::AppColors;
-use crate::models::preview_content::{DocMeta, EpubMeta, PdfMeta, PreviewContent};
+use crate::models::preview_content::{EpubMeta, PdfMeta, PreviewContent};
 use egui::{load::SizedTexture, widgets::ImageSource, RichText, TextureId, Vec2}; // Corrected import for SizedTexture and ImageSource
 use pathfinder_geometry::transform2d::Transform2F;
 use pdf::file::{NoCache, NoLog};
@@ -14,19 +14,23 @@ const METADATA_KEY_COLUMN_WIDTH: f32 = 100.0;
 /// Render document content
 pub fn render(
     ui: &mut egui::Ui,
-    doc_meta: &DocMeta,
+    pdf_meta: &PdfMeta,
     colors: &AppColors,
     available_width: f32,
     available_height: f32,
 ) {
-    match doc_meta {
-        DocMeta::Pdf(pdf_meta) => {
-            render_pdf_preview(ui, pdf_meta, colors, available_width, available_height);
-        }
-        DocMeta::Epub(epub_meta) => {
-            render_epub_preview(ui, epub_meta, colors, available_width, available_height);
-        }
-    }
+    render_pdf_preview(ui, pdf_meta, colors, available_width, available_height);
+}
+
+/// Render EPUB document content
+pub fn render_epub(
+    ui: &mut egui::Ui,
+    epub_meta: &EpubMeta,
+    colors: &AppColors,
+    available_width: f32,
+    available_height: f32,
+) {
+    render_epub_preview(ui, epub_meta, colors, available_width, available_height);
 }
 
 /// Render PDF document preview

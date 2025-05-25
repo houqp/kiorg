@@ -131,10 +131,19 @@ pub fn draw(app: &mut Kiorg, ctx: &egui::Context, ui: &mut Ui, width: f32, heigh
                                 available_height,
                             );
                         }
-                        Some(PreviewContent::Doc(ref doc_meta)) => {
+                        Some(PreviewContent::Pdf(ref pdf_meta)) => {
                             preview::doc::render(
                                 ui,
-                                doc_meta,
+                                pdf_meta,
+                                colors,
+                                available_width,
+                                available_height,
+                            );
+                        }
+                        Some(PreviewContent::Epub(ref epub_meta)) => {
+                            preview::doc::render_epub(
+                                ui,
+                                epub_meta,
                                 colors,
                                 available_width,
                                 available_height,

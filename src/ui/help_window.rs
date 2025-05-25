@@ -63,7 +63,7 @@ pub fn show_help_window(ctx: &egui::Context, show_help: &mut bool, colors: &AppC
                             ),
                             (
                                 ShortcutAction::ShowFilePreview,
-                                "Preview file in popup",
+                                "Preview file in a popup window",
                             ),
                             (
                                 ShortcutAction::DeleteEntry,

@@ -253,6 +253,22 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: Shortcut
                 app.show_popup = Some(PopupType::OpenWith(String::new()));
             }
         }
+        ShortcutAction::PageUp => {
+            // Handle page up in preview popup
+            if let Some(crate::models::preview_content::PreviewContent::Pdf(pdf_meta)) =
+                &mut app.preview_content
+            {
+                preview_popup::doc::handle_page_up(pdf_meta, ctx);
+            }
+        }
+        ShortcutAction::PageDown => {
+            // Handle page down in preview popup
+            if let Some(crate::models::preview_content::PreviewContent::Pdf(pdf_meta)) =
+                &mut app.preview_content
+            {
+                preview_popup::doc::handle_page_down(pdf_meta, ctx);
+            }
+        }
     }
 }
 
@@ -276,10 +292,15 @@ fn process_key(
             }
 
             // Handle preview popup input (PDF page navigation, etc.)
-            if let Some(crate::models::preview_content::PreviewContent::Doc(doc_meta)) =
-                &mut app.preview_content
-            {
-                preview_popup::doc::handle_preview_popup_input(doc_meta, key, modifiers, ctx);
+            match &mut app.preview_content {
+                Some(crate::models::preview_content::PreviewContent::Pdf(pdf_meta)) => {
+                    preview_popup::doc::handle_preview_popup_input_pdf(pdf_meta, key, modifiers, ctx);
+                }
+                Some(crate::models::preview_content::PreviewContent::Epub(_epub_meta)) => {
+                    // EPUB documents don't have page navigation in preview popup
+                    // Only handle ESC to close popup which is already handled above
+                }
+                _ => {}
             }
             return;
         }

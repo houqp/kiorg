@@ -41,33 +41,31 @@ fn test_epub_page_count_metadata_available() {
         harness.step();
 
         // Check if EPUB preview content is loaded
-        if let Some(PreviewContent::Doc(doc_meta)) = &harness.state().preview_content {
-            if let kiorg::models::preview_content::DocMeta::Epub(epub_meta) = doc_meta {
-                // Verify page count is accessible for right panel display
-                assert!(
-                    epub_meta.page_count > 0,
-                    "EPUB page count should be available and greater than 0"
-                );
+        if let Some(PreviewContent::Epub(epub_meta)) = &harness.state().preview_content {
+            // Verify page count is accessible for right panel display
+            assert!(
+                epub_meta.page_count > 0,
+                "EPUB page count should be available and greater than 0"
+            );
 
-                // Verify standard EPUB metadata is present
-                assert!(
-                    !epub_meta.title.is_empty(),
-                    "EPUB should have a non-empty title"
-                );
-                assert!(!epub_meta.metadata.is_empty(), "EPUB should have metadata");
+            // Verify standard EPUB metadata is present
+            assert!(
+                !epub_meta.title.is_empty(),
+                "EPUB should have a non-empty title"
+            );
+            assert!(!epub_meta.metadata.is_empty(), "EPUB should have metadata");
 
-                // Check for expected metadata fields from the test EPUB
-                assert!(
-                    epub_meta.metadata.contains_key("creator")
-                        || epub_meta.metadata.contains_key("Creator")
-                        || epub_meta.metadata.contains_key("author")
-                        || epub_meta.metadata.contains_key("Author"),
-                    "EPUB should contain author/creator metadata"
-                );
+            // Check for expected metadata fields from the test EPUB
+            assert!(
+                epub_meta.metadata.contains_key("creator")
+                    || epub_meta.metadata.contains_key("Creator")
+                    || epub_meta.metadata.contains_key("author")
+                    || epub_meta.metadata.contains_key("Author"),
+                "EPUB should contain author/creator metadata"
+            );
 
-                epub_loaded = true;
-                break;
-            }
+            epub_loaded = true;
+            break;
         }
     }
 

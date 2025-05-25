@@ -53,15 +53,6 @@ pub struct EpubMeta {
     pub page_count: usize,
 }
 
-/// Enum for different document types
-#[derive(Clone, Debug)]
-pub enum DocMeta {
-    /// PDF document with page navigation support
-    Pdf(PdfMeta),
-    /// EPUB document without page navigation
-    Epub(EpubMeta),
-}
-
 /// Metadata for image files
 #[derive(Clone)]
 pub struct ImageMeta {
@@ -96,8 +87,10 @@ pub enum PreviewContent {
     Image(ImageMeta),
     /// Zip file content with a list of entries
     Zip(Vec<ZipEntry>),
-    /// Document content with metadata and cover image
-    Doc(DocMeta),
+    /// PDF document with page navigation support
+    Pdf(PdfMeta),
+    /// EPUB document without page navigation
+    Epub(EpubMeta),
     /// Loading state with path being loaded and optional receiver for async loading
     Loading(PathBuf, PreviewReceiver),
 }
@@ -168,7 +161,7 @@ impl PreviewContent {
         // Generate unique file ID from path
         let file_id = file_path.to_string_lossy().to_string();
 
-        PreviewContent::Doc(DocMeta::Pdf(PdfMeta {
+        PreviewContent::Pdf(PdfMeta {
             file_id,
             title,
             metadata,
@@ -176,7 +169,7 @@ impl PreviewContent {
             current_page: 0,
             page_count,
             pdf_file,
-        }))
+        })
     }
 
     /// Creates a new EPUB preview content with metadata and optional cover image
@@ -208,12 +201,12 @@ impl PreviewContent {
             })
             .collect();
 
-        PreviewContent::Doc(DocMeta::Epub(EpubMeta {
+        PreviewContent::Epub(EpubMeta {
             title,
             metadata: single_metadata,
             cover: cover_image,
             page_count,
-        }))
+        })
     }
 
     /// Helper function to extract book title from EPUB metadata

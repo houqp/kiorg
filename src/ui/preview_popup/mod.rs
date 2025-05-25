@@ -1,7 +1,7 @@
 //! Preview popup module for displaying file previews in a popup window
 
 use crate::app::{Kiorg, PopupType};
-use crate::models::preview_content::{PreviewContent, DocMeta};
+use crate::models::preview_content::PreviewContent;
 use crate::ui::file_list::truncate_text;
 use crate::ui::window_utils::new_center_popup_window;
 use egui::Context;
@@ -44,41 +44,38 @@ pub fn handle_show_file_preview(app: &mut Kiorg, _ctx: &egui::Context) {
             };
 
             if let Some(path) = selected_path {
-                // We can assume preview_content will always be Doc due to right panel loading
-                if let Some(PreviewContent::Doc(ref mut existing_doc_meta)) = app.preview_content {
-                    // Only handle PDF documents for page navigation updates
-                    if let DocMeta::Pdf(ref mut pdf_meta) = existing_doc_meta {
-                        // We already have doc meta with correct metadata, just update the cover with high DPI
-                        match pdf::file::FileOptions::uncached().open(&path) {
-                            Ok(pdf_file) => {
-                                // Generate a unique file ID based on the path
-                                let file_id = path.to_string_lossy().to_string();
+                // We can assume preview_content will always be Pdf due to right panel loading
+                if let Some(PreviewContent::Pdf(ref mut pdf_meta)) = app.preview_content {
+                    // We already have pdf meta with correct metadata, just update the cover with high DPI
+                    match pdf::file::FileOptions::uncached().open(&path) {
+                        Ok(pdf_file) => {
+                            // Generate a unique file ID based on the path
+                            let file_id = path.to_string_lossy().to_string();
 
-                                match crate::ui::preview::doc::render_pdf_page_high_dpi(
-                                    &pdf_file,
-                                    pdf_meta.current_page, // Use current page from existing meta
-                                    Some(&file_id),
-                                ) {
-                                    Ok(img_source) => {
-                                        // Update the cover with high DPI version
-                                        pdf_meta.cover = img_source;
+                            match crate::ui::preview::doc::render_pdf_page_high_dpi(
+                                &pdf_file,
+                                pdf_meta.current_page, // Use current page from existing meta
+                                Some(&file_id),
+                            ) {
+                                Ok(img_source) => {
+                                    // Update the cover with high DPI version
+                                    pdf_meta.cover = img_source;
 
-                                        // Show preview popup after successful rendering
-                                        app.show_popup = Some(PopupType::Preview);
-                                    }
-                                    Err(_) => {
-                                        // If error rendering, don't show popup
-                                    }
+                                    // Show preview popup after successful rendering
+                                    app.show_popup = Some(PopupType::Preview);
+                                }
+                                Err(_) => {
+                                    // If error rendering, don't show popup
                                 }
                             }
-                            Err(_) => {
-                                // If error opening file, don't show popup
-                            }
                         }
-                    } else {
-                        // For EPUB or other doc types, just show the popup directly
-                        app.show_popup = Some(PopupType::Preview);
+                        Err(_) => {
+                            // If error opening file, don't show popup
+                        }
                     }
+                } else {
+                    // For EPUB or other doc types, just show the popup directly
+                    app.show_popup = Some(PopupType::Preview);
                 }
             }
         }
@@ -141,18 +138,28 @@ pub fn show_preview_popup(ctx: &Context, app: &mut Kiorg) {
                                 available_height,
                             );
                         }
-                        PreviewContent::Doc(ref mut doc_meta) => {
-                            // Use specialized PDF/document popup renderer with navigation
+                        PreviewContent::Pdf(ref mut pdf_meta) => {
+                            // Use specialized PDF popup renderer with navigation
                             if let Some(path) = &selected_path {
-                                doc::render_popup(
+                                doc::render_pdf_popup(
                                     ui,
-                                    doc_meta,
+                                    pdf_meta,
                                     &app.colors,
                                     available_width,
                                     available_height,
                                     path,
                                 );
                             }
+                        }
+                        PreviewContent::Epub(ref epub_meta) => {
+                            // Use specialized EPUB popup renderer without navigation
+                            doc::render_epub_popup(
+                                ui,
+                                epub_meta,
+                                &app.colors,
+                                available_width,
+                                available_height,
+                            );
                         }
                         PreviewContent::Loading(path, _) => {
                             ui.vertical_centered(|ui| {

@@ -1,7 +1,7 @@
 //! Document preview module for popup display (PDF, EPUB)
 
 use crate::config::colors::AppColors;
-use crate::models::preview_content::{DocMeta, EpubMeta, PdfMeta};
+use crate::models::preview_content::{EpubMeta, PdfMeta};
 use egui::{Button, Image, Key, Modifiers, RichText};
 
 /// Generate a consistent input ID for page navigation based on file ID
@@ -9,37 +9,8 @@ fn get_page_input_id(file_id: &str) -> egui::Id {
     egui::Id::new(format!("page_input_{}", file_id))
 }
 
-/// Render document content optimized for popup view
-///
-/// This version focuses on displaying the document cover/first page at a large size
-/// without detailed metadata tables. Only shows page navigation for PDF documents.
-pub fn render_popup(
-    ui: &mut egui::Ui,
-    doc_meta: &mut DocMeta,
-    colors: &AppColors,
-    available_width: f32,
-    available_height: f32,
-    file_path: &std::path::Path,
-) {
-    match doc_meta {
-        DocMeta::Pdf(pdf_meta) => {
-            render_pdf_popup(
-                ui,
-                pdf_meta,
-                colors,
-                available_width,
-                available_height,
-                file_path,
-            );
-        }
-        DocMeta::Epub(epub_meta) => {
-            render_epub_popup(ui, epub_meta, colors, available_width, available_height);
-        }
-    }
-}
-
 /// Render PDF document in popup with page navigation
-fn render_pdf_popup(
+pub fn render_pdf_popup(
     ui: &mut egui::Ui,
     pdf_meta: &mut PdfMeta,
     colors: &AppColors,
@@ -160,7 +131,7 @@ fn render_pdf_popup(
 }
 
 /// Render EPUB document in popup without page navigation
-fn render_epub_popup(
+pub fn render_epub_popup(
     ui: &mut egui::Ui,
     epub_meta: &EpubMeta,
     _colors: &AppColors,
@@ -263,27 +234,41 @@ fn render_pdf_page_for_popup(
     ui.ctx().request_repaint();
 }
 
-/// Handle key input events for the preview popup
+/// Handle key input events for the PDF preview popup
 /// Returns true if the key was handled, false otherwise
-pub fn handle_preview_popup_input(
-    doc_meta: &mut DocMeta,
+pub fn handle_preview_popup_input_pdf(
+    pdf_meta: &mut PdfMeta,
     key: Key,
     modifiers: Modifiers,
     ctx: &egui::Context,
 ) {
-    if modifiers.ctrl && !modifiers.shift && !modifiers.alt && !modifiers.mac_cmd {
-        if let DocMeta::Pdf(pdf_meta) = doc_meta {
-            match key {
-                Key::D => {
-                    // Navigate to next page with Ctrl+D
-                    navigate_to_next_page(pdf_meta, ctx);
-                }
-                Key::U => {
-                    // Navigate to previous page with Ctrl+U
-                    navigate_to_previous_page(pdf_meta, ctx);
-                }
-                _ => {}
+    use crate::config::shortcuts::{self, shortcuts_helpers, ShortcutAction};
+
+    // Get shortcuts from config or use defaults
+    let shortcuts = shortcuts::get_default_shortcuts();
+
+    // Try to find a matching action for the key combination
+    if let Some(action) = shortcuts_helpers::find_action(shortcuts, key, modifiers, false) {
+        match action {
+            ShortcutAction::PageUp => {
+                handle_page_up(pdf_meta, ctx);
+            }
+            ShortcutAction::PageDown => {
+                handle_page_down(pdf_meta, ctx);
+            }
+            _ => {
+                // Other actions are not handled in preview popup
             }
         }
     }
+}
+
+/// Handle page up navigation for PDF documents
+pub fn handle_page_up(pdf_meta: &mut PdfMeta, ctx: &egui::Context) {
+    navigate_to_previous_page(pdf_meta, ctx);
+}
+
+/// Handle page down navigation for PDF documents
+pub fn handle_page_down(pdf_meta: &mut PdfMeta, ctx: &egui::Context) {
+    navigate_to_next_page(pdf_meta, ctx);
 }
