@@ -69,8 +69,10 @@ pub fn handle_show_file_preview(app: &mut Kiorg, _ctx: &egui::Context) {
                                 }
                             }
                         }
-                        Err(_) => {
-                            // If error opening file, don't show popup
+                        Err(e) => {
+                            // If error opening file, don't show popup and notify error using toast
+                            app.toasts.error(format!("Failed to open PDF file: {}", e));
+                            app.show_popup = None;
                         }
                     }
                 } else {
@@ -128,6 +130,17 @@ pub fn show_preview_popup(ctx: &Context, app: &mut Kiorg) {
 
                     // Display the preview content based on its type
                     match content {
+                        PreviewContent::Text(ref text) => {
+                            ui.vertical_centered(|ui| {
+                                egui::ScrollArea::vertical().auto_shrink([false; 2]).show(
+                                    ui,
+                                    |ui| {
+                                        ui.label(egui::RichText::new(text).color(app.colors.fg));
+                                    },
+                                );
+                            });
+                            // Use a scrollable area for text content in popup
+                        }
                         PreviewContent::Image(ref image_meta) => {
                             // Use our specialized popup image renderer
                             image::render_popup(

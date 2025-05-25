@@ -114,19 +114,7 @@ fn test_pdf_preview_popup_error_handling() {
     let mut harness = create_harness(&temp_dir);
 
     // Select the invalid PDF file
-    {
-        let tab = harness.state().tab_manager.current_tab_ref();
-        let pdf_index = tab
-            .entries
-            .iter()
-            .position(|e| e.name == invalid_pdf_name)
-            .expect("Invalid PDF file should be in the entries");
-        let tab = harness.state_mut().tab_manager.current_tab_mut();
-        tab.selected_index = pdf_index;
-    }
-    harness.step();
-
-    // Step to update the preview (this will attempt to load the invalid PDF)
+    harness.press_key(Key::ArrowDown);
     harness.step();
 
     // Open preview popup with Shift+K
@@ -139,9 +127,26 @@ fn test_pdf_preview_popup_error_handling() {
 
     // Verify the preview popup is NOT shown (it should have closed due to the error)
     assert!(
-        matches!(harness.state().show_popup, None),
-        "Preview popup should be closed for invalid PDF files"
+        matches!(harness.state().show_popup, Some(PopupType::Preview)),
+        "Preview popup should be opened to display the error"
     );
+
+    // Verify the error message is displayed in the preview content
+    match harness.state().preview_content.as_ref() {
+        Some(PreviewContent::Text(text)) => {
+            assert!(
+                text.contains(
+                    "Error loading file: Failed to open PDF file: file header is missing"
+                ),
+                "Expected error message not found in preview content: {}",
+                text
+            );
+        }
+        other => panic!(
+            "Preview content should be Text with error message, got {:?}",
+            other
+        ),
+    }
 }
 
 /// Test that the image preview popup displays the image filename as its title

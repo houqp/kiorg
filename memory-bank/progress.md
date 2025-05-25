@@ -52,5 +52,4 @@
   * see <https://github.com/servo/pathfinder/issues/157>
 * Add debounce to preview with a delay to reduce io and compute
 * Support drag and drop
-* Support ctrl-d and ctrl-u for page down and page up
 * Moving up jumps when reached the first page

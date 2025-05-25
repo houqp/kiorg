@@ -261,7 +261,7 @@ fn test_modifier_shortcuts() {
     let toml_content = r##"
 # Custom shortcuts configuration with modifiers
 [[shortcuts.MoveDown]]
-key = "u"
+key = "z"
 ctrl = true
 
 [[shortcuts.MoveUp]]
@@ -281,20 +281,20 @@ key = "m"
         0
     );
 
-    // Press 'd' without Ctrl - should not move
-    harness.press_key(Key::U);
+    // Press 'z' without Ctrl - should not move
+    harness.press_key(Key::Z);
     harness.step();
     assert_eq!(
         harness.state().tab_manager.current_tab_ref().selected_index,
         0
     );
 
-    // Press Ctrl+D - should move down
+    // Press Ctrl+z - should move down
     let modifiers = Modifiers {
         ctrl: true,
         ..Default::default()
     };
-    harness.press_key_modifiers(modifiers, Key::U);
+    harness.press_key_modifiers(modifiers, Key::Z);
     harness.step();
 
     // Verify selection moved down to index 1

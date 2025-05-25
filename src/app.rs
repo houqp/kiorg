@@ -494,6 +494,20 @@ impl Kiorg {
         }
     }
 
+    pub fn move_selection_by_page(&mut self, direction: isize) {
+        // Calculate page size from scroll_range if available
+        let page_size = if let Some(ref range) = self.scroll_range {
+            // Use the visible range size as page size, with a minimum of 1
+            (range.end - range.start).max(1) as isize - 1
+        } else {
+            // Default page size if scroll_range is not available
+            10
+        };
+
+        // Move by the effective page size in the specified direction
+        self.move_selection(direction * page_size);
+    }
+
     fn navigate_to_dir_without_history(&mut self, mut path: PathBuf) {
         let tab = self.tab_manager.current_tab_mut();
         // Swap current_path with path and store the swapped path as prev_path

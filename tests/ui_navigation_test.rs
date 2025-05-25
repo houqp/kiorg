@@ -696,3 +696,108 @@ fn test_open_directory_vs_open_directory_or_file() {
         );
     }
 }
+
+#[test]
+fn test_page_navigation() {
+    // Create a directory with many files to test page navigation
+    let temp_dir = tempdir().unwrap();
+    let mut test_files = Vec::new();
+
+    // Create 25 test files to ensure we have enough for page navigation
+    for i in 0..25 {
+        test_files.push(temp_dir.path().join(format!("file_{:02}.txt", i)));
+    }
+    create_test_files(&test_files);
+
+    let mut harness = create_harness(&temp_dir);
+
+    // Initially should be at first entry
+    let tab = harness.state().tab_manager.current_tab_ref();
+    let initial_selected = tab.selected_index;
+    assert_eq!(initial_selected, 0);
+
+    // Debug: Check if scroll_range is available
+    println!("scroll_range: {:?}", harness.state().scroll_range);
+
+    // Test Page Down navigation
+    harness.press_key(Key::PageDown);
+    harness.step();
+
+    let tab = harness.state().tab_manager.current_tab_ref();
+    let after_page_down = tab.selected_index;
+
+    println!(
+        "Movement: {} -> {} (page down)",
+        initial_selected, after_page_down
+    );
+
+    // Should have moved forward by more than 1 (even with default fallback of 10)
+    assert!(
+        after_page_down > initial_selected,
+        "Page down should move forward, moved from {} to {}",
+        initial_selected,
+        after_page_down
+    );
+
+    // Test Page Up navigation
+    harness.press_key(Key::PageUp);
+    harness.step();
+
+    let tab = harness.state().tab_manager.current_tab_ref();
+    let after_page_up = tab.selected_index;
+
+    println!(
+        "Movement: {} -> {} (page up)",
+        after_page_down, after_page_up
+    );
+
+    // Should have moved back toward the beginning
+    assert!(
+        after_page_up < after_page_down,
+        "Page up should move back, from {} to {}",
+        after_page_down,
+        after_page_up
+    );
+
+    // Test Ctrl+D (alternative page down shortcut)
+    let modifiers = egui::Modifiers {
+        ctrl: true,
+        ..Default::default()
+    };
+    harness.press_key_modifiers(modifiers, Key::D);
+    harness.step();
+
+    let tab = harness.state().tab_manager.current_tab_ref();
+    let after_ctrl_d = tab.selected_index;
+
+    println!("Movement: {} -> {} (ctrl+d)", after_page_up, after_ctrl_d);
+
+    // Should behave like page down
+    assert!(
+        after_ctrl_d > after_page_up,
+        "Ctrl+D should work like page down, from {} to {}",
+        after_page_up,
+        after_ctrl_d
+    );
+
+    // Test Ctrl+U (alternative page up shortcut)
+    let modifiers = egui::Modifiers {
+        ctrl: true,
+        ..Default::default()
+    };
+    harness.press_key_modifiers(modifiers, Key::U);
+    harness.step();
+
+    let tab = harness.state().tab_manager.current_tab_ref();
+    let after_ctrl_u = tab.selected_index;
+
+    println!("Movement: {} -> {} (ctrl+u)", after_ctrl_d, after_ctrl_u);
+
+    // Should behave like page up
+    assert!(
+        after_ctrl_u < after_ctrl_d,
+        "Ctrl+U should work like page up, from {} to {}",
+        after_ctrl_d,
+        after_ctrl_u
+    );
+}

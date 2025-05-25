@@ -29,6 +29,8 @@ pub fn show_help_window(ctx: &egui::Context, show_help: &mut bool, colors: &AppC
                         let navigation_actions = [
                             (ShortcutAction::MoveDown, "Move down"),
                             (ShortcutAction::MoveUp, "Move up"),
+                            (ShortcutAction::PageDown, "Move down by page"),
+                            (ShortcutAction::PageUp, "Move up by page"),
                             (
                                 ShortcutAction::GoToParentDirectory,
                                 "Go to parent directory",

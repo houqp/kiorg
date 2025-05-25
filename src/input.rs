@@ -254,20 +254,12 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: Shortcut
             }
         }
         ShortcutAction::PageUp => {
-            // Handle page up in preview popup
-            if let Some(crate::models::preview_content::PreviewContent::Pdf(pdf_meta)) =
-                &mut app.preview_content
-            {
-                preview_popup::doc::handle_page_up(pdf_meta, ctx);
-            }
+            // Handle page up in center panel file list
+            app.move_selection_by_page(-1);
         }
         ShortcutAction::PageDown => {
-            // Handle page down in preview popup
-            if let Some(crate::models::preview_content::PreviewContent::Pdf(pdf_meta)) =
-                &mut app.preview_content
-            {
-                preview_popup::doc::handle_page_down(pdf_meta, ctx);
-            }
+            // Handle page down in center panel file list
+            app.move_selection_by_page(1);
         }
     }
 }
@@ -294,7 +286,9 @@ fn process_key(
             // Handle preview popup input (PDF page navigation, etc.)
             match &mut app.preview_content {
                 Some(crate::models::preview_content::PreviewContent::Pdf(pdf_meta)) => {
-                    preview_popup::doc::handle_preview_popup_input_pdf(pdf_meta, key, modifiers, ctx);
+                    preview_popup::doc::handle_preview_popup_input_pdf(
+                        pdf_meta, key, modifiers, ctx,
+                    );
                 }
                 Some(crate::models::preview_content::PreviewContent::Epub(_epub_meta)) => {
                     // EPUB documents don't have page navigation in preview popup
