@@ -12,9 +12,8 @@ fn test_exit_shortcut() {
     let mut harness = create_harness(&temp_dir);
 
     // Initially, the app should not be in shutdown state
-    assert_eq!(
-        harness.state().shutdown_requested,
-        false,
+    assert!(
+        !harness.state().shutdown_requested,
         "App should not be in shutdown state initially"
     );
 
@@ -34,9 +33,8 @@ fn test_exit_shortcut() {
     harness.step();
 
     // Verify shutdown was requested
-    assert_eq!(
+    assert!(
         harness.state().shutdown_requested,
-        true,
         "App should be in shutdown state after confirming exit"
     );
 }
@@ -98,9 +96,8 @@ fn test_exit_with_unsaved_changes() {
     harness.step();
 
     // Verify shutdown was requested despite unsaved changes
-    assert_eq!(
+    assert!(
         harness.state().shutdown_requested,
-        true,
         "App should be in shutdown state after confirming exit"
     );
 
@@ -161,9 +158,8 @@ fn test_exit_saves_state() {
     harness.step();
 
     // Verify shutdown was requested
-    assert_eq!(
+    assert!(
         harness.state().shutdown_requested,
-        true,
         "App should be in shutdown state after confirming exit"
     );
 

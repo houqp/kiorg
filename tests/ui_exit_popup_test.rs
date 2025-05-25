@@ -13,9 +13,8 @@ fn test_exit_popup_enter_key() {
     let mut harness = create_harness(&temp_dir);
 
     // Initially, the app should not be in shutdown state
-    assert_eq!(
-        harness.state().shutdown_requested,
-        false,
+    assert!(
+        !harness.state().shutdown_requested,
         "App should not be in shutdown state initially"
     );
 
@@ -35,9 +34,8 @@ fn test_exit_popup_enter_key() {
     harness.step();
 
     // Verify shutdown was requested
-    assert_eq!(
+    assert!(
         harness.state().shutdown_requested,
-        true,
         "App should be in shutdown state after confirming exit"
     );
 }
@@ -50,9 +48,8 @@ fn test_exit_popup_escape_key() {
     let mut harness = create_harness(&temp_dir);
 
     // Initially, the app should not be in shutdown state
-    assert_eq!(
-        harness.state().shutdown_requested,
-        false,
+    assert!(
+        !harness.state().shutdown_requested,
         "App should not be in shutdown state initially"
     );
 
@@ -79,9 +76,8 @@ fn test_exit_popup_escape_key() {
     );
 
     // Verify shutdown was not requested
-    assert_eq!(
-        harness.state().shutdown_requested,
-        false,
+    assert!(
+        !harness.state().shutdown_requested,
         "App should not be in shutdown state after canceling exit"
     );
 }
@@ -94,9 +90,8 @@ fn test_exit_popup_q_key() {
     let mut harness = create_harness(&temp_dir);
 
     // Initially, the app should not be in shutdown state
-    assert_eq!(
-        harness.state().shutdown_requested,
-        false,
+    assert!(
+        !harness.state().shutdown_requested,
         "App should not be in shutdown state initially"
     );
 
@@ -123,9 +118,8 @@ fn test_exit_popup_q_key() {
     );
 
     // Verify shutdown was not requested
-    assert_eq!(
-        harness.state().shutdown_requested,
-        false,
+    assert!(
+        !harness.state().shutdown_requested,
         "App should not be in shutdown state after canceling exit"
     );
 }

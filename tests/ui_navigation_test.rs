@@ -438,8 +438,6 @@ fn test_image_preview() {
     let text_path = temp_dir.path().join("test.txt");
     std::fs::write(&text_path, "This is a text file").unwrap();
 
-    let _test_files = vec![image_path, text_path]; // Keep references to prevent cleanup
-
     // Start the harness
     let mut harness = create_harness(&temp_dir);
 
@@ -518,8 +516,6 @@ fn test_zip_preview() {
     // Create a text file for comparison
     let text_path = temp_dir.path().join("test.txt");
     std::fs::write(&text_path, "This is a text file").unwrap();
-
-    let _test_files = vec![zip_path, text_path]; // Keep references to prevent cleanup
 
     // Start the harness
     let mut harness = create_harness(&temp_dir);

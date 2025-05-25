@@ -48,7 +48,7 @@ fn test_binary_file_preview() {
     // Create a binary file (using a simple byte array)
     let binary_path = temp_dir.path().join("binary.bin");
     let binary_data = [0x00, 0x01, 0x02, 0x03, 0xFF, 0xFE, 0xFD, 0xFC];
-    std::fs::write(&binary_path, &binary_data).unwrap();
+    std::fs::write(&binary_path, binary_data).unwrap();
 
     // Start the harness
     let mut harness = create_harness(&temp_dir);

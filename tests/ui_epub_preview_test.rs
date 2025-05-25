@@ -19,7 +19,7 @@ fn test_epub_preview() {
     let text_path = temp_dir.path().join("test.txt");
     std::fs::write(&text_path, "This is a text file").unwrap();
 
-    let _test_files = vec![epub_path, text_path]; // Keep references to prevent cleanup
+    let _test_files = [epub_path, text_path]; // Keep references to prevent cleanup
 
     let mut harness = create_harness(&temp_dir);
 

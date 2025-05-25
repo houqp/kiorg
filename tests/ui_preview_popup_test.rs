@@ -380,7 +380,7 @@ fn test_preview_popup_unsupported_file() {
 
     // Verify the preview popup is NOT shown for unsupported file types
     assert!(
-        matches!(harness.state().show_popup, None),
+        harness.state().show_popup.is_none(),
         "Preview popup should not be shown for unsupported file types"
     );
 }

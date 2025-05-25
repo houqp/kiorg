@@ -188,7 +188,7 @@ fn create_minimal_pdf_content(page_count: usize) -> Vec<u8> {
 
     // Object 1: Catalog
     offsets.push(content.len());
-    let catalog = format!("1 0 obj\n<<\n/Type /Catalog\n/Pages 2 0 R\n>>\nendobj\n");
+    let catalog = "1 0 obj\n<<\n/Type /Catalog\n/Pages 2 0 R\n>>\nendobj\n".to_string();
     content.extend_from_slice(catalog.as_bytes());
 
     // Object 2: Pages
@@ -240,8 +240,8 @@ fn create_minimal_pdf_content(page_count: usize) -> Vec<u8> {
     xref.push_str("0000000000 65535 f \n");
 
     // Add entries for all other objects
-    for i in 1..offsets.len() {
-        xref.push_str(&format!("{:010} 00000 n \n", offsets[i]));
+    for offset in offsets.iter().skip(1) {
+        xref.push_str(&format!("{:010} 00000 n \n", offset));
     }
 
     content.extend_from_slice(xref.as_bytes());
