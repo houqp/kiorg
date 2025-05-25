@@ -7,8 +7,10 @@ use std::sync::{Arc, Mutex};
 pub type PreviewReceiver = Option<Arc<Mutex<Receiver<Result<PreviewContent, String>>>>>;
 
 /// Metadata for PDF documents
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct PdfMeta {
+    /// Unique identifier for this PDF file (based on file path)
+    pub file_id: String,
     /// Document title
     pub title: String,
     /// Document metadata (key-value pairs)
@@ -19,6 +21,23 @@ pub struct PdfMeta {
     pub current_page: usize,
     /// Total number of pages in the PDF
     pub page_count: usize,
+    /// Cached PDF file object to avoid reopening and parsing on every page navigation
+    pub pdf_file:
+        Arc<pdf::file::File<Vec<u8>, pdf::file::NoCache, pdf::file::NoCache, pdf::file::NoLog>>,
+}
+
+impl std::fmt::Debug for PdfMeta {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PdfMeta")
+            .field("file_id", &self.file_id)
+            .field("title", &self.title)
+            .field("metadata", &self.metadata)
+            .field("cover", &"<ImageSource>")
+            .field("current_page", &self.current_page)
+            .field("page_count", &self.page_count)
+            .field("pdf_file", &"<PDF File>")
+            .finish()
+    }
 }
 
 /// Metadata for EPUB documents
@@ -133,42 +152,30 @@ impl PreviewContent {
         PreviewContent::Loading(path.into(), Some(Arc::new(Mutex::new(receiver))))
     }
 
-    /// Creates a new PDF document preview content with title, metadata, and image
-    pub fn pdf(
+    /// Creates a new PDF document preview content with cached PDF file
+    pub fn pdf_with_file(
         image: egui::widgets::ImageSource<'static>,
         metadata: HashMap<String, String>,
         title: Option<String>,
         page_count: usize,
+        pdf_file: Arc<
+            pdf::file::File<Vec<u8>, pdf::file::NoCache, pdf::file::NoCache, pdf::file::NoLog>,
+        >,
+        file_path: &std::path::Path,
     ) -> Self {
         // Use provided title or default
         let title = title.unwrap_or_else(|| "__Untitled__".to_string());
+        // Generate unique file ID from path
+        let file_id = file_path.to_string_lossy().to_string();
 
         PreviewContent::Doc(DocMeta::Pdf(PdfMeta {
+            file_id,
             title,
             metadata,
             cover: image,
             current_page: 0,
             page_count,
-        }))
-    }
-
-    /// Creates a new PDF document preview content with metadata (extracts title from metadata)
-    pub fn pdf_from_metadata(
-        image: egui::widgets::ImageSource<'static>,
-        mut metadata: HashMap<String, String>,
-        page_count: usize,
-    ) -> Self {
-        // Extract title from metadata or use default
-        let title = metadata
-            .remove("Title")
-            .unwrap_or_else(|| "__Untitled__".to_string());
-
-        PreviewContent::Doc(DocMeta::Pdf(PdfMeta {
-            title,
-            metadata,
-            cover: image,
-            current_page: 0,
-            page_count,
+            pdf_file,
         }))
     }
 

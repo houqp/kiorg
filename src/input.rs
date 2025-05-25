@@ -272,6 +272,14 @@ fn process_key(
         Some(PopupType::Preview) => {
             if is_cancel_keys(key) {
                 app.show_popup = None;
+                return;
+            }
+
+            // Handle preview popup input (PDF page navigation, etc.)
+            if let Some(crate::models::preview_content::PreviewContent::Doc(doc_meta)) =
+                &mut app.preview_content
+            {
+                preview_popup::doc::handle_preview_popup_input(doc_meta, key, modifiers, ctx);
             }
             return;
         }

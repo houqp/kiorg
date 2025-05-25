@@ -341,12 +341,17 @@ pub fn extract_pdf_metadata(path: &Path, _: u32) -> Result<PreviewContent, Strin
     // Get page count
     let page_count = file.num_pages() as usize;
 
+    // Store the PDF file in an Arc for sharing across page navigation
+    let pdf_file = std::sync::Arc::new(file);
+
     // Return PreviewContent with metadata, title, and the rendered first page as cover
-    Ok(PreviewContent::pdf(
+    Ok(PreviewContent::pdf_with_file(
         cover_image,
         metadata,
         title,
         page_count,
+        pdf_file,
+        path,
     ))
 }
 

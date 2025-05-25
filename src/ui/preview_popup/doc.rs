@@ -2,11 +2,10 @@
 
 use crate::config::colors::AppColors;
 use crate::models::preview_content::{DocMeta, EpubMeta, PdfMeta};
-use egui::{Button, Image, RichText};
+use egui::{Button, Image, Key, Modifiers, RichText};
 
-/// Generate a consistent input ID for page navigation based on file path
-fn get_page_input_id(file_path: &std::path::Path) -> egui::Id {
-    let file_id = file_path.to_string_lossy().to_string();
+/// Generate a consistent input ID for page navigation based on file ID
+fn get_page_input_id(file_id: &str) -> egui::Id {
     egui::Id::new(format!("page_input_{}", file_id))
 }
 
@@ -68,19 +67,13 @@ fn render_pdf_popup(
                     .clicked()
                     && current_page > 0
                 {
-                    pdf_meta.current_page = current_page.saturating_sub(1);
-                    // Update the input text in memory
-                    let input_id = get_page_input_id(file_path);
-                    let new_text = (pdf_meta.current_page + 1).to_string();
-                    ui.ctx().data_mut(|d| d.insert_temp(input_id, new_text));
-                    // Trigger PDF re-rendering for the new page
-                    render_pdf_page_for_popup(ui, pdf_meta, file_path);
+                    navigate_to_previous_page(pdf_meta, ui.ctx());
                 }
 
                 // Editable page input
                 ui.horizontal(|ui| {
                     // Use egui's memory to store the page input text per document
-                    let input_id = get_page_input_id(file_path);
+                    let input_id = get_page_input_id(&pdf_meta.file_id);
 
                     // Get or initialize the input text
                     let mut page_input_text = ui.ctx().data(|d| {
@@ -144,13 +137,7 @@ fn render_pdf_popup(
                     .clicked()
                     && current_page < total_pages - 1
                 {
-                    pdf_meta.current_page += 1;
-                    // Update the input text in memory
-                    let input_id = get_page_input_id(file_path);
-                    let new_text = (pdf_meta.current_page + 1).to_string();
-                    ui.ctx().data_mut(|d| d.insert_temp(input_id, new_text));
-                    // Trigger PDF re-rendering for the new page
-                    render_pdf_page_for_popup(ui, pdf_meta, file_path);
+                    navigate_to_next_page(pdf_meta, ui.ctx());
                 }
             },
         );
@@ -197,27 +184,106 @@ fn render_epub_popup(
     });
 }
 
+/// Helper function to navigate to the next page in PDF
+pub fn navigate_to_next_page(pdf_meta: &mut PdfMeta, ctx: &egui::Context) -> bool {
+    let current_page = pdf_meta.current_page;
+    let total_pages = pdf_meta.page_count;
+
+    if current_page < total_pages - 1 {
+        pdf_meta.current_page += 1;
+
+        // Update the input text in memory
+        let input_id = get_page_input_id(&pdf_meta.file_id);
+        let new_text = (pdf_meta.current_page + 1).to_string();
+        ctx.data_mut(|d| d.insert_temp(input_id, new_text));
+
+        // Re-render the PDF page using cached file
+        if let Ok(img_source) = crate::ui::preview::doc::render_pdf_page_high_dpi(
+            &pdf_meta.pdf_file,
+            pdf_meta.current_page,
+            Some(&pdf_meta.file_id),
+        ) {
+            pdf_meta.cover = img_source;
+        }
+
+        ctx.request_repaint();
+        true
+    } else {
+        false
+    }
+}
+
+/// Helper function to navigate to the previous page in PDF
+pub fn navigate_to_previous_page(pdf_meta: &mut PdfMeta, ctx: &egui::Context) -> bool {
+    let current_page = pdf_meta.current_page;
+
+    if current_page > 0 {
+        pdf_meta.current_page = current_page.saturating_sub(1);
+
+        // Update the input text in memory
+        let input_id = get_page_input_id(&pdf_meta.file_id);
+        let new_text = (pdf_meta.current_page + 1).to_string();
+        ctx.data_mut(|d| d.insert_temp(input_id, new_text));
+
+        // Re-render the PDF page using cached file
+        if let Ok(img_source) = crate::ui::preview::doc::render_pdf_page_high_dpi(
+            &pdf_meta.pdf_file,
+            pdf_meta.current_page,
+            Some(&pdf_meta.file_id),
+        ) {
+            pdf_meta.cover = img_source;
+        }
+
+        ctx.request_repaint();
+        true
+    } else {
+        false
+    }
+}
+
 /// Helper function to render PDF page when navigation buttons are clicked
 fn render_pdf_page_for_popup(
     ui: &mut egui::Ui,
     pdf_meta: &mut PdfMeta,
     file_path: &std::path::Path,
 ) {
-    // Open the PDF file
-    if let Ok(pdf_file) = pdf::file::FileOptions::uncached().open(file_path) {
-        // Generate a unique file ID based on the path
-        let file_id = file_path.to_string_lossy().to_string();
+    // Generate a unique file ID based on the path
+    let file_id = file_path.to_string_lossy().to_string();
 
-        // Render the new page
-        if let Ok(img_source) = crate::ui::preview::doc::render_pdf_page_high_dpi(
-            &pdf_file,
-            pdf_meta.current_page,
-            Some(&file_id),
-        ) {
-            // Update the cover with the new page image
-            pdf_meta.cover = img_source;
-        }
+    // Render the new page using cached file
+    if let Ok(img_source) = crate::ui::preview::doc::render_pdf_page_high_dpi(
+        &pdf_meta.pdf_file,
+        pdf_meta.current_page,
+        Some(&file_id),
+    ) {
+        // Update the cover with the new page image
+        pdf_meta.cover = img_source;
     }
     // Request repaint to show the updated image
     ui.ctx().request_repaint();
+}
+
+/// Handle key input events for the preview popup
+/// Returns true if the key was handled, false otherwise
+pub fn handle_preview_popup_input(
+    doc_meta: &mut DocMeta,
+    key: Key,
+    modifiers: Modifiers,
+    ctx: &egui::Context,
+) {
+    if modifiers.ctrl && !modifiers.shift && !modifiers.alt && !modifiers.mac_cmd {
+        if let DocMeta::Pdf(pdf_meta) = doc_meta {
+            match key {
+                Key::D => {
+                    // Navigate to next page with Ctrl+D
+                    navigate_to_next_page(pdf_meta, ctx);
+                }
+                Key::U => {
+                    // Navigate to previous page with Ctrl+U
+                    navigate_to_previous_page(pdf_meta, ctx);
+                }
+                _ => {}
+            }
+        }
+    }
 }
