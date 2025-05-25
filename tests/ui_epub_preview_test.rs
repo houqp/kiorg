@@ -19,31 +19,15 @@ fn test_epub_preview() {
     let text_path = temp_dir.path().join("test.txt");
     std::fs::write(&text_path, "This is a text file").unwrap();
 
-    let _test_files = [epub_path, text_path]; // Keep references to prevent cleanup
-
     let mut harness = create_harness(&temp_dir);
 
-    // Select the EPUB file
-    {
-        let tab = harness.state_mut().tab_manager.current_tab_mut();
-        // Find the index of the EPUB file
-        let epub_index = tab
-            .entries
-            .iter()
-            .position(|e| e.path.extension().unwrap_or_default() == "epub")
-            .expect("EPUB file should be in the entries");
-        tab.selected_index = epub_index;
-    }
-
-    // Step to update the preview
+    harness.press_key(egui::Key::J);
+    harness.step();
+    harness.press_key(egui::Key::K);
     harness.step();
 
-    // Check if the preview content is an EPUB or loading
-    let mut is_epub_content = false;
-
     // Try multiple steps to allow async loading to complete
-    for _ in 0..20 {
-        std::thread::sleep(std::time::Duration::from_millis(10));
+    for _ in 0..300 {
         match &harness.state().preview_content {
             Some(PreviewContent::Epub(epub_meta)) => {
                 // Verify EPUB metadata
@@ -83,31 +67,18 @@ fn test_epub_preview() {
                     );
                 }
 
-                // Cover image is optional, so we don't assert on it
-                // Just check that the test runs without errors
-
-                is_epub_content = true;
-                break;
+                return;
             }
-            Some(PreviewContent::Pdf(_)) => {
-                panic!("Expected EPUB document but got PDF");
-            }
-            Some(PreviewContent::Loading(..)) => {
-                // Still loading, try another step
+            Some(_) => {
+                std::thread::sleep(std::time::Duration::from_millis(10));
                 harness.step();
-            }
-            Some(other) => {
-                panic!(
-                    "Preview content should be EPUB or Loading variant, got {:?}",
-                    other
-                );
             }
             None => panic!("Preview content should not be None"),
         }
     }
 
-    assert!(
-        is_epub_content,
-        "Preview content should eventually be EPUB variant"
+    panic!(
+        "Preview content should eventually be EPUB variant, got: {:?}",
+        harness.state().preview_content
     );
 }

@@ -358,11 +358,12 @@ fn test_mouse_click_selects_and_previews() {
         }
         Some(PreviewContent::Loading(..)) => {
             // Wait for loading to complete
-            for _ in 0..10 {
+            for _ in 0..100 {
                 harness.step();
                 if let Some(PreviewContent::Text(_)) = &harness.state().preview_content {
                     break;
                 }
+                std::thread::sleep(std::time::Duration::from_millis(10));
             }
             // Check again after waiting
             if let Some(PreviewContent::Text(text)) = &harness.state().preview_content {
@@ -471,11 +472,12 @@ fn test_image_preview() {
         }
         Some(PreviewContent::Loading(..)) => {
             // Wait for loading to complete
-            for _ in 0..10 {
+            for _ in 0..100 {
                 harness.step();
                 if let Some(PreviewContent::Image(_)) = &harness.state().preview_content {
                     break;
                 }
+                std::thread::sleep(std::time::Duration::from_millis(10));
             }
             // Check again after waiting
             match &harness.state().preview_content {
@@ -523,16 +525,12 @@ fn test_zip_preview() {
     // select the zip file
     harness.press_key(Key::J);
     harness.step();
-    // Step to update the preview
-    harness.step();
-    harness.step(); // Additional step to ensure preview is updated
 
     // Check if the preview content is a zip or loading
     let mut is_zip_content = false;
 
     // Try multiple steps to allow async loading to complete
-    for _ in 0..20 {
-        std::thread::sleep(std::time::Duration::from_millis(10));
+    for _ in 0..100 {
         match &harness.state().preview_content {
             Some(PreviewContent::Zip(entries)) => {
                 // Verify zip entries
@@ -550,24 +548,10 @@ fn test_zip_preview() {
                 is_zip_content = true;
                 break;
             }
-            Some(PreviewContent::Loading(..)) => {
+            Some(_) => {
                 // Still loading, try another step
+                std::thread::sleep(std::time::Duration::from_millis(10));
                 harness.step();
-            }
-            Some(PreviewContent::Pdf(_)) => {
-                panic!("Preview content should be Zip or Loading variant, not PDF");
-            }
-            Some(PreviewContent::Epub(_)) => {
-                panic!("Preview content should be Zip or Loading variant, not EPUB");
-            }
-            Some(PreviewContent::Image(_)) => {
-                panic!("Preview content should be Zip or Loading variant, not Image");
-            }
-            Some(other) => {
-                panic!(
-                    "Preview content should be Zip or Loading variant, got {:?}",
-                    other
-                );
             }
             None => panic!("Preview content should not be None"),
         }

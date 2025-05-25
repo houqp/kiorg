@@ -54,20 +54,21 @@ fn test_goto_first_entry_with_filter() {
     // Verify selection is at the first filtered entry
     let tab = harness.state().tab_manager.current_tab_ref();
     let filtered_entries = tab.get_filtered_entries(&harness.state().search_bar.query);
-    
+
     // Get the selected entry
     let selected_entry = &tab.entries[tab.selected_index];
-    
+
     // Verify the selected entry is in the filtered list
     assert!(
-        filtered_entries.iter().any(|&entry| entry.path == selected_entry.path),
+        filtered_entries
+            .iter()
+            .any(|&entry| entry.path == selected_entry.path),
         "Selected entry should be in the filtered list"
     );
-    
+
     // Verify the selected entry is the first one in the filtered list
     assert_eq!(
-        selected_entry.path,
-        filtered_entries[0].path,
+        selected_entry.path, filtered_entries[0].path,
         "Selected entry should be the first entry in the filtered list"
     );
 }
@@ -117,16 +118,18 @@ fn test_goto_last_entry_with_filter() {
     // Verify selection is at the last filtered entry
     let tab = harness.state().tab_manager.current_tab_ref();
     let filtered_entries = tab.get_filtered_entries(&harness.state().search_bar.query);
-    
+
     // Get the selected entry
     let selected_entry = &tab.entries[tab.selected_index];
-    
+
     // Verify the selected entry is in the filtered list
     assert!(
-        filtered_entries.iter().any(|&entry| entry.path == selected_entry.path),
+        filtered_entries
+            .iter()
+            .any(|&entry| entry.path == selected_entry.path),
         "Selected entry should be in the filtered list"
     );
-    
+
     // Verify the selected entry is the last one in the filtered list
     assert_eq!(
         selected_entry.path,

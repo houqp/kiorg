@@ -114,17 +114,14 @@ fn create_fs_watcher(
 
     let mut fs_watcher = match notify::recommended_watcher(tx) {
         Ok(watcher) => watcher,
-        Err(e) => {
-            return Err(std::io::Error::other(
-                e.to_string(),
-            ))
-        }
+        Err(e) => return Err(std::io::Error::other(e.to_string())),
     };
 
     if let Err(e) = fs_watcher.watch(watch_dir, RecursiveMode::NonRecursive) {
-        return Err(std::io::Error::other(
-            format!("Failed to watch path: {}", e),
-        ));
+        return Err(std::io::Error::other(format!(
+            "Failed to watch path: {}",
+            e
+        )));
     }
 
     let notify_fs_change_clone = notify_fs_change.clone();

@@ -67,6 +67,7 @@ fn test_preview_popup_consumes_number_keys() {
 
     // Wait for the image preview to load
     for _ in 0..10 {
+        std::thread::sleep(std::time::Duration::from_millis(10));
         match harness.state().preview_content.as_ref() {
             Some(PreviewContent::Image(_)) => break,
             Some(PreviewContent::Loading(..)) => harness.step(),

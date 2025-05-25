@@ -4,7 +4,6 @@ mod ui_test_helpers;
 use std::{
     fs::{self, File},
     io::Write,
-    sync::atomic::Ordering, // Import Ordering
     thread,
     time::Duration,
 };
@@ -22,32 +21,32 @@ fn find_entry_index(harness: &ui_test_helpers::TestHarness, name: &str) -> Optio
         .position(|e| e.name == name)
 }
 
-// Helper function to wait for FS events and update UI
-fn wait_and_step(harness: &mut ui_test_helpers::TestHarness) {
-    // Wait for filesystem events to propagate and be picked up by notify
-    // Check in a loop with short intervals to avoid unnecessary waiting
-    let max_iterations = 100; // Increased iterations to account for shorter sleep
-    let sleep_duration = Duration::from_millis(5); // Reduced from 50ms to 5ms
-    let mut iterations = 0;
+// Helper function to wait for a condition to be met
+fn wait_for_condition<F>(
+    harness: &mut ui_test_helpers::TestHarness,
+    condition: F,
+    description: &str,
+) where
+    F: Fn(&ui_test_helpers::TestHarness) -> bool,
+{
+    let max_iterations = 300;
+    let sleep_duration = Duration::from_millis(10);
 
-    while iterations < max_iterations {
-        if harness.state().notify_fs_change.load(Ordering::Relaxed) {
-            // Flag is set, we can proceed
-            break;
+    for _ in 0..max_iterations {
+        harness.step();
+        if condition(harness) {
+            return;
         }
         // Sleep for a short interval before checking again
         thread::sleep(sleep_duration);
-        iterations += 1;
     }
 
-    // After the loop, assert that the flag was eventually set
-    assert!(
-        harness.state().notify_fs_change.load(Ordering::Relaxed),
-        "notify_fs_change should be true after waiting for {} iterations of {}ms",
+    panic!(
+        "Condition '{}' was not met after waiting for {} iterations of {}ms",
+        description,
         max_iterations,
         sleep_duration.as_millis()
     );
-    harness.step(); // Another step might be needed for async updates
 }
 
 #[test]
@@ -56,17 +55,20 @@ fn test_external_file_addition() {
     let mut harness = create_harness(&temp_dir);
 
     let file_name = "external_file.txt";
-    let file_path = temp_dir.path().join(file_name);
-
     assert!(
         find_entry_index(&harness, file_name).is_none(),
         "File should not exist in UI initially"
     );
 
+    let file_path = temp_dir.path().join(file_name);
     File::create(&file_path).expect("Failed to create external file");
     assert!(file_path.exists());
 
-    wait_and_step(&mut harness);
+    wait_for_condition(
+        &mut harness,
+        |h| find_entry_index(h, file_name).is_some(),
+        "external file to appear in UI",
+    );
 
     let file_index = find_entry_index(&harness, file_name)
         .expect("External file should appear in the UI after creation");
@@ -82,17 +84,20 @@ fn test_external_directory_addition() {
     let mut harness = create_harness(&temp_dir);
 
     let dir_name = "external_dir";
-    let dir_path = temp_dir.path().join(dir_name);
-
     assert!(
         find_entry_index(&harness, dir_name).is_none(),
         "Directory should not exist in UI initially"
     );
 
+    let dir_path = temp_dir.path().join(dir_name);
     fs::create_dir(&dir_path).expect("Failed to create external directory");
     assert!(dir_path.exists());
 
-    wait_and_step(&mut harness);
+    wait_for_condition(
+        &mut harness,
+        |h| find_entry_index(h, dir_name).is_some(),
+        "external directory to appear in UI",
+    );
 
     let dir_index = find_entry_index(&harness, dir_name)
         .expect("External directory should appear in the UI after creation");
@@ -105,13 +110,12 @@ fn test_external_directory_addition() {
 #[test]
 fn test_external_file_modification() {
     let temp_dir = tempdir().unwrap();
-    let mut harness = create_harness(&temp_dir);
 
     let mod_file_name = "modifiable_file.txt";
     let mod_file_path = temp_dir.path().join(mod_file_name);
 
     File::create(&mod_file_path).expect("Failed to create modifiable file");
-    wait_and_step(&mut harness); // Ensure it's in the UI
+    let mut harness = create_harness(&temp_dir);
 
     let initial_entry_index =
         find_entry_index(&harness, mod_file_name).expect("Modifiable file should be in UI");
@@ -125,7 +129,18 @@ fn test_external_file_modification() {
     file.sync_all().unwrap();
     drop(file);
 
-    wait_and_step(&mut harness);
+    wait_for_condition(
+        &mut harness,
+        |h| {
+            if let Some(index) = find_entry_index(h, mod_file_name) {
+                let entry = &h.state().tab_manager.current_tab_ref().entries[index];
+                entry.size != initial_entry.size
+            } else {
+                false
+            }
+        },
+        "file size to be updated in UI",
+    );
 
     let updated_entry_index = find_entry_index(&harness, mod_file_name)
         .expect("Modifiable file should still be in UI after modification");
@@ -151,13 +166,11 @@ fn test_external_file_modification() {
 #[test]
 fn test_external_file_removal() {
     let temp_dir = tempdir().unwrap();
-    let mut harness = create_harness(&temp_dir);
 
     let rem_file_name = "removable_file.txt";
     let rem_file_path = temp_dir.path().join(rem_file_name);
-
     File::create(&rem_file_path).expect("Failed to create removable file");
-    wait_and_step(&mut harness); // Ensure it's in the UI
+    let mut harness = create_harness(&temp_dir);
 
     assert!(
         find_entry_index(&harness, rem_file_name).is_some(),
@@ -167,8 +180,11 @@ fn test_external_file_removal() {
     fs::remove_file(&rem_file_path).expect("Failed to remove external file");
     assert!(!rem_file_path.exists());
 
-    wait_and_step(&mut harness);
-
+    wait_for_condition(
+        &mut harness,
+        |h| find_entry_index(h, rem_file_name).is_none(),
+        "external file to disappear from UI",
+    );
     assert!(
         find_entry_index(&harness, rem_file_name).is_none(),
         "External file should disappear from the UI after removal"
@@ -178,14 +194,13 @@ fn test_external_file_removal() {
 #[test]
 fn test_external_directory_removal() {
     let temp_dir = tempdir().unwrap();
-    let mut harness = create_harness(&temp_dir);
 
     let rem_dir_name = "removable_dir";
     let rem_dir_path = temp_dir.path().join(rem_dir_name);
 
     fs::create_dir(&rem_dir_path).expect("Failed to create removable directory");
     File::create(rem_dir_path.join("inner.txt")).unwrap();
-    wait_and_step(&mut harness); // Ensure it's in the UI
+    let mut harness = create_harness(&temp_dir);
 
     assert!(
         find_entry_index(&harness, rem_dir_name).is_some(),
@@ -195,7 +210,11 @@ fn test_external_directory_removal() {
     fs::remove_dir_all(&rem_dir_path).expect("Failed to remove external directory");
     assert!(!rem_dir_path.exists());
 
-    wait_and_step(&mut harness);
+    wait_for_condition(
+        &mut harness,
+        |h| find_entry_index(h, rem_dir_name).is_none(),
+        "external directory to disappear from UI",
+    );
 
     assert!(
         find_entry_index(&harness, rem_dir_name).is_none(),

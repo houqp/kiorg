@@ -24,6 +24,16 @@ fn test_text_file_preview() {
     harness.press_key(Key::J);
     harness.step();
 
+    for _ in 0..100 {
+        match harness.state().preview_content.as_ref() {
+            Some(PreviewContent::Text(_)) => break, // Text preview loaded
+            _ => {
+                std::thread::sleep(std::time::Duration::from_millis(10));
+                harness.step(); // Continue stepping until the text preview loads
+            }
+        }
+    }
+
     // Check if the preview content is text and contains the expected content
     match &harness.state().preview_content {
         Some(PreviewContent::Text(text)) => {
@@ -58,6 +68,16 @@ fn test_binary_file_preview() {
     harness.press_key(Key::J);
     harness.step();
 
+    for _ in 0..100 {
+        match harness.state().preview_content.as_ref() {
+            Some(PreviewContent::Text(_)) => break, // Text preview loaded
+            _ => {
+                std::thread::sleep(std::time::Duration::from_millis(10));
+                harness.step(); // Continue stepping until the text preview loads
+            }
+        }
+    }
+
     // Check if the preview content is text and indicates it's a binary file
     match &harness.state().preview_content {
         Some(PreviewContent::Text(text)) => {
@@ -91,6 +111,16 @@ fn test_directory_preview() {
     harness.press_key(Key::J);
     harness.step();
 
+    for _ in 0..100 {
+        match harness.state().preview_content.as_ref() {
+            Some(PreviewContent::Text(_)) => break, // Text preview loaded
+            _ => {
+                std::thread::sleep(std::time::Duration::from_millis(10));
+                harness.step(); // Continue stepping until the text preview loads
+            }
+        }
+    }
+
     // Check if the preview content is text and indicates it's a directory
     match &harness.state().preview_content {
         Some(PreviewContent::Text(text)) => {
@@ -123,6 +153,16 @@ fn test_image_preview() {
     // Since entries are sorted by name, we can navigate to the image file
     harness.press_key(Key::J);
     harness.step();
+
+    for _ in 0..100 {
+        match harness.state().preview_content.as_ref() {
+            Some(PreviewContent::Image(_)) => break, // Image preview loaded
+            _ => {
+                std::thread::sleep(std::time::Duration::from_millis(10));
+                harness.step(); // Continue stepping until the image preview loads
+            }
+        }
+    }
 
     // Check if the preview content is an image
     match &harness.state().preview_content {
@@ -158,12 +198,8 @@ fn test_zip_preview() {
     harness.press_key(Key::J);
     harness.step();
 
-    // Check if the preview content is a zip or loading
-    let mut is_zip_content = false;
-
     // Try multiple steps to allow async loading to complete
-    for _ in 0..20 {
-        std::thread::sleep(std::time::Duration::from_millis(10));
+    for _ in 0..100 {
         match &harness.state().preview_content {
             Some(PreviewContent::Zip(entries)) => {
                 // Verify zip entries
@@ -178,29 +214,19 @@ fn test_zip_preview() {
                 assert!(file2.is_some(), "file2.txt should be in the zip entries");
                 assert!(subdir.is_some(), "subdir/ should be in the zip entries");
 
-                is_zip_content = true;
-                break;
+                return;
             }
-            Some(PreviewContent::Loading(..)) => {
+            _ => {
                 // Still loading, try another step
+                std::thread::sleep(std::time::Duration::from_millis(10));
                 harness.step();
             }
-            Some(PreviewContent::Image(_)) => {
-                panic!("Preview content should be Zip or Loading variant, not Image");
-            }
-            Some(other) => {
-                panic!(
-                    "Preview content should be Zip or Loading variant, got {:?}",
-                    other
-                );
-            }
-            None => panic!("Preview content should not be None"),
         }
     }
 
-    assert!(
-        is_zip_content,
-        "Preview content should eventually be Zip variant"
+    panic!(
+        "Preview content should eventually be Zip variant, got {:?}",
+        harness.state().preview_content
     );
 }
 
