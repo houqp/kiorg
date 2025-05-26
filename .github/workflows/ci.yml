@@ -63,22 +63,20 @@ jobs:
     - name: Cache dependencies
       uses: Swatinem/rust-cache@v2
 
-    - name: Run tests (Linux/macOS)
-      if: runner.os == 'Linux' || runner.os == 'macOS'
-      run: |
-        if which mold &>/dev/null; then
-          mold -run cargo test
-        else
-          cargo test
-        fi
-
+    - name: Run tests (Linux)
+      if: runner.os == 'Linux'
+      run: mold -run cargo test
+    - name: Run tests (macOS)
+      if: runner.os == 'macOS'
+      run: cargo test
     - name: Run tests (Windows)
       if: runner.os == 'Windows'
-      run: cargo test
+      # disable terminal on windows
+      run: cargo test --no-default-features
 
   bundle-linux:
     name: Bundle Packaging (Linux)
-    # needs: build-and-test
+    needs: test
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
@@ -107,7 +105,7 @@ jobs:
 
   bundle-macos:
     name: Bundle Packaging (macOS)
-    #needs: build-and-test
+    needs: test
     runs-on: macos-15
     steps:
     - uses: actions/checkout@v3
@@ -122,27 +120,20 @@ jobs:
 
     - uses: cargo-bins/cargo-binstall@v1.12.4
     - name: Install cargo-bundle
-      run: cargo binstall --force cargo-bundle@0.6.1 && cargo-bundle --version
+      run: cargo binstall --force cargo-bundle && cargo-bundle --version
 
-    - name: Build release binary
-      run: |
-        cargo build --release
-        cd target/release
-        zip -r ../../kiorg-arm64-macos.zip kiorg
-
-    - name: Create bundle
+    - name: Create App bundle
       run: |
         cargo bundle --release
         cd target/release/bundle/osx
         # Create DMG using hdiutil
         hdiutil create -volname "Kiorg" -srcfolder Kiorg.app -ov -format UDZO ../../../Kiorg.dmg
 
-    - name: Upload macOS CLI binary
-      uses: actions/upload-artifact@v4
-      with:
-        name: kiorg-arm64-macos.zip
-        path: kiorg-arm64-macos.zip
-        if-no-files-found: error
+    - name: Create CLI binary
+      run: |
+        cargo build --release
+        cd target/release
+        zip -r ../../kiorg-arm64-macos.zip kiorg
 
     - name: Upload DMG artifact
       uses: actions/upload-artifact@v4
@@ -151,9 +142,16 @@ jobs:
         path: target/Kiorg.dmg
         if-no-files-found: error
 
+    - name: Upload macOS CLI binary
+      uses: actions/upload-artifact@v4
+      with:
+        name: kiorg-arm64-macos.zip
+        path: kiorg-arm64-macos.zip
+        if-no-files-found: error
+
   bundle-windows:
     name: Bundle Packaging (Windows)
-    # needs: build-and-test
+    needs: test
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v3

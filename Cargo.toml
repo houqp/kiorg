@@ -5,6 +5,10 @@ edition = "2021"
 authors = ["houqp"]
 repository = "https://github.com/houqp/kiorg"
 
+[features]
+default = ["terminal"]
+terminal = ["dep:egui_term"]
+
 [lib]
 name = "kiorg"
 path = "src/lib.rs"
@@ -24,7 +28,7 @@ serde_json = "1.0"
 dirs = "6"
 open = "4.0"
 clap = { version = "4.5.1", features = ["derive"] }
-egui_term = { git = "https://github.com/houqp/egui_term.git", rev = "b8b4a1b79e10e07bd64d8104449e8904b466b3cd" }
+egui_term = { git = "https://github.com/houqp/egui_term.git", rev = "b8b4a1b79e10e07bd64d8104449e8904b466b3cd", optional = true }
 notify = "8"
 egui_extras = { version = "0", features = ["all_loaders"] }
 zip = "4"

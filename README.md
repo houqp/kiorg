@@ -20,6 +20,20 @@ bindings. It is built using the [egui](https://www.egui.rs/#demo) framework.
 * Builtin terminal emulator
 * App state persistence
 
+## Installation
+
+### Install from source
+
+The easiest way to install Kiorg is using Cargo:
+
+```bash
+cargo install --git https://github.com/houqp/kiorg --locked
+```
+### Binary Releases
+
+Pre-built binaries for all platforms are available on the [releases page](https://github.com/houqp/kiorg/releases).
+
+
 ## Configuration
 
 Kiorg uses TOML configuration files stored in the user's config directory:
