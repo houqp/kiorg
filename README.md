@@ -22,17 +22,13 @@ bindings. It is built using the [egui](https://www.egui.rs/#demo) framework.
 
 ## Installation
 
-### Install from source
+Pre-built binaries for all platforms are available on the [releases page](https://github.com/houqp/kiorg/releases).
 
-The easiest way to install Kiorg is using Cargo:
+Alternatively, you can build it from source using cargo:
 
 ```bash
 cargo install --git https://github.com/houqp/kiorg --locked
 ```
-### Binary Releases
-
-Pre-built binaries for all platforms are available on the [releases page](https://github.com/houqp/kiorg/releases).
-
 
 ## Configuration
 

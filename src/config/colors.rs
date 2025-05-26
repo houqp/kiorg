@@ -101,6 +101,12 @@ impl Default for AppColors {
     }
 }
 
+// Helper function to convert Color32 to hex string
+#[inline]
+fn color32_to_hex(color: Color32) -> String {
+    format!("#{:02x}{:02x}{:02x}", color.r(), color.g(), color.b())
+}
+
 // Custom serialization for AppColors
 impl Serialize for AppColors {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -109,74 +115,19 @@ impl Serialize for AppColors {
     {
         // Convert to ColorScheme for serialization
         let scheme = ColorScheme {
-            bg: format!("#{:02x}{:02x}{:02x}", self.bg.r(), self.bg.g(), self.bg.b()),
-            bg_dim: format!(
-                "#{:02x}{:02x}{:02x}",
-                self.bg_dim.r(),
-                self.bg_dim.g(),
-                self.bg_dim.b()
-            ),
-            bg_light: format!(
-                "#{:02x}{:02x}{:02x}",
-                self.bg_light.r(),
-                self.bg_light.g(),
-                self.bg_light.b()
-            ),
-            fg: format!("#{:02x}{:02x}{:02x}", self.fg.r(), self.fg.g(), self.fg.b()),
-            selected_bg: format!(
-                "#{:02x}{:02x}{:02x}",
-                self.selected_bg.r(),
-                self.selected_bg.g(),
-                self.selected_bg.b()
-            ),
-            fg_light: format!(
-                "#{:02x}{:02x}{:02x}",
-                self.fg_light.r(),
-                self.fg_light.g(),
-                self.fg_light.b()
-            ),
-            fg_folder: format!(
-                "#{:02x}{:02x}{:02x}",
-                self.fg_folder.r(),
-                self.fg_folder.g(),
-                self.fg_folder.b()
-            ),
-            highlight: format!(
-                "#{:02x}{:02x}{:02x}",
-                self.highlight.r(),
-                self.highlight.g(),
-                self.highlight.b()
-            ),
-            link_text: format!(
-                "#{:02x}{:02x}{:02x}",
-                self.link_text.r(),
-                self.link_text.g(),
-                self.link_text.b()
-            ),
-            link_underscore: format!(
-                "#{:02x}{:02x}{:02x}",
-                self.link_underscore.r(),
-                self.link_underscore.g(),
-                self.link_underscore.b()
-            ),
-            error: format!(
-                "#{:02x}{:02x}{:02x}",
-                self.error.r(),
-                self.error.g(),
-                self.error.b()
-            ),
-            warn: format!(
-                "#{:02x}{:02x}{:02x}",
-                self.warn.r(),
-                self.warn.g(),
-                self.warn.b()
-            ),
-            success: format!(
-                "#{:02x}{:02x}{:02x}",
-                self.success.r(),
-                self.success.g(),
-                self.success.b()
-            ),
+            bg: color32_to_hex(self.bg),
+            bg_dim: color32_to_hex(self.bg_dim),
+            bg_light: color32_to_hex(self.bg_light),
+            fg: color32_to_hex(self.fg),
+            selected_bg: color32_to_hex(self.selected_bg),
+            fg_light: color32_to_hex(self.fg_light),
+            fg_folder: color32_to_hex(self.fg_folder),
+            highlight: color32_to_hex(self.highlight),
+            link_text: color32_to_hex(self.link_text),
+            link_underscore: color32_to_hex(self.link_underscore),
+            error: color32_to_hex(self.error),
+            warn: color32_to_hex(self.warn),
+            success: color32_to_hex(self.success),
         };
         scheme.serialize(serializer)
     }
@@ -209,5 +160,20 @@ mod tests {
         let scheme = ColorScheme::default();
         let colors = AppColors::from_config(&scheme);
         assert_eq!(colors.bg, Color32::from_rgb(0x2c, 0x2e, 0x34));
+    }
+
+    #[test]
+    fn test_color32_to_hex() {
+        let red = Color32::from_rgb(255, 0, 0);
+        assert_eq!(color32_to_hex(red), "#ff0000");
+
+        let green = Color32::from_rgb(0, 255, 0);
+        assert_eq!(color32_to_hex(green), "#00ff00");
+
+        let blue = Color32::from_rgb(0, 0, 255);
+        assert_eq!(color32_to_hex(blue), "#0000ff");
+
+        let custom = Color32::from_rgb(0x2c, 0x2e, 0x34);
+        assert_eq!(color32_to_hex(custom), "#2c2e34");
     }
 }
