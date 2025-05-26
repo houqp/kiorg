@@ -1,5 +1,6 @@
 pub mod app;
 pub mod config;
+pub mod font;
 pub mod input;
 pub mod models;
 pub mod ui;

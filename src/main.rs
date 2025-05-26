@@ -79,9 +79,10 @@ fn main() -> Result<(), eframe::Error> {
         options,
         Box::new(|cc| {
             egui_extras::install_image_loaders(&cc.egui_ctx);
-            egui_zhcn_fonts::add_sys_ui_fonts(&cc.egui_ctx);
 
-            // Create the app, handling any errors
+            let fonts = kiorg::font::load_system_fonts(egui::FontDefinitions::default());
+            cc.egui_ctx.set_fonts(fonts);
+
             match Kiorg::new(cc, initial_dir) {
                 Ok(app) => Ok(Box::new(app)),
                 Err(e) => {
