@@ -68,6 +68,7 @@ pub enum PopupType {
     AddEntry(String), // Name for the new file/directory being added
     Bookmarks(usize), // Selected index in the bookmarks list
     Preview,          // Show file preview in a popup window
+    Themes(String),   // Selected theme key in the themes list
 }
 
 /// Clipboard operation types
@@ -93,7 +94,7 @@ use crate::ui::terminal;
 use crate::ui::top_banner;
 use crate::ui::{
     about_popup, bookmark_popup, center_panel, help_window, left_panel, open_with_popup,
-    preview_popup, rename_popup, right_panel,
+    preview_popup, rename_popup, right_panel, theme_popup,
 };
 use egui_notify::Toasts;
 
@@ -224,11 +225,8 @@ impl Kiorg {
     ) -> Result<Self, KiorgError> {
         let config = config::load_config_with_override(config_dir_override.as_ref())?;
 
-        let colors = match &config.colors {
-            Some(color_scheme) => AppColors::from_config(color_scheme),
-            None => AppColors::default(),
-        };
-
+        // Load colors based on theme name from config
+        let colors = crate::theme::Theme::load_colors_from_config(&config);
         cc.egui_ctx.set_visuals(colors.to_visuals());
 
         // Determine the initial path and tab manager
@@ -324,6 +322,48 @@ impl Kiorg {
         self.toasts
             .error(message.to_string())
             .duration(Some(std::time::Duration::from_secs(20)));
+    }
+
+    /// Get shortcuts from config or use defaults
+    /// This method provides a centralized way to access shortcuts configuration
+    /// that can be reused across the main input handler and popup components
+    pub fn get_shortcuts(&self) -> &crate::config::shortcuts::Shortcuts {
+        match &self.config.shortcuts {
+            Some(shortcuts) => shortcuts,
+            None => {
+                // If no shortcuts are configured, use the default ones
+                crate::config::shortcuts::get_default_shortcuts()
+            }
+        }
+    }
+
+    /// Extract shortcut action from egui input events
+    /// This method provides a centralized way to process keyboard input and convert it to shortcut actions
+    /// that can be reused across the main input handler and popup components
+    pub fn get_shortcut_action_from_input(
+        &self,
+        ctx: &egui::Context,
+        namespace: bool,
+    ) -> Option<crate::config::shortcuts::ShortcutAction> {
+        let shortcuts = self.get_shortcuts();
+        ctx.input(|i| {
+            for event in &i.events {
+                if let egui::Event::Key {
+                    key,
+                    modifiers,
+                    pressed: true,
+                    ..
+                } = event
+                {
+                    if let Some(action) = crate::config::shortcuts::shortcuts_helpers::find_action(
+                        shortcuts, *key, *modifiers, namespace,
+                    ) {
+                        return Some(action);
+                    }
+                }
+            }
+            None
+        })
     }
 
     pub fn refresh_entries(&mut self) {
@@ -719,11 +759,6 @@ impl Kiorg {
 
 impl eframe::App for Kiorg {
     fn update(&mut self, ctx: &egui::Context, _: &mut eframe::Frame) {
-        // Store shortcuts in the context for the help window to access
-        if let Some(shortcuts) = &self.config.shortcuts {
-            ctx.data_mut(|d| d.insert_temp(egui::Id::new("shortcuts"), shortcuts.clone()));
-        }
-
         if self
             .notify_fs_change
             .load(std::sync::atomic::Ordering::Relaxed)
@@ -750,16 +785,15 @@ impl eframe::App for Kiorg {
 
         self.process_input(ctx);
 
-        // Show delete confirmation window if needed
-        // TODO: write a test for triggering delete popup from right click
-        // NOTE: important to keep it before the center panel so the popup can
-        // be triggered through the right click context menu
-        //
-        // Handle popups based on the show_popup field
-        match self.show_popup {
+        match &self.show_popup {
             Some(PopupType::Help) => {
                 let mut keep_open = true;
-                help_window::show_help_window(ctx, &mut keep_open, &self.colors);
+                help_window::show_help_window(
+                    ctx,
+                    self.get_shortcuts(),
+                    &mut keep_open,
+                    &self.colors,
+                );
                 if !keep_open {
                     self.show_popup = None;
                 }
@@ -784,11 +818,7 @@ impl eframe::App for Kiorg {
             }
             Some(PopupType::Bookmarks(_)) => {
                 // Handle bookmark popup
-                let bookmark_action = bookmark_popup::show_bookmark_popup(
-                    ctx,
-                    &mut self.show_popup,
-                    &mut self.bookmarks,
-                );
+                let bookmark_action = bookmark_popup::show_bookmark_popup(ctx, self);
                 // Process the bookmark action
                 match bookmark_action {
                     bookmark_popup::BookmarkAction::Navigate(path) => self.navigate_to_dir(path),
@@ -806,6 +836,9 @@ impl eframe::App for Kiorg {
             }
             Some(PopupType::Preview) => {
                 preview_popup::show_preview_popup(ctx, self);
+            }
+            Some(PopupType::Themes(_)) => {
+                theme_popup::draw(self, ctx);
             }
             None => {}
         }

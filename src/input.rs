@@ -1,4 +1,4 @@
-use crate::config::shortcuts::{self, shortcuts_helpers, ShortcutAction};
+use crate::config::shortcuts::{shortcuts_helpers, ShortcutAction};
 use crate::ui::terminal;
 use crate::ui::{add_entry_popup, bookmark_popup, center_panel, preview_popup};
 use egui::{Key, Modifiers};
@@ -347,7 +347,8 @@ fn process_key(
                 return;
             }
         }
-        Some(PopupType::Bookmarks(_)) => {
+        Some(PopupType::Themes(_)) | Some(PopupType::Bookmarks(_)) => {
+            // Theme popup input is handled in the popup itself
             // Bookmark popup input is handled in show_bookmark_popup
             return;
         }
@@ -359,15 +360,6 @@ fn process_key(
         app.search_bar.close();
         return;
     }
-
-    // Get shortcuts from config or use defaults
-    let shortcuts = match &app.config.shortcuts {
-        Some(shortcuts) => shortcuts,
-        None => {
-            // If no shortcuts are configured, use the default ones
-            shortcuts::get_default_shortcuts()
-        }
-    };
 
     // Special case for g key to handle namespace
     let mut namespace = false;
@@ -403,6 +395,7 @@ fn process_key(
     }
 
     // Find and handle the action for this key combination
+    let shortcuts = app.get_shortcuts();
     if let Some(action) = shortcuts_helpers::find_action(shortcuts, key, modifiers, namespace) {
         handle_shortcut_action(app, ctx, action);
     }

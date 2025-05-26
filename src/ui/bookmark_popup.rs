@@ -7,6 +7,7 @@ use std::path::PathBuf; // Removed unused Path
 use super::window_utils::new_center_popup_window;
 use crate::app::Kiorg;
 use crate::config::get_kiorg_config_dir;
+use crate::config::shortcuts::ShortcutAction;
 
 // Get the full path to the bookmarks file
 fn get_bookmarks_file_path(config_dir_override: Option<&PathBuf>) -> PathBuf {
@@ -76,14 +77,22 @@ fn display_bookmarks_grid(
     ui: &mut egui::Ui,
     bookmarks: &[PathBuf],
     selected_index: usize,
+    colors: &crate::config::colors::AppColors,
 ) -> (Option<PathBuf>, Option<PathBuf>) {
     let mut navigate_to_path = None;
     let mut remove_bookmark_path = None;
+    let bg_selected = colors.bg_selected.to_owned();
 
     egui::Grid::new("bookmarks_grid")
         .num_columns(2)
-        .spacing([20.0, 6.0]) // Space between columns and rows
-        .striped(true) // Alternate row background for better readability
+        .spacing([20.0, 2.0]) // 20px horizontal spacing, 2px vertical spacing
+        .with_row_color(move |i, _| {
+            if i == selected_index {
+                Some(bg_selected)
+            } else {
+                None
+            }
+        })
         .show(ui, |ui| {
             for (i, bookmark) in bookmarks.iter().enumerate() {
                 // Extract folder name and parent path
@@ -97,28 +106,39 @@ fn display_bookmarks_grid(
                     .map(|p| p.to_string_lossy().to_string())
                     .unwrap_or_default();
 
-                // First column: Folder name with selectable label
-                let folder_response =
-                    ui.add(egui::SelectableLabel::new(i == selected_index, folder_name));
+                let is_selected = i == selected_index;
 
-                // Second column: Parent path
-                let path_color = if i == selected_index {
-                    ui.visuals().strong_text_color()
+                // Column 1: Folder name
+                let folder_response = ui.colored_label(colors.fg_folder, &folder_name);
+
+                // Column 2: Parent path
+                let path_color = if is_selected {
+                    colors.fg_selected
                 } else {
-                    ui.visuals().weak_text_color()
+                    colors.fg_light
                 };
-                let path_response = ui.colored_label(path_color, parent_path);
+
+                let path_response = ui.colored_label(path_color, &parent_path);
+
                 ui.end_row();
 
-                // Combined response for click handling
-                let response = folder_response.union(path_response);
+                // Combine responses for unified row clicking
+                let combined_response = folder_response.union(path_response);
 
-                if response.clicked() {
+                // Show clickable hand cursor on hover and handle clicks
+                let combined_response = if combined_response.hovered() {
+                    combined_response.on_hover_cursor(egui::CursorIcon::PointingHand)
+                } else {
+                    combined_response
+                };
+
+                // Handle row click for navigation
+                if combined_response.clicked() {
                     navigate_to_path = Some(bookmark.clone());
                 }
 
-                // Right-click context menu for removing bookmarks
-                response.context_menu(|ui| {
+                // Right-click context menu for the entire row
+                combined_response.context_menu(|ui| {
                     if ui.button("Remove bookmark").clicked() {
                         remove_bookmark_path = Some(bookmark.clone());
                         ui.close_menu();
@@ -130,13 +150,9 @@ fn display_bookmarks_grid(
     (navigate_to_path, remove_bookmark_path)
 }
 
-pub fn show_bookmark_popup(
-    ctx: &Context,
-    show_popup: &mut Option<crate::app::PopupType>,
-    bookmarks: &mut Vec<PathBuf>,
-) -> BookmarkAction {
+pub fn show_bookmark_popup(ctx: &Context, app: &mut Kiorg) -> BookmarkAction {
     // Extract the current selected index from the popup type, or return early if not showing bookmarks
-    let current_index = match show_popup {
+    let current_index = match &app.show_popup {
         Some(crate::app::PopupType::Bookmarks(index)) => *index,
         _ => return BookmarkAction::None,
     };
@@ -144,22 +160,32 @@ pub fn show_bookmark_popup(
     let mut current_index = current_index;
 
     // Ensure index is valid
-    if !bookmarks.is_empty() {
-        current_index = current_index.min(bookmarks.len() - 1);
+    if !app.bookmarks.is_empty() {
+        current_index = current_index.min(app.bookmarks.len() - 1);
     } else {
         current_index = 0;
     }
 
-    // Handle keyboard navigation for closing the popup
-    if ctx.input(|i| i.key_pressed(egui::Key::Q) || i.key_pressed(egui::Key::Escape)) {
-        *show_popup = None;
-        return BookmarkAction::None;
-    }
+    // Handle keyboard navigation using shortcuts
 
-    // Handle keyboard shortcut for deleting bookmarks
     let mut remove_bookmark_path = None;
-    if ctx.input(|i| i.key_pressed(egui::Key::D)) && !bookmarks.is_empty() {
-        remove_bookmark_path = Some(bookmarks[current_index].clone());
+
+    // Check for shortcut actions based on input
+    let action = app.get_shortcut_action_from_input(ctx, false);
+
+    if let Some(action) = action {
+        match action {
+            ShortcutAction::Exit => {
+                app.show_popup = None;
+                return BookmarkAction::None;
+            }
+            ShortcutAction::DeleteEntry => {
+                if !app.bookmarks.is_empty() {
+                    remove_bookmark_path = Some(app.bookmarks[current_index].clone());
+                }
+            }
+            _ => {} // Other actions will be handled below in the window
+        }
     }
 
     let mut navigate_to_path = None;
@@ -171,30 +197,36 @@ pub fn show_bookmark_popup(
         .default_pos(ctx.screen_rect().center()) // Position at screen center
         .open(&mut window_open)
         .show(ctx, |ui| {
-            if bookmarks.is_empty() {
+            if app.bookmarks.is_empty() {
                 ui.label("No bookmarks yet. Use 'b' to bookmark folders.");
                 return;
             }
 
             // Handle keyboard navigation
-            if ctx.input(|i| i.key_pressed(egui::Key::J) || i.key_pressed(egui::Key::ArrowDown)) {
-                if !bookmarks.is_empty() {
-                    current_index = (current_index + 1).min(bookmarks.len() - 1);
+            let action = app.get_shortcut_action_from_input(ctx, false);
+            if let Some(action) = action {
+                match action {
+                    ShortcutAction::MoveDown => {
+                        if !app.bookmarks.is_empty() {
+                            current_index = (current_index + 1).min(app.bookmarks.len() - 1);
+                        }
+                    }
+                    ShortcutAction::MoveUp => {
+                        current_index = current_index.saturating_sub(1);
+                    }
+                    ShortcutAction::OpenDirectoryOrFile | ShortcutAction::OpenDirectory => {
+                        if !app.bookmarks.is_empty() {
+                            navigate_to_path = Some(app.bookmarks[current_index].clone());
+                        }
+                    }
+                    _ => {} // Other actions already handled above
                 }
-            } else if ctx
-                .input(|i| i.key_pressed(egui::Key::K) || i.key_pressed(egui::Key::ArrowUp))
-            {
-                current_index = current_index.saturating_sub(1);
-            } else if ctx.input(|i| i.key_pressed(egui::Key::Enter) || i.key_pressed(egui::Key::L))
-                && !bookmarks.is_empty()
-            {
-                navigate_to_path = Some(bookmarks[current_index].clone());
             }
 
             // Display bookmarks in a scrollable area
             egui::ScrollArea::vertical().show(ui, |ui| {
                 let (click_navigate, context_menu_remove) =
-                    display_bookmarks_grid(ui, bookmarks, current_index);
+                    display_bookmarks_grid(ui, &app.bookmarks, current_index, &app.colors);
                 if let Some(path) = click_navigate {
                     navigate_to_path = Some(path);
                 }
@@ -210,26 +242,26 @@ pub fn show_bookmark_popup(
         // If we need to navigate, return the path
         if let Some(path) = navigate_to_path {
             action = BookmarkAction::Navigate(path);
-            *show_popup = None; // Close popup when navigating
+            app.show_popup = None; // Close popup when navigating
         } else {
             // If we need to remove a bookmark, do it now
             if let Some(path) = remove_bookmark_path {
-                bookmarks.retain(|p| p != &path);
+                app.bookmarks.retain(|p| p != &path);
                 action = BookmarkAction::SaveBookmarks;
             }
 
             // Update the popup state with the current index
             if window_open && !response.response.clicked_elsewhere() {
-                *show_popup = Some(crate::app::PopupType::Bookmarks(current_index));
+                app.show_popup = Some(crate::app::PopupType::Bookmarks(current_index));
             } else {
-                *show_popup = None;
+                app.show_popup = None;
             }
         }
 
         action
     } else {
         // Window was closed
-        *show_popup = None;
+        app.show_popup = None;
         BookmarkAction::None
     }
 }

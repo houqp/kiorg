@@ -1,7 +1,6 @@
 use egui::{Context, RichText, Ui};
 
 use super::window_utils::new_center_popup_window;
-use crate::config::colors::AppColors;
 
 /// Result of a confirmation popup
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -31,7 +30,6 @@ pub fn show_confirm_popup<F>(
     ctx: &Context,
     title: &str,
     show_popup: &mut bool,
-    colors: &AppColors,
     content_fn: F,
     confirm_text: &str,
     cancel_text: &str,
@@ -57,8 +55,7 @@ where
 
                     ui.horizontal(|ui| {
                         ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
-                            let confirm_rich_text =
-                                RichText::new(confirm_text).color(colors.success);
+                            let confirm_rich_text = RichText::new(confirm_text);
                             let confirm_clicked = ui.button(confirm_rich_text).clicked();
                             if confirm_clicked {
                                 result = ConfirmResult::Confirm;

@@ -90,8 +90,6 @@ pub fn draw(ctx: &Context, app: &mut Kiorg) {
         .interactable(true)
         .movable(false)
         .show(ctx, |ui| {
-            ui.visuals_mut().widgets.noninteractive.bg_fill = app.colors.bg_light;
-
             // Create a shadow similar to window popups
             let shadow = Shadow {
                 offset: [0, 4],                       // 4px downward shadow

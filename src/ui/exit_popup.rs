@@ -29,7 +29,6 @@ pub fn draw(ctx: &Context, app: &mut Kiorg) {
         ctx,
         "Exit Confirmation",
         &mut keep_open,
-        &app.colors,
         |ui| {
             ui.vertical_centered(|ui| {
                 ui.label("Are you sure you want to exit?");

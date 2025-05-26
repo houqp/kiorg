@@ -40,6 +40,7 @@ pub struct SortPreference {
 #[derive(Deserialize, Serialize, Default, Debug)]
 pub struct Config {
     pub colors: Option<ColorScheme>,
+    pub theme: Option<String>,
     pub sort_preference: Option<SortPreference>,
     pub shortcuts: Option<shortcuts::Shortcuts>,
 }
@@ -48,6 +49,7 @@ impl Config {
     fn default() -> Self {
         Self {
             colors: None,
+            theme: None,
             sort_preference: None,
             shortcuts: Some(shortcuts::default_shortcuts()),
         }

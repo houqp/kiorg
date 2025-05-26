@@ -17,6 +17,7 @@ pub mod search_bar;
 pub mod separator;
 pub mod style;
 pub mod terminal;
+pub mod theme_popup;
 pub mod top_banner;
 
 pub mod popup_utils;

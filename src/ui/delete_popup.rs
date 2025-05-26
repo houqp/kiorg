@@ -42,7 +42,6 @@ pub fn handle_delete_confirmation(
                     ctx,
                     "Delete Confirmation",
                     show_delete_confirm,
-                    colors,
                     |ui| {
                         ui.vertical_centered(|ui| {
                             ui.label(path.display().to_string());
@@ -58,7 +57,6 @@ pub fn handle_delete_confirmation(
                     ctx,
                     "Delete Confirmation",
                     show_delete_confirm,
-                    colors,
                     |ui| {
                         ui.vertical_centered(|ui| {
                             ui.label("Are you SURE you want to delete");
@@ -89,7 +87,6 @@ pub fn handle_delete_confirmation(
                     ctx,
                     "Bulk Delete Confirmation",
                     show_delete_confirm,
-                    colors,
                     |ui| {
                         ui.vertical_centered(|ui| {
                             ui.label(format!(
@@ -127,7 +124,6 @@ pub fn handle_delete_confirmation(
                     ctx,
                     "Bulk Delete Confirmation",
                     show_delete_confirm,
-                    colors,
                     |ui| {
                         ui.vertical_centered(|ui| {
                             ui.label("Are you SURE you want to delete these items?");

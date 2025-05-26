@@ -1,17 +1,16 @@
 use crate::config::colors::AppColors;
-use crate::config::shortcuts::{self, shortcuts_helpers, ShortcutAction, Shortcuts};
+use crate::config::shortcuts::{shortcuts_helpers, ShortcutAction, Shortcuts};
 use egui::{self, RichText};
 
 use super::window_utils::new_center_popup_window;
 
-pub fn show_help_window(ctx: &egui::Context, show_help: &mut bool, colors: &AppColors) {
+pub fn show_help_window(
+    ctx: &egui::Context,
+    shortcuts: &Shortcuts,
+    show_help: &mut bool,
+    colors: &AppColors,
+) {
     let mut keep_open = *show_help; // Use a temporary variable for the open state
-
-    // Get the shortcuts from the app context
-    let shortcuts = match ctx.data(|d| d.get_temp::<Shortcuts>(egui::Id::new("shortcuts"))) {
-        Some(shortcuts) => shortcuts,
-        None => shortcuts::get_default_shortcuts().clone(),
-    };
 
     let response = new_center_popup_window("Help")
         .open(&mut keep_open)
@@ -44,7 +43,7 @@ pub fn show_help_window(ctx: &egui::Context, show_help: &mut bool, colors: &AppC
 
                         for (action, description) in navigation_actions {
                             let shortcut_display =
-                                shortcuts_helpers::get_shortcut_display(&shortcuts, action);
+                                shortcuts_helpers::get_shortcut_display(shortcuts, action);
                             ui.label(RichText::new(shortcut_display).color(colors.highlight));
                             ui.label(description);
                             ui.end_row();
@@ -83,7 +82,7 @@ pub fn show_help_window(ctx: &egui::Context, show_help: &mut bool, colors: &AppC
                         ];
                         for (action, description) in file_actions {
                             let shortcut_display =
-                                shortcuts_helpers::get_shortcut_display(&shortcuts, action);
+                                shortcuts_helpers::get_shortcut_display(shortcuts, action);
                             ui.label(RichText::new(shortcut_display).color(colors.highlight));
                             ui.label(description);
                             ui.end_row();
@@ -108,7 +107,7 @@ pub fn show_help_window(ctx: &egui::Context, show_help: &mut bool, colors: &AppC
 
                         for (action, description) in bookmark_actions {
                             let shortcut_display =
-                                shortcuts_helpers::get_shortcut_display(&shortcuts, action);
+                                shortcuts_helpers::get_shortcut_display(shortcuts, action);
                             ui.label(RichText::new(shortcut_display).color(colors.highlight));
                             ui.label(description);
                             ui.end_row();
@@ -132,7 +131,7 @@ pub fn show_help_window(ctx: &egui::Context, show_help: &mut bool, colors: &AppC
 
                         for (action, description) in tab_actions {
                             let shortcut_display =
-                                shortcuts_helpers::get_shortcut_display(&shortcuts, action);
+                                shortcuts_helpers::get_shortcut_display(shortcuts, action);
                             ui.label(RichText::new(shortcut_display).color(colors.highlight));
                             ui.label(description);
                             ui.end_row();
@@ -154,7 +153,7 @@ pub fn show_help_window(ctx: &egui::Context, show_help: &mut bool, colors: &AppC
                             [(ShortcutAction::ActivateSearch, "Activate search filter")];
                         for (action, description) in search_actions {
                             let shortcut_display =
-                                shortcuts_helpers::get_shortcut_display(&shortcuts, action);
+                                shortcuts_helpers::get_shortcut_display(shortcuts, action);
                             ui.label(RichText::new(shortcut_display).color(colors.highlight));
                             ui.label(description);
                             ui.end_row();
@@ -186,7 +185,7 @@ pub fn show_help_window(ctx: &egui::Context, show_help: &mut bool, colors: &AppC
                         ];
                         for (action, description) in util_actions {
                             let shortcut_display =
-                                shortcuts_helpers::get_shortcut_display(&shortcuts, action);
+                                shortcuts_helpers::get_shortcut_display(shortcuts, action);
                             ui.label(RichText::new(shortcut_display).color(colors.highlight));
                             ui.label(description);
                             ui.end_row();

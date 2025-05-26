@@ -308,7 +308,7 @@ mod tests {
             .with_max_steps(20)
             .build_eframe(|_cc| TestApp {
                 path: PathBuf::from("/"),
-                colors: crate::config::colors::AppColors::default(),
+                colors: crate::theme::get_default_theme().get_colors().clone(),
                 message: None,
             });
 

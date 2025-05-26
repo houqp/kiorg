@@ -56,9 +56,6 @@ pub fn draw(ctx: &egui::Context, app: &mut Kiorg) {
         new_center_popup_window("Rename")
             .open(&mut keep_open)
             .show(ctx, |ui| {
-                // Set background color to match search bar
-                ui.visuals_mut().widgets.noninteractive.bg_fill = app.colors.bg_light;
-
                 // Create a frame with styling similar to other popups
                 Frame::default()
                     .fill(app.colors.bg_light)

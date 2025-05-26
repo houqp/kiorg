@@ -1,5 +1,5 @@
 use chrono::{DateTime, Local};
-use egui::{Align2, Color32, Ui};
+use egui::{Align2, Ui};
 use humansize::{format_size, BINARY};
 
 use crate::config::colors::AppColors;
@@ -156,7 +156,7 @@ fn draw_icon(
     };
 
     let icon_color = if is_selected {
-        Color32::WHITE
+        colors.fg_selected
     } else {
         colors.fg_light
     };
@@ -177,7 +177,7 @@ fn draw_icon(
             "🔖",
             egui::FontId::proportional(ICON_SIZE * 0.7), // Even smaller font for the bookmark icon
             if is_selected {
-                Color32::WHITE
+                colors.fg_selected
             } else {
                 colors.fg_light.gamma_multiply(1.2)
             }, // More subtle color
@@ -215,7 +215,7 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
     } else if is_marked {
         ui.painter().rect_filled(rect, 0.0, colors.bg_light);
     } else if is_selected {
-        ui.painter().rect_filled(rect, 0.0, colors.selected_bg);
+        ui.painter().rect_filled(rect, 0.0, colors.bg_selected);
     }
 
     let mut cursor = rect.left_top();
@@ -339,7 +339,7 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
         .format("%Y-%m-%d %H:%M:%S")
         .to_string();
     let date_color = if is_selected {
-        Color32::WHITE
+        colors.fg_selected
     } else {
         colors.fg_light
     };
@@ -359,7 +359,7 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
         format_size(entry.size, BINARY)
     };
     let size_color = if is_selected {
-        Color32::WHITE
+        colors.fg_selected
     } else {
         colors.fg_light
     };
@@ -390,7 +390,7 @@ pub fn draw_parent_entry_row(
     );
 
     if is_selected {
-        ui.painter().rect_filled(rect, 0.0, colors.selected_bg);
+        ui.painter().rect_filled(rect, 0.0, colors.bg_selected);
     }
 
     let mut cursor = rect.left_top();

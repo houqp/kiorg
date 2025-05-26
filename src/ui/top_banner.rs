@@ -31,6 +31,17 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui) {
                         ui.close_menu();
                     }
 
+                    if ui.button("Themes").clicked() {
+                        // Use current theme key or default to dark_kiorg
+                        let current_theme_key = app
+                            .config
+                            .theme
+                            .clone()
+                            .unwrap_or_else(|| "dark_kiorg".to_string());
+                        app.show_popup = Some(crate::app::PopupType::Themes(current_theme_key));
+                        ui.close_menu();
+                    }
+
                     ui.separator();
 
                     if ui.button("Help").clicked() {
