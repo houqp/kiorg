@@ -245,10 +245,21 @@ fn read_dir_entries(path: &PathBuf) -> Vec<DirEntry> {
                 let path = entry.path();
                 let name = entry.file_name().to_string_lossy().into_owned();
 
+                let file_type = entry.file_type().ok()?;
+                let is_symlink = file_type.is_symlink();
+
+                // For non-symlinks, we can determine is_dir without additional syscalls
+                let is_dir = if is_symlink {
+                    // For symlinks, we need to follow the link to determine if target is a directory
+                    // This is the only case where we need the additional syscall
+                    path.is_dir()
+                } else {
+                    // For regular files/directories, use the file_type directly
+                    file_type.is_dir()
+                };
+
+                // Get metadata for size and modification time
                 let metadata = entry.metadata().ok()?;
-                let is_symlink = metadata.file_type().is_symlink();
-                // For symlinks, we need to check if the target is a directory
-                let is_dir = path.is_dir();
                 let modified = metadata
                     .modified()
                     .unwrap_or(std::time::SystemTime::UNIX_EPOCH);
