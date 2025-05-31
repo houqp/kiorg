@@ -99,7 +99,7 @@ pub fn draw(ctx: &Context, app: &mut Kiorg) {
             };
 
             egui::Frame::default()
-                .fill(app.colors.bg_light)
+                .fill(app.colors.bg_extreme)
                 .inner_margin(5.0)
                 .shadow(shadow)
                 .show(ui, |ui| {

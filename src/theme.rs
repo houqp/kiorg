@@ -13,7 +13,7 @@ static DARK_KIORG_THEME: LazyLock<Theme> = LazyLock::new(|| Theme {
     colors: AppColors::from_scheme(&ColorScheme {
         bg: "#2c2e34".to_string(),
         bg_light: "#3b3e48".to_string(),
-        bg_extreme: "#0a0a0a".to_string(),
+        bg_extreme: "#222222".to_string(),
         bg_fill: "#2d2d2d".to_string(),
         bg_interactive_fill: "#3c3c3c".to_string(),
         bg_active: "#373737".to_string(),
@@ -38,7 +38,7 @@ static LIGHT_ONEDARK_THEME: LazyLock<Theme> = LazyLock::new(|| Theme {
         bg: "#f0f0f0".to_string(),
         bg_selected: "#eaeef2".to_string(),
         bg_light: "#d0d7de".to_string(),
-        bg_extreme: "#fafafa".to_string(),
+        bg_extreme: "#f8f8f8".to_string(),
         bg_fill: "#dcdcdc".to_string(),
         bg_interactive_fill: "#e6e6e6".to_string(),
         bg_active: "#c9c9c9".to_string(),

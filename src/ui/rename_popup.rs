@@ -58,7 +58,7 @@ pub fn draw(ctx: &egui::Context, app: &mut Kiorg) {
             .show(ctx, |ui| {
                 // Create a frame with styling similar to other popups
                 Frame::default()
-                    .fill(app.colors.bg_light)
+                    .fill(app.colors.bg_extreme)
                     .inner_margin(5.0)
                     .show(ui, |ui| {
                         ui.set_max_width(400.0); // Limit width

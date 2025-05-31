@@ -15,7 +15,7 @@ pub struct ColorScheme {
     pub bg: String,
     // Background for marked elements
     pub bg_light: String,
-    // Background for scrollbars and text edit areas
+    // Background for scrollbars and text edit areas including the search bar
     pub bg_extreme: String,
     pub fg: String,
     pub highlight: String,
