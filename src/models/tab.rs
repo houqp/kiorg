@@ -1,5 +1,7 @@
 use crate::config::Config;
 use crate::models::dir_entry::DirEntry;
+use chrono::{DateTime, Local};
+use humansize::{format_size, BINARY};
 use std::path::PathBuf;
 
 #[derive(Clone, PartialEq, Debug, Hash, Eq, serde::Serialize, serde::Deserialize, Copy)]
@@ -265,6 +267,18 @@ fn read_dir_entries(path: &PathBuf) -> Vec<DirEntry> {
                     .unwrap_or(std::time::SystemTime::UNIX_EPOCH);
                 let size = if is_dir { 0 } else { metadata.len() };
 
+                // Format the modification date once during creation
+                let formatted_modified = DateTime::<Local>::from(modified)
+                    .format("%Y-%m-%d %H:%M:%S")
+                    .to_string();
+
+                // Format the size once during creation
+                let formatted_size = if is_dir {
+                    String::new()
+                } else {
+                    format_size(size, BINARY)
+                };
+
                 Some(DirEntry {
                     name,
                     path,
@@ -272,6 +286,8 @@ fn read_dir_entries(path: &PathBuf) -> Vec<DirEntry> {
                     is_symlink,
                     modified,
                     size,
+                    formatted_modified,
+                    formatted_size,
                 })
             })
             .collect()
@@ -482,13 +498,24 @@ mod tests {
     // Helper to create DirEntry instances for testing
     fn create_entry(name: &str, is_dir: bool, modified_secs_ago: u64, size: u64) -> DirEntry {
         let modified = SystemTime::now() - Duration::from_secs(modified_secs_ago);
+        let formatted_modified = DateTime::<Local>::from(modified)
+            .format("%Y-%m-%d %H:%M:%S")
+            .to_string();
+        let actual_size = if is_dir { 0 } else { size };
+        let formatted_size = if is_dir {
+            String::new()
+        } else {
+            format_size(actual_size, BINARY)
+        };
         DirEntry {
             path: PathBuf::from(name),
             name: name.to_string(),
             is_dir,
             is_symlink: false, // Default to false for test entries
             modified,          // Use the calculated SystemTime directly
-            size: if is_dir { 0 } else { size }, // Use 0 for dirs, provided size for files
+            size: actual_size, // Use 0 for dirs, provided size for files
+            formatted_modified,
+            formatted_size,
         }
     }
 

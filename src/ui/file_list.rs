@@ -1,6 +1,4 @@
-use chrono::{DateTime, Local};
 use egui::{Align2, Ui};
-use humansize::{format_size, BINARY};
 
 use crate::config::colors::AppColors;
 use crate::models::dir_entry::DirEntry;
@@ -335,9 +333,6 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
     cursor.x += name_width + INTER_COLUMN_PADDING; // Advance cursor including padding
 
     // --- Draw Modified Column ---
-    let modified_date = DateTime::<Local>::from(entry.modified)
-        .format("%Y-%m-%d %H:%M:%S")
-        .to_string();
     let date_color = if is_selected {
         colors.fg_selected
     } else {
@@ -346,18 +341,13 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
     ui.painter().text(
         cursor + egui::vec2(0.0, ROW_HEIGHT / 2.0),
         Align2::LEFT_CENTER,
-        &modified_date,
+        &entry.formatted_modified,
         egui::FontId::proportional(14.0),
         date_color,
     );
     cursor.x += MODIFIED_DATE_WIDTH + INTER_COLUMN_PADDING; // Advance cursor including padding
 
     // --- Draw Size Column ---
-    let size_str = if entry.is_dir {
-        String::new()
-    } else {
-        format_size(entry.size, BINARY)
-    };
     let size_color = if is_selected {
         colors.fg_selected
     } else {
@@ -366,7 +356,7 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
     ui.painter().text(
         cursor + egui::vec2(0.0, ROW_HEIGHT / 2.0),
         Align2::LEFT_CENTER,
-        &size_str,
+        &entry.formatted_size,
         egui::FontId::proportional(14.0),
         size_color,
     );
