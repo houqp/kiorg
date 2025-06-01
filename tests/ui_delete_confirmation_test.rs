@@ -41,29 +41,36 @@ fn test_folder_delete_double_confirmation() {
     harness.step();
 
     // Verify delete popup is shown
-    assert_eq!(
-        harness.state().show_popup,
-        Some(kiorg::app::PopupType::Delete),
+    assert!(
+        matches!(harness.state().show_popup, Some(kiorg::app::PopupType::Delete(_))),
         "Delete popup should be open"
     );
 
     // Verify we're in the initial confirmation state
-    assert_eq!(
-        harness.state().delete_popup_state,
-        kiorg::ui::delete_popup::DeleteConfirmState::Initial,
-        "Should be in initial confirmation state"
-    );
+    if let Some(kiorg::app::PopupType::Delete(state)) = &harness.state().show_popup {
+        assert_eq!(
+            *state,
+            kiorg::ui::delete_popup::DeleteConfirmState::Initial,
+            "Should be in initial confirmation state"
+        );
+    } else {
+        panic!("Expected Delete popup to be open");
+    }
 
     // Press Enter for first confirmation
     harness.press_key(Key::Enter);
     harness.step();
 
     // Verify we're now in the recursive confirmation state
-    assert_eq!(
-        harness.state().delete_popup_state,
-        kiorg::ui::delete_popup::DeleteConfirmState::RecursiveConfirm,
-        "Should be in recursive confirmation state after first Enter"
-    );
+    if let Some(kiorg::app::PopupType::Delete(state)) = &harness.state().show_popup {
+        assert_eq!(
+            *state,
+            kiorg::ui::delete_popup::DeleteConfirmState::RecursiveConfirm,
+            "Should be in recursive confirmation state after first Enter"
+        );
+    } else {
+        panic!("Expected Delete popup to be open");
+    }
 
     // Verify directory still exists after first confirmation
     assert!(
@@ -110,9 +117,8 @@ fn test_folder_delete_cancel_first_confirmation() {
     harness.step();
 
     // Verify delete popup is shown
-    assert_eq!(
-        harness.state().show_popup,
-        Some(kiorg::app::PopupType::Delete),
+    assert!(
+        matches!(harness.state().show_popup, Some(kiorg::app::PopupType::Delete(_))),
         "Delete popup should be open"
     );
 
@@ -158,11 +164,15 @@ fn test_folder_delete_cancel_second_confirmation() {
     harness.step();
 
     // Verify we're in the recursive confirmation state
-    assert_eq!(
-        harness.state().delete_popup_state,
-        kiorg::ui::delete_popup::DeleteConfirmState::RecursiveConfirm,
-        "Should be in recursive confirmation state after first Enter"
-    );
+    if let Some(kiorg::app::PopupType::Delete(state)) = &harness.state().show_popup {
+        assert_eq!(
+            *state,
+            kiorg::ui::delete_popup::DeleteConfirmState::RecursiveConfirm,
+            "Should be in recursive confirmation state after first Enter"
+        );
+    } else {
+        panic!("Expected Delete popup to be open");
+    }
 
     // Press Escape to cancel
     harness.press_key(Key::Escape);

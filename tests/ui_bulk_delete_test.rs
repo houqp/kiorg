@@ -59,9 +59,8 @@ fn test_bulk_delete_with_space_key() {
     // Verify the delete popup is shown with multiple entries
     {
         let app = harness.state();
-        assert_eq!(
-            app.show_popup,
-            Some(kiorg::app::PopupType::Delete),
+        assert!(
+            matches!(app.show_popup, Some(kiorg::app::PopupType::Delete(_))),
             "Delete popup should be shown"
         );
         assert_eq!(
@@ -78,11 +77,15 @@ fn test_bulk_delete_with_space_key() {
     // Verify we're now in the recursive confirmation state (second confirmation required)
     {
         let app = harness.state();
-        assert_eq!(
-            app.delete_popup_state,
-            kiorg::ui::delete_popup::DeleteConfirmState::RecursiveConfirm,
-            "Should be in initial confirmation state after first Enter"
-        );
+        if let Some(kiorg::app::PopupType::Delete(state)) = &app.show_popup {
+            assert_eq!(
+                *state,
+                kiorg::ui::delete_popup::DeleteConfirmState::RecursiveConfirm,
+                "Should be in recursive confirmation state after first Enter"
+            );
+        } else {
+            panic!("Expected Delete popup to be open");
+        }
 
         // Verify files still exist after first confirmation
         assert!(
