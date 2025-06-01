@@ -162,12 +162,21 @@ pub fn confirm_delete(app: &mut crate::app::Kiorg) {
         return;
     }
 
+    // Get the state from the popup
+    let state = if let Some(crate::app::PopupType::Delete(ref state)) = app.show_popup {
+        state.clone()
+    } else {
+        return;
+    };
+
     // For bulk deletion (multiple entries)
     if app.entries_to_delete.len() > 1 {
         // Check if we're in the initial state and any of the entries is a directory
-        if app.delete_popup_state == DeleteConfirmState::Initial {
+        if state == DeleteConfirmState::Initial {
             // For bulk deletion with directories, move to second confirmation
-            app.delete_popup_state = DeleteConfirmState::RecursiveConfirm;
+            app.show_popup = Some(crate::app::PopupType::Delete(
+                DeleteConfirmState::RecursiveConfirm,
+            ));
             return; // Return early without performing deletion
         }
 
@@ -190,9 +199,11 @@ pub fn confirm_delete(app: &mut crate::app::Kiorg) {
 
     let path = &app.entries_to_delete[0];
     // Check if we're in the initial state and dealing with a directory
-    if app.delete_popup_state == DeleteConfirmState::Initial && path.is_dir() {
+    if state == DeleteConfirmState::Initial && path.is_dir() {
         // For directories in initial state, move to second confirmation
-        app.delete_popup_state = DeleteConfirmState::RecursiveConfirm;
+        app.show_popup = Some(crate::app::PopupType::Delete(
+            DeleteConfirmState::RecursiveConfirm,
+        ));
         return; // Return early without performing deletion
     }
 
@@ -212,5 +223,4 @@ pub fn confirm_delete(app: &mut crate::app::Kiorg) {
 pub fn cancel_delete(app: &mut crate::app::Kiorg) {
     app.show_popup = None;
     app.entries_to_delete.clear(); // Clear the entries to delete
-    app.delete_popup_state = DeleteConfirmState::Initial; // Reset delete popup state
 }

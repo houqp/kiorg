@@ -306,7 +306,7 @@ fn process_key(
             }
             return;
         }
-        Some(PopupType::Delete) => {
+        Some(PopupType::Delete(_)) => {
             if key == Key::Enter {
                 crate::ui::delete_popup::confirm_delete(app);
             } else if is_cancel_keys(key) {

@@ -62,7 +62,7 @@ pub enum PopupType {
     About,
     Help,
     Exit,
-    Delete,
+    Delete(crate::ui::delete_popup::DeleteConfirmState),
     Rename(String),   // New name for the file/directory being renamed
     OpenWith(String), // Command to use when opening a file with a custom command
     AddEntry(String), // Name for the new file/directory being added
@@ -85,7 +85,7 @@ use crate::config::{self, colors::AppColors};
 use crate::input;
 use crate::models::tab::{TabManager, TabManagerState};
 use crate::ui::add_entry_popup; // Import the new module
-use crate::ui::delete_popup::{self, DeleteConfirmResult, DeleteConfirmState};
+use crate::ui::delete_popup::{self, DeleteConfirmResult};
 use crate::ui::exit_popup;
 use crate::ui::search_bar::{self, SearchBar};
 use crate::ui::separator;
@@ -191,7 +191,6 @@ pub struct Kiorg {
     // Popup management
     pub show_popup: Option<PopupType>,
     pub entries_to_delete: Vec<PathBuf>, // Changed from Option<PathBuf> to Vec<PathBuf> for bulk deletion
-    pub delete_popup_state: DeleteConfirmState, // State for delete confirmation popup
     pub clipboard: Option<Clipboard>,
     pub search_bar: SearchBar,
     pub terminal_ctx: Option<terminal::TerminalContext>,
@@ -301,7 +300,6 @@ impl Kiorg {
             show_popup: None,
             clipboard: None,
             entries_to_delete: Vec::new(), // Initialize empty vector for entries to delete
-            delete_popup_state: DeleteConfirmState::Initial, // Initialize delete popup state
             search_bar: SearchBar::new(),
             files_being_opened: HashMap::new(),
             error_sender,
@@ -407,7 +405,9 @@ impl Kiorg {
             return;
         }
 
-        self.show_popup = Some(PopupType::Delete);
+        self.show_popup = Some(PopupType::Delete(
+            crate::ui::delete_popup::DeleteConfirmState::Initial,
+        ));
     }
 
     pub fn rename_selected_entry(&mut self) {
@@ -656,33 +656,35 @@ impl Kiorg {
     }
 
     fn handle_delete_confirmation(&mut self, ctx: &egui::Context) {
-        if self.show_popup != Some(PopupType::Delete) || self.entries_to_delete.is_empty() {
-            return;
-        }
-
-        let mut show_delete_confirm = true; // Temporary variable for compatibility
-
-        let result = delete_popup::handle_delete_confirmation(
-            ctx,
-            &mut show_delete_confirm,
-            &self.entries_to_delete,
-            &self.colors,
-            &mut self.delete_popup_state,
-        );
-
-        if !show_delete_confirm {
-            self.show_popup = None;
-        }
-
-        match result {
-            DeleteConfirmResult::Confirm => {
-                delete_popup::confirm_delete(self);
+        if let Some(PopupType::Delete(ref mut state)) = self.show_popup {
+            if self.entries_to_delete.is_empty() {
+                return;
             }
-            DeleteConfirmResult::Cancel => {
-                delete_popup::cancel_delete(self);
+
+            let mut show_delete_confirm = true; // Temporary variable for compatibility
+
+            let result = delete_popup::handle_delete_confirmation(
+                ctx,
+                &mut show_delete_confirm,
+                &self.entries_to_delete,
+                &self.colors,
+                state,
+            );
+
+            if !show_delete_confirm {
+                self.show_popup = None;
             }
-            DeleteConfirmResult::None => {
-                // No action taken yet
+
+            match result {
+                DeleteConfirmResult::Confirm => {
+                    delete_popup::confirm_delete(self);
+                }
+                DeleteConfirmResult::Cancel => {
+                    delete_popup::cancel_delete(self);
+                }
+                DeleteConfirmResult::None => {
+                    // No action taken yet
+                }
             }
         }
     }
@@ -804,7 +806,7 @@ impl eframe::App for Kiorg {
             Some(PopupType::Exit) => {
                 exit_popup::draw(ctx, self);
             }
-            Some(PopupType::Delete) => {
+            Some(PopupType::Delete(_)) => {
                 self.handle_delete_confirmation(ctx);
             }
             Some(PopupType::Rename(_)) => {
