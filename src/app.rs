@@ -765,7 +765,14 @@ impl eframe::App for Kiorg {
             .notify_fs_change
             .load(std::sync::atomic::Ordering::Relaxed)
         {
+            // Store the currently selected file path in prev_path for refresh_entries to handle
+            self.prev_path = {
+                let tab = self.tab_manager.current_tab_ref();
+                tab.selected_entry().map(|entry| entry.path.clone())
+            };
+
             self.refresh_entries();
+
             self.notify_fs_change
                 .store(false, std::sync::atomic::Ordering::Relaxed);
         }
