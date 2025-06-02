@@ -8,14 +8,16 @@ pub struct SearchBar {
 }
 
 impl SearchBar {
-    #[must_use] pub const fn new() -> Self {
+    #[must_use]
+    pub const fn new() -> Self {
         Self {
             query: None,
             focus: false,
         }
     }
 
-    #[must_use] pub const fn active(&self) -> bool {
+    #[must_use]
+    pub const fn active(&self) -> bool {
         self.query.is_some()
     }
 

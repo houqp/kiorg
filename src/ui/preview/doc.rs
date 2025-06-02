@@ -255,10 +255,12 @@ fn render_pdf_page_with_dpi(
 
     // Create a unique texture ID that includes the file identifier, page number, and DPI
     // This ensures that different documents and different DPI levels don't share texture cache entries
-    let texture_id = if let Some(id) = file_id { format!(
-        "bytes://pdf_doc_{}_page_{}_dpi_{}.svg",
-        id, page_number, dpi as u32
-    ) } else {
+    let texture_id = if let Some(id) = file_id {
+        format!(
+            "bytes://pdf_doc_{}_page_{}_dpi_{}.svg",
+            id, page_number, dpi as u32
+        )
+    } else {
         // Generate a timestamp-based ID if no file_id is provided
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)

@@ -53,8 +53,10 @@ pub fn handle_delete_confirmation(
                             // Show the first few entries as examples
                             let max_to_show = 5.min(entries_to_delete.len());
                             for path in entries_to_delete.iter().take(max_to_show) {
-                                let name = path
-                                    .file_name().map_or_else(|| path.display().to_string(), |n| n.to_string_lossy().to_string());
+                                let name = path.file_name().map_or_else(
+                                    || path.display().to_string(),
+                                    |n| n.to_string_lossy().to_string(),
+                                );
 
                                 ui.label(name);
                             }
@@ -144,9 +146,9 @@ pub fn handle_delete_confirmation(
 }
 
 /// Helper function to perform the actual deletion
-/// 
+///
 /// # Errors
-/// 
+///
 /// Returns an error string if the deletion fails, either due to permission issues,
 /// file system errors, or if the path doesn't exist.
 pub fn perform_delete(path: &Path) -> Result<(), String> {

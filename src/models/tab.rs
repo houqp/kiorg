@@ -85,13 +85,15 @@ fn refresh_path_to_index(tab: &mut Tab) {
 }
 
 impl TabState {
-    #[must_use] pub const fn new(path: PathBuf) -> Self {
+    #[must_use]
+    pub const fn new(path: PathBuf) -> Self {
         Self { current_path: path }
     }
 }
 
 impl Tab {
-    #[must_use] pub fn new(path: PathBuf) -> Self {
+    #[must_use]
+    pub fn new(path: PathBuf) -> Self {
         let mut tab = Self {
             current_path: path.clone(),
             entries: Vec::new(),
@@ -109,14 +111,16 @@ impl Tab {
     }
 
     // Convert Tab to TabState for serialization
-    #[must_use] pub fn to_state(&self) -> TabState {
+    #[must_use]
+    pub fn to_state(&self) -> TabState {
         TabState {
             current_path: self.current_path.clone(),
         }
     }
 
     // Create Tab from TabState
-    #[must_use] pub fn from_state(state: TabState) -> Self {
+    #[must_use]
+    pub fn from_state(state: TabState) -> Self {
         let path = state.current_path.clone();
         let mut tab = Self {
             current_path: state.current_path,
@@ -174,7 +178,8 @@ impl Tab {
         }
     }
 
-    #[must_use] pub fn selected_entry(&self) -> Option<&DirEntry> {
+    #[must_use]
+    pub fn selected_entry(&self) -> Option<&DirEntry> {
         if self.entries.is_empty() {
             None
         } else {
@@ -183,12 +188,14 @@ impl Tab {
     }
 
     // Get the index of an entry by its path using the reverse index
-    #[must_use] pub fn get_index_by_path(&self, path: &PathBuf) -> Option<usize> {
+    #[must_use]
+    pub fn get_index_by_path(&self, path: &PathBuf) -> Option<usize> {
         self.path_to_index.get(path).copied()
     }
 
     // Returns the index of the first entry that matches the current search query
-    #[must_use] pub fn get_first_filtered_entry_index(&self, query: &str) -> Option<usize> {
+    #[must_use]
+    pub fn get_first_filtered_entry_index(&self, query: &str) -> Option<usize> {
         if query.is_empty() {
             // If query is empty, return the current selection or 0
             return if self.entries.is_empty() {
@@ -203,7 +210,8 @@ impl Tab {
     }
 
     // Returns a filtered list of entries based on the search query
-    #[must_use] pub fn get_filtered_entries(&self, query: &Option<String>) -> Vec<&DirEntry> {
+    #[must_use]
+    pub fn get_filtered_entries(&self, query: &Option<String>) -> Vec<&DirEntry> {
         match query {
             Some(query) => self
                 .entries
@@ -215,7 +223,8 @@ impl Tab {
     }
 
     // Returns a filtered list of entries along with their original indices
-    #[must_use] pub fn get_filtered_entries_with_indices(
+    #[must_use]
+    pub fn get_filtered_entries_with_indices(
         &self,
         query: &Option<String>,
     ) -> Vec<(&DirEntry, usize)> {
@@ -314,11 +323,13 @@ pub struct TabManager {
 }
 
 impl TabManager {
-    #[must_use] pub fn new(initial_path: PathBuf) -> Self {
+    #[must_use]
+    pub fn new(initial_path: PathBuf) -> Self {
         Self::new_with_config(initial_path, None)
     }
 
-    #[must_use] pub fn new_with_config(initial_path: PathBuf, config: Option<&Config>) -> Self {
+    #[must_use]
+    pub fn new_with_config(initial_path: PathBuf, config: Option<&Config>) -> Self {
         let sort_preference = config.and_then(|c| c.sort_preference.as_ref());
 
         // Initialize sort settings from config
@@ -337,7 +348,8 @@ impl TabManager {
     }
 
     // Convert TabManager to TabManagerState for serialization
-    #[must_use] pub fn to_state(&self) -> TabManagerState {
+    #[must_use]
+    pub fn to_state(&self) -> TabManagerState {
         TabManagerState {
             tab_states: self.tabs.iter().map(Tab::to_state).collect(),
             current_tab_index: self.current_tab_index,
@@ -356,7 +368,8 @@ impl TabManager {
         }
     }
 
-    #[must_use] pub fn tab_indexes(&self) -> Vec<(usize, bool)> {
+    #[must_use]
+    pub fn tab_indexes(&self) -> Vec<(usize, bool)> {
         (0..self.tabs.len())
             .map(|i| (i, i == self.current_tab_index))
             .collect()
@@ -390,22 +403,26 @@ impl TabManager {
         &mut self.tabs[self.current_tab_index]
     }
 
-    #[must_use] pub fn current_tab_ref(&self) -> &Tab {
+    #[must_use]
+    pub fn current_tab_ref(&self) -> &Tab {
         &self.tabs[self.current_tab_index]
     }
 
     // Get the current tab index
-    #[must_use] pub const fn get_current_tab_index(&self) -> usize {
+    #[must_use]
+    pub const fn get_current_tab_index(&self) -> usize {
         self.current_tab_index
     }
 
     // Get the total number of tabs
-    #[must_use] pub const fn get_tab_count(&self) -> usize {
+    #[must_use]
+    pub const fn get_tab_count(&self) -> usize {
         self.tabs.len()
     }
 
     // Get the index of an entry by its path in the current tab
-    #[must_use] pub fn get_entry_index_by_path(&self, path: &PathBuf) -> Option<usize> {
+    #[must_use]
+    pub fn get_entry_index_by_path(&self, path: &PathBuf) -> Option<usize> {
         self.current_tab_ref().get_index_by_path(path)
     }
 

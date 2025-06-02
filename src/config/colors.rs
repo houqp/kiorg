@@ -2,7 +2,8 @@ use egui::Color32;
 use serde::{Deserialize, Serialize};
 
 // Helper function to convert hex string to Color32
-#[must_use] pub fn hex_to_color32(hex: &str) -> Color32 {
+#[must_use]
+pub fn hex_to_color32(hex: &str) -> Color32 {
     let hex = hex.trim_start_matches('#');
     let r = u8::from_str_radix(&hex[0..2], 16).unwrap_or(0);
     let g = u8::from_str_radix(&hex[2..4], 16).unwrap_or(0);
@@ -60,7 +61,8 @@ pub struct AppColors {
 }
 
 impl AppColors {
-    #[must_use] pub fn from_scheme(config: &ColorScheme) -> Self {
+    #[must_use]
+    pub fn from_scheme(config: &ColorScheme) -> Self {
         Self {
             bg: hex_to_color32(&config.bg),
             bg_light: hex_to_color32(&config.bg_light),
@@ -82,7 +84,8 @@ impl AppColors {
         }
     }
 
-    #[must_use] pub fn to_color_scheme(&self) -> ColorScheme {
+    #[must_use]
+    pub fn to_color_scheme(&self) -> ColorScheme {
         ColorScheme {
             bg: color32_to_hex(self.bg),
             bg_light: color32_to_hex(self.bg_light),
@@ -104,7 +107,8 @@ impl AppColors {
         }
     }
 
-    #[must_use] pub fn to_visuals(&self) -> egui::Visuals {
+    #[must_use]
+    pub fn to_visuals(&self) -> egui::Visuals {
         let mut visuals = egui::Visuals::dark();
 
         visuals.window_shadow = egui::Shadow {

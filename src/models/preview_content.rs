@@ -128,7 +128,8 @@ impl PreviewContent {
     }
 
     /// Creates a new zip preview content from a list of entries
-    #[must_use] pub const fn zip(entries: Vec<ZipEntry>) -> Self {
+    #[must_use]
+    pub const fn zip(entries: Vec<ZipEntry>) -> Self {
         Self::Zip(entries)
     }
 
@@ -146,7 +147,8 @@ impl PreviewContent {
     }
 
     /// Creates a new PDF document preview content with cached PDF file
-    #[must_use] pub fn pdf_with_file(
+    #[must_use]
+    pub fn pdf_with_file(
         image: egui::widgets::ImageSource<'static>,
         metadata: HashMap<String, String>,
         title: Option<String>,
@@ -173,7 +175,8 @@ impl PreviewContent {
     }
 
     /// Creates a new EPUB preview content with metadata and optional cover image
-    #[must_use] pub fn epub(
+    #[must_use]
+    pub fn epub(
         mut metadata: HashMap<String, Vec<String>>,
         cover_image: egui::widgets::ImageSource<'static>,
         page_count: usize,

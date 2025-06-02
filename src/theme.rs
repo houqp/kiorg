@@ -59,7 +59,8 @@ static LIGHT_ONEDARK_THEME: LazyLock<Theme> = LazyLock::new(|| Theme {
 static ALL_THEMES: LazyLock<Vec<&Theme>> =
     LazyLock::new(|| vec![&DARK_KIORG_THEME, &LIGHT_ONEDARK_THEME]);
 
-#[must_use] pub fn get_default_theme() -> &'static Theme {
+#[must_use]
+pub fn get_default_theme() -> &'static Theme {
     &DARK_KIORG_THEME
 }
 
@@ -71,7 +72,8 @@ pub struct Theme {
 }
 
 impl Theme {
-    #[must_use] pub fn new(key: &str, display_name: &str, colors: AppColors) -> Self {
+    #[must_use]
+    pub fn new(key: &str, display_name: &str, colors: AppColors) -> Self {
         Self {
             key: key.to_string(),
             display_name: display_name.to_string(),
@@ -79,19 +81,23 @@ impl Theme {
         }
     }
 
-    #[must_use] pub const fn get_colors(&self) -> &AppColors {
+    #[must_use]
+    pub const fn get_colors(&self) -> &AppColors {
         &self.colors
     }
 
-    #[must_use] pub fn display_name(&self) -> &str {
+    #[must_use]
+    pub fn display_name(&self) -> &str {
         &self.display_name
     }
 
-    #[must_use] pub fn theme_key(&self) -> &str {
+    #[must_use]
+    pub fn theme_key(&self) -> &str {
         &self.key
     }
 
-    #[must_use] pub fn from_theme_key(key: &str) -> Option<&'static Self> {
+    #[must_use]
+    pub fn from_theme_key(key: &str) -> Option<&'static Self> {
         match key {
             DARK_KIORG_KEY => Some(&DARK_KIORG_THEME),
             LIGHT_ONEDARK_KEY => Some(&LIGHT_ONEDARK_THEME),
@@ -99,7 +105,8 @@ impl Theme {
         }
     }
 
-    #[must_use] pub fn all_themes() -> &'static [&'static Self] {
+    #[must_use]
+    pub fn all_themes() -> &'static [&'static Self] {
         &ALL_THEMES
     }
 

@@ -45,7 +45,8 @@ pub fn update_cache(app: &mut Kiorg, ctx: &egui::Context) {
     let ext = entry
         .path
         .extension()
-        .and_then(|e| e.to_str()).map_or_else(|| "__unknown__".to_string(), str::to_lowercase);
+        .and_then(|e| e.to_str())
+        .map_or_else(|| "__unknown__".to_string(), str::to_lowercase);
 
     match ext.as_str() {
         "jpg" | "jpeg" | "png" | "gif" | "bmp" | "webp" | "svg" => {
@@ -61,9 +62,7 @@ pub fn update_cache(app: &mut Kiorg, ctx: &egui::Context) {
             });
         }
         "epub" => {
-            loading::load_preview_async(app, entry.path, |path| {
-                doc::extract_epub_metadata(&path)
-            });
+            loading::load_preview_async(app, entry.path, |path| doc::extract_epub_metadata(&path));
         }
         "pdf" => {
             loading::load_preview_async(app, entry.path, |path| {
