@@ -66,9 +66,9 @@ pub fn handle_clipboard_operations(
             let ext = path
                 .extension()
                 .and_then(|e| e.to_str())
-                .map(|e| format!(".{}", e))
+                .map(|e| format!(".{e}"))
                 .unwrap_or_default();
-            new_path = current_path.join(format!("{}_{}{}", stem, counter, ext));
+            new_path = current_path.join(format!("{stem}_{counter}{ext}"));
             counter += 1;
         }
 
@@ -105,14 +105,13 @@ pub fn handle_clipboard_operations(
 fn scroll_by_filtered_index(
     mut scroll_area: egui::ScrollArea,
     filtered_index: usize,
-    scroll_range: &Option<std::ops::Range<usize>>,
+    scroll_range: Option<&std::ops::Range<usize>>,
     spaced_row_height: f32,
     total_rows: usize,
 ) -> egui::ScrollArea {
     // Return early if scroll_range is None
-    let scroll_range = match scroll_range {
-        Some(range) => range,
-        None => return scroll_area,
+    let Some(scroll_range) = scroll_range else {
+        return scroll_area;
     };
 
     // scroll_area will always be lagging one cycle behind, i.e. it shows the view port before
@@ -142,8 +141,10 @@ fn scroll_by_filtered_index(
 
     if filtered_index <= scroll_range.start + PADDING_ROWS {
         // scrolling up, reached start of view port + row padding
-        let entry_y = filtered_index as f32 * spaced_row_height; // y for selected row
-        let scroll_y = entry_y - spaced_row_height * PADDING_ROWS as f32; // 3 rows before the selected row
+        // y for selected row
+        let entry_y = filtered_index as f32 * spaced_row_height;
+        // 3 rows before the selected row
+        let scroll_y = spaced_row_height.mul_add(-(PADDING_ROWS as f32), entry_y);
         scroll_area = scroll_area.vertical_scroll_offset(scroll_y.max(0.0));
     } else if scroll_page_end_index >= scroll_range.end {
         // scrolling down, reached end of view port + row padding
@@ -316,7 +317,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                         scroll_area = scroll_by_filtered_index(
                             scroll_area,
                             filtered_index,
-                            &app.scroll_range,
+                            app.scroll_range.as_ref(),
                             spaced_row_height,
                             total_rows,
                         );
@@ -351,13 +352,12 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                         let is_marked = tab_ref.marked_entries.contains(&entry.path);
                         let being_opened = match app.files_being_opened.get(&entry.path) {
                             Some(signal) => {
-                                match signal.load(std::sync::atomic::Ordering::Relaxed) {
-                                    true => true,
-                                    false => {
-                                        // trim hashmap to keep it lean
-                                        app.files_being_opened.remove(&entry.path);
-                                        false
-                                    }
+                                if signal.load(std::sync::atomic::Ordering::Relaxed) {
+                                    true
+                                } else {
+                                    // trim hashmap to keep it lean
+                                    app.files_being_opened.remove(&entry.path);
+                                    false
                                 }
                             }
                             None => false,
@@ -517,7 +517,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
             config::save_config_with_override(&app.config, app.config_dir_override.as_ref())
         {
             app.toasts
-                .error(format!("Failed to save sort preferences: {}", e));
+                .error(format!("Failed to save sort preferences: {e}"));
         }
     }
 }

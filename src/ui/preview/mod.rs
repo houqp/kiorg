@@ -45,30 +45,28 @@ pub fn update_cache(app: &mut Kiorg, ctx: &egui::Context) {
     let ext = entry
         .path
         .extension()
-        .and_then(|e| e.to_str())
-        .map(|e| e.to_lowercase())
-        .unwrap_or_else(|| "__unknown__".to_string());
+        .and_then(|e| e.to_str()).map_or_else(|| "__unknown__".to_string(), str::to_lowercase);
 
     match ext.as_str() {
         "jpg" | "jpeg" | "png" | "gif" | "bmp" | "webp" | "svg" => {
             let ctx_clone = ctx.clone();
-            loading::load_preview_async(app, entry.path.clone(), move |path| {
+            loading::load_preview_async(app, entry.path, move |path| {
                 image::read_image_with_metadata(&path, &ctx_clone)
             });
         }
         "zip" | "jar" | "war" | "ear" => {
-            loading::load_preview_async(app, entry.path.clone(), |path| {
+            loading::load_preview_async(app, entry.path, |path| {
                 let result = zip::read_zip_entries(&path);
                 result.map(PreviewContent::zip)
             });
         }
         "epub" => {
-            loading::load_preview_async(app, entry.path.clone(), |path| {
+            loading::load_preview_async(app, entry.path, |path| {
                 doc::extract_epub_metadata(&path)
             });
         }
         "pdf" => {
-            loading::load_preview_async(app, entry.path.clone(), |path| {
+            loading::load_preview_async(app, entry.path, |path| {
                 doc::extract_pdf_metadata(&path, 0)
             });
         }

@@ -6,7 +6,7 @@ use kiorg::models::tab::SortColumn;
 use tempfile::tempdir;
 use ui_test_helpers::{create_harness, create_test_files};
 
-/// Test to demonstrate the bug where toggle_sort doesn't update the path_to_index map
+/// Test to demonstrate the bug where `toggle_sort` doesn't update the `path_to_index` map
 /// causing navigation with J/K shortcuts to select the wrong entries
 #[test]
 fn test_sort_navigation_bug() {
@@ -89,8 +89,7 @@ fn test_sort_navigation_bug() {
         // This assertion might fail due to the bug
         assert_eq!(
             selected_name, "b.txt",
-            "After pressing J, b.txt should be selected, but got {} instead",
-            selected_name
+            "After pressing J, b.txt should be selected, but got {selected_name} instead"
         );
     }
 
@@ -107,8 +106,7 @@ fn test_sort_navigation_bug() {
         // This assertion might fail due to the bug
         assert_eq!(
             selected_name, "a.txt",
-            "After pressing J twice, a.txt should be selected, but got {} instead",
-            selected_name
+            "After pressing J twice, a.txt should be selected, but got {selected_name} instead"
         );
     }
 
@@ -127,8 +125,7 @@ fn test_sort_navigation_bug() {
         // This assertion might fail due to the bug
         assert_eq!(
             selected_name, "c.txt",
-            "After pressing K twice, c.txt should be selected, but got {} instead",
-            selected_name
+            "After pressing K twice, c.txt should be selected, but got {selected_name} instead"
         );
     }
 }

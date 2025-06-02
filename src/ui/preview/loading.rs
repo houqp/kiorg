@@ -48,7 +48,7 @@ pub fn render(
             }
             Err(e) => {
                 app.preview_content =
-                    Some(PreviewContent::text(format!("Error loading file: {}", e)));
+                    Some(PreviewContent::text(format!("Error loading file: {e}")));
             }
         }
     }
@@ -65,7 +65,7 @@ pub fn render(
 /// # Arguments
 /// * `app` - The application state
 /// * `path` - The path to the file to load
-/// * `processor` - A closure that processes the file and returns a Result<PreviewContent, String>
+/// * `processor` - A closure that processes the file and returns a Result<`PreviewContent`, String>
 pub fn load_preview_async<F>(app: &mut Kiorg, path: PathBuf, processor: F)
 where
     F: FnOnce(PathBuf) -> Result<PreviewContent, String> + Send + 'static,

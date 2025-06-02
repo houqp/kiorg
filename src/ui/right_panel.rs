@@ -35,23 +35,17 @@ pub fn draw(app: &mut Kiorg, ctx: &egui::Context, ui: &mut Ui, width: f32, heigh
         if let (Some(_path), Some(receiver)) = (&loading_path, &loading_receiver) {
             // Check if we have a receiver to poll for results
             let receiver_opt = Some(receiver.clone());
-            let receiver = match receiver_opt {
-                Some(receiver) => receiver,
-                None => {
-                    // We can't process the loading state, so render empty
-                    preview::text::render_empty(ui, colors);
-                    return;
-                }
+            let receiver = if let Some(receiver) = receiver_opt { receiver } else {
+                // We can't process the loading state, so render empty
+                preview::text::render_empty(ui, colors);
+                return;
             };
 
             // Try to get a lock on the receiver
-            let receiver_lock = match receiver.lock() {
-                Ok(lock) => lock,
-                Err(_) => {
-                    // We can't process the loading state, so render empty
-                    preview::text::render_empty(ui, colors);
-                    return;
-                }
+            let receiver_lock = if let Ok(lock) = receiver.lock() { lock } else {
+                // We can't process the loading state, so render empty
+                preview::text::render_empty(ui, colors);
+                return;
             };
 
             // Try to receive the result without blocking
@@ -68,7 +62,7 @@ pub fn draw(app: &mut Kiorg, ctx: &egui::Context, ui: &mut Ui, width: f32, heigh
                     }
                     Err(e) => {
                         app.preview_content =
-                            Some(PreviewContent::text(format!("Error loading file: {}", e)));
+                            Some(PreviewContent::text(format!("Error loading file: {e}")));
                         is_loading = false;
                     }
                 }
@@ -97,8 +91,8 @@ pub fn draw(app: &mut Kiorg, ctx: &egui::Context, ui: &mut Ui, width: f32, heigh
                 ui.set_min_width(width - scrollbar_width);
                 ui.set_max_width(width - scrollbar_width);
 
-                let available_width = width - PANEL_SPACING * 2.0;
-                let available_height = available_height - PANEL_SPACING * 2.0;
+                let available_width = PANEL_SPACING.mul_add(-2.0, width);
+                let available_height = PANEL_SPACING.mul_add(-2.0, available_height);
 
                 // Draw preview content based on the enum variant
                 if is_loading {

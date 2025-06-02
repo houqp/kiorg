@@ -48,14 +48,14 @@ pub fn render(ui: &mut egui::Ui, entries: &[ZipEntry], colors: &AppColors) {
         });
 }
 
-/// Read entries from a zip file and return them as a vector of ZipEntry
+/// Read entries from a zip file and return them as a vector of `ZipEntry`
 pub fn read_zip_entries(path: &Path) -> Result<Vec<ZipEntry>, String> {
     // Open the zip file
-    let file = File::open(path).map_err(|e| format!("Failed to open zip file: {}", e))?;
+    let file = File::open(path).map_err(|e| format!("Failed to open zip file: {e}"))?;
 
     // Create a zip archive from the file
     let mut archive =
-        ZipArchive::new(file).map_err(|e| format!("Failed to read zip archive: {}", e))?;
+        ZipArchive::new(file).map_err(|e| format!("Failed to read zip archive: {e}"))?;
 
     // Create a vector to store the entries
     let mut entries = Vec::new();
@@ -64,7 +64,7 @@ pub fn read_zip_entries(path: &Path) -> Result<Vec<ZipEntry>, String> {
     for i in 0..archive.len() {
         let file = archive
             .by_index(i)
-            .map_err(|e| format!("Failed to read zip entry: {}", e))?;
+            .map_err(|e| format!("Failed to read zip entry: {e}"))?;
 
         // Create a ZipEntry from the file
         let entry = ZipEntry {

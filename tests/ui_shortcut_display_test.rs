@@ -13,32 +13,31 @@ fn test_arrow_key_display() {
         KeyboardShortcut::new("up"),
         KeyboardShortcut::new("arrow_up"),
     ];
-    shortcuts.set_shortcuts(ShortcutAction::MoveUp, up_shortcuts.clone());
+    shortcuts.set_shortcuts(ShortcutAction::MoveUp, up_shortcuts);
 
     let down_shortcuts = vec![
         KeyboardShortcut::new("down"),
         KeyboardShortcut::new("arrow_down"),
     ];
-    shortcuts.set_shortcuts(ShortcutAction::MoveDown, down_shortcuts.clone());
+    shortcuts.set_shortcuts(ShortcutAction::MoveDown, down_shortcuts);
 
     let left_shortcuts = vec![
         KeyboardShortcut::new("left"),
         KeyboardShortcut::new("arrow_left"),
     ];
-    shortcuts.set_shortcuts(ShortcutAction::GoToParentDirectory, left_shortcuts.clone());
+    shortcuts.set_shortcuts(ShortcutAction::GoToParentDirectory, left_shortcuts);
 
     let right_shortcuts = vec![
         KeyboardShortcut::new("right"),
         KeyboardShortcut::new("arrow_right"),
     ];
-    shortcuts.set_shortcuts(ShortcutAction::OpenDirectory, right_shortcuts.clone());
+    shortcuts.set_shortcuts(ShortcutAction::OpenDirectory, right_shortcuts);
 
     // Test up arrow display
     let up_display = shortcuts_helpers::get_shortcut_display(&shortcuts, ShortcutAction::MoveUp);
     assert!(
         up_display.contains("⬆"),
-        "Up arrow should be displayed as ⬆ symbol, got: {}",
-        up_display
+        "Up arrow should be displayed as ⬆ symbol, got: {up_display}"
     );
 
     // Test down arrow display
@@ -46,8 +45,7 @@ fn test_arrow_key_display() {
         shortcuts_helpers::get_shortcut_display(&shortcuts, ShortcutAction::MoveDown);
     assert!(
         down_display.contains("⬇"),
-        "Down arrow should be displayed as ⬇ symbol, got: {}",
-        down_display
+        "Down arrow should be displayed as ⬇ symbol, got: {down_display}"
     );
 
     // Test left arrow display
@@ -55,8 +53,7 @@ fn test_arrow_key_display() {
         shortcuts_helpers::get_shortcut_display(&shortcuts, ShortcutAction::GoToParentDirectory);
     assert!(
         left_display.contains("⬅"),
-        "Left arrow should be displayed as ⬅ symbol, got: {}",
-        left_display
+        "Left arrow should be displayed as ⬅ symbol, got: {left_display}"
     );
 
     // Test right arrow display
@@ -64,8 +61,7 @@ fn test_arrow_key_display() {
         shortcuts_helpers::get_shortcut_display(&shortcuts, ShortcutAction::OpenDirectory);
     assert!(
         right_display.contains("➡"),
-        "Right arrow should be displayed as ➡ symbol, got: {}",
-        right_display
+        "Right arrow should be displayed as ➡ symbol, got: {right_display}"
     );
 }
 
@@ -76,18 +72,17 @@ fn test_special_key_display() {
 
     // Add special key shortcuts
     let enter_shortcuts = vec![KeyboardShortcut::new("enter")];
-    shortcuts.set_shortcuts(ShortcutAction::OpenDirectoryOrFile, enter_shortcuts.clone());
+    shortcuts.set_shortcuts(ShortcutAction::OpenDirectoryOrFile, enter_shortcuts);
 
     let space_shortcuts = vec![KeyboardShortcut::new("space")];
-    shortcuts.set_shortcuts(ShortcutAction::SelectEntry, space_shortcuts.clone());
+    shortcuts.set_shortcuts(ShortcutAction::SelectEntry, space_shortcuts);
 
     // Test enter key display
     let enter_display =
         shortcuts_helpers::get_shortcut_display(&shortcuts, ShortcutAction::OpenDirectoryOrFile);
     assert!(
         enter_display.contains("Enter"),
-        "Enter key should be displayed as 'Enter', got: {}",
-        enter_display
+        "Enter key should be displayed as 'Enter', got: {enter_display}"
     );
 
     // Test space key display
@@ -95,8 +90,7 @@ fn test_special_key_display() {
         shortcuts_helpers::get_shortcut_display(&shortcuts, ShortcutAction::SelectEntry);
     assert!(
         space_display.contains("Space"),
-        "Space key should be displayed as 'Space', got: {}",
-        space_display
+        "Space key should be displayed as 'Space', got: {space_display}"
     );
 }
 
@@ -107,25 +101,23 @@ fn test_regular_key_display() {
 
     // Add regular key shortcuts
     let a_shortcuts = vec![KeyboardShortcut::new("a")];
-    shortcuts.set_shortcuts(ShortcutAction::AddEntry, a_shortcuts.clone());
+    shortcuts.set_shortcuts(ShortcutAction::AddEntry, a_shortcuts);
 
     let d_shortcuts = vec![KeyboardShortcut::new("d")];
-    shortcuts.set_shortcuts(ShortcutAction::DeleteEntry, d_shortcuts.clone());
+    shortcuts.set_shortcuts(ShortcutAction::DeleteEntry, d_shortcuts);
 
     // Test regular key display
     let a_display = shortcuts_helpers::get_shortcut_display(&shortcuts, ShortcutAction::AddEntry);
     assert_eq!(
         a_display, "a",
-        "Regular key 'a' should be displayed as 'a', got: {}",
-        a_display
+        "Regular key 'a' should be displayed as 'a', got: {a_display}"
     );
 
     let d_display =
         shortcuts_helpers::get_shortcut_display(&shortcuts, ShortcutAction::DeleteEntry);
     assert_eq!(
         d_display, "d",
-        "Regular key 'd' should be displayed as 'd', got: {}",
-        d_display
+        "Regular key 'd' should be displayed as 'd', got: {d_display}"
     );
 }
 
@@ -136,13 +128,13 @@ fn test_shortcut_with_modifiers() {
 
     // Add shortcuts with modifiers
     let ctrl_c_shortcuts = vec![KeyboardShortcut::new("c").with_ctrl()];
-    shortcuts.set_shortcuts(ShortcutAction::CloseCurrentTab, ctrl_c_shortcuts.clone());
+    shortcuts.set_shortcuts(ShortcutAction::CloseCurrentTab, ctrl_c_shortcuts);
 
     let shift_question_shortcuts = vec![KeyboardShortcut::new("?").with_shift()];
-    shortcuts.set_shortcuts(ShortcutAction::ShowHelp, shift_question_shortcuts.clone());
+    shortcuts.set_shortcuts(ShortcutAction::ShowHelp, shift_question_shortcuts);
 
     let shift_t_shortcuts = vec![KeyboardShortcut::new("t").with_shift()];
-    shortcuts.set_shortcuts(ShortcutAction::OpenTerminal, shift_t_shortcuts.clone());
+    shortcuts.set_shortcuts(ShortcutAction::OpenTerminal, shift_t_shortcuts);
 
     // Add a shortcut with multiple modifiers
     let ctrl_shift_q_shortcuts = vec![KeyboardShortcut {
@@ -153,15 +145,14 @@ fn test_shortcut_with_modifiers() {
         mac_cmd: false,
         namespace: false,
     }];
-    shortcuts.set_shortcuts(ShortcutAction::Exit, ctrl_shift_q_shortcuts.clone());
+    shortcuts.set_shortcuts(ShortcutAction::Exit, ctrl_shift_q_shortcuts);
 
     // Test Ctrl+C display
     let ctrl_c_display =
         shortcuts_helpers::get_shortcut_display(&shortcuts, ShortcutAction::CloseCurrentTab);
     assert_eq!(
         ctrl_c_display, "Ctrl+c",
-        "Ctrl+C should be displayed as 'Ctrl+c', got: {}",
-        ctrl_c_display
+        "Ctrl+C should be displayed as 'Ctrl+c', got: {ctrl_c_display}"
     );
 
     // Test Shift+? display
@@ -169,8 +160,7 @@ fn test_shortcut_with_modifiers() {
         shortcuts_helpers::get_shortcut_display(&shortcuts, ShortcutAction::ShowHelp);
     assert_eq!(
         shift_question_display, "Shift+?",
-        "Shift+? should be displayed as 'Shift+?', got: {}",
-        shift_question_display
+        "Shift+? should be displayed as 'Shift+?', got: {shift_question_display}"
     );
 
     // Test Shift+T display
@@ -178,8 +168,7 @@ fn test_shortcut_with_modifiers() {
         shortcuts_helpers::get_shortcut_display(&shortcuts, ShortcutAction::OpenTerminal);
     assert_eq!(
         shift_t_display, "Shift+t",
-        "Shift+T should be displayed as 'Shift+t', got: {}",
-        shift_t_display
+        "Shift+T should be displayed as 'Shift+t', got: {shift_t_display}"
     );
 
     // Test Ctrl+Shift+Q display
@@ -187,8 +176,7 @@ fn test_shortcut_with_modifiers() {
         shortcuts_helpers::get_shortcut_display(&shortcuts, ShortcutAction::Exit);
     assert_eq!(
         ctrl_shift_q_display, "Ctrl+Shift+q",
-        "Ctrl+Shift+Q should be displayed as 'Ctrl+Shift+q', got: {}",
-        ctrl_shift_q_display
+        "Ctrl+Shift+Q should be displayed as 'Ctrl+Shift+q', got: {ctrl_shift_q_display}"
     );
 }
 
@@ -199,22 +187,20 @@ fn test_multiple_shortcuts_display() {
 
     // Add multiple shortcuts for the same action
     let move_down_shortcuts = vec![KeyboardShortcut::new("j"), KeyboardShortcut::new("down")];
-    shortcuts.set_shortcuts(ShortcutAction::MoveDown, move_down_shortcuts.clone());
+    shortcuts.set_shortcuts(ShortcutAction::MoveDown, move_down_shortcuts);
 
     // Test multiple shortcuts display
     let move_down_display =
         shortcuts_helpers::get_shortcut_display(&shortcuts, ShortcutAction::MoveDown);
     assert!(
-        move_down_display.contains("j") && move_down_display.contains("⬇"),
-        "Multiple shortcuts should be displayed with separator, got: {}",
-        move_down_display
+        move_down_display.contains('j') && move_down_display.contains("⬇"),
+        "Multiple shortcuts should be displayed with separator, got: {move_down_display}"
     );
 
     // Check for separator
     assert!(
         move_down_display.contains(" or "),
-        "Multiple shortcuts should be separated by ' or ', got: {}",
-        move_down_display
+        "Multiple shortcuts should be separated by ' or ', got: {move_down_display}"
     );
 }
 
@@ -228,7 +214,6 @@ fn test_no_shortcuts_display() {
         shortcuts_helpers::get_shortcut_display(&shortcuts, ShortcutAction::AddEntry);
     assert_eq!(
         no_shortcut_display, "Not assigned",
-        "Action with no shortcuts should display 'Not assigned', got: {}",
-        no_shortcut_display
+        "Action with no shortcuts should display 'Not assigned', got: {no_shortcut_display}"
     );
 }

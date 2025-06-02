@@ -22,11 +22,11 @@ fn test_missing_key_field() {
     let config_dir = config_temp_dir.path().to_path_buf();
 
     // Create a TOML config file with a shortcut missing the required 'key' field
-    let toml_content = r##"
+    let toml_content = r"
 # Invalid shortcut configuration - missing key field
 [[shortcuts.MoveDown]]
 shift = true
-"##;
+";
 
     // Write the config file
     create_config_file(&config_dir, toml_content);
@@ -42,8 +42,7 @@ shift = true
     let error = result.unwrap_err().to_string();
     assert!(
         error.contains("missing field") && error.contains("key"),
-        "Error should mention missing 'key' field, got: {}",
-        error
+        "Error should mention missing 'key' field, got: {error}"
     );
 }
 
@@ -54,11 +53,11 @@ fn test_invalid_action_name() {
     let config_dir = config_temp_dir.path().to_path_buf();
 
     // Create a TOML config file with an invalid action name
-    let toml_content = r##"
+    let toml_content = r#"
 # Invalid shortcut configuration - invalid action name
 [[shortcuts.NonExistentAction]]
 key = "x"
-"##;
+"#;
 
     // Write the config file
     create_config_file(&config_dir, toml_content);
@@ -74,8 +73,7 @@ key = "x"
     let error = result.unwrap_err().to_string();
     assert!(
         error.contains("unknown variant") && error.contains("NonExistentAction"),
-        "Error should mention unknown variant 'NonExistentAction', got: {}",
-        error
+        "Error should mention unknown variant 'NonExistentAction', got: {error}"
     );
 }
 
@@ -86,11 +84,11 @@ fn test_invalid_toml_syntax() {
     let config_dir = config_temp_dir.path().to_path_buf();
 
     // Create a TOML config file with invalid syntax
-    let toml_content = r##"
+    let toml_content = r#"
 # Invalid TOML syntax
 [[shortcuts.MoveDown]
 key = "j"
-"##;
+"#;
 
     // Write the config file
     create_config_file(&config_dir, toml_content);
@@ -106,8 +104,7 @@ key = "j"
     let error = result.unwrap_err().to_string();
     assert!(
         error.contains("expected") || error.contains("syntax"),
-        "Error should mention syntax error, got: {}",
-        error
+        "Error should mention syntax error, got: {error}"
     );
 }
 
@@ -118,11 +115,11 @@ fn test_invalid_shortcut_format() {
     let config_dir = config_temp_dir.path().to_path_buf();
 
     // Create a TOML config file with wrong nesting structure
-    let toml_content = r##"
+    let toml_content = r#"
 # Invalid shortcut format - wrong nesting
 [shortcuts.MoveDown]  # Using single brackets instead of double
 key = "j"
-"##;
+"#;
 
     // Write the config file
     create_config_file(&config_dir, toml_content);
@@ -138,8 +135,7 @@ key = "j"
     let error = result.unwrap_err().to_string();
     assert!(
         !error.is_empty(),
-        "Should have a non-empty error message, got: {}",
-        error
+        "Should have a non-empty error message, got: {error}"
     );
 }
 
@@ -150,11 +146,11 @@ fn test_empty_key_string() {
     let config_dir = config_temp_dir.path().to_path_buf();
 
     // Create a TOML config file with an empty key string
-    let toml_content = r##"
+    let toml_content = r#"
 # Invalid shortcut configuration - empty key string
 [[shortcuts.MoveDown]]
 key = ""
-"##;
+"#;
 
     // Write the config file
     create_config_file(&config_dir, toml_content);
@@ -185,12 +181,12 @@ fn test_invalid_boolean_value() {
     let config_dir = config_temp_dir.path().to_path_buf();
 
     // Create a TOML config file with an invalid boolean value
-    let toml_content = r##"
+    let toml_content = r#"
 # Invalid shortcut configuration - invalid boolean value
 [[shortcuts.MoveDown]]
 key = "j"
 shift = "yes"  # Should be true/false, not a string
-"##;
+"#;
 
     // Write the config file
     create_config_file(&config_dir, toml_content);
@@ -206,8 +202,7 @@ shift = "yes"  # Should be true/false, not a string
     let error = result.unwrap_err().to_string();
     assert!(
         error.contains("invalid type") || error.contains("expected a boolean"),
-        "Error should mention type mismatch for boolean, got: {}",
-        error
+        "Error should mention type mismatch for boolean, got: {error}"
     );
 }
 
@@ -219,14 +214,14 @@ fn test_duplicate_shortcut_definition() {
 
     // Create a TOML config file with duplicate shortcut definitions
     // This should not error as it's valid TOML, but it's a logical error in the config
-    let toml_content = r##"
+    let toml_content = r#"
 # Duplicate shortcut definitions - should be merged into a list
 [[shortcuts.MoveDown]]
 key = "j"
 
 [[shortcuts.MoveDown]]
 key = "j"
-"##;
+"#;
 
     // Write the config file
     create_config_file(&config_dir, toml_content);
@@ -272,11 +267,11 @@ fn test_invalid_key_name() {
     let config_dir = config_temp_dir.path().to_path_buf();
 
     // Create a TOML config file with an invalid key name
-    let toml_content = r##"
+    let toml_content = r#"
 # Invalid shortcut configuration - invalid key name
 [[shortcuts.MoveDown]]
 key = "invalid_key_name"
-"##;
+"#;
 
     // Write the config file
     create_config_file(&config_dir, toml_content);
@@ -309,14 +304,14 @@ fn test_mixed_valid_and_invalid_shortcuts() {
     let config_dir = config_temp_dir.path().to_path_buf();
 
     // Create a TOML config file with both valid and invalid shortcuts
-    let toml_content = r##"
+    let toml_content = r#"
 # Mix of valid and invalid shortcuts
 [[shortcuts.MoveDown]]
 key = "j"
 
 [[shortcuts.NonExistentAction]]
 key = "x"
-"##;
+"#;
 
     // Write the config file
     create_config_file(&config_dir, toml_content);
@@ -332,8 +327,7 @@ key = "x"
     let error = result.unwrap_err().to_string();
     assert!(
         error.contains("unknown variant") && error.contains("NonExistentAction"),
-        "Error should mention unknown variant 'NonExistentAction', got: {}",
-        error
+        "Error should mention unknown variant 'NonExistentAction', got: {error}"
     );
 }
 
@@ -344,11 +338,11 @@ fn test_invalid_nested_structure() {
     let config_dir = config_temp_dir.path().to_path_buf();
 
     // Create a TOML config file with an invalid nested structure
-    let toml_content = r##"
+    let toml_content = r#"
 # Invalid nested structure
 [shortcuts]
 MoveDown = { key = "j" }  # Should be [[shortcuts.MoveDown]] with key inside
-"##;
+"#;
 
     // Write the config file
     create_config_file(&config_dir, toml_content);
@@ -364,8 +358,7 @@ MoveDown = { key = "j" }  # Should be [[shortcuts.MoveDown]] with key inside
     let error = result.unwrap_err().to_string();
     assert!(
         !error.is_empty(),
-        "Should have a non-empty error message, got: {}",
-        error
+        "Should have a non-empty error message, got: {error}"
     );
 }
 
@@ -376,11 +369,11 @@ fn test_completely_malformed_toml() {
     let config_dir = config_temp_dir.path().to_path_buf();
 
     // Create a completely malformed TOML file
-    let toml_content = r##"
+    let toml_content = r"
 This is not TOML at all
 just some random text
 with no valid TOML syntax
-"##;
+";
 
     // Write the config file
     create_config_file(&config_dir, toml_content);
@@ -396,7 +389,6 @@ with no valid TOML syntax
     let error = result.unwrap_err().to_string();
     assert!(
         error.contains("parse") || error.contains("expected") || error.contains("syntax"),
-        "Error should mention parsing error, got: {}",
-        error
+        "Error should mention parsing error, got: {error}"
     );
 }

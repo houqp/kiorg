@@ -9,7 +9,7 @@ use egui::Context;
 pub mod doc;
 pub mod image;
 
-/// Handle the ShowFilePreview shortcut action
+/// Handle the `ShowFilePreview` shortcut action
 /// This function was extracted from input.rs to reduce complexity
 pub fn handle_show_file_preview(app: &mut Kiorg, _ctx: &egui::Context) {
     // Store path and extension information before borrowing app mutably
@@ -71,7 +71,7 @@ pub fn handle_show_file_preview(app: &mut Kiorg, _ctx: &egui::Context) {
                         }
                         Err(e) => {
                             // If error opening file, don't show popup and notify error using toast
-                            app.toasts.error(format!("Failed to open PDF file: {}", e));
+                            app.toasts.error(format!("Failed to open PDF file: {e}"));
                             app.show_popup = None;
                         }
                     }
@@ -98,7 +98,7 @@ pub fn handle_show_file_preview(app: &mut Kiorg, _ctx: &egui::Context) {
 /// Shows the preview popup for the currently selected file
 pub fn show_preview_popup(ctx: &Context, app: &mut Kiorg) {
     // Check if preview popup should be shown
-    if let Some(PopupType::Preview) = app.show_popup {
+    if app.show_popup == Some(PopupType::Preview) {
         // Get selected file path for rendering the popup
         let selected_path = {
             let tab = app.tab_manager.current_tab_ref();
@@ -113,9 +113,7 @@ pub fn show_preview_popup(ctx: &Context, app: &mut Kiorg) {
         let window_title = {
             let tab = app.tab_manager.current_tab_ref();
             let selected_entry = tab.selected_entry();
-            selected_entry
-                .map(|entry| entry.name.clone())
-                .unwrap_or_else(|| "File Preview".to_string())
+            selected_entry.map_or_else(|| "File Preview".to_string(), |entry| entry.name.clone())
         };
 
         new_center_popup_window(&truncate_text(&window_title, popup_content_width))

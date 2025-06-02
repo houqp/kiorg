@@ -100,12 +100,12 @@ fn test_tab_selection_not_persisted() {
     {
         // Create a new egui context
         let ctx = egui::Context::default();
-        let cc = eframe::CreationContext::_new_kittest(ctx.clone());
+        let cc = eframe::CreationContext::_new_kittest(ctx);
 
         // Create the app with the test config directory override
         let app = kiorg::Kiorg::new_with_config_dir(
             &cc,
-            Some(test_dir_path.clone()),
+            Some(test_dir_path),
             Some(config_dir_path.clone()),
         )
         .expect("Failed to create Kiorg app");
@@ -200,15 +200,13 @@ fn test_tab_selection_not_persisted() {
         for (i, tab_state) in tab_states.iter().enumerate() {
             assert!(
                 tab_state.get("current_path").is_some(),
-                "Tab state {} should contain a current_path field",
-                i
+                "Tab state {i} should contain a current_path field"
             );
 
             // Verify that selected_index is NOT present in the persisted state
             assert!(
                 tab_state.get("selected_index").is_none(),
-                "Tab state {} should NOT contain a selected_index field",
-                i
+                "Tab state {i} should NOT contain a selected_index field"
             );
         }
     }
@@ -217,14 +215,14 @@ fn test_tab_selection_not_persisted() {
     {
         // Create a new egui context
         let ctx = egui::Context::default();
-        let cc = eframe::CreationContext::_new_kittest(ctx.clone());
+        let cc = eframe::CreationContext::_new_kittest(ctx);
 
         // Create the app with the same config directory to load the saved state
         // Pass None as initial_dir to force loading from saved state
         let app = kiorg::Kiorg::new_with_config_dir(
             &cc,
             None, // Use None to load from saved state
-            Some(config_dir_path.clone()),
+            Some(config_dir_path),
         )
         .expect("Failed to create Kiorg app");
 

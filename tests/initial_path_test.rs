@@ -29,11 +29,11 @@ fn test_fallback_to_current_dir_when_saved_path_nonexistent() {
 
     // Create a new egui context
     let ctx = Context::default();
-    let cc = eframe::CreationContext::_new_kittest(ctx.clone());
+    let cc = eframe::CreationContext::_new_kittest(ctx);
 
     // Create the app with the test config directory override
     // We don't provide an initial directory, so it should try to load from state.json
-    let app = Kiorg::new_with_config_dir(&cc, None, Some(config_dir.clone()))
+    let app = Kiorg::new_with_config_dir(&cc, None, Some(config_dir))
         .expect("Failed to create Kiorg app");
 
     // Check that the current path is not the non-existent path from state.json

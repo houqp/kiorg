@@ -73,7 +73,7 @@ pub fn draw_path_navigation(
     message
 }
 
-pub fn get_path_components(path: &Path) -> Vec<(String, PathBuf)> {
+#[must_use] pub fn get_path_components(path: &Path) -> Vec<(String, PathBuf)> {
     let mut components = Vec::new();
     let mut current = PathBuf::new();
 

@@ -102,12 +102,12 @@ pub fn render(
     }
 }
 
-/// Read image file, extract metadata, and create a PreviewContent
+/// Read image file, extract metadata, and create a `PreviewContent`
 ///
 /// This function:
 /// 1. Reads the image file and extracts metadata
 /// 2. Creates a texture from the image data
-/// 3. Returns a PreviewContent::Image with the texture
+/// 3. Returns a `PreviewContent::Image` with the texture
 ///
 /// # Arguments
 /// * `path` - The path to the image file
@@ -210,7 +210,7 @@ pub fn read_image_with_metadata(
             ImageFormat::Avif => "AVIF".to_string(),
             ImageFormat::Qoi => "QOI".to_string(),
             ImageFormat::Pcx => "PCX".to_string(),
-            _ => format!("{:?}", format),
+            _ => format!("{format:?}"),
         };
         metadata.insert("Format".to_string(), format_name);
 

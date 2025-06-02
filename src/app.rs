@@ -206,7 +206,7 @@ pub struct Kiorg {
     pub error_receiver: std::sync::mpsc::Receiver<String>,
 
     // ts variable for tracking key press times
-    pub last_lowercase_g_pressed_ms: u64,
+    pub last_lowercase_g_pressed_ms: u128,
 }
 
 impl Kiorg {

@@ -78,7 +78,7 @@ fn test_preview_popup_consumes_number_keys() {
     // Verify image preview is loaded
     match harness.state().preview_content.as_ref() {
         Some(PreviewContent::Image(_)) => {}
-        other => panic!("Preview content should be Image, got {:?}", other),
+        other => panic!("Preview content should be Image, got {other:?}"),
     }
 
     // Open preview popup with Shift+K
@@ -93,8 +93,7 @@ fn test_preview_popup_consumes_number_keys() {
     match &harness.state().show_popup {
         Some(PopupType::Preview) => {}
         other => panic!(
-            "Preview popup should be shown after pressing Shift+K, got {:?}",
-            other
+            "Preview popup should be shown after pressing Shift+K, got {other:?}"
         ),
     }
 
@@ -115,7 +114,7 @@ fn test_preview_popup_consumes_number_keys() {
     // Verify popup is still open
     match &harness.state().show_popup {
         Some(PopupType::Preview) => {}
-        other => panic!("Preview popup should still be open, got {:?}", other),
+        other => panic!("Preview popup should still be open, got {other:?}"),
     }
 
     // Try pressing more number keys
@@ -134,7 +133,7 @@ fn test_preview_popup_consumes_number_keys() {
     // Verify popup is still open
     match &harness.state().show_popup {
         Some(PopupType::Preview) => {}
-        other => panic!("Preview popup should still be open, got {:?}", other),
+        other => panic!("Preview popup should still be open, got {other:?}"),
     }
 
     // Close the popup with Escape
@@ -205,8 +204,7 @@ fn test_preview_popup_consumes_other_keys() {
     match &harness.state().show_popup {
         Some(PopupType::Preview) => {}
         other => panic!(
-            "Preview popup should be shown after pressing Shift+K, got {:?}",
-            other
+            "Preview popup should be shown after pressing Shift+K, got {other:?}"
         ),
     }
 
@@ -226,8 +224,7 @@ fn test_preview_popup_consumes_other_keys() {
     match &harness.state().show_popup {
         Some(PopupType::Preview) => {}
         other => panic!(
-            "Preview popup should still be open after pressing J, got {:?}",
-            other
+            "Preview popup should still be open after pressing J, got {other:?}"
         ),
     }
 
@@ -244,8 +241,7 @@ fn test_preview_popup_consumes_other_keys() {
     match &harness.state().show_popup {
         Some(PopupType::Preview) => {}
         other => panic!(
-            "Preview popup should still be open after pressing K, got {:?}",
-            other
+            "Preview popup should still be open after pressing K, got {other:?}"
         ),
     }
 

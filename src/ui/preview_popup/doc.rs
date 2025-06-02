@@ -6,7 +6,7 @@ use egui::{Button, Image, Key, Modifiers, RichText};
 
 /// Generate a consistent input ID for page navigation based on file ID
 fn get_page_input_id(file_id: &str) -> egui::Id {
-    egui::Id::new(format!("page_input_{}", file_id))
+    egui::Id::new(format!("page_input_{file_id}"))
 }
 
 /// Render PDF document in popup with page navigation
@@ -55,7 +55,7 @@ pub fn render_pdf_popup(
                     // Update input text if page changed via navigation buttons
                     let expected_text = (current_page + 1).to_string();
                     if !ui.memory(|m| m.has_focus(input_id)) && page_input_text != expected_text {
-                        page_input_text = expected_text.clone();
+                        page_input_text = expected_text;
                         ui.ctx()
                             .data_mut(|d| d.insert_temp(input_id, page_input_text.clone()));
                     }
@@ -92,7 +92,7 @@ pub fn render_pdf_popup(
 
                     // Label showing "of X"
                     ui.label(
-                        RichText::new(format!("of {}", total_pages))
+                        RichText::new(format!("of {total_pages}"))
                             .color(colors.fg)
                             .size(14.0),
                     );

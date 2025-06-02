@@ -37,11 +37,11 @@ fn test_custom_shortcuts() {
     let config_dir = config_temp_dir.path().to_path_buf();
 
     // Create a TOML config file with custom shortcuts
-    let toml_content = r##"
+    let toml_content = r#"
 # Custom shortcuts configuration
 [[shortcuts.MoveDown]]
 key = "n"
-"##;
+"#;
 
     // Write the config file
     create_config_file(&config_dir, toml_content);
@@ -104,9 +104,9 @@ fn test_default_shortcuts() {
     let config_dir = config_temp_dir.path().to_path_buf();
 
     // Create an empty config file to use default shortcuts
-    let toml_content = r##"
+    let toml_content = r"
 # Empty config file - will use default shortcuts
-"##;
+";
 
     // Write the config file
     create_config_file(&config_dir, toml_content);
@@ -171,7 +171,7 @@ fn test_toml_config_file() {
     let config_dir = config_temp_dir.path().to_path_buf();
 
     // Create a TOML config file with multiple custom shortcuts
-    let toml_content = r##"
+    let toml_content = r#"
 # Custom shortcuts configuration with multiple shortcuts
 [[shortcuts.MoveDown]]
 key = "m"
@@ -182,7 +182,7 @@ key = "i"
 [[shortcuts.DeleteEntry]]
 key = "d"
 shift = true
-"##;
+"#;
 
     // Write the config file
     create_config_file(&config_dir, toml_content);
@@ -258,7 +258,7 @@ fn test_modifier_shortcuts() {
 
     // Create a TOML config file with custom shortcuts using modifiers
     // Include both the default MoveUp shortcut and a custom MoveDown shortcut
-    let toml_content = r##"
+    let toml_content = r#"
 # Custom shortcuts configuration with modifiers
 [[shortcuts.MoveDown]]
 key = "z"
@@ -266,7 +266,7 @@ ctrl = true
 
 [[shortcuts.MoveUp]]
 key = "m"
-"##;
+"#;
 
     // Write the config file
     create_config_file(&config_dir, toml_content);
@@ -334,11 +334,11 @@ fn test_shortcut_merging() {
 
     // Create a TOML config file with only one custom shortcut
     // This should override just the MoveDown action while keeping all other default shortcuts
-    let toml_content = r##"
+    let toml_content = r#"
 # Custom shortcuts configuration with only one action
 [[shortcuts.MoveDown]]
 key = "n"
-"##;
+"#;
     // Write the config file
     create_config_file(&config_dir, toml_content);
 
@@ -393,14 +393,14 @@ fn test_shortcut_conflict_detection() {
 
     // Create a TOML config file with conflicting shortcuts
     // Both MoveDown and DeleteEntry are assigned to the same shortcut (d key)
-    let toml_content = r##"
+    let toml_content = r#"
 # Config with conflicting shortcuts
 [[shortcuts.MoveDown]]
 key = "d"
 
 [[shortcuts.DeleteEntry]]
 key = "d"
-"##;
+"#;
 
     // Write the config file
     create_config_file(&config_dir, toml_content);
@@ -415,7 +415,7 @@ key = "d"
     );
 
     // Check that the error is a ShortcutConflictError
-    if let Err(kiorg::config::ConfigError::ShortcutConflict(conflict)) = result {
+    if let Err(kiorg::config::ConfigError::ShortcutConflict(conflict, _)) = result {
         // Verify the conflicting shortcut details
         assert_eq!(conflict.shortcut.key, "d");
         assert!(
@@ -426,6 +426,6 @@ key = "d"
             "Error should identify the correct conflicting actions"
         );
     } else {
-        panic!("Expected ShortcutConflictError, got: {:?}", result);
+        panic!("Expected ShortcutConflictError, got: {result:?}");
     }
 }

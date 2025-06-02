@@ -81,7 +81,7 @@ fn display_bookmarks_grid(
 ) -> (Option<PathBuf>, Option<PathBuf>) {
     let mut navigate_to_path = None;
     let mut remove_bookmark_path = None;
-    let bg_selected = colors.bg_selected.to_owned();
+    let bg_selected = colors.bg_selected;
 
     egui::Grid::new("bookmarks_grid")
         .num_columns(2)
@@ -157,14 +157,11 @@ pub fn show_bookmark_popup(ctx: &Context, app: &mut Kiorg) -> BookmarkAction {
         _ => return BookmarkAction::None,
     };
 
-    let mut current_index = current_index;
-
-    // Ensure index is valid
-    if !app.bookmarks.is_empty() {
-        current_index = current_index.min(app.bookmarks.len() - 1);
+    let mut current_index = if app.bookmarks.is_empty() {
+        0
     } else {
-        current_index = 0;
-    }
+        current_index.min(app.bookmarks.len() - 1)
+    };
 
     // Handle keyboard navigation using shortcuts
 
@@ -272,9 +269,8 @@ pub fn show_bookmark_popup(ctx: &Context, app: &mut Kiorg) -> BookmarkAction {
 pub fn toggle_bookmark(app: &mut Kiorg) {
     let bookmarks = &mut app.bookmarks;
     let tab = app.tab_manager.current_tab_mut();
-    let selected_entry = match tab.selected_entry() {
-        Some(entry) => entry,
-        None => return, // No selected entry
+    let Some(selected_entry) = tab.selected_entry() else {
+        return;
     };
 
     // Only allow bookmarking directories, not files
@@ -290,7 +286,7 @@ pub fn toggle_bookmark(app: &mut Kiorg) {
 
         // Save bookmarks to config file
         if let Err(e) = save_bookmarks(bookmarks, app.config_dir_override.as_ref()) {
-            app.notify_error(format!("Failed to save bookmarks: {}", e));
+            app.notify_error(format!("Failed to save bookmarks: {e}"));
         }
     }
 }

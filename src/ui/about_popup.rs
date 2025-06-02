@@ -35,7 +35,7 @@ pub fn show_about_popup(ctx: &Context, app: &mut Kiorg) {
                 {
                     if let Err(e) = open::that(repo_url) {
                         // Call notify_error wrapper
-                        app.notify_error(format!("Failed to open URL: {}", e));
+                        app.notify_error(format!("Failed to open URL: {e}"));
                     }
                 }
                 ui.add_space(10.0);

@@ -19,6 +19,7 @@ pub struct KeyboardShortcut {
 }
 
 impl KeyboardShortcut {
+    #[must_use]
     pub fn new(key: &str) -> Self {
         Self {
             key: key.to_string(),
@@ -30,27 +31,32 @@ impl KeyboardShortcut {
         }
     }
 
-    pub fn with_shift(mut self) -> Self {
+    #[must_use]
+    pub const fn with_shift(mut self) -> Self {
         self.shift = true;
         self
     }
 
-    pub fn with_ctrl(mut self) -> Self {
+    #[must_use]
+    pub const fn with_ctrl(mut self) -> Self {
         self.ctrl = true;
         self
     }
 
-    pub fn with_alt(mut self) -> Self {
+    #[must_use]
+    pub const fn with_alt(mut self) -> Self {
         self.alt = true;
         self
     }
 
-    pub fn with_mac_cmd(mut self) -> Self {
+    #[must_use]
+    pub const fn with_mac_cmd(mut self) -> Self {
         self.mac_cmd = true;
         self
     }
 
-    pub fn with_namespace(mut self) -> Self {
+    #[must_use]
+    pub const fn with_namespace(mut self) -> Self {
         self.namespace = true;
         self
     }
@@ -122,6 +128,7 @@ impl KeyboardShortcut {
     }
 
     // Check if this shortcut matches the given key and modifiers
+    #[must_use]
     pub fn matches(&self, key: Key, modifiers: Modifiers, namespace: bool) -> bool {
         let key_matches = match self.to_egui_key() {
             Some(shortcut_key) => shortcut_key == key,
@@ -211,6 +218,7 @@ pub struct Shortcuts {
 }
 
 impl Shortcuts {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             action_to_shortcuts: HashMap::new(),
@@ -218,6 +226,7 @@ impl Shortcuts {
         }
     }
 
+    #[must_use]
     pub fn get(&self, action: &ShortcutAction) -> Option<&Vec<KeyboardShortcut>> {
         self.action_to_shortcuts.get(action)
     }
@@ -303,6 +312,7 @@ impl<'a> IntoIterator for &'a Shortcuts {
 }
 
 // Function to get default shortcuts
+#[must_use]
 pub fn default_shortcuts() -> Shortcuts {
     let mut shortcuts = Shortcuts::new();
 
@@ -493,6 +503,7 @@ pub fn get_default_shortcuts() -> &'static Shortcuts {
 mod tests {
     use super::*;
     use std::collections::HashMap;
+    use std::fmt::Write;
 
     #[test]
     fn test_default_shortcuts_no_conflicts() {
@@ -541,9 +552,9 @@ mod tests {
                     shortcut_str.push_str(", Namespace");
                 }
 
-                error_msg.push_str(&format!("\n{} is assigned to: ", shortcut_str));
+                writeln!(error_msg, "\n{shortcut_str} is assigned to: ").unwrap();
                 for action in actions {
-                    error_msg.push_str(&format!("{:?}, ", action));
+                    write!(error_msg, "{action:?}, ").unwrap();
                 }
             }
 
@@ -554,9 +565,10 @@ mod tests {
 
 // Helper functions for the Shortcuts type
 pub mod shortcuts_helpers {
-    use super::*;
+    use super::{EguiKeyCombo, Key, Modifiers, ShortcutAction, Shortcuts};
 
     // Find the action for a given key and modifiers
+    #[must_use]
     pub fn find_action(
         shortcuts: &Shortcuts,
         key: Key,
@@ -575,11 +587,11 @@ pub mod shortcuts_helpers {
     }
 
     // Get a human-readable representation of shortcuts for an action
+    #[must_use]
     pub fn get_shortcut_display(shortcuts: &Shortcuts, action: ShortcutAction) -> String {
         let action_shortcuts = shortcuts
             .get(&action)
-            .map(|v| v.as_slice())
-            .unwrap_or_else(|| &[]);
+            .map_or_else(|| &[], std::vec::Vec::as_slice);
         if action_shortcuts.is_empty() {
             return String::from("Not assigned");
         }

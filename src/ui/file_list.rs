@@ -97,7 +97,7 @@ fn draw_header_column(
         params.colors.link_text
     };
 
-    let header_text = format!("{}{}", text, sort_indicator);
+    let header_text = format!("{text}{sort_indicator}");
 
     // Interact with the calculated rectangle
     let response = ui.interact(col_rect, ui.id().with(column), egui::Sense::click());
@@ -206,8 +206,8 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
     // Show a subtle pulsing effect for files being opened
     if is_being_opened && !entry.is_dir {
         let time = ui.ctx().input(|i| i.time);
-        let pulse = ((time * 20.0).sin() * 0.5 + 0.5) as f32; // Pulsing effect between 0.0 and 1.0
-        let pulse_color = colors.success.gamma_multiply(0.3 + pulse * 0.5);
+        let pulse = (time * 20.0).sin().mul_add(0.5, 0.5) as f32; // Pulsing effect between 0.0 and 1.0
+        let pulse_color = colors.success.gamma_multiply(pulse.mul_add(0.5, 0.3));
         // Draw a pulsing background
         ui.painter().rect_filled(rect, 0.0, pulse_color);
     } else if is_marked {
@@ -421,7 +421,7 @@ pub fn draw_parent_entry_row(
     response
 }
 
-pub fn truncate_text(text: &str, available_width: f32) -> String {
+#[must_use] pub fn truncate_text(text: &str, available_width: f32) -> String {
     // Approximate width of a character in pixels
     let char_width = 8.0;
     let max_chars = (available_width / char_width) as usize;
@@ -440,7 +440,7 @@ pub fn truncate_text(text: &str, available_width: f32) -> String {
         .take(half_chars)
         .collect::<String>();
 
-    format!("{}...{}", start, end)
+    format!("{start}...{end}")
 }
 
 #[cfg(test)]

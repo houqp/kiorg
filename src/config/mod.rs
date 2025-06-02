@@ -31,7 +31,7 @@ impl fmt::Display for ShortcutConflictError {
 
 impl Error for ShortcutConflictError {}
 
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
 pub struct SortPreference {
     pub column: SortColumn,
     pub order: SortOrder,
@@ -59,15 +59,15 @@ impl Config {
 // Define a custom error type that can represent both TOML parsing errors and shortcut conflicts
 #[derive(Debug)]
 pub enum ConfigError {
-    TomlError(toml::de::Error),
-    ShortcutConflict(ShortcutConflictError),
+    TomlError(toml::de::Error, PathBuf),
+    ShortcutConflict(ShortcutConflictError, PathBuf),
 }
 
 impl fmt::Display for ConfigError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ConfigError::TomlError(e) => write!(f, "Invalid config: {}", e),
-            ConfigError::ShortcutConflict(e) => write!(f, "Shortcut conflict: {}", e),
+            Self::TomlError(e, _) => write!(f, "Invalid config: {e}"),
+            Self::ShortcutConflict(e, _) => write!(f, "Shortcut conflict: {e}"),
         }
     }
 }
@@ -75,21 +75,35 @@ impl fmt::Display for ConfigError {
 impl Error for ConfigError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
-            ConfigError::TomlError(e) => Some(e),
-            ConfigError::ShortcutConflict(e) => Some(e),
+            Self::TomlError(e, _) => Some(e),
+            Self::ShortcutConflict(e, _) => Some(e),
+        }
+    }
+}
+
+impl ConfigError {
+    #[must_use]
+    pub const fn config_path(&self) -> &PathBuf {
+        match self {
+            Self::TomlError(_, path) => path,
+            Self::ShortcutConflict(_, path) => path,
         }
     }
 }
 
 impl From<toml::de::Error> for ConfigError {
     fn from(err: toml::de::Error) -> Self {
-        ConfigError::TomlError(err)
+        // This From implementation is problematic since we don't have the path here
+        // We'll handle the path in the load_config_with_override function directly
+        Self::TomlError(err, PathBuf::new())
     }
 }
 
 impl From<ShortcutConflictError> for ConfigError {
     fn from(err: ShortcutConflictError) -> Self {
-        ConfigError::ShortcutConflict(err)
+        // This From implementation is problematic since we don't have the path here
+        // We'll handle the path in the load_config_with_override function directly
+        Self::ShortcutConflict(err, PathBuf::new())
     }
 }
 
@@ -107,9 +121,8 @@ pub fn load_config_with_override(
         return Ok(Config::default());
     }
 
-    let mut file = match fs::File::open(&config_path) {
-        Ok(file) => file,
-        Err(_) => return Ok(Config::default()),
+    let Ok(mut file) = fs::File::open(&config_path) else {
+        return Ok(Config::default());
     };
 
     let mut contents = String::new();
@@ -118,13 +131,19 @@ pub fn load_config_with_override(
     }
 
     // Parse the user config
-    let mut user_config: Config = toml::from_str(&contents)?;
+    let mut user_config: Config = match toml::from_str(&contents) {
+        Ok(config) => config,
+        Err(e) => return Err(ConfigError::TomlError(e, config_path)),
+    };
 
     // Merge user shortcuts with default shortcuts if user provided any
     if let Some(user_shortcuts) = user_config.shortcuts.take() {
         let default_shortcuts = shortcuts::default_shortcuts();
-        // Use ? to propagate the ShortcutConflictError
-        let merged_shortcuts = merge_shortcuts(default_shortcuts, user_shortcuts)?;
+        // Handle shortcut conflicts with the config path
+        let merged_shortcuts = match merge_shortcuts(default_shortcuts, user_shortcuts) {
+            Ok(shortcuts) => shortcuts,
+            Err(e) => return Err(ConfigError::ShortcutConflict(e, config_path)),
+        };
         user_config.shortcuts = Some(merged_shortcuts);
     } else {
         // If no shortcuts provided, use defaults
@@ -153,30 +172,31 @@ pub fn save_config_with_override(
     fs::write(&config_path, toml_str)
 }
 
+#[must_use]
 pub fn get_config_path_with_override(config_dir_override: Option<&PathBuf>) -> PathBuf {
     let config_dir = get_kiorg_config_dir(config_dir_override);
     config_dir.join("config.toml")
 }
 
+#[must_use]
 pub fn get_kiorg_config_dir(override_path: Option<&PathBuf>) -> PathBuf {
-    match override_path {
-        Some(dir) => dir.clone(),
-        None => {
-            // For macOS, prioritize ~/.config/kiorg for easier config management and terminal access
-            #[cfg(target_os = "macos")]
-            {
-                if let Some(home_dir) = dirs::home_dir() {
-                    let xdg_config_dir = home_dir.join(".config").join("kiorg");
-                    if xdg_config_dir.exists() {
-                        return xdg_config_dir;
-                    }
+    if let Some(dir) = override_path {
+        dir.clone()
+    } else {
+        // For macOS, prioritize ~/.config/kiorg for easier config management and terminal access
+        #[cfg(target_os = "macos")]
+        {
+            if let Some(home_dir) = dirs::home_dir() {
+                let xdg_config_dir = home_dir.join(".config").join("kiorg");
+                if xdg_config_dir.exists() {
+                    return xdg_config_dir;
                 }
             }
-
-            // Fall back to the standard config directory
-            let dir = dirs::config_dir().expect("Failed to look up config directory");
-            dir.join("kiorg")
         }
+
+        // Fall back to the standard config directory
+        let dir = dirs::config_dir().expect("Failed to look up config directory");
+        dir.join("kiorg")
     }
 }
 

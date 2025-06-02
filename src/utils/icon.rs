@@ -19,7 +19,7 @@ fn get_app_icon_image() -> &'static RgbaImage {
 }
 
 /// Load the embedded icon data into an egui icon
-pub fn load_app_icon() -> IconData {
+#[must_use] pub fn load_app_icon() -> IconData {
     let image = get_app_icon_image();
     let width = image.width();
     let height = image.height();

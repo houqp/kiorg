@@ -47,13 +47,11 @@ fn test_add_file_and_directory() {
     // Verify file exists on filesystem
     assert!(
         expected_file_path.exists(),
-        "File '{}' should exist on filesystem",
-        file_name
+        "File '{file_name}' should exist on filesystem"
     );
     assert!(
         expected_file_path.is_file(),
-        "'{}' should be a file",
-        file_name
+        "'{file_name}' should be a file"
     );
 
     // Verify file appears in UI list and is selected
@@ -122,13 +120,11 @@ fn test_add_file_and_directory() {
     // Verify directory exists on filesystem
     assert!(
         expected_dir_path.exists(),
-        "Directory '{}' should exist on filesystem",
-        dir_name_actual
+        "Directory '{dir_name_actual}' should exist on filesystem"
     );
     assert!(
         expected_dir_path.is_dir(),
-        "'{}' should be a directory",
-        dir_name_actual
+        "'{dir_name_actual}' should be a directory"
     );
 
     // Verify directory appears in UI list and is selected
@@ -177,13 +173,11 @@ fn test_add_file_and_directory() {
     // Verify file exists
     assert!(
         expected_file_q_path.exists(),
-        "File '{}' should exist",
-        file_name_q
+        "File '{file_name_q}' should exist"
     );
     assert!(
         expected_file_q_path.is_file(),
-        "'{}' should be a file",
-        file_name_q
+        "'{file_name_q}' should be a file"
     );
 
     // Verify file appears in UI and is selected
@@ -221,13 +215,11 @@ fn test_add_file_and_directory() {
     // Verify directory exists
     assert!(
         expected_dir_q_path.exists(),
-        "Directory '{}' should exist",
-        dir_name_q_actual
+        "Directory '{dir_name_q_actual}' should exist"
     );
     assert!(
         expected_dir_q_path.is_dir(),
-        "'{}' should be a directory",
-        dir_name_q_actual
+        "'{dir_name_q_actual}' should be a directory"
     );
 
     // Verify directory appears in UI and is selected
@@ -365,7 +357,7 @@ fn test_add_entry_name_conflict() {
     harness.step();
 
     // Input the existing directory name with trailing slash
-    let dir_input = format!("{}/", existing_dir);
+    let dir_input = format!("{existing_dir}/");
     harness
         .input_mut()
         .events

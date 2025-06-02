@@ -2,7 +2,7 @@ use crate::app::Kiorg;
 
 #[cfg(feature = "terminal")]
 mod implementation {
-    use super::*;
+    use super::Kiorg;
     use crate::ui::style::section_title_text;
     use egui::Vec2;
     use egui_term::{PtyEvent, TerminalView};
@@ -18,21 +18,21 @@ mod implementation {
             working_directory: std::path::PathBuf,
         ) -> Result<Self, String> {
             let system_shell = std::env::var("SHELL")
-                .map_err(|e| format!("SHELL variable is not defined: {}", e))?;
+                .map_err(|e| format!("SHELL variable is not defined: {e}"))?;
 
             let (pty_proxy_sender, pty_proxy_receiver) = std::sync::mpsc::channel();
 
             let terminal_backend = egui_term::TerminalBackend::new(
                 0,
                 ctx.clone(),
-                pty_proxy_sender.clone(),
+                pty_proxy_sender,
                 egui_term::BackendSettings {
                     shell: system_shell,
                     working_directory: Some(working_directory),
                     ..Default::default()
                 },
             )
-            .map_err(|e| format!("Failed to create terminal backend: {}", e))?;
+            .map_err(|e| format!("Failed to create terminal backend: {e}"))?;
 
             Ok(Self {
                 terminal_backend,

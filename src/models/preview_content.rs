@@ -109,7 +109,7 @@ pub struct ZipEntry {
 impl PreviewContent {
     /// Creates a new text preview content
     pub fn text(content: impl Into<String>) -> Self {
-        PreviewContent::Text(content.into())
+        Self::Text(content.into())
     }
 
     /// Creates a new image preview content with a texture handle
@@ -119,7 +119,7 @@ impl PreviewContent {
         texture: egui::TextureHandle,
         exif_data: Option<HashMap<String, String>>,
     ) -> Self {
-        PreviewContent::Image(ImageMeta {
+        Self::Image(ImageMeta {
             title: title.into(),
             metadata,
             exif_data,
@@ -128,25 +128,25 @@ impl PreviewContent {
     }
 
     /// Creates a new zip preview content from a list of entries
-    pub fn zip(entries: Vec<ZipEntry>) -> Self {
-        PreviewContent::Zip(entries)
+    #[must_use] pub const fn zip(entries: Vec<ZipEntry>) -> Self {
+        Self::Zip(entries)
     }
 
     /// Creates a new loading preview content for a path
     pub fn loading(path: impl Into<PathBuf>) -> Self {
-        PreviewContent::Loading(path.into(), None)
+        Self::Loading(path.into(), None)
     }
 
     /// Creates a new loading preview content with a receiver for async updates
     pub fn loading_with_receiver(
         path: impl Into<PathBuf>,
-        receiver: Receiver<Result<PreviewContent, String>>,
+        receiver: Receiver<Result<Self, String>>,
     ) -> Self {
-        PreviewContent::Loading(path.into(), Some(Arc::new(Mutex::new(receiver))))
+        Self::Loading(path.into(), Some(Arc::new(Mutex::new(receiver))))
     }
 
     /// Creates a new PDF document preview content with cached PDF file
-    pub fn pdf_with_file(
+    #[must_use] pub fn pdf_with_file(
         image: egui::widgets::ImageSource<'static>,
         metadata: HashMap<String, String>,
         title: Option<String>,
@@ -161,7 +161,7 @@ impl PreviewContent {
         // Generate unique file ID from path
         let file_id = file_path.to_string_lossy().to_string();
 
-        PreviewContent::Pdf(PdfMeta {
+        Self::Pdf(PdfMeta {
             file_id,
             title,
             metadata,
@@ -173,7 +173,7 @@ impl PreviewContent {
     }
 
     /// Creates a new EPUB preview content with metadata and optional cover image
-    pub fn epub(
+    #[must_use] pub fn epub(
         mut metadata: HashMap<String, Vec<String>>,
         cover_image: egui::widgets::ImageSource<'static>,
         page_count: usize,
@@ -201,7 +201,7 @@ impl PreviewContent {
             })
             .collect();
 
-        PreviewContent::Epub(EpubMeta {
+        Self::Epub(EpubMeta {
             title,
             metadata: single_metadata,
             cover: cover_image,
@@ -214,7 +214,7 @@ impl PreviewContent {
         // Check for title in various possible metadata keys
         let title_keys = ["title", "dc:title"];
 
-        for key in title_keys.iter() {
+        for key in &title_keys {
             if let Some(values) = metadata.get(*key) {
                 if !values.is_empty() {
                     return values[0].clone();

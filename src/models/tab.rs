@@ -12,7 +12,7 @@ pub enum SortColumn {
     None,
 }
 
-#[derive(Clone, PartialEq, Debug, serde::Serialize, serde::Deserialize, Copy)]
+#[derive(Clone, PartialEq, Eq, Debug, serde::Serialize, serde::Deserialize, Copy)]
 pub enum SortOrder {
     Ascending,
     Descending,
@@ -73,7 +73,7 @@ fn sort_entries_by(entries: &mut [DirEntry], sort_column: SortColumn, sort_order
             }
             primary_order_fn(b, a)
         }),
-    };
+    }
 }
 
 // Build the reverse index mapping paths to indices
@@ -85,13 +85,13 @@ fn refresh_path_to_index(tab: &mut Tab) {
 }
 
 impl TabState {
-    pub fn new(path: PathBuf) -> Self {
+    #[must_use] pub const fn new(path: PathBuf) -> Self {
         Self { current_path: path }
     }
 }
 
 impl Tab {
-    pub fn new(path: PathBuf) -> Self {
+    #[must_use] pub fn new(path: PathBuf) -> Self {
         let mut tab = Self {
             current_path: path.clone(),
             entries: Vec::new(),
@@ -109,14 +109,14 @@ impl Tab {
     }
 
     // Convert Tab to TabState for serialization
-    pub fn to_state(&self) -> TabState {
+    #[must_use] pub fn to_state(&self) -> TabState {
         TabState {
             current_path: self.current_path.clone(),
         }
     }
 
     // Create Tab from TabState
-    pub fn from_state(state: TabState) -> Self {
+    #[must_use] pub fn from_state(state: TabState) -> Self {
         let path = state.current_path.clone();
         let mut tab = Self {
             current_path: state.current_path,
@@ -168,13 +168,13 @@ impl Tab {
         }
     }
 
-    pub fn update_selection(&mut self, new_index: usize) {
+    pub const fn update_selection(&mut self, new_index: usize) {
         if new_index < self.entries.len() {
             self.selected_index = new_index;
         }
     }
 
-    pub fn selected_entry(&self) -> Option<&DirEntry> {
+    #[must_use] pub fn selected_entry(&self) -> Option<&DirEntry> {
         if self.entries.is_empty() {
             None
         } else {
@@ -183,18 +183,18 @@ impl Tab {
     }
 
     // Get the index of an entry by its path using the reverse index
-    pub fn get_index_by_path(&self, path: &PathBuf) -> Option<usize> {
+    #[must_use] pub fn get_index_by_path(&self, path: &PathBuf) -> Option<usize> {
         self.path_to_index.get(path).copied()
     }
 
     // Returns the index of the first entry that matches the current search query
-    pub fn get_first_filtered_entry_index(&self, query: &str) -> Option<usize> {
+    #[must_use] pub fn get_first_filtered_entry_index(&self, query: &str) -> Option<usize> {
         if query.is_empty() {
             // If query is empty, return the current selection or 0
-            return if !self.entries.is_empty() {
-                Some(self.selected_index.min(self.entries.len() - 1))
-            } else {
+            return if self.entries.is_empty() {
                 None
+            } else {
+                Some(self.selected_index.min(self.entries.len() - 1))
             };
         }
         self.entries
@@ -203,7 +203,7 @@ impl Tab {
     }
 
     // Returns a filtered list of entries based on the search query
-    pub fn get_filtered_entries(&self, query: &Option<String>) -> Vec<&DirEntry> {
+    #[must_use] pub fn get_filtered_entries(&self, query: &Option<String>) -> Vec<&DirEntry> {
         match query {
             Some(query) => self
                 .entries
@@ -215,7 +215,7 @@ impl Tab {
     }
 
     // Returns a filtered list of entries along with their original indices
-    pub fn get_filtered_entries_with_indices(
+    #[must_use] pub fn get_filtered_entries_with_indices(
         &self,
         query: &Option<String>,
     ) -> Vec<(&DirEntry, usize)> {
@@ -314,11 +314,11 @@ pub struct TabManager {
 }
 
 impl TabManager {
-    pub fn new(initial_path: PathBuf) -> Self {
+    #[must_use] pub fn new(initial_path: PathBuf) -> Self {
         Self::new_with_config(initial_path, None)
     }
 
-    pub fn new_with_config(initial_path: PathBuf, config: Option<&Config>) -> Self {
+    #[must_use] pub fn new_with_config(initial_path: PathBuf, config: Option<&Config>) -> Self {
         let sort_preference = config.and_then(|c| c.sort_preference.as_ref());
 
         // Initialize sort settings from config
@@ -337,9 +337,9 @@ impl TabManager {
     }
 
     // Convert TabManager to TabManagerState for serialization
-    pub fn to_state(&self) -> TabManagerState {
+    #[must_use] pub fn to_state(&self) -> TabManagerState {
         TabManagerState {
-            tab_states: self.tabs.iter().map(|tab| tab.to_state()).collect(),
+            tab_states: self.tabs.iter().map(Tab::to_state).collect(),
             current_tab_index: self.current_tab_index,
             sort_column: self.sort_column,
             sort_order: self.sort_order,
@@ -356,7 +356,7 @@ impl TabManager {
         }
     }
 
-    pub fn tab_indexes(&self) -> Vec<(usize, bool)> {
+    #[must_use] pub fn tab_indexes(&self) -> Vec<(usize, bool)> {
         (0..self.tabs.len())
             .map(|i| (i, i == self.current_tab_index))
             .collect()
@@ -367,7 +367,7 @@ impl TabManager {
         self.current_tab_index = self.tabs.len() - 1;
     }
 
-    pub fn switch_to_tab(&mut self, index: usize) {
+    pub const fn switch_to_tab(&mut self, index: usize) {
         if index < self.tabs.len() {
             self.current_tab_index = index;
         }
@@ -390,22 +390,22 @@ impl TabManager {
         &mut self.tabs[self.current_tab_index]
     }
 
-    pub fn current_tab_ref(&self) -> &Tab {
+    #[must_use] pub fn current_tab_ref(&self) -> &Tab {
         &self.tabs[self.current_tab_index]
     }
 
     // Get the current tab index
-    pub fn get_current_tab_index(&self) -> usize {
+    #[must_use] pub const fn get_current_tab_index(&self) -> usize {
         self.current_tab_index
     }
 
     // Get the total number of tabs
-    pub fn get_tab_count(&self) -> usize {
+    #[must_use] pub const fn get_tab_count(&self) -> usize {
         self.tabs.len()
     }
 
     // Get the index of an entry by its path in the current tab
-    pub fn get_entry_index_by_path(&self, path: &PathBuf) -> Option<usize> {
+    #[must_use] pub fn get_entry_index_by_path(&self, path: &PathBuf) -> Option<usize> {
         self.current_tab_ref().get_index_by_path(path)
     }
 

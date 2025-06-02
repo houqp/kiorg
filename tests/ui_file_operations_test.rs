@@ -18,7 +18,7 @@ fn test_delete_shortcut() {
 
     // Create a file inside dir2 to test non-empty directory deletion
     let nested_file = test_files[1].join("nested.txt");
-    create_test_files(&[nested_file.clone()]);
+    create_test_files(&[nested_file]);
 
     // Create files inside dir1 to test recursive deletion
     let dir1_files = create_test_files(&[

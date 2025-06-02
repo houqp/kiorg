@@ -200,7 +200,7 @@ fn test_unmark_copied_file() {
 
         // Clipboard should be empty or the file should be removed from it
         match &app.clipboard {
-            Some(kiorg::app::Clipboard::Copy(paths)) | Some(kiorg::app::Clipboard::Cut(paths)) => {
+            Some(kiorg::app::Clipboard::Copy(paths) | kiorg::app::Clipboard::Cut(paths)) => {
                 assert!(
                     !paths.contains(&test_files[2]),
                     "test1.txt should be removed from clipboard"

@@ -5,7 +5,7 @@ use egui::{Key, Modifiers};
 
 use super::app::{Kiorg, PopupType};
 
-const DOUBLE_KEY_PRESS_THRESHOLD_MS: u64 = 500;
+const DOUBLE_KEY_PRESS_THRESHOLD_MS: u128 = 500;
 
 #[inline]
 fn is_cancel_keys(key: Key) -> bool {
@@ -13,6 +13,7 @@ fn is_cancel_keys(key: Key) -> bool {
 }
 
 // Helper function to handle a shortcut action
+#[allow(clippy::too_many_lines)]
 fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: ShortcutAction) {
     match action {
         ShortcutAction::ShowFilePreview => {
@@ -30,7 +31,7 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: Shortcut
                 .current_tab_ref()
                 .current_path
                 .parent()
-                .map(|p| p.to_path_buf());
+                .map(std::path::Path::to_path_buf);
             if let Some(parent) = parent_path {
                 app.navigate_to_dir(parent);
             }
@@ -108,8 +109,9 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: Shortcut
 
                     // If this entry is in the clipboard as a cut or copy operation, remove it
                     match &mut app.clipboard {
-                        Some(crate::app::Clipboard::Cut(paths))
-                        | Some(crate::app::Clipboard::Copy(paths)) => {
+                        Some(
+                            crate::app::Clipboard::Cut(paths) | crate::app::Clipboard::Copy(paths),
+                        ) => {
                             // Remove the path from the clipboard's paths list
                             paths.retain(|p| p != path);
 
@@ -264,6 +266,7 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: Shortcut
     }
 }
 
+#[allow(clippy::too_many_lines)]
 fn process_key(
     app: &mut Kiorg,
     ctx: &egui::Context,
@@ -347,7 +350,7 @@ fn process_key(
                 return;
             }
         }
-        Some(PopupType::Themes(_)) | Some(PopupType::Bookmarks(_)) => {
+        Some(PopupType::Themes(_) | PopupType::Bookmarks(_)) => {
             // Theme popup input is handled in the popup itself
             // Bookmark popup input is handled in show_bookmark_popup
             return;
@@ -367,7 +370,7 @@ fn process_key(
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
-            .as_millis() as u64;
+            .as_millis();
 
         let last = app.last_lowercase_g_pressed_ms;
         if last > 0 && now - last < DOUBLE_KEY_PRESS_THRESHOLD_MS {
@@ -384,7 +387,7 @@ fn process_key(
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
-            .as_millis() as u64;
+            .as_millis();
 
         if now - app.last_lowercase_g_pressed_ms < DOUBLE_KEY_PRESS_THRESHOLD_MS {
             namespace = true;

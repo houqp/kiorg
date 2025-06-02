@@ -38,7 +38,7 @@ fn test_image_preview_popup_shortcut() {
     // Verify image preview is loaded
     match harness.state().preview_content.as_ref() {
         Some(PreviewContent::Image(_)) => {}
-        other => panic!("Preview content should be Image, got {:?}", other),
+        other => panic!("Preview content should be Image, got {other:?}"),
     }
 
     // Open preview popup with Shift+K
@@ -53,8 +53,7 @@ fn test_image_preview_popup_shortcut() {
     match &harness.state().show_popup {
         Some(PopupType::Preview) => {}
         other => panic!(
-            "Preview popup should be shown after pressing Shift+K, got {:?}",
-            other
+            "Preview popup should be shown after pressing Shift+K, got {other:?}"
         ),
     }
 
@@ -110,8 +109,7 @@ fn test_pdf_preview_popup_error_handling() {
                 text.contains(
                     "Error loading file: Failed to open PDF file: file header is missing"
                 ),
-                "Expected error message not found in preview content: {}",
-                text
+                "Expected error message not found in preview content: {text}"
             );
             return;
         }
@@ -152,7 +150,7 @@ fn test_preview_popup_unsupported_file() {
 }
 
 /// Test that the EPUB preview popup correctly sets the Page Count metadata
-/// This test uses EPUB files which also use DocMeta and are easier to create reliably
+/// This test uses EPUB files which also use `DocMeta` and are easier to create reliably
 #[test]
 fn test_doc_preview_popup_page_count_metadata() {
     // Create a temporary directory for testing
@@ -178,7 +176,7 @@ fn test_doc_preview_popup_page_count_metadata() {
     // Verify document preview is loaded
     match harness.state().preview_content.as_ref() {
         Some(PreviewContent::Epub(_)) => {}
-        other => panic!("Preview content should be EPUB, got {:?}", other),
+        other => panic!("Preview content should be EPUB, got {other:?}"),
     }
 
     // Open preview popup with Shift+K
@@ -204,15 +202,13 @@ fn test_doc_preview_popup_page_count_metadata() {
                 }
                 other => {
                     panic!(
-                        "Preview content should be EPUB type for document file, got {:?}",
-                        other
+                        "Preview content should be EPUB type for document file, got {other:?}"
                     );
                 }
             }
         }
         other => panic!(
-            "Preview popup should be shown after pressing Shift+K, got {:?}",
-            other
+            "Preview popup should be shown after pressing Shift+K, got {other:?}"
         ),
     }
 

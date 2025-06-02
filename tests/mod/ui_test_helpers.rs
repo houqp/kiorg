@@ -3,6 +3,7 @@
 use egui_kittest::Harness;
 use kiorg::Kiorg;
 use std::fs::File;
+use std::fmt::Write;
 use std::path::PathBuf;
 use tempfile::tempdir;
 
@@ -198,11 +199,10 @@ fn create_minimal_pdf_content(page_count: usize) -> Vec<u8> {
         if i > 0 {
             kids_refs.push(' ');
         }
-        kids_refs.push_str(&format!("{} 0 R", 3 + i * 2));
+        write!(kids_refs, "{} 0 R", 3 + i * 2).unwrap();
     }
     let pages = format!(
-        "2 0 obj\n<<\n/Type /Pages\n/Count {}\n/Kids [{}]\n>>\nendobj\n",
-        page_count, kids_refs
+        "2 0 obj\n<<\n/Type /Pages\n/Count {page_count}\n/Kids [{kids_refs}]\n>>\nendobj\n"
     );
     content.extend_from_slice(pages.as_bytes());
 
@@ -214,20 +214,18 @@ fn create_minimal_pdf_content(page_count: usize) -> Vec<u8> {
         // Page object
         offsets.push(content.len());
         let page_content_text = format!("(Page {})", i + 1);
-        let stream_content = format!("BT\n/F1 12 Tf\n72 720 Td\n{} Tj\nET\n", page_content_text);
+        let stream_content = format!("BT\n/F1 12 Tf\n72 720 Td\n{page_content_text} Tj\nET\n");
         let stream_length = stream_content.len();
 
         let page = format!(
-            "{} 0 obj\n<<\n/Type /Page\n/Parent 2 0 R\n/MediaBox [0 0 612 792]\n/Contents {} 0 R\n/Resources <<\n/Font <<\n/F1 <<\n/Type /Font\n/Subtype /Type1\n/BaseFont /Helvetica\n>>\n>>\n>>\n>>\nendobj\n",
-            page_obj_num, content_obj_num
+            "{page_obj_num} 0 obj\n<<\n/Type /Page\n/Parent 2 0 R\n/MediaBox [0 0 612 792]\n/Contents {content_obj_num} 0 R\n/Resources <<\n/Font <<\n/F1 <<\n/Type /Font\n/Subtype /Type1\n/BaseFont /Helvetica\n>>\n>>\n>>\n>>\nendobj\n"
         );
         content.extend_from_slice(page.as_bytes());
 
         // Content stream object
         offsets.push(content.len());
         let content_stream = format!(
-            "{} 0 obj\n<<\n/Length {}\n>>\nstream\n{}endstream\nendobj\n",
-            content_obj_num, stream_length, stream_content
+            "{content_obj_num} 0 obj\n<<\n/Length {stream_length}\n>>\nstream\n{stream_content}endstream\nendobj\n"
         );
         content.extend_from_slice(content_stream.as_bytes());
     }
@@ -241,7 +239,7 @@ fn create_minimal_pdf_content(page_count: usize) -> Vec<u8> {
 
     // Add entries for all other objects
     for offset in offsets.iter().skip(1) {
-        xref.push_str(&format!("{:010} 00000 n \n", offset));
+        writeln!(xref, "{offset:010} 00000 n ").unwrap();
     }
 
     content.extend_from_slice(xref.as_bytes());
@@ -278,11 +276,12 @@ pub fn create_harness_with_config_dir<'a>(
 
     // Create a new egui context
     let ctx = egui::Context::default();
-    let cc = eframe::CreationContext::_new_kittest(ctx.clone());
+    let cc = eframe::CreationContext::_new_kittest(ctx);
 
+    let path = temp_dir.path().to_path_buf();
     let app = Kiorg::new_with_config_dir(
         &cc,
-        Some(temp_dir.path().to_path_buf()),
+        Some(path),
         Some(test_config_dir),
     )
     .expect("Failed to create Kiorg app");
@@ -307,7 +306,7 @@ pub fn create_harness_with_config_dir<'a>(
     harness
 }
 
-impl<'a> TestHarness<'a> {
+impl TestHarness<'_> {
     /// Ensures the current tab's entries are sorted by Name/Ascending.
     pub fn ensure_sorted_by_name_ascending(&mut self) {
         // Toggle twice on the TabManager to ensure Ascending order regardless of the initial state

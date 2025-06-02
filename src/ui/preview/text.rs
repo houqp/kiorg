@@ -31,11 +31,11 @@ pub fn try_load_utf8_str(path: PathBuf, file_size: u64) -> Result<PreviewContent
 
     let mut file = match std::fs::File::open(&path) {
         Ok(file) => file,
-        Err(e) => return Ok(PreviewContent::text(format!("Error opening file: {}", e))),
+        Err(e) => return Ok(PreviewContent::text(format!("Error opening file: {e}"))),
     };
     let bytes_read = match file.read(&mut bytes) {
         Ok(bytes_read) => bytes_read,
-        Err(e) => return Ok(PreviewContent::text(format!("Error reading file: {}", e))),
+        Err(e) => return Ok(PreviewContent::text(format!("Error reading file: {e}"))),
     };
     let content = match std::str::from_utf8(&bytes[..bytes_read]) {
         Ok(content) => Some(content.to_string()),
@@ -59,7 +59,7 @@ pub fn try_load_utf8_str(path: PathBuf, file_size: u64) -> Result<PreviewContent
     }
 }
 
-/// Detect file type and return a PreviewContent with generic file information
+/// Detect file type and return a `PreviewContent` with generic file information
 pub fn render_generic_file(path: PathBuf, size: u64) -> Result<PreviewContent, String> {
     // Try to detect the file type using file_type crate
     let file_type_info = match FileType::try_from_file(&path) {
@@ -68,9 +68,9 @@ pub fn render_generic_file(path: PathBuf, size: u64) -> Result<PreviewContent, S
             let extensions = file_type.extensions().join(", ");
 
             if !media_types.is_empty() {
-                format!("File type: {} ({})", media_types, extensions)
+                format!("File type: {media_types} ({extensions})")
             } else if !extensions.is_empty() {
-                format!("File type: {}", extensions)
+                format!("File type: {extensions}")
             } else {
                 "Unknown file type".to_string()
             }

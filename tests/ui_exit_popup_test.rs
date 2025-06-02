@@ -5,7 +5,7 @@ use egui::Key;
 use tempfile::tempdir;
 use ui_test_helpers::create_harness;
 
-/// Test that the exit popup sets shutdown_requested to true when confirmed with Enter key
+/// Test that the exit popup sets `shutdown_requested` to true when confirmed with Enter key
 #[test]
 fn test_exit_popup_enter_key() {
     // Create a temporary directory for testing
@@ -40,7 +40,7 @@ fn test_exit_popup_enter_key() {
     );
 }
 
-/// Test that the exit popup does not set shutdown_requested to true when canceled with Escape key
+/// Test that the exit popup does not set `shutdown_requested` to true when canceled with Escape key
 #[test]
 fn test_exit_popup_escape_key() {
     // Create a temporary directory for testing
@@ -82,7 +82,7 @@ fn test_exit_popup_escape_key() {
     );
 }
 
-/// Test that the exit popup does not set shutdown_requested to true when canceled with 'q' key
+/// Test that the exit popup does not set `shutdown_requested` to true when canceled with 'q' key
 #[test]
 fn test_exit_popup_q_key() {
     // Create a temporary directory for testing

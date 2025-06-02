@@ -43,10 +43,10 @@ fn test_text_file_preview() {
             );
         }
         Some(other) => {
-            panic!("Preview content should be Text variant, got {:?}", other);
+            panic!("Preview content should be Text variant, got {other:?}");
         }
         None => panic!("Preview content should not be None"),
-    };
+    }
 }
 
 /// Test for text preview of binary files
@@ -87,10 +87,10 @@ fn test_binary_file_preview() {
             );
         }
         Some(other) => {
-            panic!("Preview content should be Text variant, got {:?}", other);
+            panic!("Preview content should be Text variant, got {other:?}");
         }
         None => panic!("Preview content should not be None"),
-    };
+    }
 }
 
 /// Test for directory preview
@@ -130,10 +130,10 @@ fn test_directory_preview() {
             );
         }
         Some(other) => {
-            panic!("Preview content should be Text variant, got {:?}", other);
+            panic!("Preview content should be Text variant, got {other:?}");
         }
         None => panic!("Preview content should not be None"),
-    };
+    }
 }
 
 /// Test for image preview
@@ -174,10 +174,10 @@ fn test_image_preview() {
             );
         }
         Some(other) => {
-            panic!("Preview content should be Image variant, got {:?}", other);
+            panic!("Preview content should be Image variant, got {other:?}");
         }
         None => panic!("Preview content should not be None"),
-    };
+    }
 }
 
 /// Test for zip preview
@@ -200,27 +200,24 @@ fn test_zip_preview() {
 
     // Try multiple steps to allow async loading to complete
     for _ in 0..100 {
-        match &harness.state().preview_content {
-            Some(PreviewContent::Zip(entries)) => {
-                // Verify zip entries
-                assert!(!entries.is_empty(), "Zip entries should not be empty");
+        if let Some(PreviewContent::Zip(entries)) = &harness.state().preview_content {
+            // Verify zip entries
+            assert!(!entries.is_empty(), "Zip entries should not be empty");
 
-                // Check for expected files
-                let file1 = entries.iter().find(|e| e.name == "file1.txt");
-                let file2 = entries.iter().find(|e| e.name == "file2.txt");
-                let subdir = entries.iter().find(|e| e.name == "subdir/" && e.is_dir);
+            // Check for expected files
+            let file1 = entries.iter().find(|e| e.name == "file1.txt");
+            let file2 = entries.iter().find(|e| e.name == "file2.txt");
+            let subdir = entries.iter().find(|e| e.name == "subdir/" && e.is_dir);
 
-                assert!(file1.is_some(), "file1.txt should be in the zip entries");
-                assert!(file2.is_some(), "file2.txt should be in the zip entries");
-                assert!(subdir.is_some(), "subdir/ should be in the zip entries");
+            assert!(file1.is_some(), "file1.txt should be in the zip entries");
+            assert!(file2.is_some(), "file2.txt should be in the zip entries");
+            assert!(subdir.is_some(), "subdir/ should be in the zip entries");
 
-                return;
-            }
-            _ => {
-                // Still loading, try another step
-                std::thread::sleep(std::time::Duration::from_millis(10));
-                harness.step();
-            }
+            return;
+        } else {
+            // Still loading, try another step
+            std::thread::sleep(std::time::Duration::from_millis(10));
+            harness.step();
         }
     }
 
@@ -258,8 +255,7 @@ fn test_none_preview() {
         }
         Some(other) => {
             panic!(
-                "Preview content should be None or a 'No file selected' message, got {:?}",
-                other
+                "Preview content should be None or a 'No file selected' message, got {other:?}"
             );
         }
     }

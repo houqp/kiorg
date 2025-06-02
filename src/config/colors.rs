@@ -2,7 +2,7 @@ use egui::Color32;
 use serde::{Deserialize, Serialize};
 
 // Helper function to convert hex string to Color32
-pub fn hex_to_color32(hex: &str) -> Color32 {
+#[must_use] pub fn hex_to_color32(hex: &str) -> Color32 {
     let hex = hex.trim_start_matches('#');
     let r = u8::from_str_radix(&hex[0..2], 16).unwrap_or(0);
     let g = u8::from_str_radix(&hex[2..4], 16).unwrap_or(0);
@@ -10,7 +10,7 @@ pub fn hex_to_color32(hex: &str) -> Color32 {
     Color32::from_rgb(r, g, b)
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
 pub struct ColorScheme {
     pub bg: String,
     // Background for marked elements
@@ -60,7 +60,7 @@ pub struct AppColors {
 }
 
 impl AppColors {
-    pub fn from_scheme(config: &ColorScheme) -> Self {
+    #[must_use] pub fn from_scheme(config: &ColorScheme) -> Self {
         Self {
             bg: hex_to_color32(&config.bg),
             bg_light: hex_to_color32(&config.bg_light),
@@ -82,7 +82,7 @@ impl AppColors {
         }
     }
 
-    pub fn to_color_scheme(&self) -> ColorScheme {
+    #[must_use] pub fn to_color_scheme(&self) -> ColorScheme {
         ColorScheme {
             bg: color32_to_hex(self.bg),
             bg_light: color32_to_hex(self.bg_light),
@@ -104,7 +104,7 @@ impl AppColors {
         }
     }
 
-    pub fn to_visuals(&self) -> egui::Visuals {
+    #[must_use] pub fn to_visuals(&self) -> egui::Visuals {
         let mut visuals = egui::Visuals::dark();
 
         visuals.window_shadow = egui::Shadow {
@@ -121,6 +121,8 @@ impl AppColors {
         };
 
         visuals.override_text_color = Some(self.fg);
+        visuals.warn_fg_color = self.warn;
+        visuals.error_fg_color = self.error;
 
         visuals.widgets.noninteractive.bg_fill = self.bg_light;
         visuals.widgets.noninteractive.weak_bg_fill = self.bg_light;
@@ -187,7 +189,7 @@ impl<'de> Deserialize<'de> for AppColors {
         D: serde::Deserializer<'de>,
     {
         let scheme = ColorScheme::deserialize(deserializer)?;
-        Ok(AppColors::from_scheme(&scheme))
+        Ok(Self::from_scheme(&scheme))
     }
 }
 

@@ -22,7 +22,7 @@ fn apply_and_save_theme(app: &mut Kiorg, theme_selection: &Theme, ctx: &egui::Co
     // Save the configuration
     if let Err(e) = config::save_config_with_override(&app.config, app.config_dir_override.as_ref())
     {
-        app.notify_error(format!("Failed to save theme: {}", e));
+        app.notify_error(format!("Failed to save theme: {e}"));
     }
 }
 
@@ -35,7 +35,7 @@ fn display_themes_grid(
     colors: &crate::config::colors::AppColors,
 ) -> Option<Theme> {
     let mut selected_theme: Option<&Theme> = None;
-    let bg_selected = colors.bg_selected.to_owned();
+    let bg_selected = colors.bg_selected;
     let selected_key = selected_theme_key.to_owned(); // Clone for closure capture
 
     // Create a vector of theme keys for the closure to use
@@ -58,7 +58,7 @@ fn display_themes_grid(
             }
         })
         .show(ui, |ui| {
-            for theme in themes.iter() {
+            for theme in themes {
                 let is_selected = theme.theme_key() == selected_theme_key;
                 let is_current = theme.theme_key() == current_theme.theme_key();
 

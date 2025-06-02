@@ -32,7 +32,71 @@ pub fn handle_delete_confirmation(
     let is_bulk_delete = entries_to_delete.len() > 1;
 
     // For single entry deletion, use the existing logic
-    if !is_bulk_delete {
+    if is_bulk_delete {
+        // For bulk deletion, show a different confirmation dialog
+        let has_directories = entries_to_delete.iter().any(|path| path.is_dir());
+
+        match *state {
+            DeleteConfirmState::Initial => {
+                // Initial confirmation for bulk deletion
+                show_confirm_popup(
+                    ctx,
+                    "Bulk Delete Confirmation",
+                    show_delete_confirm,
+                    |ui| {
+                        ui.vertical_centered(|ui| {
+                            ui.label(format!(
+                                "Delete {} selected items?",
+                                entries_to_delete.len()
+                            ));
+
+                            // Show the first few entries as examples
+                            let max_to_show = 5.min(entries_to_delete.len());
+                            for path in entries_to_delete.iter().take(max_to_show) {
+                                let name = path
+                                    .file_name().map_or_else(|| path.display().to_string(), |n| n.to_string_lossy().to_string());
+
+                                ui.label(name);
+                            }
+
+                            // If there are more entries than we're showing
+                            if entries_to_delete.len() > max_to_show {
+                                ui.label(format!(
+                                    "...and {} more",
+                                    entries_to_delete.len() - max_to_show
+                                ));
+                            }
+                        });
+                    },
+                    "Delete (Enter)",
+                    "Cancel (Esc)",
+                )
+            }
+            DeleteConfirmState::RecursiveConfirm => {
+                // Second confirmation specifically for bulk deletion with directories
+                show_confirm_popup(
+                    ctx,
+                    "Bulk Delete Confirmation",
+                    show_delete_confirm,
+                    |ui| {
+                        ui.vertical_centered(|ui| {
+                            ui.label("Are you SURE you want to delete these items?");
+
+                            if has_directories {
+                                ui.label("Some selected items are directories and will be deleted recursively.");
+                            }
+
+                            ui.label(
+                                RichText::new("This action cannot be undone!").color(colors.error),
+                            );
+                        });
+                    },
+                    "Delete (Enter)",
+                    "Cancel (Esc)",
+                )
+            }
+        }
+    } else {
         let path = &entries_to_delete[0];
 
         match *state {
@@ -76,76 +140,15 @@ pub fn handle_delete_confirmation(
                 )
             }
         }
-    } else {
-        // For bulk deletion, show a different confirmation dialog
-        let has_directories = entries_to_delete.iter().any(|path| path.is_dir());
-
-        match *state {
-            DeleteConfirmState::Initial => {
-                // Initial confirmation for bulk deletion
-                show_confirm_popup(
-                    ctx,
-                    "Bulk Delete Confirmation",
-                    show_delete_confirm,
-                    |ui| {
-                        ui.vertical_centered(|ui| {
-                            ui.label(format!(
-                                "Delete {} selected items?",
-                                entries_to_delete.len()
-                            ));
-
-                            // Show the first few entries as examples
-                            let max_to_show = 5.min(entries_to_delete.len());
-                            for path in entries_to_delete.iter().take(max_to_show) {
-                                let name = path
-                                    .file_name()
-                                    .map(|n| n.to_string_lossy().to_string())
-                                    .unwrap_or_else(|| path.display().to_string());
-
-                                ui.label(name);
-                            }
-
-                            // If there are more entries than we're showing
-                            if entries_to_delete.len() > max_to_show {
-                                ui.label(format!(
-                                    "...and {} more",
-                                    entries_to_delete.len() - max_to_show
-                                ));
-                            }
-                        });
-                    },
-                    "Delete (Enter)",
-                    "Cancel (Esc)",
-                )
-            }
-            DeleteConfirmState::RecursiveConfirm => {
-                // Second confirmation specifically for bulk deletion with directories
-                show_confirm_popup(
-                    ctx,
-                    "Bulk Delete Confirmation",
-                    show_delete_confirm,
-                    |ui| {
-                        ui.vertical_centered(|ui| {
-                            ui.label("Are you SURE you want to delete these items?");
-
-                            if has_directories {
-                                ui.label("Some selected items are directories and will be deleted recursively.");
-                            }
-
-                            ui.label(
-                                RichText::new("This action cannot be undone!").color(colors.error),
-                            );
-                        });
-                    },
-                    "Delete (Enter)",
-                    "Cancel (Esc)",
-                )
-            }
-        }
     }
 }
 
 /// Helper function to perform the actual deletion
+/// 
+/// # Errors
+/// 
+/// Returns an error string if the deletion fails, either due to permission issues,
+/// file system errors, or if the path doesn't exist.
 pub fn perform_delete(path: &Path) -> Result<(), String> {
     let result = if path.is_dir() {
         std::fs::remove_dir_all(path)
@@ -209,7 +212,7 @@ pub fn confirm_delete(app: &mut crate::app::Kiorg) {
 
     // For files or directories in second confirmation state, proceed with deletion
     match perform_delete(path) {
-        Ok(_) => {
+        Ok(()) => {
             app.refresh_entries();
         }
         Err(error) => {

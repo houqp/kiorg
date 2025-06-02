@@ -91,8 +91,7 @@ fn test_bookmark_feature() {
     let bookmark_count = harness.state().bookmarks.len();
     assert_eq!(
         bookmark_count, 2,
-        "Expected 2 bookmarks, got {}",
-        bookmark_count
+        "Expected 2 bookmarks, got {bookmark_count}"
     );
 
     // Open bookmark popup again

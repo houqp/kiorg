@@ -35,25 +35,30 @@ fn main() -> Result<(), eframe::Error> {
     let initial_dir = if let Some(dir) = args.directory {
         // Validate the provided directory
         if !dir.exists() {
-            eprintln!("Error: Directory '{}' does not exist", dir.display());
-            std::process::exit(1);
+            return kiorg::startup_error::StartupErrorApp::show_error_dialog(
+                format!("Directory '{}' does not exist", dir.display()),
+                "Filesystem Error".to_string(),
+                Some(format!("Requested directory: {}", dir.display())),
+            );
         }
 
         if !dir.is_dir() {
-            eprintln!("Error: '{}' is not a directory", dir.display());
-            std::process::exit(1);
+            return kiorg::startup_error::StartupErrorApp::show_error_dialog(
+                format!("'{}' is not a directory", dir.display()),
+                "Filesystem Error".to_string(),
+                Some(format!("Path provided: {}", dir.display())),
+            );
         }
 
         // Canonicalize the path to get absolute path
         let canonical_dir = match fs::canonicalize(&dir) {
             Ok(path) => path,
             Err(e) => {
-                eprintln!(
-                    "Error: Failed to canonicalize path '{}': {}",
-                    dir.display(),
-                    e
+                return kiorg::startup_error::StartupErrorApp::show_error_dialog(
+                    format!("Failed to canonicalize path '{}': {}", dir.display(), e),
+                    "Permission Error".to_string(),
+                    Some(format!("Path provided: {}", dir.display())),
                 );
-                std::process::exit(1);
             }
         };
 
@@ -62,6 +67,15 @@ fn main() -> Result<(), eframe::Error> {
         // No directory provided, use None to load from saved state
         None
     };
+
+    // Check configuration first before creating the GUI
+    if let Err(config_error) = kiorg::config::load_config_with_override(None) {
+        // Configuration error detected - show error dialog with config path from error
+        return kiorg::startup_error::StartupErrorApp::show_config_error_with_path(
+            config_error.to_string(),
+            &config_error.config_path().display().to_string(),
+        );
+    }
 
     // Load the app icon from embedded data
     let icon_data = kiorg::utils::icon::load_app_icon();
@@ -86,7 +100,9 @@ fn main() -> Result<(), eframe::Error> {
             match Kiorg::new(cc, initial_dir) {
                 Ok(app) => Ok(Box::new(app)),
                 Err(e) => {
-                    eprintln!("Error initializing Kiorg: {}", e);
+                    // For other errors during app initialization, we can't show a GUI dialog
+                    // since we're already in the eframe context, so we still exit
+                    eprintln!("Error initializing Kiorg: {e}");
                     std::process::exit(1);
                 }
             }

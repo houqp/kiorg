@@ -296,7 +296,7 @@ fn test_mouse_click_selects_and_previews() {
     let header_height = kiorg::ui::style::HEADER_ROW_HEIGHT; // Header row
     let row_height = kiorg::ui::file_list::ROW_HEIGHT; // Entry row
     let banner_height = 27.0;
-    let target_y = banner_height + header_height + (2.0 * row_height) + (row_height / 2.0); // Click in the middle of the second entry row
+    let target_y = 2.0f32.mul_add(row_height, banner_height + header_height) + (row_height / 2.0); // Click in the middle of the second entry row
     let target_pos = egui::pos2(200.0, target_y); // Click somewhere within the row horizontally
 
     // Simulate a primary mouse button click (press and release)
@@ -376,7 +376,7 @@ fn test_mouse_click_selects_and_previews() {
             }
         }
         None => panic!("Preview content should not be None"),
-    };
+    }
 }
 
 #[test]
@@ -500,10 +500,10 @@ fn test_image_preview() {
             panic!("Preview content should be Image variant, not EPUB");
         }
         Some(other) => {
-            panic!("Preview content should be Image variant, got {:?}", other);
+            panic!("Preview content should be Image variant, got {other:?}");
         }
         None => panic!("Preview content should not be None"),
-    };
+    }
 }
 
 #[test]
@@ -685,7 +685,7 @@ fn test_page_navigation() {
 
     // Create 25 test files to ensure we have enough for page navigation
     for i in 0..25 {
-        test_files.push(temp_dir.path().join(format!("file_{:02}.txt", i)));
+        test_files.push(temp_dir.path().join(format!("file_{i:02}.txt")));
     }
     create_test_files(&test_files);
 
@@ -707,16 +707,13 @@ fn test_page_navigation() {
     let after_page_down = tab.selected_index;
 
     println!(
-        "Movement: {} -> {} (page down)",
-        initial_selected, after_page_down
+        "Movement: {initial_selected} -> {after_page_down} (page down)"
     );
 
     // Should have moved forward by more than 1 (even with default fallback of 10)
     assert!(
         after_page_down > initial_selected,
-        "Page down should move forward, moved from {} to {}",
-        initial_selected,
-        after_page_down
+        "Page down should move forward, moved from {initial_selected} to {after_page_down}"
     );
 
     // Test Page Up navigation
@@ -727,16 +724,13 @@ fn test_page_navigation() {
     let after_page_up = tab.selected_index;
 
     println!(
-        "Movement: {} -> {} (page up)",
-        after_page_down, after_page_up
+        "Movement: {after_page_down} -> {after_page_up} (page up)"
     );
 
     // Should have moved back toward the beginning
     assert!(
         after_page_up < after_page_down,
-        "Page up should move back, from {} to {}",
-        after_page_down,
-        after_page_up
+        "Page up should move back, from {after_page_down} to {after_page_up}"
     );
 
     // Test Ctrl+D (alternative page down shortcut)
@@ -750,14 +744,12 @@ fn test_page_navigation() {
     let tab = harness.state().tab_manager.current_tab_ref();
     let after_ctrl_d = tab.selected_index;
 
-    println!("Movement: {} -> {} (ctrl+d)", after_page_up, after_ctrl_d);
+    println!("Movement: {after_page_up} -> {after_ctrl_d} (ctrl+d)");
 
     // Should behave like page down
     assert!(
         after_ctrl_d > after_page_up,
-        "Ctrl+D should work like page down, from {} to {}",
-        after_page_up,
-        after_ctrl_d
+        "Ctrl+D should work like page down, from {after_page_up} to {after_ctrl_d}"
     );
 
     // Test Ctrl+U (alternative page up shortcut)
@@ -771,13 +763,11 @@ fn test_page_navigation() {
     let tab = harness.state().tab_manager.current_tab_ref();
     let after_ctrl_u = tab.selected_index;
 
-    println!("Movement: {} -> {} (ctrl+u)", after_ctrl_d, after_ctrl_u);
+    println!("Movement: {after_ctrl_d} -> {after_ctrl_u} (ctrl+u)");
 
     // Should behave like page up
     assert!(
         after_ctrl_u < after_ctrl_d,
-        "Ctrl+U should work like page up, from {} to {}",
-        after_ctrl_d,
-        after_ctrl_u
+        "Ctrl+U should work like page up, from {after_ctrl_d} to {after_ctrl_u}"
     );
 }

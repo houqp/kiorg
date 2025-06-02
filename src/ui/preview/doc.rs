@@ -199,7 +199,7 @@ fn format_metadata_key(key: &str) -> String {
     capitalized.join(" ")
 }
 
-/// Render a specific PDF page as an egui ImageSource
+/// Render a specific PDF page as an egui `ImageSource`
 pub fn render_pdf_page(
     file: &pdf::file::File<Vec<u8>, NoCache, NoCache, NoLog>,
     page_number: usize,
@@ -208,7 +208,7 @@ pub fn render_pdf_page(
     render_pdf_page_with_dpi(file, page_number, file_id, 150.0) // Use 150 DPI for regular preview
 }
 
-/// Render a specific PDF page as an egui ImageSource with high DPI for popup view
+/// Render a specific PDF page as an egui `ImageSource` with high DPI for popup view
 pub fn render_pdf_page_high_dpi(
     file: &pdf::file::File<Vec<u8>, NoCache, NoCache, NoLog>,
     page_number: usize,
@@ -217,7 +217,7 @@ pub fn render_pdf_page_high_dpi(
     render_pdf_page_with_dpi(file, page_number, file_id, 300.0) // Use 300 DPI for popup
 }
 
-/// Render a specific PDF page as an egui ImageSource with configurable DPI
+/// Render a specific PDF page as an egui `ImageSource` with configurable DPI
 fn render_pdf_page_with_dpi(
     file: &pdf::file::File<Vec<u8>, NoCache, NoCache, NoLog>,
     page_number: usize,
@@ -229,7 +229,7 @@ fn render_pdf_page_with_dpi(
     // Get the page for rendering
     let page = file
         .get_page(page_number as u32)
-        .map_err(|e| format!("Failed to get page {}: {}", page_number, e))?;
+        .map_err(|e| format!("Failed to get page {page_number}: {e}"))?;
 
     // Set up rendering with configurable DPI
     let mut cache = Cache::new();
@@ -241,7 +241,7 @@ fn render_pdf_page_with_dpi(
         &page,
         Transform2F::from_scale(dpi / 25.4),
     )
-    .map_err(|e| format!("Failed to render page: {}", e))?;
+    .map_err(|e| format!("Failed to render page: {e}"))?;
 
     let scene = backend.finish();
 
@@ -255,22 +255,19 @@ fn render_pdf_page_with_dpi(
 
     // Create a unique texture ID that includes the file identifier, page number, and DPI
     // This ensures that different documents and different DPI levels don't share texture cache entries
-    let texture_id = match file_id {
-        Some(id) => format!(
+    let texture_id = if let Some(id) = file_id { format!(
+        "bytes://pdf_doc_{}_page_{}_dpi_{}.svg",
+        id, page_number, dpi as u32
+    ) } else {
+        // Generate a timestamp-based ID if no file_id is provided
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis();
+        format!(
             "bytes://pdf_doc_{}_page_{}_dpi_{}.svg",
-            id, page_number, dpi as u32
-        ),
-        None => {
-            // Generate a timestamp-based ID if no file_id is provided
-            let now = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap_or_default()
-                .as_millis();
-            format!(
-                "bytes://pdf_doc_{}_page_{}_dpi_{}.svg",
-                now, page_number, dpi as u32
-            )
-        }
+            now, page_number, dpi as u32
+        )
     };
 
     let img_source = ImageSource::from((texture_id, svg_bytes));
@@ -282,7 +279,7 @@ fn render_pdf_page_with_dpi(
 pub fn extract_pdf_metadata(path: &Path, _: u32) -> Result<PreviewContent, String> {
     let file = pdf::file::FileOptions::uncached()
         .open(path)
-        .map_err(|e| format!("Failed to open PDF file: {}", e))?;
+        .map_err(|e| format!("Failed to open PDF file: {e}"))?;
 
     // Generate a unique file ID based on the path
     let file_id = path.to_string_lossy().to_string();
@@ -295,7 +292,7 @@ pub fn extract_pdf_metadata(path: &Path, _: u32) -> Result<PreviewContent, Strin
 
     // Get PDF version
     if let Ok(version) = file.version() {
-        let version_str = format!("{:?}", version).trim_matches('"').to_string();
+        let version_str = format!("{version:?}").trim_matches('"').to_string();
         metadata.insert("PDF Version".to_string(), version_str);
     }
 
@@ -359,12 +356,12 @@ pub fn extract_pdf_metadata(path: &Path, _: u32) -> Result<PreviewContent, Strin
     ))
 }
 
-/// Extract metadata and cover image from an EPUB file and return as PreviewContent
+/// Extract metadata and cover image from an EPUB file and return as `PreviewContent`
 pub fn extract_epub_metadata(path: &Path) -> Result<PreviewContent, String> {
     use epub::doc::EpubDoc;
 
     // Open the EPUB file
-    let mut doc = EpubDoc::new(path).map_err(|e| format!("Failed to open EPUB file: {}", e))?;
+    let mut doc = EpubDoc::new(path).map_err(|e| format!("Failed to open EPUB file: {e}"))?;
 
     // Get metadata
     let metadata = doc.metadata.clone();
