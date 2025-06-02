@@ -52,9 +52,7 @@ fn test_image_preview_popup_shortcut() {
     // Verify the preview popup is shown
     match &harness.state().show_popup {
         Some(PopupType::Preview) => {}
-        other => panic!(
-            "Preview popup should be shown after pressing Shift+K, got {other:?}"
-        ),
+        other => panic!("Preview popup should be shown after pressing Shift+K, got {other:?}"),
     }
 
     // Close the popup with Escape
@@ -201,15 +199,11 @@ fn test_doc_preview_popup_page_count_metadata() {
                     );
                 }
                 other => {
-                    panic!(
-                        "Preview content should be EPUB type for document file, got {other:?}"
-                    );
+                    panic!("Preview content should be EPUB type for document file, got {other:?}");
                 }
             }
         }
-        other => panic!(
-            "Preview popup should be shown after pressing Shift+K, got {other:?}"
-        ),
+        other => panic!("Preview popup should be shown after pressing Shift+K, got {other:?}"),
     }
 
     // Close the popup

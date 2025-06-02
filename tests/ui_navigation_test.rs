@@ -706,9 +706,7 @@ fn test_page_navigation() {
     let tab = harness.state().tab_manager.current_tab_ref();
     let after_page_down = tab.selected_index;
 
-    println!(
-        "Movement: {initial_selected} -> {after_page_down} (page down)"
-    );
+    println!("Movement: {initial_selected} -> {after_page_down} (page down)");
 
     // Should have moved forward by more than 1 (even with default fallback of 10)
     assert!(
@@ -723,9 +721,7 @@ fn test_page_navigation() {
     let tab = harness.state().tab_manager.current_tab_ref();
     let after_page_up = tab.selected_index;
 
-    println!(
-        "Movement: {after_page_down} -> {after_page_up} (page up)"
-    );
+    println!("Movement: {after_page_down} -> {after_page_up} (page up)");
 
     // Should have moved back toward the beginning
     assert!(

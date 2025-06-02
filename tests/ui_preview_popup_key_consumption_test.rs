@@ -92,9 +92,7 @@ fn test_preview_popup_consumes_number_keys() {
     // Verify the preview popup is shown
     match &harness.state().show_popup {
         Some(PopupType::Preview) => {}
-        other => panic!(
-            "Preview popup should be shown after pressing Shift+K, got {other:?}"
-        ),
+        other => panic!("Preview popup should be shown after pressing Shift+K, got {other:?}"),
     }
 
     // Store the current tab index before pressing number keys
@@ -203,9 +201,7 @@ fn test_preview_popup_consumes_other_keys() {
     // Verify the preview popup is shown
     match &harness.state().show_popup {
         Some(PopupType::Preview) => {}
-        other => panic!(
-            "Preview popup should be shown after pressing Shift+K, got {other:?}"
-        ),
+        other => panic!("Preview popup should be shown after pressing Shift+K, got {other:?}"),
     }
 
     // Test that various other keys don't trigger their normal actions
@@ -223,9 +219,7 @@ fn test_preview_popup_consumes_other_keys() {
     );
     match &harness.state().show_popup {
         Some(PopupType::Preview) => {}
-        other => panic!(
-            "Preview popup should still be open after pressing J, got {other:?}"
-        ),
+        other => panic!("Preview popup should still be open after pressing J, got {other:?}"),
     }
 
     // Press K (normally moves up) - should be consumed
@@ -240,9 +234,7 @@ fn test_preview_popup_consumes_other_keys() {
     );
     match &harness.state().show_popup {
         Some(PopupType::Preview) => {}
-        other => panic!(
-            "Preview popup should still be open after pressing K, got {other:?}"
-        ),
+        other => panic!("Preview popup should still be open after pressing K, got {other:?}"),
     }
 
     // Test that Escape still works to close the popup

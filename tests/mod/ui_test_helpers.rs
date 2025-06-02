@@ -2,8 +2,8 @@
 
 use egui_kittest::Harness;
 use kiorg::Kiorg;
-use std::fs::File;
 use std::fmt::Write;
+use std::fs::File;
 use std::path::PathBuf;
 use tempfile::tempdir;
 
@@ -279,12 +279,8 @@ pub fn create_harness_with_config_dir<'a>(
     let cc = eframe::CreationContext::_new_kittest(ctx);
 
     let path = temp_dir.path().to_path_buf();
-    let app = Kiorg::new_with_config_dir(
-        &cc,
-        Some(path),
-        Some(test_config_dir),
-    )
-    .expect("Failed to create Kiorg app");
+    let app = Kiorg::new_with_config_dir(&cc, Some(path), Some(test_config_dir))
+        .expect("Failed to create Kiorg app");
 
     // Create a test harness with more steps to ensure all events are processed
     let harness = Harness::builder()

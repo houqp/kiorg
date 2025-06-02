@@ -254,9 +254,7 @@ fn test_none_preview() {
             // This is also acceptable - a text message indicating no selection
         }
         Some(other) => {
-            panic!(
-                "Preview content should be None or a 'No file selected' message, got {other:?}"
-            );
+            panic!("Preview content should be None or a 'No file selected' message, got {other:?}");
         }
     }
 }

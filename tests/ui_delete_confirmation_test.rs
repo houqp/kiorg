@@ -42,7 +42,10 @@ fn test_folder_delete_double_confirmation() {
 
     // Verify delete popup is shown
     assert!(
-        matches!(harness.state().show_popup, Some(kiorg::app::PopupType::Delete(_))),
+        matches!(
+            harness.state().show_popup,
+            Some(kiorg::app::PopupType::Delete(_))
+        ),
         "Delete popup should be open"
     );
 
@@ -118,7 +121,10 @@ fn test_folder_delete_cancel_first_confirmation() {
 
     // Verify delete popup is shown
     assert!(
-        matches!(harness.state().show_popup, Some(kiorg::app::PopupType::Delete(_))),
+        matches!(
+            harness.state().show_popup,
+            Some(kiorg::app::PopupType::Delete(_))
+        ),
         "Delete popup should be open"
     );
 
