@@ -5,6 +5,7 @@ use egui::{Color32, Context, Shadow};
 pub struct SearchBar {
     pub query: Option<String>,
     pub focus: bool,
+    pub case_insensitive: bool,
 }
 
 impl SearchBar {
@@ -13,6 +14,7 @@ impl SearchBar {
         Self {
             query: None,
             focus: false,
+            case_insensitive: true, // Default to case insensitive
         }
     }
 
@@ -51,10 +53,17 @@ pub fn handle_key_press(ctx: &Context, app: &mut Kiorg) -> bool {
                     } else {
                         // Select the first matched entry
                         let tab = app.tab_manager.current_tab_mut();
-                        if let Some(first_filtered_index) =
-                            tab.get_first_filtered_entry_index(query.as_str())
-                        {
-                            tab.update_selection(first_filtered_index);
+                        let query_option = Some(query.clone());
+                        let first_filtered_index = tab
+                            .get_filtered_entries_with_indices_and_case(
+                                &query_option,
+                                app.search_bar.case_insensitive,
+                            )
+                            .next()
+                            .map(|(_, index)| index);
+
+                        if let Some(index) = first_filtered_index {
+                            tab.update_selection(index);
                             app.ensure_selected_visible = true;
                             app.selection_changed = true;
                         }
@@ -124,6 +133,29 @@ pub fn draw(ctx: &Context, app: &mut Kiorg) {
 
                         // Update focus state based on whether the text edit has focus
                         app.search_bar.focus = response.has_focus();
+
+                        // Case sensitivity toggle button
+                        let toggle_color = if app.search_bar.case_insensitive {
+                            app.colors.fg_light
+                        } else {
+                            app.colors.highlight
+                        };
+                        let tooltip_text = if app.search_bar.case_insensitive {
+                            "Click to enable case sensitive search"
+                        } else {
+                            "Click to enable case insensitive search"
+                        };
+                        if ui
+                            .add(
+                                egui::Button::new(egui::RichText::new("Aa").color(toggle_color))
+                                    .small()
+                                    .frame(false),
+                            )
+                            .on_hover_text(tooltip_text)
+                            .clicked()
+                        {
+                            app.search_bar.case_insensitive = !app.search_bar.case_insensitive;
+                        }
 
                         // Close button
                         if ui.button("×").clicked() {

@@ -222,6 +222,19 @@ impl Tab {
         }
     }
 
+    // Returns a filtered list of entries based on the search query with case sensitivity option
+    #[must_use]
+    pub fn get_filtered_entries_with_case(
+        &self,
+        query: &Option<String>,
+        case_insensitive: bool,
+    ) -> Vec<&DirEntry> {
+        // Reuse the indices method and extract just the entries
+        self.get_filtered_entries_with_indices_and_case(query, case_insensitive)
+            .map(|(entry, _)| entry)
+            .collect()
+    }
+
     // Returns a filtered list of entries along with their original indices
     #[must_use]
     pub fn get_filtered_entries_with_indices(
@@ -244,6 +257,38 @@ impl Tab {
                 .enumerate()
                 .map(|(i, e)| (e, i))
                 .collect(),
+        }
+    }
+
+    // Returns a filtered list of entries along with their original indices with case sensitivity option
+    #[must_use]
+    pub fn get_filtered_entries_with_indices_and_case(
+        &self,
+        query: &Option<String>,
+        case_insensitive: bool,
+    ) -> Box<dyn Iterator<Item = (&DirEntry, usize)> + '_> {
+        match query.as_ref() {
+            Some(q) if case_insensitive => {
+                let lower_query = q.to_lowercase();
+                Box::new(
+                    self.entries
+                        .iter()
+                        .enumerate()
+                        .filter(move |(_, entry)| entry.name.to_lowercase().contains(&lower_query))
+                        .map(|(i, e)| (e, i)),
+                )
+            }
+            Some(q) => {
+                let q = q.clone();
+                Box::new(
+                    self.entries
+                        .iter()
+                        .enumerate()
+                        .filter(move |(_, entry)| entry.name.contains(&q))
+                        .map(|(i, e)| (e, i)),
+                )
+            }
+            None => Box::new(self.entries.iter().enumerate().map(|(i, e)| (e, i))),
         }
     }
 }

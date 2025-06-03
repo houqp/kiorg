@@ -261,7 +261,8 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
 
     // Get filtered entries - needs tab_ref and search query
     // TODO: store filtered entries in tab_ref to avoid re-filtering on every draw
-    let filtered_entries = tab_ref.get_filtered_entries(current_search_query);
+    let filtered_entries = tab_ref
+        .get_filtered_entries_with_case(current_search_query, app.search_bar.case_insensitive);
 
     // --- State variables to capture changes from UI closures ---
     let mut new_selected_index = None; // For selection changes captured from the row click
@@ -396,6 +397,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                                 is_in_cut_clipboard,
                                 is_in_copy_clipboard,
                                 search_query: current_search_query,
+                                case_insensitive_search: app.search_bar.case_insensitive,
                             },
                         );
 

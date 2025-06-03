@@ -496,7 +496,12 @@ impl Kiorg {
 
     pub fn move_selection(&mut self, delta: isize) {
         let tab = self.tab_manager.current_tab_mut();
-        let entries = tab.get_filtered_entries_with_indices(&self.search_bar.query); // Get filtered entries with original indices
+        let entries: Vec<_> = tab
+            .get_filtered_entries_with_indices_and_case(
+                &self.search_bar.query,
+                self.search_bar.case_insensitive,
+            )
+            .collect(); // Get filtered entries with original indices
 
         if entries.is_empty() {
             return;

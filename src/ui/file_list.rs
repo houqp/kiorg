@@ -132,6 +132,7 @@ pub struct EntryRowParams<'a> {
     pub is_in_cut_clipboard: bool,
     pub is_in_copy_clipboard: bool,
     pub search_query: &'a Option<String>,
+    pub case_insensitive_search: bool,
 }
 
 fn draw_icon(
@@ -196,6 +197,7 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
         is_in_cut_clipboard,
         is_in_copy_clipboard,
         search_query,
+        case_insensitive_search,
     } = params;
 
     let (rect, response) = ui.allocate_exact_size(
@@ -264,7 +266,20 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
         (Some(query), false) => {
             let mut last_match_end = 0;
 
-            for (start, matched_part) in name_text.match_indices(query) {
+            // Get all match positions based on case sensitivity
+            let matches: Vec<(usize, &str)> = if case_insensitive_search {
+                // For case-insensitive search, we need to find matches in lowercase but track original positions
+                let lower_name = name_text.to_lowercase();
+                let lower_query = query.to_lowercase();
+                lower_name
+                    .match_indices(&lower_query)
+                    .map(|(start, _)| (start, &name_text[start..start + lower_query.len()]))
+                    .collect()
+            } else {
+                name_text.match_indices(query).collect()
+            };
+
+            for (start, matched_part) in matches {
                 let end = start + matched_part.len();
                 // Add non-matching part before the match
                 if start > last_match_end {
