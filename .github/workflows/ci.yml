@@ -147,7 +147,7 @@ jobs:
     - name: Create DMG using create-dmg
       run: |
         cd target/release/bundle/osx
-        create-dmg --overwrite --dmg-title="Kiorg" Kiorg.app ../../../Kiorg.dmg
+        create-dmg --overwrite --dmg-title="Kiorg" Kiorg.app ../../..
 
     - name: Create CLI binary
       run: |
