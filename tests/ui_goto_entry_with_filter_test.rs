@@ -53,7 +53,8 @@ fn test_goto_first_entry_with_filter() {
 
     // Verify selection is at the first filtered entry
     let tab = harness.state().tab_manager.current_tab_ref();
-    let filtered_entries = tab.get_filtered_entries(&harness.state().search_bar.query);
+    let filtered_entries =
+        tab.get_filtered_entries_with_case(&harness.state().search_bar.query, true);
 
     // Get the selected entry
     let selected_entry = &tab.entries[tab.selected_index];
@@ -117,7 +118,8 @@ fn test_goto_last_entry_with_filter() {
 
     // Verify selection is at the last filtered entry
     let tab = harness.state().tab_manager.current_tab_ref();
-    let filtered_entries = tab.get_filtered_entries(&harness.state().search_bar.query);
+    let filtered_entries =
+        tab.get_filtered_entries_with_case(&harness.state().search_bar.query, true);
 
     // Get the selected entry
     let selected_entry = &tab.entries[tab.selected_index];

@@ -83,7 +83,13 @@ fn test_folder_delete_double_confirmation() {
 
     // Press Enter for second confirmation
     harness.press_key(Key::Enter);
-    harness.step();
+    for _ in 0..100 {
+        harness.step();
+        if harness.state().show_popup.is_none() {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    }
 
     // Verify popup is closed
     assert_eq!(

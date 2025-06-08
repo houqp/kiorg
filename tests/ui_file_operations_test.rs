@@ -46,7 +46,13 @@ fn test_delete_shortcut() {
 
     // Simulate pressing Enter to confirm deletion
     harness.press_key(Key::Enter);
-    harness.step();
+    for _ in 0..100 {
+        harness.step();
+        if harness.state().show_popup.is_none() {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    }
 
     // Verify only test1.txt was deleted
     assert!(!test_files[2].exists(), "test1.txt should be deleted");
@@ -77,6 +83,13 @@ fn test_delete_shortcut() {
     // confirm twice
     harness.press_key(Key::Enter);
     harness.step();
+    for _ in 0..100 {
+        harness.step();
+        if harness.state().show_popup.is_none() {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    }
 
     // Verify dir1 and all its contents were deleted recursively
     assert!(!test_files[0].exists(), "dir1 should be deleted");

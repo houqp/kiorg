@@ -361,6 +361,10 @@ fn process_key(
             // Bookmark popup input is handled in show_bookmark_popup
             return;
         }
+        Some(PopupType::DeleteProgress(_)) => {
+            // Delete progress popup doesn't handle input - just return
+            return;
+        }
         None => {}
     }
 

@@ -63,6 +63,7 @@ pub enum PopupType {
     Help,
     Exit,
     Delete(crate::ui::delete_popup::DeleteConfirmState),
+    DeleteProgress(crate::ui::delete_popup::DeleteProgressData),
     Rename(String),   // New name for the file/directory being renamed
     OpenWith(String), // Command to use when opening a file with a custom command
     AddEntry(String), // Name for the new file/directory being added
@@ -820,6 +821,9 @@ impl eframe::App for Kiorg {
             }
             Some(PopupType::Delete(_)) => {
                 self.handle_delete_confirmation(ctx);
+            }
+            Some(PopupType::DeleteProgress(_)) => {
+                delete_popup::handle_delete_progress(ctx, self);
             }
             Some(PopupType::Rename(_)) => {
                 rename_popup::draw(ctx, self);
