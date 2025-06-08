@@ -112,7 +112,7 @@ jobs:
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: kiorg-x86_64-linux.zip
+        name: kiorg-${{ github.event.pull_request.head.sha || github.sha }}--x86_64-linux.zip
         path: kiorg-x86_64-linux.zip
         if-no-files-found: error
 
@@ -140,35 +140,35 @@ jobs:
 
     - name: Create App bundle
       run: |
-        cargo bundle --release
+        cargo bundle --release --target aarch64-apple-darwin
         cd target/release/bundle/osx
     - name: Install create-dmg
       run: npm install --global create-dmg
     - name: Create DMG using create-dmg
       run: |
-        cd target/release/bundle/osx
+        cd target/aarch64-apple-darwin/release/bundle/osx
         # create-dmg will fail without code signing identity, ignore that error for now
-        create-dmg --overwrite --dmg-title="Kiorg" Kiorg.app ../../.. || false
-        test -f ../../../Kiorg\ *.dmg
+        create-dmg --overwrite --dmg-title="Kiorg" Kiorg.app ../../../.. || true
+        mv ../../../Kiorg\ *.dmg Kiorg-aarch64.dmg
 
     - name: Create CLI binary
       run: |
-        cargo build --release
-        cd target/release
-        zip -r ../../kiorg-arm64-macos.zip kiorg
+        cargo build --release --target aarch64-apple-darwin
+        cd target/aarch64-apple-darwin/release
+        zip -r ../../../kiorg-aarch64-macos.zip kiorg
 
     - name: Upload DMG artifact
       uses: actions/upload-artifact@v4
       with:
-        name: Kiorg.dmg
-        path: target/Kiorg.dmg
+        name: Kiorg_${{ github.event.pull_request.head.sha || github.sha }}-aarch64.dmg
+        path: target/Kiorg-aarch64.dmg
         if-no-files-found: error
 
     - name: Upload macOS CLI binary
       uses: actions/upload-artifact@v4
       with:
-        name: kiorg-arm64-macos.zip
-        path: kiorg-arm64-macos.zip
+        name: kiorg-${{ github.event.pull_request.head.sha || github.sha }}-aarch64-macos.zip
+        path: kiorg-aarch64-macos.zip
         if-no-files-found: error
 
   bundle-windows:
@@ -195,6 +195,6 @@ jobs:
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: kiorg-x86_64-windows.zip
+        name: kiorg-${{ github.event.pull_request.head.sha || github.sha }}--x86_64-windows.zip
         path: kiorg-x86_64-windows.zip
         if-no-files-found: error
