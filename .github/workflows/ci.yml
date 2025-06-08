@@ -147,7 +147,9 @@ jobs:
     - name: Create DMG using create-dmg
       run: |
         cd target/release/bundle/osx
-        create-dmg --overwrite --dmg-title="Kiorg" Kiorg.app ../../..
+        # create-dmg will fail without code signing identity, ignore that error for now
+        create-dmg --overwrite --dmg-title="Kiorg" Kiorg.app ../../.. || false
+        test -f ../../../Kiorg\ *.dmg
 
     - name: Create CLI binary
       run: |
