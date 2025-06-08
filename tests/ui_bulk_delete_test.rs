@@ -2,7 +2,6 @@
 mod ui_test_helpers;
 
 use egui::Key;
-use kiorg::app::PopupType;
 use tempfile::tempdir;
 use ui_test_helpers::{create_harness, create_test_files};
 
