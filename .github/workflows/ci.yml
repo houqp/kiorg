@@ -142,8 +142,12 @@ jobs:
       run: |
         cargo bundle --release
         cd target/release/bundle/osx
-        # Create DMG using hdiutil
-        hdiutil create -volname "Kiorg" -srcfolder Kiorg.app -ov -format UDZO ../../../Kiorg.dmg
+    - name: Install create-dmg
+      run: npm install --global create-dmg
+    - name: Create DMG using create-dmg
+      run: |
+        cd target/release/bundle/osx
+        create-dmg --overwrite --dmg-title="Kiorg" Kiorg.app ../../../Kiorg.dmg
 
     - name: Create CLI binary
       run: |
