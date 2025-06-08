@@ -145,10 +145,9 @@ jobs:
       run: npm install --global create-dmg
     - name: Create DMG using create-dmg
       run: |
-        cd target/aarch64-apple-darwin/release/bundle/osx
         # create-dmg will fail without code signing identity, ignore that error for now
-        create-dmg --overwrite --dmg-title="Kiorg" Kiorg.app ../../../.. || true
-        mv ../../../Kiorg\ *.dmg Kiorg-aarch64.dmg
+        create-dmg --overwrite --dmg-title="Kiorg" target/aarch64-apple-darwin/release/bundle/osx/Kiorg.app || true
+        mv Kiorg\ *.dmg Kiorg-aarch64.dmg
 
     - name: Create CLI binary
       run: |
@@ -160,7 +159,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: Kiorg_${{ github.event.pull_request.head.sha || github.sha }}-aarch64.dmg
-        path: target/Kiorg-aarch64.dmg
+        path: Kiorg-aarch64.dmg
         if-no-files-found: error
 
     - name: Upload macOS CLI binary
