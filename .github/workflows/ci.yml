@@ -141,7 +141,6 @@ jobs:
     - name: Create App bundle
       run: |
         cargo bundle --release --target aarch64-apple-darwin
-        cd target/release/bundle/osx
     - name: Install create-dmg
       run: npm install --global create-dmg
     - name: Create DMG using create-dmg
