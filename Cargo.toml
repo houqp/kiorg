@@ -4,6 +4,10 @@ version = "0.1.0"
 edition = "2021"
 authors = ["houqp"]
 repository = "https://github.com/houqp/kiorg"
+description = "A hacker's file manager with VIM inspired keybind"
+license = "MIT"
+keywords = ["file-manager", "gui", "productivity", "rust", "egui"]
+categories = ["filesystem", "gui", "command-line-utilities"]
 
 [features]
 default = ["terminal"]
@@ -40,17 +44,28 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # image handling
-image = { version = "0"}
+image = { version = "0" }
 kamadak-exif = "0"
 
 # for pdf rendering
-pdf_render = { git = "https://github.com/pdf-rs/pdf_render.git", rev = "9a31988b091495c65a54236fd6cdce8f1fa2afd0", features = ["embed"] }
+pdf_render = { git = "https://github.com/pdf-rs/pdf_render.git", rev = "9a31988b091495c65a54236fd6cdce8f1fa2afd0", features = [
+    "embed",
+] }
 pdf = { git = "https://github.com/pdf-rs/pdf" }
 pathfinder_geometry = { git = "https://github.com/servo/pathfinder" }
 pathfinder_export = { git = "https://github.com/servo/pathfinder" }
 # pathfinder_rasterize = { git = "https://github.com/s3bk/pathfinder_rasterizer" }
 
+[[bench]]
+name = "center_panel_bench"
+harness = false
+
+[[bench]]
+name = "top_banner_bench"
+harness = false
+
 [dev-dependencies]
+criterion = "0.5"
 egui_kittest = { version = "0.31.1", features = ["eframe"] }
 tempfile = "3.8"
 
