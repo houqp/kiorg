@@ -9,8 +9,24 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
+use crate::config::{self, colors::AppColors};
+use crate::input;
 use crate::models::preview_content::PreviewContent;
+use crate::models::tab::{TabManager, TabManagerState};
+use crate::ui::add_entry_popup; // Import the new module
+use crate::ui::delete_popup::{self, DeleteConfirmResult};
+use crate::ui::exit_popup;
 use crate::ui::preview;
+use crate::ui::search_bar::{self, SearchBar};
+use crate::ui::separator;
+use crate::ui::separator::SEPARATOR_PADDING;
+use crate::ui::terminal;
+use crate::ui::top_banner;
+use crate::ui::{
+    about_popup, bookmark_popup, center_panel, help_window, left_panel, open_with_popup,
+    preview_popup, rename_popup, right_panel, theme_popup,
+};
+use egui_notify::Toasts;
 
 /// Error type for Kiorg application
 #[derive(Debug)]
@@ -82,23 +98,6 @@ pub enum Clipboard {
 // Constants
 const STATE_FILE_NAME: &str = "state.json";
 
-use crate::config::{self, colors::AppColors};
-use crate::input;
-use crate::models::tab::{TabManager, TabManagerState};
-use crate::ui::add_entry_popup; // Import the new module
-use crate::ui::delete_popup::{self, DeleteConfirmResult};
-use crate::ui::exit_popup;
-use crate::ui::search_bar::{self, SearchBar};
-use crate::ui::separator;
-use crate::ui::separator::SEPARATOR_PADDING;
-use crate::ui::terminal;
-use crate::ui::top_banner;
-use crate::ui::{
-    about_popup, bookmark_popup, center_panel, help_window, left_panel, open_with_popup,
-    preview_popup, rename_popup, right_panel, theme_popup,
-};
-use egui_notify::Toasts;
-
 // Layout constants
 const PANEL_SPACING: f32 = 5.0; // Space between panels
 
@@ -164,50 +163,42 @@ pub struct AppState {
 pub struct Kiorg {
     // Tab manager for file navigation
     pub tab_manager: TabManager,
-
     // Fields moved from AppState
     pub bookmarks: Vec<PathBuf>,
     pub config_dir_override: Option<PathBuf>,
-
     // Application configuration
     pub config: config::Config,
-
     // Application colors
     pub colors: AppColors,
-
     // Toast notifications
     pub toasts: Toasts,
-
     // Fields that get reset after refresh_entries
     pub selection_changed: bool, // Flag to track if selection changed
     pub ensure_selected_visible: bool,
     pub prev_path: Option<PathBuf>, // Previous path for selection preservation
     pub cached_preview_path: Option<PathBuf>,
     pub preview_content: Option<PreviewContent>,
-
     // fields that get reset after changing directories
     // TODO: will it crash the app if large amount of entries are deleted in the same dir?
     pub scroll_range: Option<std::ops::Range<usize>>,
-
     // Popup management
     pub show_popup: Option<PopupType>,
     pub entries_to_delete: Vec<PathBuf>, // Changed from Option<PathBuf> to Vec<PathBuf> for bulk deletion
     pub clipboard: Option<Clipboard>,
     pub search_bar: SearchBar,
     pub terminal_ctx: Option<terminal::TerminalContext>,
-    pub shutdown_requested: bool,
     pub notify_fs_change: Arc<AtomicBool>,
     pub fs_watcher: notify::RecommendedWatcher,
-
     // Track files that are currently being opened
     pub files_being_opened: HashMap<PathBuf, Arc<AtomicBool>>,
-
     // Error channel for background operations
     pub error_sender: std::sync::mpsc::Sender<String>,
     pub error_receiver: std::sync::mpsc::Receiver<String>,
-
     // ts variable for tracking key press times
     pub last_lowercase_g_pressed_ms: u128,
+    pub shutdown_requested: bool,
+    // Signal whether to scroll to display current directory in the left panel
+    pub scroll_left_panel: bool,
 }
 
 impl Kiorg {
@@ -309,6 +300,7 @@ impl Kiorg {
             terminal_ctx: None,
             shutdown_requested: false,
             notify_fs_change,
+            scroll_left_panel: false,
             fs_watcher,
         };
 
@@ -367,6 +359,9 @@ impl Kiorg {
 
     pub fn refresh_entries(&mut self) {
         self.tab_manager.refresh_entries();
+        // tab_manager.refresh_entries() will refresh both parent and current directory entries
+        // so always refocus left panel after refresh
+        self.scroll_left_panel = true;
 
         // --- Start: Restore Selection Preservation (Post-Sort) ---
         if let Some(prev_path) = &self.prev_path {

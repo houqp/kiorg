@@ -9,7 +9,7 @@ use super::style::section_title_text;
 
 /// Draws the left panel (parent directory list).
 /// Returns Some(PathBuf) if a directory was clicked for navigation.
-pub fn draw(app: &Kiorg, ui: &mut Ui, width: f32, height: f32) -> Option<PathBuf> {
+pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) -> Option<PathBuf> {
     let tab = app.tab_manager.current_tab_ref();
     let parent_entries = tab.parent_entries.clone();
     let parent_selected_index = tab.parent_selected_index;
@@ -32,6 +32,7 @@ pub fn draw(app: &Kiorg, ui: &mut Ui, width: f32, height: f32) -> Option<PathBuf
             .id_salt("parent_list_scroll")
             .auto_shrink([false; 2])
             .max_height(available_height)
+            // TODO: use show_row as an optimization
             .show(ui, |ui| {
                 // Set the width of the content area
                 let scrollbar_width = 6.0;
@@ -79,7 +80,7 @@ pub fn draw(app: &Kiorg, ui: &mut Ui, width: f32, height: f32) -> Option<PathBuf
                 }
 
                 // Ensure current directory is visible in parent list
-                if !parent_entries.is_empty() {
+                if app.scroll_left_panel && !parent_entries.is_empty() {
                     let selected_pos = parent_selected_index as f32 * ROW_HEIGHT;
                     ui.scroll_to_rect(
                         egui::Rect::from_min_size(
@@ -88,6 +89,7 @@ pub fn draw(app: &Kiorg, ui: &mut Ui, width: f32, height: f32) -> Option<PathBuf
                         ),
                         Some(egui::Align::Center),
                     );
+                    app.scroll_left_panel = false;
                 }
             });
     });
