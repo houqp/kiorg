@@ -36,6 +36,25 @@ impl SearchBar {
     }
 }
 
+fn apply_new_query(app: &mut Kiorg, query_option: Option<String>) {
+    // Select the first matched entry
+    let tab = app.tab_manager.current_tab_mut();
+
+    // Ensure cache is up to date with current search parameters
+    tab.update_filtered_cache(&query_option, app.search_bar.case_insensitive);
+
+    let first_filtered_index = tab
+        .get_cached_filtered_entries()
+        .first()
+        .map(|(_, index)| *index);
+
+    if let Some(index) = first_filtered_index {
+        tab.update_selection(index);
+        app.ensure_selected_visible = true;
+        app.selection_changed = true;
+    }
+}
+
 pub fn handle_key_press(ctx: &Context, app: &mut Kiorg) -> bool {
     match &app.search_bar.query {
         Some(query) => {
@@ -50,23 +69,6 @@ pub fn handle_key_press(ctx: &Context, app: &mut Kiorg) -> bool {
                     // Keep search mode active if there's a non-empty search query
                     if query.is_empty() {
                         close_search_bar = true;
-                    } else {
-                        // Select the first matched entry
-                        let tab = app.tab_manager.current_tab_mut();
-                        let query_option = Some(query.clone());
-                        let first_filtered_index = tab
-                            .get_filtered_entries_with_indices_and_case(
-                                &query_option,
-                                app.search_bar.case_insensitive,
-                            )
-                            .next()
-                            .map(|(_, index)| index);
-
-                        if let Some(index) = first_filtered_index {
-                            tab.update_selection(index);
-                            app.ensure_selected_visible = true;
-                            app.selection_changed = true;
-                        }
                     }
                     app.search_bar.focus = false;
                     return true; // Consume Enter key
@@ -83,6 +85,9 @@ pub fn handle_key_press(ctx: &Context, app: &mut Kiorg) -> bool {
 
             if close_search_bar {
                 app.search_bar.close();
+                // Reset filter when closing search bar
+                let tab = app.tab_manager.current_tab_mut();
+                tab.update_filtered_cache(&None, false);
             }
 
             consumed
@@ -134,6 +139,11 @@ pub fn draw(ctx: &Context, app: &mut Kiorg) {
                         // Update focus state based on whether the text edit has focus
                         app.search_bar.focus = response.has_focus();
 
+                        // Update filter when text changes
+                        if response.changed() {
+                            apply_new_query(app, app.search_bar.query.clone());
+                        }
+
                         // Case sensitivity toggle button
                         let toggle_color = if app.search_bar.case_insensitive {
                             app.colors.fg_light
@@ -145,21 +155,25 @@ pub fn draw(ctx: &Context, app: &mut Kiorg) {
                         } else {
                             "Click to enable case insensitive search"
                         };
-                        if ui
+                        let case_button_clicked = ui
                             .add(
                                 egui::Button::new(egui::RichText::new("Aa").color(toggle_color))
                                     .small()
                                     .frame(false),
                             )
                             .on_hover_text(tooltip_text)
-                            .clicked()
-                        {
+                            .clicked();
+                        if case_button_clicked {
                             app.search_bar.case_insensitive = !app.search_bar.case_insensitive;
+                            apply_new_query(app, app.search_bar.query.clone());
                         }
 
                         // Close button
                         if ui.button("×").clicked() {
                             app.search_bar.close();
+                            // Reset filter when closing search bar
+                            let tab = app.tab_manager.current_tab_mut();
+                            tab.update_filtered_cache(&None, false);
                         }
                     });
                 });

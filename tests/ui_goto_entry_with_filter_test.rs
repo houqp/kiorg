@@ -2,6 +2,7 @@
 mod ui_test_helpers;
 
 use egui::{Key, Modifiers};
+use kiorg::models::dir_entry::DirEntry;
 use tempfile::tempdir;
 use ui_test_helpers::{create_harness, create_test_files};
 
@@ -52,9 +53,14 @@ fn test_goto_first_entry_with_filter() {
     harness.step();
 
     // Verify selection is at the first filtered entry
-    let tab = harness.state().tab_manager.current_tab_ref();
-    let filtered_entries =
-        tab.get_filtered_entries_with_case(&harness.state().search_bar.query, true);
+    let query = harness.state().search_bar.query.clone();
+    let tab = harness.state_mut().tab_manager.current_tab_mut();
+    tab.update_filtered_cache(&query, true);
+    let filtered_entries: Vec<&DirEntry> = tab
+        .get_cached_filtered_entries()
+        .iter()
+        .map(|(entry, _)| entry)
+        .collect();
 
     // Get the selected entry
     let selected_entry = &tab.entries[tab.selected_index];
@@ -117,9 +123,14 @@ fn test_goto_last_entry_with_filter() {
     harness.step();
 
     // Verify selection is at the last filtered entry
-    let tab = harness.state().tab_manager.current_tab_ref();
-    let filtered_entries =
-        tab.get_filtered_entries_with_case(&harness.state().search_bar.query, true);
+    let query = harness.state().search_bar.query.clone();
+    let tab = harness.state_mut().tab_manager.current_tab_mut();
+    tab.update_filtered_cache(&query, true);
+    let filtered_entries: Vec<&DirEntry> = tab
+        .get_cached_filtered_entries()
+        .iter()
+        .map(|(entry, _)| entry)
+        .collect();
 
     // Get the selected entry
     let selected_entry = &tab.entries[tab.selected_index];

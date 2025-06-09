@@ -61,14 +61,11 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: Shortcut
         ShortcutAction::GoToFirstEntry => {
             let tab = app.tab_manager.current_tab_mut();
             if !tab.entries.is_empty() {
-                // Get the first filtered entry with its original index (more efficient)
+                // Get the first filtered entry with its original index
                 let first_filtered_index = tab
-                    .get_filtered_entries_with_indices_and_case(
-                        &app.search_bar.query,
-                        app.search_bar.case_insensitive,
-                    )
-                    .next()
-                    .map(|(_, index)| index);
+                    .get_cached_filtered_entries()
+                    .first()
+                    .map(|(_, index)| *index);
                 if let Some(index) = first_filtered_index {
                     tab.update_selection(index);
                     app.ensure_selected_visible = true;
@@ -80,14 +77,11 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: Shortcut
         ShortcutAction::GoToLastEntry => {
             let tab = app.tab_manager.current_tab_mut();
             if !tab.entries.is_empty() {
-                // Get the last filtered entry with its original index (more efficient)
+                // Get the last filtered entry with its original index
                 let last_filtered_index = tab
-                    .get_filtered_entries_with_indices_and_case(
-                        &app.search_bar.query,
-                        app.search_bar.case_insensitive,
-                    )
+                    .get_cached_filtered_entries()
                     .last()
-                    .map(|(_, index)| index);
+                    .map(|(_, index)| *index);
                 if let Some(index) = last_filtered_index {
                     tab.update_selection(index);
                     app.ensure_selected_visible = true;
@@ -371,6 +365,9 @@ fn process_key(
     // Handle ESC key to clear search filter when search is active but not focused
     if key == Key::Escape && app.search_bar.query.is_some() && !app.search_bar.focus {
         app.search_bar.close();
+        // Reset filter when closing search bar
+        let tab = app.tab_manager.current_tab_mut();
+        tab.update_filtered_cache(&None, false);
         return;
     }
 

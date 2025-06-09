@@ -225,3 +225,203 @@ fn test_search_cleared_on_escape() {
         harness.state().search_bar.query
     );
 }
+
+#[test]
+fn test_search_filters_realtime_without_enter() {
+    // Create a temporary directory for testing
+    let temp_dir = tempdir().unwrap();
+    create_test_files(&[
+        temp_dir.path().join("apple.txt"),
+        temp_dir.path().join("apricot.txt"),
+        temp_dir.path().join("banana.txt"),
+        temp_dir.path().join("cherry.txt"),
+        temp_dir.path().join("grape.txt"),
+    ]);
+
+    let mut harness = create_harness(&temp_dir);
+
+    // Initially, all 5 files should be visible
+    let tab = harness.state().tab_manager.current_tab_ref();
+    assert_eq!(tab.entries.len(), 5, "Should have 5 files initially");
+    assert_eq!(
+        tab.get_cached_filtered_entries().len(),
+        5,
+        "Should have 5 filtered entries initially"
+    );
+
+    // Activate search
+    harness.press_key(Key::Slash);
+    harness.step();
+
+    // Type "a" - should match apple, apricot
+    harness
+        .input_mut()
+        .events
+        .push(egui::Event::Text("a".to_string()));
+    harness.step();
+
+    // Verify filtered list is updated immediately without pressing Enter
+    let tab = harness.state().tab_manager.current_tab_ref();
+    let filtered_entries = tab.get_cached_filtered_entries();
+    assert_eq!(
+        filtered_entries.len(),
+        4,
+        "Should have 4 filtered entries after typing 'a'"
+    );
+
+    // Verify the filtered entries are correct
+    let filtered_names: Vec<&str> = filtered_entries
+        .iter()
+        .map(|(entry, _)| entry.name.as_str())
+        .collect();
+    assert!(
+        filtered_names.contains(&"apple.txt"),
+        "Filtered list should contain apple.txt"
+    );
+    assert!(
+        filtered_names.contains(&"apricot.txt"),
+        "Filtered list should contain apricot.txt"
+    );
+
+    // Type more characters "pp" (making it "app") - should match only apple
+    harness
+        .input_mut()
+        .events
+        .push(egui::Event::Text("pp".to_string()));
+    harness.step();
+
+    // Verify filtered list is updated again
+    let tab = harness.state().tab_manager.current_tab_ref();
+    let filtered_entries = tab.get_cached_filtered_entries();
+    assert_eq!(
+        filtered_entries.len(),
+        1,
+        "Should have 1 filtered entry after typing 'app'"
+    );
+    assert_eq!(
+        filtered_entries[0].0.name, "apple.txt",
+        "Should only match apple.txt"
+    );
+
+    // Clear one character using backspace
+    harness.press_key(Key::Backspace);
+    harness.step();
+
+    // Verify filtered list expands again to match "ap"
+    let tab = harness.state().tab_manager.current_tab_ref();
+    let filtered_entries = tab.get_cached_filtered_entries();
+    assert_eq!(
+        filtered_entries.len(),
+        3,
+        "Should have 3 filtered entries after backspace to 'ap'"
+    );
+
+    // Type a character that matches nothing
+    harness
+        .input_mut()
+        .events
+        .push(egui::Event::Text("xyz".to_string()));
+    harness.step();
+
+    // Verify filtered list is empty
+    let tab = harness.state().tab_manager.current_tab_ref();
+    let filtered_entries = tab.get_cached_filtered_entries();
+    assert_eq!(
+        filtered_entries.len(),
+        0,
+        "Should have 0 filtered entries after typing 'xyz'"
+    );
+}
+
+#[test]
+fn test_search_escape_clears_query_and_resets_file_list() {
+    // Create a temporary directory for testing
+    let temp_dir = tempdir().unwrap();
+    create_test_files(&[
+        temp_dir.path().join("apple.txt"),
+        temp_dir.path().join("banana.txt"),
+        temp_dir.path().join("cherry.txt"),
+    ]);
+
+    let mut harness = create_harness(&temp_dir);
+
+    // Initially, all 3 files should be visible
+    let tab = harness.state().tab_manager.current_tab_ref();
+    assert_eq!(tab.entries.len(), 3, "Should have 3 files initially");
+    assert_eq!(
+        tab.get_cached_filtered_entries().len(),
+        3,
+        "Should have 3 filtered entries initially (no filter)"
+    );
+
+    // Activate search
+    harness.press_key(Key::Slash);
+    harness.step();
+
+    // Type "apple" - should match only apple.txt
+    harness
+        .input_mut()
+        .events
+        .push(egui::Event::Text("apple".to_string()));
+    harness.step();
+
+    // Verify search is active and filtering is applied
+    assert!(
+        harness.state().search_bar.query.is_some(),
+        "Search bar should have query after typing"
+    );
+    assert_eq!(
+        harness.state().search_bar.query.as_deref(),
+        Some("apple"),
+        "Search query should be 'apple'"
+    );
+
+    let tab = harness.state().tab_manager.current_tab_ref();
+    let filtered_entries = tab.get_cached_filtered_entries();
+    assert_eq!(
+        filtered_entries.len(),
+        1,
+        "Should have 1 filtered entry after typing 'apple'"
+    );
+    assert_eq!(
+        filtered_entries[0].0.name, "apple.txt",
+        "Should only match apple.txt"
+    );
+
+    // Press Escape to close search bar
+    harness.press_key(Key::Escape);
+    harness.step();
+
+    // Verify search query is cleared
+    assert!(
+        harness.state().search_bar.query.is_none(),
+        "Search query should be None after pressing Escape"
+    );
+
+    // Verify file list is reset to show all files
+    let tab = harness.state().tab_manager.current_tab_ref();
+    let filtered_entries = tab.get_cached_filtered_entries();
+    assert_eq!(
+        filtered_entries.len(),
+        3,
+        "Should show all 3 files after pressing Escape"
+    );
+
+    // Verify all files are visible again
+    let filtered_names: Vec<&str> = filtered_entries
+        .iter()
+        .map(|(entry, _)| entry.name.as_str())
+        .collect();
+    assert!(
+        filtered_names.contains(&"apple.txt"),
+        "File list should contain apple.txt"
+    );
+    assert!(
+        filtered_names.contains(&"banana.txt"),
+        "File list should contain banana.txt"
+    );
+    assert!(
+        filtered_names.contains(&"cherry.txt"),
+        "File list should contain cherry.txt"
+    );
+}

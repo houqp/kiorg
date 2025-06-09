@@ -256,13 +256,10 @@ fn show_context_menu(
 
 /// Draws the center panel content.
 pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
-    let tab_ref = app.tab_manager.current_tab_ref(); // Use a different name to avoid confusion
-    let current_search_query = &app.search_bar.query;
-
-    // Get filtered entries - needs tab_ref and search query
-    // TODO: store filtered entries in tab_ref to avoid re-filtering on every draw
-    let filtered_entries = tab_ref
-        .get_filtered_entries_with_case(current_search_query, app.search_bar.case_insensitive);
+    // Get cached filtered entries or compute them if cache is empty
+    // Get the current tab reference for reading
+    let tab_ref = app.tab_manager.current_tab_ref();
+    let filtered_entries = tab_ref.get_cached_filtered_entries();
 
     // --- State variables to capture changes from UI closures ---
     let mut new_selected_index = None; // For selection changes captured from the row click
@@ -312,7 +309,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                         // Find the position of the selected entry in the filtered list
                         let filtered_index = filtered_entries
                             .iter()
-                            .position(|entry| entry.path == selected_entry.path)
+                            .position(|(entry, _)| entry.path == selected_entry.path)
                             .expect("selected entry not in filtered list");
 
                         scroll_area = scroll_by_filtered_index(
@@ -340,16 +337,10 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                     app.scroll_range = Some(row_range.clone());
 
                     for row_index in row_range {
-                        // Get the entry for the current visible row from the filtered list
-                        let entry = &filtered_entries[row_index];
+                        // Get the entry and original index for the current visible row from the filtered list
+                        let (entry, original_index) = &filtered_entries[row_index];
 
-                        // Use the TabManager's method to find the original index in constant time
-                        let original_index = app
-                            .tab_manager
-                            .get_entry_index_by_path(&entry.path)
-                            .expect("selected entry not found in tab");
-
-                        let is_selected = original_index == tab_ref.selected_index;
+                        let is_selected = *original_index == tab_ref.selected_index;
                         let is_marked = tab_ref.marked_entries.contains(&entry.path);
                         let being_opened = match app.files_being_opened.get(&entry.path) {
                             Some(signal) => {
@@ -396,14 +387,14 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                                 is_being_opened: being_opened,
                                 is_in_cut_clipboard,
                                 is_in_copy_clipboard,
-                                search_query: current_search_query,
+                                search_query: &app.search_bar.query,
                                 case_insensitive_search: app.search_bar.case_insensitive,
                             },
                         );
 
                         // Check for clicks to update selection state (captured outside)
                         if row_response.clicked() {
-                            new_selected_index = Some(original_index);
+                            new_selected_index = Some(*original_index);
                         }
 
                         // Check for double-clicks to navigate or open files
@@ -413,7 +404,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
 
                         // --- Add Context Menu for Rows ---
                         row_response.context_menu(|menu_ui| {
-                            new_selected_index = Some(original_index);
+                            new_selected_index = Some(*original_index);
                             // Capture the action, don't perform it yet
                             // Pass only the necessary booleans, not the whole app
                             let has_marked_entries = !tab_ref.marked_entries.is_empty();

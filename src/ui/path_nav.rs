@@ -19,52 +19,52 @@ pub fn draw_path_navigation(
 
         if components.is_empty() {
             ui.label(RichText::new("/").color(colors.link_text));
-        } else {
-            let mut path_str = String::new();
-            for (i, (name, _)) in components.iter().enumerate() {
-                if i > 0 {
-                    path_str.push('/');
-                }
-                path_str.push_str(name);
+            return;
+        }
+
+        let mut path_str = String::new();
+        for (i, (name, _)) in components.iter().enumerate() {
+            if i > 0 {
+                path_str.push('/');
+            }
+            path_str.push_str(name);
+        }
+
+        let available_width = ui.available_width();
+        let estimated_width = path_str.len() as f32 * 7.0;
+
+        if estimated_width > available_width && components.len() > 4 {
+            if ui
+                .link(RichText::new(&components[0].0).color(colors.link_text))
+                .clicked()
+            {
+                message = Some(PathNavMessage::Navigate(components[0].1.clone()));
             }
 
-            let available_width = ui.available_width();
-            let estimated_width = path_str.len() as f32 * 7.0;
+            ui.label(RichText::new("/...").color(colors.fg_light));
 
-            if estimated_width > available_width && components.len() > 4 {
+            let start_idx = components.len() - 2;
+            for component in components.iter().skip(start_idx) {
+                let (comp_str, path) = component;
+                ui.label(RichText::new("/").color(colors.fg_light));
                 if ui
-                    .link(RichText::new(&components[0].0).color(colors.link_text))
+                    .link(RichText::new(comp_str).color(colors.link_text))
                     .clicked()
                 {
-                    message = Some(PathNavMessage::Navigate(components[0].1.clone()));
+                    message = Some(PathNavMessage::Navigate(path.clone()));
                 }
-
-                ui.label(RichText::new("/").color(colors.fg_light));
-                ui.label(RichText::new("...").color(colors.fg_light));
-
-                let start_idx = components.len() - 2;
-                for component in components.iter().skip(start_idx) {
-                    let (comp_str, path) = component;
+            }
+        } else {
+            for (i, (name, path)) in components.iter().enumerate() {
+                if (i > 1) || (i == 1 && components[0].0 != "/") {
                     ui.label(RichText::new("/").color(colors.fg_light));
-                    if ui
-                        .link(RichText::new(comp_str).color(colors.link_text))
-                        .clicked()
-                    {
-                        message = Some(PathNavMessage::Navigate(path.clone()));
-                    }
                 }
-            } else {
-                for (i, (name, path)) in components.iter().enumerate() {
-                    if (i > 1) || (i == 1 && components[0].0 != "/") {
-                        ui.label(RichText::new("/").color(colors.fg_light));
-                    }
 
-                    if ui
-                        .link(RichText::new(name).color(colors.link_text))
-                        .clicked()
-                    {
-                        message = Some(PathNavMessage::Navigate(path.clone()));
-                    }
+                if ui
+                    .link(RichText::new(name).color(colors.link_text))
+                    .clicked()
+                {
+                    message = Some(PathNavMessage::Navigate(path.clone()));
                 }
             }
         }

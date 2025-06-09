@@ -38,6 +38,8 @@ pub struct Tab {
     pub history_position: usize,
     // Reverse index mapping DirEntry path to index in entries (private)
     path_to_index: std::collections::HashMap<PathBuf, usize>,
+    // Cached filtered entries to avoid re-filtering on every draw
+    cached_filtered_entries: Vec<(DirEntry, usize)>,
 }
 
 // Private helper function for sorting DirEntry slices
@@ -104,6 +106,7 @@ impl Tab {
             history: Vec::new(),
             history_position: 0,
             path_to_index: std::collections::HashMap::new(),
+            cached_filtered_entries: Vec::new(),
         };
         // Add the initial path to history
         tab.add_to_history(path);
@@ -132,6 +135,7 @@ impl Tab {
             history: Vec::new(),
             history_position: 0,
             path_to_index: std::collections::HashMap::new(),
+            cached_filtered_entries: Vec::new(),
         };
         // Add the initial path to history
         tab.add_to_history(path);
@@ -223,73 +227,44 @@ impl Tab {
     }
 
     // Returns a filtered list of entries based on the search query with case sensitivity option
-    #[must_use]
-    pub fn get_filtered_entries_with_case(
-        &self,
-        query: &Option<String>,
-        case_insensitive: bool,
-    ) -> Vec<&DirEntry> {
-        // Reuse the indices method and extract just the entries
-        self.get_filtered_entries_with_indices_and_case(query, case_insensitive)
-            .map(|(entry, _)| entry)
-            .collect()
-    }
 
-    // Returns a filtered list of entries along with their original indices
-    #[must_use]
-    pub fn get_filtered_entries_with_indices(
-        &self,
-        query: &Option<String>,
-    ) -> Vec<(&DirEntry, usize)> {
-        match query {
-            Some(q) => {
+    // Update cached filtered entries with new filter parameters
+    pub fn update_filtered_cache(&mut self, query: &Option<String>, case_insensitive: bool) {
+        // Inline the filtering logic instead of calling get_filtered_entries_with_indices_and_case
+        let filtered_iter = match query.as_ref() {
+            Some(q) if case_insensitive => {
                 let lower_query = q.to_lowercase();
                 self.entries
                     .iter()
                     .enumerate()
-                    .filter(|(_, entry)| entry.name.to_lowercase().contains(&lower_query))
-                    .map(|(i, e)| (e, i))
+                    .filter(move |(_, entry)| entry.name.to_lowercase().contains(&lower_query))
+                    .map(|(i, e)| (e.clone(), i))
+                    .collect()
+            }
+            Some(q) => {
+                let q = q.clone();
+                self.entries
+                    .iter()
+                    .enumerate()
+                    .filter(move |(_, entry)| entry.name.contains(&q))
+                    .map(|(i, e)| (e.clone(), i))
                     .collect()
             }
             None => self
                 .entries
                 .iter()
                 .enumerate()
-                .map(|(i, e)| (e, i))
+                .map(|(i, e)| (e.clone(), i))
                 .collect(),
-        }
+        };
+
+        self.cached_filtered_entries = filtered_iter;
     }
 
-    // Returns a filtered list of entries along with their original indices with case sensitivity option
+    // Returns cached filtered entries as references to avoid allocation
     #[must_use]
-    pub fn get_filtered_entries_with_indices_and_case(
-        &self,
-        query: &Option<String>,
-        case_insensitive: bool,
-    ) -> Box<dyn Iterator<Item = (&DirEntry, usize)> + '_> {
-        match query.as_ref() {
-            Some(q) if case_insensitive => {
-                let lower_query = q.to_lowercase();
-                Box::new(
-                    self.entries
-                        .iter()
-                        .enumerate()
-                        .filter(move |(_, entry)| entry.name.to_lowercase().contains(&lower_query))
-                        .map(|(i, e)| (e, i)),
-                )
-            }
-            Some(q) => {
-                let q = q.clone();
-                Box::new(
-                    self.entries
-                        .iter()
-                        .enumerate()
-                        .filter(move |(_, entry)| entry.name.contains(&q))
-                        .map(|(i, e)| (e, i)),
-                )
-            }
-            None => Box::new(self.entries.iter().enumerate().map(|(i, e)| (e, i))),
-        }
+    pub fn get_cached_filtered_entries(&self) -> &Vec<(DirEntry, usize)> {
+        &self.cached_filtered_entries
     }
 }
 
@@ -507,6 +482,9 @@ impl TabManager {
         sort_entries_by(&mut tab.entries, column, order);
         sort_entries_by(&mut tab.parent_entries, column, order);
         refresh_path_to_index(tab);
+
+        // Reset filter cache to show all entries when sort order changes
+        tab.update_filtered_cache(&None, false);
     }
 
     pub fn refresh_entries(&mut self) {
@@ -543,6 +521,9 @@ impl TabManager {
                                                        // Sort entries using the global sort settings
         sort_entries_by(&mut tab.entries, sort_column, sort_order);
         refresh_path_to_index(tab);
+
+        // Reset filter cache to show all entries when entries change
+        tab.update_filtered_cache(&None, false);
 
         // Reset selection index if it's out of bounds (can happen after rehydrating from TabState)
         if tab.selected_index >= tab.entries.len() && !tab.entries.is_empty() {

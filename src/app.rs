@@ -497,12 +497,7 @@ impl Kiorg {
 
     pub fn move_selection(&mut self, delta: isize) {
         let tab = self.tab_manager.current_tab_mut();
-        let entries: Vec<_> = tab
-            .get_filtered_entries_with_indices_and_case(
-                &self.search_bar.query,
-                self.search_bar.case_insensitive,
-            )
-            .collect(); // Get filtered entries with original indices
+        let entries = tab.get_cached_filtered_entries(); // Get filtered entries with original indices
 
         if entries.is_empty() {
             return;
@@ -557,6 +552,8 @@ impl Kiorg {
         // Reset scroll_range to None when navigating to a new directory
         self.scroll_range = None;
         self.search_bar.close();
+        // Reset filter when closing search bar
+        tab.update_filtered_cache(&None, false);
 
         // Watch the new directory
         if let Err(e) = self
