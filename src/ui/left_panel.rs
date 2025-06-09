@@ -81,7 +81,9 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) -> Option<Pat
 
                 // Ensure current directory is visible in parent list
                 if app.scroll_left_panel && !parent_entries.is_empty() {
-                    let selected_pos = parent_selected_index as f32 * ROW_HEIGHT;
+                    let ui_spacing = ui.spacing().item_spacing.y;
+                    let spaced_row_height = ROW_HEIGHT + ui_spacing;
+                    let selected_pos = parent_selected_index as f32 * spaced_row_height;
                     ui.scroll_to_rect(
                         egui::Rect::from_min_size(
                             egui::pos2(0.0, selected_pos),
