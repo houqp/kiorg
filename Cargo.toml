@@ -12,6 +12,7 @@ categories = ["filesystem", "gui", "command-line-utilities"]
 [features]
 default = ["terminal"]
 terminal = ["dep:egui_term"]
+debug = []
 
 [lib]
 name = "kiorg"

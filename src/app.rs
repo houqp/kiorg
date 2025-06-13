@@ -759,6 +759,7 @@ impl Kiorg {
 
 impl eframe::App for Kiorg {
     fn update(&mut self, ctx: &egui::Context, _: &mut eframe::Frame) {
+        #[cfg(feature = "debug")]
         ctx.set_debug_on_hover(true);
 
         if self
