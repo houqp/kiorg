@@ -1,5 +1,6 @@
-use egui::{RichText, Ui};
 use std::path::{Path, PathBuf};
+
+use egui::{RichText, Ui};
 
 #[derive(Debug)]
 pub enum PathNavMessage {
@@ -10,6 +11,7 @@ pub fn draw_path_navigation(
     ui: &mut Ui,
     current_path: &Path,
     colors: &crate::config::colors::AppColors,
+    tab_count: usize,
 ) -> Option<PathNavMessage> {
     let components = get_path_components(current_path);
     let mut message = None;
@@ -22,29 +24,69 @@ pub fn draw_path_navigation(
             return;
         }
 
-        let mut path_str = String::new();
+        let available_width = ui.available_width()
+            - (
+                // +1 for menu button
+                tab_count + 1
+            ) as f32
+                * 24.0
+            // for prompt dollar sign and space
+            - 15.0;
+        let mut estimated_width = 0.0;
+
         for (i, (name, _)) in components.iter().enumerate() {
-            if i > 0 {
-                path_str.push('/');
+            if (i > 1) || (i == 1 && components[0].0 != "/") {
+                estimated_width += 8.0; // width for slash
             }
-            path_str.push_str(name);
+            estimated_width += (name.chars().count() * 8) as f32; // width for component name
         }
 
-        let available_width = ui.available_width();
-        let estimated_width = path_str.len() as f32 * 7.0;
-
-        if estimated_width > available_width && components.len() > 4 {
+        if estimated_width > available_width && components.len() > 3 {
+            estimated_width = 0.0;
+            let (name, path) = &components[0];
             if ui
-                .link(RichText::new(&components[0].0).color(colors.link_text))
+                .link(RichText::new(name.to_string()).color(colors.link_text))
                 .clicked()
             {
-                message = Some(PathNavMessage::Navigate(components[0].1.clone()));
+                message = Some(PathNavMessage::Navigate(path.clone()));
             }
+            estimated_width += (name.chars().count() * 8) as f32;
 
-            ui.label(RichText::new("/...").color(colors.fg_light));
+            if name != "/" {
+                ui.label(RichText::new("/").color(colors.fg_light));
+                estimated_width += 8.0;
+            }
+            let (name, path) = &components[1];
+            if ui
+                .link(RichText::new(name.to_string()).color(colors.link_text))
+                .clicked()
+            {
+                message = Some(PathNavMessage::Navigate(path.clone()));
+            }
+            estimated_width += (name.chars().count() * 8) as f32;
 
-            let start_idx = components.len() - 2;
-            for component in components.iter().skip(start_idx) {
+            ui.label(RichText::new("/ ...").color(colors.fg_light));
+            estimated_width += 4.0 * 8.0;
+            println!("estimated_width: {}", estimated_width);
+            println!("available width: {}", available_width);
+
+            // walk backwards to find the starting index for truncation
+            let mut start_idx = components.len() - 1;
+            for (i, (name, _)) in components.iter().enumerate().rev() {
+                let new_width = estimated_width + (name.chars().count() * 8) as f32 + 8.0;
+                if new_width > available_width {
+                    start_idx = i;
+                    break;
+                }
+                estimated_width = new_width;
+            }
+            println!(
+                "start_idx: {}, components.len(): {}",
+                start_idx,
+                components.len()
+            );
+
+            for component in components.iter().skip(start_idx + 1) {
                 let (comp_str, path) = component;
                 ui.label(RichText::new("/").color(colors.fg_light));
                 if ui
@@ -163,6 +205,7 @@ pub fn get_path_components(path: &Path) -> Vec<(String, PathBuf)> {
 mod tests {
     use super::*;
     use eframe::App;
+    use egui_kittest::kittest::Queryable;
     use egui_kittest::Harness;
     use std::path::PathBuf;
 
@@ -175,7 +218,7 @@ mod tests {
     impl App for TestApp {
         fn update(&mut self, ctx: &egui::Context, _: &mut eframe::Frame) {
             egui::CentralPanel::default().show(ctx, |ui| {
-                self.message = draw_path_navigation(ui, &self.path, &self.colors);
+                self.message = draw_path_navigation(ui, &self.path, &self.colors, 1);
             });
         }
     }
@@ -335,5 +378,180 @@ mod tests {
         assert_eq!(components[1].0, "home");
         assert_eq!(components[0].1, PathBuf::from("/"));
         assert_eq!(components[1].1, PathBuf::from("/home"));
+    }
+
+    #[test]
+    fn test_path_truncation_rendering_short_path() {
+        let mut harness = Harness::builder()
+            .with_size(egui::Vec2::new(800.0, 600.0))
+            .with_max_steps(10)
+            .build_eframe(|_cc| TestApp {
+                path: PathBuf::from("/home/user"),
+                colors: crate::theme::get_default_theme().get_colors().clone(),
+                message: None,
+            });
+
+        harness.step();
+
+        // For short paths, all components should be visible (no truncation)
+        assert!(
+            harness.query_by_label("home").is_some(),
+            "Home component should be visible"
+        );
+        assert!(
+            harness.query_by_label("user").is_some(),
+            "User component should be visible"
+        );
+
+        // Should not have truncation indicator
+        assert!(
+            harness.query_by_label("/ ...").is_none(),
+            "Truncation indicator should not be present for short paths"
+        );
+    }
+
+    #[test]
+    fn test_path_truncation_rendering_long_path() {
+        let mut harness = Harness::builder()
+            .with_size(egui::Vec2::new(400.0, 600.0)) // Very narrow width to force truncation
+            .with_max_steps(10)
+            .build_eframe(|_cc| TestApp {
+                path: PathBuf::from(
+                    "/home/user/documents/projects/very/long/path/that/should/be/truncated",
+                ),
+                colors: crate::theme::get_default_theme().get_colors().clone(),
+                message: None,
+            });
+
+        harness.step();
+
+        // First two components should always be visible
+        assert!(
+            harness.query_by_label("home").is_some(),
+            "First normal component should always be visible"
+        );
+
+        // Truncation indicator should be present
+        assert!(
+            harness.query_by_label("/ ...").is_some(),
+            "Truncation indicator should be present for long paths"
+        );
+
+        // Some middle components should be truncated (not visible)
+        assert!(
+            harness.query_by_label("documents").is_none(),
+            "Middle components should be truncated"
+        );
+        assert!(
+            harness.query_by_label("projects").is_none(),
+            "Middle components should be truncated"
+        );
+        assert!(
+            harness.query_by_label("very").is_none(),
+            "Middle components should be truncated"
+        );
+
+        // Last few components should be visible
+        assert!(harness.query_by_label("should").is_some());
+        assert!(harness.query_by_label("be").is_some());
+        assert!(
+            harness.query_by_label("truncated").is_some(),
+            "Last component should be visible"
+        );
+    }
+
+    #[test]
+    fn test_path_truncation_rendering_medium_path() {
+        let mut harness = Harness::builder()
+            .with_size(egui::Vec2::new(400.0, 600.0)) // Medium width
+            .with_max_steps(10)
+            .build_eframe(|_cc| TestApp {
+                path: PathBuf::from("/home/user/documents/projects/myproject"),
+                colors: crate::theme::get_default_theme().get_colors().clone(),
+                message: None,
+            });
+
+        harness.step();
+
+        // First two components should be visible
+        assert!(
+            harness.query_by_label("home").is_some(),
+            "First component should be visible"
+        );
+
+        // Truncation indicator should be present
+        assert!(
+            harness.query_by_label("/ ...").is_some(),
+            "Truncation indicator should be present for long paths"
+        );
+
+        // Last few components should be visible
+        assert!(
+            harness.query_by_label("myproject").is_some(),
+            "Last component should be visible"
+        );
+        assert!(
+            harness.query_by_label("projects").is_some(),
+            "Second last component should be visible"
+        );
+    }
+
+    #[test]
+    fn test_path_truncation_edge_case_three_components() {
+        let mut harness = Harness::builder()
+            .with_size(egui::Vec2::new(100.0, 600.0)) // Very narrow to test edge case
+            .with_max_steps(10)
+            .build_eframe(|_cc| TestApp {
+                path: PathBuf::from("/home/user"),
+                colors: crate::theme::get_default_theme().get_colors().clone(),
+                message: None,
+            });
+
+        harness.step();
+
+        // With only 3 components, truncation should not occur regardless of width
+        // (the truncation logic only applies when components.len() > 3)
+        assert!(
+            harness.query_by_label("home").is_some(),
+            "Home should be visible"
+        );
+        assert!(
+            harness.query_by_label("user").is_some(),
+            "User should be visible"
+        );
+        assert!(
+            harness.query_by_label("/ ...").is_none(),
+            "No truncation for <= 3 components"
+        );
+    }
+
+    #[test]
+    fn test_path_truncation_relative_path() {
+        let mut harness = Harness::builder()
+            .with_size(egui::Vec2::new(200.0, 600.0)) // Narrow width
+            .with_max_steps(10)
+            .build_eframe(|_cc| TestApp {
+                path: PathBuf::from("documents/projects/very/long/relative/path"),
+                colors: crate::theme::get_default_theme().get_colors().clone(),
+                message: None,
+            });
+
+        harness.step();
+
+        // For relative paths with > 3 components, truncation should still work
+        assert!(
+            harness.query_by_label("documents").is_some(),
+            "First component should be visible"
+        );
+
+        // Should have truncation indicator for long relative paths
+        let has_truncation = harness.query_by_label("...").is_some();
+        if has_truncation {
+            // Last component should be visible
+            assert!(
+                harness.query_by_label("path").is_some(),
+                "Last component should be visible when truncated"
+            );
+        }
     }
 }

@@ -5,12 +5,15 @@ use egui::{RichText, Ui};
 pub fn draw(app: &mut Kiorg, ui: &mut Ui) {
     ui.vertical(|ui| {
         ui.horizontal(|ui| {
+            let tab_indexes = app.tab_manager.tab_indexes();
+
             // Path navigation on the left
             ui.with_layout(egui::Layout::left_to_right(egui::Align::LEFT), |ui| {
                 if let Some(message) = path_nav::draw_path_navigation(
                     ui,
                     &app.tab_manager.current_tab_mut().current_path,
                     &app.colors,
+                    tab_indexes.len(),
                 ) {
                     match message {
                         path_nav::PathNavMessage::Navigate(path) => {
@@ -66,7 +69,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui) {
                 ui.add_space(5.0);
 
                 // Tab numbers
-                for (i, is_current) in app.tab_manager.tab_indexes().into_iter().rev() {
+                for (i, is_current) in tab_indexes.into_iter().rev() {
                     let text = format!("{}", i + 1);
                     let color = if is_current {
                         app.colors.highlight

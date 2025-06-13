@@ -759,6 +759,8 @@ impl Kiorg {
 
 impl eframe::App for Kiorg {
     fn update(&mut self, ctx: &egui::Context, _: &mut eframe::Frame) {
+        ctx.set_debug_on_hover(true);
+
         if self
             .notify_fs_change
             .load(std::sync::atomic::Ordering::Relaxed)
