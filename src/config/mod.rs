@@ -51,7 +51,7 @@ impl Config {
             colors: None,
             theme: None,
             sort_preference: None,
-            shortcuts: Some(shortcuts::default_shortcuts()),
+            shortcuts: None,
         }
     }
 }
@@ -131,23 +131,16 @@ pub fn load_config_with_override(
     }
 
     // Parse the user config
-    let mut user_config: Config = match toml::from_str(&contents) {
+    let user_config: Config = match toml::from_str(&contents) {
         Ok(config) => config,
         Err(e) => return Err(ConfigError::TomlError(e, config_path)),
     };
 
-    // Merge user shortcuts with default shortcuts if user provided any
-    if let Some(user_shortcuts) = user_config.shortcuts.take() {
-        let default_shortcuts = shortcuts::default_shortcuts();
-        // Handle shortcut conflicts with the config path
-        let merged_shortcuts = match merge_shortcuts(default_shortcuts, user_shortcuts) {
-            Ok(shortcuts) => shortcuts,
-            Err(e) => return Err(ConfigError::ShortcutConflict(e, config_path)),
-        };
-        user_config.shortcuts = Some(merged_shortcuts);
-    } else {
-        // If no shortcuts provided, use defaults
-        user_config.shortcuts = Some(shortcuts::default_shortcuts());
+    // Validate user shortcuts for conflicts
+    if let Some(ref user_shortcuts) = user_config.shortcuts {
+        if let Err(conflict_error) = validate_user_shortcuts(user_shortcuts) {
+            return Err(ConfigError::ShortcutConflict(conflict_error, config_path));
+        }
     }
 
     Ok(user_config)
@@ -200,50 +193,41 @@ pub fn get_kiorg_config_dir(override_path: Option<&PathBuf>) -> PathBuf {
     }
 }
 
-// Merge default shortcuts with user-provided shortcuts
-// User shortcuts take precedence for any actions they define
-// Returns an error if there are conflicting shortcuts
-fn merge_shortcuts(
-    mut default_shortcuts: shortcuts::Shortcuts,
-    user_shortcuts: shortcuts::Shortcuts,
-) -> Result<shortcuts::Shortcuts, ShortcutConflictError> {
-    // Create a map to track which action each shortcut is assigned to
-    let mut shortcut_map: std::collections::HashMap<
-        &shortcuts::KeyboardShortcut,
-        shortcuts::ShortcutAction,
-    > = std::collections::HashMap::new();
+/// Validate user shortcuts for conflicts
+/// Returns an error if any shortcut is assigned to multiple different actions
+fn validate_user_shortcuts(
+    user_shortcuts: &shortcuts::Shortcuts,
+) -> Result<(), ShortcutConflictError> {
+    use std::collections::HashMap;
 
-    // First, add all default shortcuts to the map
-    for (action, shortcuts_list) in &default_shortcuts {
-        for shortcut in shortcuts_list {
-            shortcut_map.insert(shortcut, *action);
-        }
-    }
+    // Create a map from shortcut to actions that use it
+    let mut shortcut_to_actions: HashMap<
+        shortcuts::KeyboardShortcut,
+        Vec<shortcuts::ShortcutAction>,
+    > = HashMap::new();
 
-    // Check user shortcuts for conflicts with default shortcuts
-    for (action, shortcuts_list) in &user_shortcuts {
+    for (action, shortcuts_list) in user_shortcuts {
         for shortcut in shortcuts_list {
-            // If this shortcut is already assigned to a different action, it's a conflict
-            if let Some(&existing_action) = shortcut_map.get(shortcut) {
-                if existing_action != *action {
-                    return Err(ShortcutConflictError {
-                        shortcut: shortcut.clone(),
-                        action1: existing_action,
-                        action2: *action,
-                    });
-                }
+            // Only add unique actions (don't count duplicates of the same action)
+            let actions_for_shortcut = shortcut_to_actions.entry(shortcut.clone()).or_default();
+
+            if !actions_for_shortcut.contains(action) {
+                actions_for_shortcut.push(*action);
             }
-
-            // Otherwise, add or update the mapping
-            shortcut_map.insert(shortcut, *action);
         }
     }
 
-    // If we get here, there are no conflicts, so apply the user shortcuts
-    for (action, shortcuts_list) in &user_shortcuts {
-        // Replace the default shortcuts for this action with the user's shortcuts
-        default_shortcuts.set_shortcuts(*action, shortcuts_list.clone());
+    // Check for conflicts (shortcuts assigned to multiple different actions)
+    for (shortcut, actions) in shortcut_to_actions {
+        if actions.len() > 1 {
+            // Found a conflict - return error with the first two conflicting actions
+            return Err(ShortcutConflictError {
+                shortcut,
+                action1: actions[0],
+                action2: actions[1],
+            });
+        }
     }
 
-    Ok(default_shortcuts)
+    Ok(())
 }

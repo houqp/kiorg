@@ -4,8 +4,6 @@ use std::path::PathBuf;
 use tempfile::tempdir;
 use ui_test_helpers::create_harness_with_config_dir;
 
-use crate::ui_test_helpers::create_harness;
-
 #[path = "mod/ui_test_helpers.rs"]
 mod ui_test_helpers;
 
@@ -46,15 +44,10 @@ key = "n"
     // Write the config file
     create_config_file(&config_dir, toml_content);
 
-    // Create the test harness
-    let mut harness = create_harness(&temp_dir);
+    // Create the test harness with the custom config directory
+    let mut harness = create_harness_with_config_dir(&temp_dir, config_temp_dir);
 
-    // Override the config directory to use our custom one
-    harness.state_mut().config_dir_override = Some(config_dir.clone());
-
-    // Reload the config from the custom directory
-    harness.state_mut().config =
-        kiorg::config::load_config_with_override(Some(&config_dir)).expect("Failed to load config");
+    // Refresh entries to make sure the files are loaded
     harness.state_mut().refresh_entries();
     harness.step();
 
@@ -111,15 +104,8 @@ fn test_default_shortcuts() {
     // Write the config file
     create_config_file(&config_dir, toml_content);
 
-    // Create the test harness
-    let mut harness = create_harness(&temp_dir);
-
-    // Override the config directory to use our custom one
-    harness.state_mut().config_dir_override = Some(config_dir.clone());
-
-    // Reload the config from the custom directory
-    harness.state_mut().config =
-        kiorg::config::load_config_with_override(Some(&config_dir)).expect("Failed to load config");
+    // Create the test harness with the custom config directory
+    let mut harness = create_harness_with_config_dir(&temp_dir, config_temp_dir);
 
     // Refresh entries to make sure the files are loaded
     harness.state_mut().refresh_entries();
@@ -187,15 +173,8 @@ shift = true
     // Write the config file
     create_config_file(&config_dir, toml_content);
 
-    // Create the test harness
-    let mut harness = create_harness(&temp_dir);
-
-    // Override the config directory to use our custom one
-    harness.state_mut().config_dir_override = Some(config_dir.clone());
-
-    // Reload the config from the custom directory
-    harness.state_mut().config =
-        kiorg::config::load_config_with_override(Some(&config_dir)).expect("Failed to load config");
+    // Create the test harness with the custom config directory
+    let mut harness = create_harness_with_config_dir(&temp_dir, config_temp_dir);
 
     // Refresh entries to make sure the files are loaded
     harness.state_mut().refresh_entries();

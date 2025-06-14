@@ -168,6 +168,8 @@ pub struct Kiorg {
     pub config_dir_override: Option<PathBuf>,
     // Application configuration
     pub config: config::Config,
+    // Merged shortcuts (defaults + user overrides) for runtime use
+    pub merged_shortcuts: config::shortcuts::Shortcuts,
     // Application colors
     pub colors: AppColors,
     // Toast notifications
@@ -215,6 +217,15 @@ impl Kiorg {
         config_dir_override: Option<PathBuf>,
     ) -> Result<Self, KiorgError> {
         let config = config::load_config_with_override(config_dir_override.as_ref())?;
+
+        // Create merged shortcuts: start with defaults and apply user overrides
+        let mut merged_shortcuts = config::shortcuts::default_shortcuts();
+        if let Some(user_shortcuts) = &config.shortcuts {
+            // Apply user shortcuts over defaults
+            for (action, shortcuts_list) in user_shortcuts {
+                merged_shortcuts.set_shortcuts(*action, shortcuts_list.clone());
+            }
+        }
 
         // Load colors based on theme name from config
         let colors = crate::theme::Theme::load_colors_from_config(&config);
@@ -281,6 +292,7 @@ impl Kiorg {
             bookmarks,
             config_dir_override, // Use the provided config_dir_override
             config,              // Store the loaded config
+            merged_shortcuts,    // Initialize merged_shortcuts
             colors,              // Add the colors field here
             toasts: Toasts::default().with_anchor(egui_notify::Anchor::BottomLeft),
             selection_changed: true,
@@ -319,13 +331,7 @@ impl Kiorg {
     /// This method provides a centralized way to access shortcuts configuration
     /// that can be reused across the main input handler and popup components
     pub fn get_shortcuts(&self) -> &crate::config::shortcuts::Shortcuts {
-        match &self.config.shortcuts {
-            Some(shortcuts) => shortcuts,
-            None => {
-                // If no shortcuts are configured, use the default ones
-                crate::config::shortcuts::get_default_shortcuts()
-            }
-        }
+        &self.merged_shortcuts
     }
 
     /// Extract shortcut action from egui input events
