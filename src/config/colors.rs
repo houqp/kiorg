@@ -1,112 +1,142 @@
 use egui::Color32;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 // Helper function to convert hex string to Color32
+// Returns an error for invalid hex strings
 #[must_use]
-pub fn hex_to_color32(hex: &str) -> Color32 {
+pub fn hex_to_color32(hex: &str) -> Result<Color32, String> {
     let hex = hex.trim_start_matches('#');
-    let r = u8::from_str_radix(&hex[0..2], 16).unwrap_or(0);
-    let g = u8::from_str_radix(&hex[2..4], 16).unwrap_or(0);
-    let b = u8::from_str_radix(&hex[4..6], 16).unwrap_or(0);
-    Color32::from_rgb(r, g, b)
+
+    // Ensure hex string is at least 6 characters long
+    if hex.len() < 6 {
+        return Err(format!(
+            "Hex color string '{}' is too short, expected at least 6 characters",
+            hex
+        ));
+    }
+    let r = u8::from_str_radix(&hex[0..2], 16)
+        .map_err(|_| format!("Failed to parse red component from '{}'", &hex[0..2]))?;
+    let g = u8::from_str_radix(&hex[2..4], 16)
+        .map_err(|_| format!("Failed to parse green component from '{}'", &hex[2..4]))?;
+    let b = u8::from_str_radix(&hex[4..6], 16)
+        .map_err(|_| format!("Failed to parse blue component from '{}'", &hex[4..6]))?;
+
+    Ok(Color32::from_rgb(r, g, b))
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
-pub struct ColorScheme {
-    pub bg: String,
-    // Background for marked elements
-    pub bg_light: String,
-    // Background for scrollbars and text edit areas including the search bar
-    pub bg_extreme: String,
-    pub fg: String,
-    pub highlight: String,
-    pub link_text: String,
-    // Links and cursor
-    pub link_underscore: String,
-    pub bg_selected: String,
-    // Background color for window title bar.
-    pub bg_fill: String,
-    // Background color for buttons.
-    pub bg_interactive_fill: String,
-    // Background color for elements that are being actively interacted with (e.g. clicked)
-    pub bg_active: String,
-    pub fg_selected: String,
-    pub fg_light: String,
-    // Folder names and Grid title
-    pub fg_folder: String,
-    pub success: String,
-    pub warn: String,
-    pub error: String,
+// Helper function to convert Color32 to hex string
+#[inline]
+fn color32_to_hex(color: Color32) -> String {
+    format!("#{:02x}{:02x}{:02x}", color.r(), color.g(), color.b())
 }
 
-#[derive(Clone, Debug)]
+// Custom serialization for Color32 as hex string
+fn serialize_color<S>(color: &Color32, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    serializer.serialize_str(&color32_to_hex(*color))
+}
+
+// Custom deserialization for Color32 from hex string
+fn deserialize_color<'de, D>(deserializer: D) -> Result<Color32, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let hex = String::deserialize(deserializer)?;
+    hex_to_color32(&hex).map_err(serde::de::Error::custom)
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AppColors {
+    #[serde(
+        serialize_with = "serialize_color",
+        deserialize_with = "deserialize_color"
+    )]
     pub fg: Color32,
+    #[serde(
+        serialize_with = "serialize_color",
+        deserialize_with = "deserialize_color"
+    )]
     pub bg: Color32,
+    #[serde(
+        serialize_with = "serialize_color",
+        deserialize_with = "deserialize_color"
+    )]
     pub bg_light: Color32,
+    #[serde(
+        serialize_with = "serialize_color",
+        deserialize_with = "deserialize_color"
+    )]
     pub bg_extreme: Color32,
+    #[serde(
+        serialize_with = "serialize_color",
+        deserialize_with = "deserialize_color"
+    )]
     pub bg_selected: Color32,
+    #[serde(
+        serialize_with = "serialize_color",
+        deserialize_with = "deserialize_color"
+    )]
     pub bg_fill: Color32,
+    #[serde(
+        serialize_with = "serialize_color",
+        deserialize_with = "deserialize_color"
+    )]
     pub bg_interactive_fill: Color32,
+    #[serde(
+        serialize_with = "serialize_color",
+        deserialize_with = "deserialize_color"
+    )]
     pub bg_active: Color32,
+    #[serde(
+        serialize_with = "serialize_color",
+        deserialize_with = "deserialize_color"
+    )]
     pub fg_selected: Color32,
+    #[serde(
+        serialize_with = "serialize_color",
+        deserialize_with = "deserialize_color"
+    )]
     pub fg_light: Color32,
+    #[serde(
+        serialize_with = "serialize_color",
+        deserialize_with = "deserialize_color"
+    )]
     pub fg_folder: Color32,
+    #[serde(
+        serialize_with = "serialize_color",
+        deserialize_with = "deserialize_color"
+    )]
     pub highlight: Color32,
+    #[serde(
+        serialize_with = "serialize_color",
+        deserialize_with = "deserialize_color"
+    )]
     pub link_text: Color32,
+    #[serde(
+        serialize_with = "serialize_color",
+        deserialize_with = "deserialize_color"
+    )]
     pub link_underscore: Color32,
+    #[serde(
+        serialize_with = "serialize_color",
+        deserialize_with = "deserialize_color"
+    )]
     pub warn: Color32,
+    #[serde(
+        serialize_with = "serialize_color",
+        deserialize_with = "deserialize_color"
+    )]
     pub error: Color32,
+    #[serde(
+        serialize_with = "serialize_color",
+        deserialize_with = "deserialize_color"
+    )]
     pub success: Color32,
 }
 
 impl AppColors {
-    #[must_use]
-    pub fn from_scheme(config: &ColorScheme) -> Self {
-        Self {
-            bg: hex_to_color32(&config.bg),
-            bg_light: hex_to_color32(&config.bg_light),
-            bg_extreme: hex_to_color32(&config.bg_extreme),
-            bg_fill: hex_to_color32(&config.bg_fill),
-            bg_active: hex_to_color32(&config.bg_active),
-            bg_interactive_fill: hex_to_color32(&config.bg_interactive_fill),
-            fg: hex_to_color32(&config.fg),
-            bg_selected: hex_to_color32(&config.bg_selected),
-            fg_selected: hex_to_color32(&config.fg_selected),
-            fg_light: hex_to_color32(&config.fg_light),
-            fg_folder: hex_to_color32(&config.fg_folder),
-            highlight: hex_to_color32(&config.highlight),
-            link_text: hex_to_color32(&config.link_text),
-            error: hex_to_color32(&config.error),
-            warn: hex_to_color32(&config.warn),
-            success: hex_to_color32(&config.success),
-            link_underscore: hex_to_color32(&config.link_underscore),
-        }
-    }
-
-    #[must_use]
-    pub fn to_color_scheme(&self) -> ColorScheme {
-        ColorScheme {
-            bg: color32_to_hex(self.bg),
-            bg_light: color32_to_hex(self.bg_light),
-            bg_extreme: color32_to_hex(self.bg_extreme),
-            bg_active: color32_to_hex(self.bg_active),
-            bg_fill: color32_to_hex(self.bg_fill),
-            bg_interactive_fill: color32_to_hex(self.bg_interactive_fill),
-            fg: color32_to_hex(self.fg),
-            bg_selected: color32_to_hex(self.bg_selected),
-            fg_selected: color32_to_hex(self.fg_selected),
-            fg_light: color32_to_hex(self.fg_light),
-            fg_folder: color32_to_hex(self.fg_folder),
-            highlight: color32_to_hex(self.highlight),
-            link_text: color32_to_hex(self.link_text),
-            link_underscore: color32_to_hex(self.link_underscore),
-            error: color32_to_hex(self.error),
-            warn: color32_to_hex(self.warn),
-            success: color32_to_hex(self.success),
-        }
-    }
-
     #[must_use]
     pub fn to_visuals(&self) -> egui::Visuals {
         let mut visuals = egui::Visuals::dark();
@@ -169,63 +199,9 @@ impl AppColors {
     }
 }
 
-// Helper function to convert Color32 to hex string
-#[inline]
-fn color32_to_hex(color: Color32) -> String {
-    format!("#{:02x}{:02x}{:02x}", color.r(), color.g(), color.b())
-}
-
-// Custom serialization for AppColors
-impl Serialize for AppColors {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let scheme = self.to_color_scheme();
-        scheme.serialize(serializer)
-    }
-}
-
-// Custom deserialization for AppColors
-impl<'de> Deserialize<'de> for AppColors {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let scheme = ColorScheme::deserialize(deserializer)?;
-        Ok(Self::from_scheme(&scheme))
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_app_colors_from_config() {
-        // Create a test scheme to verify conversion works
-        let test_scheme = ColorScheme {
-            bg: "#2c2e34".to_string(),
-            bg_light: "#3b3e48".to_string(),
-            bg_extreme: "#1a1a1a".to_string(),
-            fg: "#e2e2e3".to_string(),
-            highlight: "#e7c664".to_string(),
-            link_text: "#b39df3".to_string(),
-            link_underscore: "#76cce0".to_string(),
-            bg_selected: "#45475a".to_string(),
-            bg_fill: "#2d2d2d".to_string(),
-            bg_interactive_fill: "#3c3c3c".to_string(),
-            bg_active: "#373737".to_string(),
-            fg_selected: "#e2e2e3".to_string(),
-            fg_light: "#7f8490".to_string(),
-            fg_folder: "#7f84de".to_string(),
-            success: "#9ed072".to_string(),
-            warn: "#f39660".to_string(),
-            error: "#fc5d7c".to_string(),
-        };
-        let converted_colors = AppColors::from_scheme(&test_scheme);
-        assert_eq!(color32_to_hex(converted_colors.bg), test_scheme.bg);
-    }
 
     #[test]
     fn test_color32_to_hex() {
@@ -244,10 +220,94 @@ mod tests {
 
     #[test]
     fn test_hex_to_color32() {
-        assert_eq!(hex_to_color32("#ff0000"), Color32::from_rgb(255, 0, 0));
-        assert_eq!(hex_to_color32("00ff00"), Color32::from_rgb(0, 255, 0));
-        assert_eq!(hex_to_color32("#0000ff"), Color32::from_rgb(0, 0, 255));
-        // Test invalid input
-        assert_eq!(hex_to_color32("invalid"), Color32::from_rgb(0, 0, 0));
+        // Valid color strings
+        assert_eq!(hex_to_color32("#ff0000"), Ok(Color32::from_rgb(255, 0, 0)));
+        assert_eq!(hex_to_color32("00ff00"), Ok(Color32::from_rgb(0, 255, 0)));
+        assert_eq!(hex_to_color32("#0000ff"), Ok(Color32::from_rgb(0, 0, 255)));
+        assert_eq!(
+            hex_to_color32("#ffffff"),
+            Ok(Color32::from_rgb(255, 255, 255))
+        );
+        assert_eq!(hex_to_color32("#000000"), Ok(Color32::from_rgb(0, 0, 0)));
+
+        // Test various invalid inputs - all should return errors
+
+        // Invalid characters
+        assert!(hex_to_color32("invalid").is_err());
+        assert!(hex_to_color32("#gggggg").is_err());
+        assert!(hex_to_color32("not_a_color").is_err());
+        assert!(hex_to_color32("#zzzzzz").is_err());
+
+        // Short strings
+        assert!(hex_to_color32("#12345").is_err());
+        assert!(hex_to_color32("#123").is_err());
+        assert!(hex_to_color32("#ff").is_err());
+        assert!(hex_to_color32("").is_err());
+        assert!(hex_to_color32("#").is_err());
+
+        // Mixed valid/invalid characters
+        assert!(hex_to_color32("#ff00gg").is_err());
+        assert!(hex_to_color32("#12g456").is_err());
+
+        // Valid uppercase
+        assert_eq!(hex_to_color32("#FF0000"), Ok(Color32::from_rgb(255, 0, 0)));
+        assert_eq!(
+            hex_to_color32("#ABCDEF"),
+            Ok(Color32::from_rgb(171, 205, 239))
+        );
+
+        // Test specific error messages
+        assert_eq!(
+            hex_to_color32("#12345").unwrap_err(),
+            "Hex color string '12345' is too short, expected at least 6 characters"
+        );
+        assert_eq!(
+            hex_to_color32("#gggggg").unwrap_err(),
+            "Failed to parse red component from 'gg'"
+        );
+    }
+
+    #[test]
+    fn test_app_colors_serialization() {
+        let app_colors = AppColors {
+            bg: Color32::from_rgb(44, 46, 52),
+            bg_light: Color32::from_rgb(59, 62, 72),
+            bg_extreme: Color32::from_rgb(34, 34, 34),
+            fg: Color32::from_rgb(226, 226, 227),
+            highlight: Color32::from_rgb(231, 198, 100),
+            link_text: Color32::from_rgb(179, 157, 243),
+            link_underscore: Color32::from_rgb(118, 204, 224),
+            bg_selected: Color32::from_rgb(69, 71, 90),
+            bg_fill: Color32::from_rgb(45, 45, 45),
+            bg_interactive_fill: Color32::from_rgb(60, 60, 60),
+            bg_active: Color32::from_rgb(55, 55, 55),
+            fg_selected: Color32::from_rgb(226, 226, 227),
+            fg_light: Color32::from_rgb(127, 132, 144),
+            fg_folder: Color32::from_rgb(127, 132, 222),
+            success: Color32::from_rgb(158, 208, 114),
+            warn: Color32::from_rgb(243, 150, 96),
+            error: Color32::from_rgb(252, 93, 124),
+        };
+
+        // Test serialization
+        let serialized = serde_json::to_string(&app_colors).expect("Failed to serialize");
+        assert!(serialized.contains("\"bg\":\"#2c2e34\""));
+        assert!(serialized.contains("\"fg\":\"#e2e2e3\""));
+
+        // Test deserialization
+        let deserialized: AppColors =
+            serde_json::from_str(&serialized).expect("Failed to deserialize");
+        assert_eq!(deserialized.bg, app_colors.bg);
+        assert_eq!(deserialized.fg, app_colors.fg);
+        assert_eq!(deserialized.highlight, app_colors.highlight);
+    }
+
+    #[test]
+    fn test_app_colors_deserialization_with_invalid_color() {
+        // Simple test with one invalid color to verify error handling
+        let json = "{\"bg\":\"invalid_color\",\"fg\":\"#ffffff\",\"bg_light\":\"#000000\",\"bg_extreme\":\"#000000\",\"bg_selected\":\"#000000\",\"bg_fill\":\"#000000\",\"bg_interactive_fill\":\"#000000\",\"bg_active\":\"#000000\",\"fg_selected\":\"#ffffff\",\"fg_light\":\"#808080\",\"fg_folder\":\"#808080\",\"highlight\":\"#ffff00\",\"link_text\":\"#0064ff\",\"link_underscore\":\"#0064ff\",\"warn\":\"#ffa500\",\"error\":\"#ff0000\",\"success\":\"#00ff00\"}";
+
+        let result: Result<AppColors, _> = serde_json::from_str(json);
+        assert!(result.is_err());
     }
 }

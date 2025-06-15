@@ -6,18 +6,18 @@ use crate::theme::Theme;
 use super::window_utils::new_center_popup_window;
 
 /// Helper function to apply a theme and save it to the configuration
-fn apply_and_save_theme(app: &mut Kiorg, theme_selection: &Theme, ctx: &egui::Context) {
-    let new_colors = theme_selection.get_colors();
+fn apply_and_save_theme(app: &mut Kiorg, theme: &Theme, ctx: &egui::Context) {
+    let new_colors = theme.get_colors().clone();
 
     // Apply the new theme to the app colors
-    app.colors = new_colors.clone();
+    app.colors = new_colors;
 
     // Apply the new theme to the UI context
     ctx.set_visuals(app.colors.to_visuals());
 
     // Update the configuration with theme key only, set colors to None to keep config short
     app.config.colors = None;
-    app.config.theme = Some(theme_selection.theme_key().to_string());
+    app.config.theme = Some(theme.theme_key().to_string());
 
     // Save the configuration
     if let Err(e) = config::save_config_with_override(&app.config, app.config_dir_override.as_ref())
@@ -29,9 +29,9 @@ fn apply_and_save_theme(app: &mut Kiorg, theme_selection: &Theme, ctx: &egui::Co
 /// Helper function to display themes in a grid layout
 fn display_themes_grid(
     ui: &mut egui::Ui,
-    themes: &[&Theme],
+    themes: &[Theme],
     selected_theme_key: &str,
-    current_theme: &Theme,
+    current_theme_key: &str,
     colors: &crate::config::colors::AppColors,
 ) -> Option<Theme> {
     let mut selected_theme: Option<&Theme> = None;
@@ -60,7 +60,7 @@ fn display_themes_grid(
         .show(ui, |ui| {
             for theme in themes {
                 let is_selected = theme.theme_key() == selected_theme_key;
-                let is_current = theme.theme_key() == current_theme.theme_key();
+                let is_current = theme.theme_key() == current_theme_key;
 
                 let theme_text = theme.display_name();
                 let theme_color = if is_current {
@@ -98,13 +98,16 @@ pub fn draw(app: &mut Kiorg, ctx: &egui::Context) {
         "dark_kiorg".to_string()
     };
 
-    // Get current theme from the selected theme key
-    let current_theme =
-        Theme::from_theme_key(&selected_theme_key).unwrap_or_else(crate::theme::get_default_theme); // Default fallback
+    // Get current theme key from config
+    let current_theme_key = app
+        .config
+        .theme
+        .clone()
+        .unwrap_or_else(|| "dark_kiorg".to_string());
 
     let mut keep_open = true;
-    // Get list of all themes
-    let themes = Theme::all_themes();
+    // Get list of all themes including custom ones
+    let themes = Theme::all_themes_with_custom(&app.config);
 
     // Find current theme index for navigation
     let current_selected_index = themes
@@ -143,7 +146,11 @@ pub fn draw(app: &mut Kiorg, ctx: &egui::Context) {
             }
             ShortcutAction::OpenDirectoryOrFile => {
                 if !themes.is_empty() {
-                    if let Some(selected_theme) = Theme::from_theme_key(&new_selected_theme_key) {
+                    // Find the selected theme entry
+                    if let Some(selected_theme) = themes
+                        .iter()
+                        .find(|t| t.theme_key() == new_selected_theme_key)
+                    {
                         // Apply and save the selected theme
                         apply_and_save_theme(app, selected_theme, ctx);
                         app.show_popup = None;
@@ -157,10 +164,13 @@ pub fn draw(app: &mut Kiorg, ctx: &egui::Context) {
 
     // Apply preview theme when theme key changes
     if theme_key_changed {
-        if let Some(preview_theme) = Theme::from_theme_key(&new_selected_theme_key) {
+        if let Some(preview_theme) = themes
+            .iter()
+            .find(|t| t.theme_key() == new_selected_theme_key)
+        {
             // Apply the theme immediately for preview
-            let new_colors = preview_theme.get_colors();
-            app.colors = new_colors.clone();
+            let new_colors = preview_theme.get_colors().clone();
+            app.colors = new_colors;
             ctx.set_visuals(app.colors.to_visuals());
 
             // Update the popup with the new selected theme key
@@ -178,9 +188,9 @@ pub fn draw(app: &mut Kiorg, ctx: &egui::Context) {
             egui::ScrollArea::vertical().show(ui, |ui| {
                 if let Some(theme) = display_themes_grid(
                     ui,
-                    themes,
+                    &themes,
                     &new_selected_theme_key,
-                    current_theme,
+                    &current_theme_key,
                     &app.colors,
                 ) {
                     selected_theme = Some(theme);
