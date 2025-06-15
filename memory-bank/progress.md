@@ -40,12 +40,13 @@
 * 'g' namespace key similar to Vim for special shortcut combinations
 * Soft/hard link files display with dedicated icons
 * Directory history navigation with Ctrl+O (back) and Ctrl+I (forward) within each tab
+* Async delete operations with progress dialog to prevent UI blocking
+* Benchmarking infrastructure for performance monitoring
 
 ### What's left to build
 
 * Shortcut to toggle sort
 * Fuzzy directory jump (integrate with fzf)
-* Case-sensitive/insensitive search toggle
 * Regular expression search support
 * Renaming a file doesn't clear the image rendering cache, so it still displays the old image
 * render PDF preview using pdfium_render or pathfinder_rasterize

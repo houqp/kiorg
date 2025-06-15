@@ -2,20 +2,24 @@
 
 ### Current work focus
 
-- Column sort order persistence feature is now fully implemented and tested. User sort preferences are reliably loaded and saved between sessions, enhancing UX.
-- Improved search filter feature with robust visual highlighting and support for large directories, Unicode, and long filenames.
-- Enhanced preview functionality with support for PDF and EPUB files, displaying metadata and rendered content.
+- Async delete operations have been implemented with progress dialog to prevent UI blocking during large file deletions
+- Performance optimizations completed for search functionality and center panel rendering to reduce UI lag
+- Theme and colorscheme system has been refactored for improved maintainability and code organization
+- Benchmarking infrastructure added to monitor and improve performance
+- Various UI improvements including fixed navigation path truncation and left panel scrolling issues
 
 ### Next steps
 
-1. Test the search filter feature thoroughly, especially with:
-   - Large directories
-   - Unicode characters
-   - Very long filenames
-   - Empty search queries
-2. Consider implementing other features from the backlog (e.g., create new file/folder shortcuts, case-sensitive/insensitive search toggle).
-3. Ensure all future UI development follows the patterns documented in the UI style guide.
-4. Continue maintaining and updating the Memory Bank.
+1. Continue optimizing performance based on benchmark results
+2. Consider implementing remaining features from the backlog:
+   - Shortcut to toggle sort
+   - Fuzzy directory jump (integrate with fzf)
+   - Regular expression search support
+3. Fix known issues:
+   - Renaming a file doesn't clear the image rendering cache, so it still displays the old image
+   - Implement PDF preview using pdfium or pathfinder_rasterize
+4. Ensure all future UI development follows the patterns documented in the UI style guide
+5. Continue maintaining and updating the Memory Bank
 
 ### Important patterns and preferences
 
@@ -38,7 +42,10 @@
 - Persisting user preferences enhances the user experience significantly
 - The serde library makes it straightforward to serialize and deserialize Rust structs to and from TOML
 - Modular code organization makes it easier to implement new features without introducing bugs
-- Confirmed that persisting user preferences (like sort order) significantly improves user experience and is technically straightforward with serde/TOML.
-- Ensured backward compatibility when expanding the config file for new preferences.
-- Reinforced the value of immediate persistence (saving on change) for user settings, rather than on exit.
-- Returning final data structures directly from functions rather than intermediate results improves code organization and reduces duplication.
+- Confirmed that persisting user preferences (like sort order) significantly improves user experience and is technically straightforward with serde/TOML
+- Ensured backward compatibility when expanding the config file for new preferences
+- Reinforced the value of immediate persistence (saving on change) for user settings, rather than on exit
+- Returning final data structures directly from functions rather than intermediate results improves code organization and reduces duplication
+- Async operations are crucial for maintaining responsive UI, especially for potentially long-running tasks like file operations
+- Performance benchmarking provides valuable insights for optimization efforts
+- Breaking large operations into background threads with progress reporting greatly improves user experience

@@ -11,6 +11,8 @@ The configuration system has been expanded to include user preferences such as c
 *   Using TOML for configuration files.
 *   Using serde for serialization and deserialization of configuration data.
 *   Implementing user preference persistence for improved user experience.
+*   Implementing async operations for long-running tasks to prevent UI blocking.
+*   Adding performance benchmarking infrastructure for optimization guidance.
 
 ### Design patterns in use
 *   Composition over inheritance.
