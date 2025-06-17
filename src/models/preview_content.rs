@@ -91,8 +91,19 @@ pub enum PreviewContent {
     Pdf(PdfMeta),
     /// EPUB document without page navigation
     Epub(EpubMeta),
+    /// Directory content with a list of entries
+    Directory(Vec<DirectoryEntry>),
     /// Loading state with path being loaded and optional receiver for async loading
     Loading(PathBuf, PreviewReceiver),
+}
+
+/// Represents an entry in a directory listing for preview
+#[derive(Clone, Debug)]
+pub struct DirectoryEntry {
+    /// Name of the entry (file or directory)
+    pub name: String,
+    /// Whether the entry is a directory
+    pub is_dir: bool,
 }
 
 /// Represents an entry in a zip file
@@ -131,6 +142,12 @@ impl PreviewContent {
     #[must_use]
     pub const fn zip(entries: Vec<ZipEntry>) -> Self {
         Self::Zip(entries)
+    }
+
+    /// Creates a new directory preview content from a list of entries
+    #[must_use]
+    pub const fn directory(entries: Vec<DirectoryEntry>) -> Self {
+        Self::Directory(entries)
     }
 
     /// Creates a new loading preview content for a path

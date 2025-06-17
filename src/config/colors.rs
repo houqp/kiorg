@@ -3,7 +3,6 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 // Helper function to convert hex string to Color32
 // Returns an error for invalid hex strings
-#[must_use]
 pub fn hex_to_color32(hex: &str) -> Result<Color32, String> {
     let hex = hex.trim_start_matches('#');
 

@@ -1,5 +1,6 @@
 //! Preview content modules for different file types
 
+pub mod directory;
 pub mod doc;
 pub mod image;
 pub mod loading;
@@ -8,6 +9,16 @@ pub mod zip;
 
 use crate::app::Kiorg;
 use crate::models::preview_content::PreviewContent;
+
+#[inline]
+pub fn prefix_file_name(name: &str) -> String {
+    format!("📄 {}", name)
+}
+
+#[inline]
+pub fn prefix_dir_name(name: &str) -> String {
+    format!("📁 {}", name)
+}
 
 /// Update the preview cache based on the selected file
 pub fn update_cache(app: &mut Kiorg, ctx: &egui::Context) {
@@ -35,10 +46,10 @@ pub fn update_cache(app: &mut Kiorg, ctx: &egui::Context) {
     };
 
     if entry.is_dir {
-        app.preview_content = Some(PreviewContent::text(format!(
-            "Directory: {}",
-            entry.path.file_name().unwrap_or_default().to_string_lossy()
-        )));
+        loading::load_preview_async(app, entry.path, |path| {
+            let result = directory::read_dir_entries(&path);
+            result.map(PreviewContent::directory)
+        });
         return;
     }
 
@@ -78,5 +89,28 @@ pub fn update_cache(app: &mut Kiorg, ctx: &egui::Context) {
             }
             text::load_async(app, entry.path, size);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_prefix_file_name_uses_nbsp() {
+        let file_name = "test_file.txt";
+        let prefixed_name = prefix_file_name(file_name);
+        // Expected: "📄 test_file.txt" (with NBSP between icon and name)
+        assert_eq!(prefixed_name, format!("📄{}test_file.txt", '\u{00A0}'));
+        assert_eq!(prefixed_name.chars().nth(1), Some('\u{00A0}'));
+    }
+
+    #[test]
+    fn test_prefix_dir_name_uses_nbsp() {
+        let dir_name = "test_dir";
+        let prefixed_name = prefix_dir_name(dir_name);
+        // Expected: "📁 test_dir" (with NBSP between icon and name)
+        assert_eq!(prefixed_name, format!("📁{}test_dir", '\u{00A0}'));
+        assert_eq!(prefixed_name.chars().nth(1), Some('\u{00A0}'));
     }
 }

@@ -356,24 +356,11 @@ fn test_mouse_click_selects_and_previews() {
         Some(PreviewContent::Epub(_)) => {
             panic!("Preview content should be Text variant, not EPUB")
         }
-        Some(PreviewContent::Loading(..)) => {
-            // Wait for loading to complete
-            for _ in 0..100 {
-                harness.step();
-                if let Some(PreviewContent::Text(_)) = &harness.state().preview_content {
-                    break;
-                }
-                std::thread::sleep(std::time::Duration::from_millis(10));
-            }
-            // Check again after waiting
-            if let Some(PreviewContent::Text(text)) = &harness.state().preview_content {
-                assert!(
-                    text.contains("Content of b.txt"),
-                    "Preview content should contain 'Content of b.txt' after loading"
-                );
-            } else {
-                panic!("Preview content should be Text variant after loading completes");
-            }
+        Some(PreviewContent::Directory(_)) => {
+            panic!("Preview content should be Text variant, not Directory")
+        }
+        Some(other) => {
+            panic!("Preview content should be Text variant, got {other:?}");
         }
         None => panic!("Preview content should not be None"),
     }
@@ -498,6 +485,9 @@ fn test_image_preview() {
         }
         Some(PreviewContent::Epub(_)) => {
             panic!("Preview content should be Image variant, not EPUB");
+        }
+        Some(PreviewContent::Directory(_)) => {
+            panic!("Preview content should be Image variant, not Directory");
         }
         Some(other) => {
             panic!("Preview content should be Image variant, got {other:?}");

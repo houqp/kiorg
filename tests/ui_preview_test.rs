@@ -103,6 +103,10 @@ fn test_directory_preview() {
     let dir_path = temp_dir.path().join("subdir");
     std::fs::create_dir(&dir_path).unwrap();
 
+    let binary_path = dir_path.join("binary.bin");
+    let binary_data = [0x00, 0x01, 0x02, 0x03, 0xFF, 0xFE, 0xFD, 0xFC];
+    std::fs::write(&binary_path, binary_data).unwrap();
+
     // Start the harness
     let mut harness = create_harness(&temp_dir);
 
@@ -113,7 +117,7 @@ fn test_directory_preview() {
 
     for _ in 0..100 {
         match harness.state().preview_content.as_ref() {
-            Some(PreviewContent::Text(_)) => break, // Text preview loaded
+            Some(PreviewContent::Directory(_)) => break,
             _ => {
                 std::thread::sleep(std::time::Duration::from_millis(10));
                 harness.step(); // Continue stepping until the text preview loads
@@ -123,14 +127,14 @@ fn test_directory_preview() {
 
     // Check if the preview content is text and indicates it's a directory
     match &harness.state().preview_content {
-        Some(PreviewContent::Text(text)) => {
+        Some(PreviewContent::Directory(dirs)) => {
             assert!(
-                text.contains("Directory:") && text.contains("subdir"),
-                "Preview content should indicate it's a directory"
+                dirs.iter().any(|d| d.name == "binary.bin" && !d.is_dir),
+                "Preview content should show directory entries in preview"
             );
         }
         Some(other) => {
-            panic!("Preview content should be Text variant, got {other:?}");
+            panic!("Preview content should be Directory variant, got {other:?}");
         }
         None => panic!("Preview content should not be None"),
     }

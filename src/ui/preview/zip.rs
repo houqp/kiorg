@@ -2,6 +2,7 @@
 
 use crate::config::colors::AppColors;
 use crate::models::preview_content::ZipEntry;
+use crate::ui::preview::{prefix_dir_name, prefix_file_name};
 use egui::RichText;
 use std::fs::File;
 use std::path::Path;
@@ -36,11 +37,10 @@ pub fn render(ui: &mut egui::Ui, entries: &[ZipEntry], colors: &AppColors) {
             // Display entries in the visible range
             for row_index in row_range {
                 let entry = &entries[row_index];
-                // Create a visual indicator for directories
                 let entry_text = if entry.is_dir {
-                    RichText::new(format!("📁 {}", entry.name)).strong()
+                    RichText::new(prefix_dir_name(&entry.name)).strong()
                 } else {
-                    RichText::new(format!("📄 {}", entry.name))
+                    RichText::new(prefix_file_name(&entry.name))
                 };
 
                 ui.label(entry_text.color(colors.fg));

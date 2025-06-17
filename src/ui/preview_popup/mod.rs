@@ -30,7 +30,8 @@ pub fn handle_show_file_preview(app: &mut Kiorg, _ctx: &egui::Context) {
     };
 
     if is_dir {
-        // TODO: preview directory by storage size?
+        // Show preview popup for directories
+        app.show_popup = Some(PopupType::Preview);
         return;
     }
 
