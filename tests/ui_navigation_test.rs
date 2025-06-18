@@ -335,7 +335,17 @@ fn test_mouse_click_selects_and_previews() {
         Some(test_files[1].clone()),
         "Cached preview path should be b.txt after selection"
     );
-    // Check if the preview content is text and contains the expected content
+    // wait for preview to be completed
+    for _ in 0..100 {
+        harness.step();
+        match harness.state().preview_content {
+            Some(PreviewContent::Text(_)) => {
+                break;
+            }
+            _ => {}
+        }
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    }
     match &harness.state().preview_content {
         Some(PreviewContent::Text(text)) => {
             assert!(
@@ -443,9 +453,6 @@ fn test_image_preview() {
     harness.press_key(Key::J);
     harness.step();
     harness.press_key(Key::K);
-    harness.step();
-
-    // Step to update the preview
     harness.step();
 
     // Check if the preview content is an image
