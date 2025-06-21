@@ -369,6 +369,13 @@ impl Kiorg {
         // so always refocus left panel after refresh
         self.scroll_left_panel = true;
 
+        // Restore search filter if it was active before refresh
+        if self.search_bar.query.is_some() {
+            let case_insensitive = self.search_bar.case_insensitive;
+            let tab = self.tab_manager.current_tab_mut();
+            tab.update_filtered_cache(&self.search_bar.query, case_insensitive);
+        }
+
         // --- Start: Restore Selection Preservation (Post-Sort) ---
         if let Some(prev_path) = &self.prev_path {
             self.tab_manager.select_child(prev_path);

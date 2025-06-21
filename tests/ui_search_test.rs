@@ -2,6 +2,10 @@
 mod ui_test_helpers;
 
 use egui::Key;
+use std::fs::File;
+use std::io::Write;
+use std::thread;
+use std::time::Duration;
 use tempfile::tempdir;
 use ui_test_helpers::{create_harness, create_test_files};
 
@@ -423,5 +427,157 @@ fn test_search_escape_clears_query_and_resets_file_list() {
     assert!(
         filtered_names.contains(&"cherry.txt"),
         "File list should contain cherry.txt"
+    );
+}
+
+// Helper function to wait for a condition to be met with filesystem operations
+fn wait_for_fs_condition<F>(
+    harness: &mut ui_test_helpers::TestHarness,
+    condition: F,
+    description: &str,
+) where
+    F: Fn(&ui_test_helpers::TestHarness) -> bool,
+{
+    let max_iterations = 300;
+    let sleep_duration = Duration::from_millis(10);
+
+    for _ in 0..max_iterations {
+        harness.step();
+        if condition(harness) {
+            return;
+        }
+        // Sleep for a short interval before checking again
+        thread::sleep(sleep_duration);
+    }
+
+    panic!(
+        "Condition '{}' was not met after waiting for {} iterations of {}ms",
+        description,
+        max_iterations,
+        sleep_duration.as_millis()
+    );
+}
+
+#[test]
+fn test_fs_notify_preserves_search_query() {
+    // Create a temporary directory for testing
+    let temp_dir = tempdir().unwrap();
+
+    // Create test files - some that match the search and some that don't
+    create_test_files(&[
+        temp_dir.path().join("testfile1.txt"),
+        temp_dir.path().join("testfile2.txt"),
+        temp_dir.path().join("another.log"),
+        temp_dir.path().join("document.pdf"),
+    ]);
+
+    let mut harness = create_harness(&temp_dir);
+
+    // Activate search mode by pressing '/'
+    harness.press_key(Key::Slash);
+    harness.step();
+
+    // Verify search is active
+    assert!(
+        harness.state().search_bar.active(),
+        "Search bar should be active after pressing '/'"
+    );
+
+    // Input search query "test" to filter files
+    harness
+        .input_mut()
+        .events
+        .push(egui::Event::Text("test".to_string()));
+    harness.step();
+
+    // Verify search bar has the query
+    assert!(
+        harness.state().search_bar.query.is_some(),
+        "Search bar should have query after input"
+    );
+    assert_eq!(
+        harness.state().search_bar.query.as_deref(),
+        Some("test"),
+        "Search query should be 'test'"
+    );
+
+    // Verify that the search is actually filtering entries
+    let tab = harness.state().tab_manager.current_tab_ref();
+    let filtered_entries = tab.get_cached_filtered_entries();
+    let filtered_count = filtered_entries.len();
+
+    // Should only see files containing "test" (testfile1.txt, testfile2.txt)
+    assert!(
+        filtered_count < tab.entries.len(),
+        "Search should filter entries - got {} filtered entries out of {} total",
+        filtered_count,
+        tab.entries.len()
+    );
+
+    // Get the original query to compare later
+    let original_query = harness.state().search_bar.query.clone();
+
+    // Simulate a filesystem change by creating a new file
+    // This should trigger the fs_notify mechanism
+    let new_file_path = temp_dir.path().join("newfile.txt");
+    {
+        let mut file = File::create(&new_file_path).unwrap();
+        file.write_all(b"new content").unwrap();
+        file.sync_all().unwrap();
+    }
+
+    // Wait for the filesystem notification to be processed
+    // The filesystem watcher should detect the new file and trigger a refresh
+    wait_for_fs_condition(
+        &mut harness,
+        |h| {
+            let tab = h.state().tab_manager.current_tab_ref();
+            tab.entries.iter().any(|e| e.name == "newfile.txt")
+        },
+        "new file should appear in entries after filesystem notification",
+    );
+
+    // The bug: After fs notification triggers refresh_entries(),
+    // the search query should still be preserved
+    assert!(
+        harness.state().search_bar.query.is_some(),
+        "BUG: Search query should be preserved after filesystem notification, but it was cleared"
+    );
+
+    assert_eq!(
+        harness.state().search_bar.query,
+        original_query,
+        "BUG: Search query should remain '{}' after filesystem notification, but got '{:?}'",
+        original_query.as_deref().unwrap_or("None"),
+        harness.state().search_bar.query.as_deref()
+    );
+
+    // Verify that search is still active
+    assert!(
+        harness.state().search_bar.active(),
+        "BUG: Search bar should still be active after filesystem notification"
+    );
+
+    // Verify that the search filtering is still working after the refresh
+    let tab = harness.state().tab_manager.current_tab_ref();
+    let filtered_entries_after = tab.get_cached_filtered_entries();
+
+    // The filtered results should still only show files containing "test"
+    // (newfile.txt should NOT appear since it doesn't contain "test")
+    for (entry, _) in filtered_entries_after.iter() {
+        assert!(
+            entry.name.contains("test"),
+            "BUG: After filesystem notification, search filtering should still work. File '{}' should not appear in filtered results for query 'test'",
+            entry.name
+        );
+    }
+
+    // Verify the new file is not in the filtered results (since it doesn't match "test")
+    let new_file_in_filtered = filtered_entries_after
+        .iter()
+        .any(|(entry, _)| entry.name == "newfile.txt");
+    assert!(
+        !new_file_in_filtered,
+        "BUG: New file 'newfile.txt' should not appear in filtered results for query 'test'"
     );
 }

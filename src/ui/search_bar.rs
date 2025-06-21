@@ -36,12 +36,10 @@ impl SearchBar {
     }
 }
 
-fn apply_new_query(app: &mut Kiorg, query_option: Option<String>) {
-    // Select the first matched entry
+fn apply_new_query(app: &mut Kiorg) {
+    // only need to apply search filter to the current active tab
     let tab = app.tab_manager.current_tab_mut();
-
-    // Ensure cache is up to date with current search parameters
-    tab.update_filtered_cache(&query_option, app.search_bar.case_insensitive);
+    tab.update_filtered_cache(&app.search_bar.query, app.search_bar.case_insensitive);
 
     let first_filtered_index = tab
         .get_cached_filtered_entries()
@@ -141,7 +139,7 @@ pub fn draw(ctx: &Context, app: &mut Kiorg) {
 
                         // Update filter when text changes
                         if response.changed() {
-                            apply_new_query(app, app.search_bar.query.clone());
+                            apply_new_query(app);
                         }
 
                         // Case sensitivity toggle button
@@ -165,7 +163,7 @@ pub fn draw(ctx: &Context, app: &mut Kiorg) {
                             .clicked();
                         if case_button_clicked {
                             app.search_bar.case_insensitive = !app.search_bar.case_insensitive;
-                            apply_new_query(app, app.search_bar.query.clone());
+                            apply_new_query(app);
                         }
 
                         // Close button
