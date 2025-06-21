@@ -93,14 +93,22 @@ fn draw_header_column(
     let text_color = if is_sorted {
         params.colors.highlight
     } else {
-        // hover will change cursor, not color here
         params.colors.link_text
     };
 
     let header_text = format!("{text}{sort_indicator}");
 
-    // Interact with the calculated rectangle
-    let response = ui.interact(col_rect, ui.id().with(column), egui::Sense::click());
+    // Create a child UI with the exact rectangle we want
+    let mut child_ui = ui.new_child(egui::UiBuilder::new().max_rect(col_rect));
+
+    let response = child_ui.add(
+        egui::Label::new(
+            egui::RichText::new(header_text)
+                .color(text_color)
+                .size(HEADER_FONT_SIZE),
+        )
+        .sense(egui::Sense::click()),
+    );
 
     if response.clicked() {
         (params.on_sort)(column);
@@ -110,15 +118,6 @@ fn draw_header_column(
     if response.hovered() {
         response.on_hover_cursor(egui::CursorIcon::PointingHand);
     }
-
-    // Draw the text using the painter, ensuring left alignment
-    ui.painter().text(
-        col_rect.left_center(), // Position text at the vertical center, horizontal left
-        Align2::LEFT_CENTER,
-        header_text,
-        egui::FontId::proportional(HEADER_FONT_SIZE), // Match entry row font size
-        text_color,
-    );
 }
 
 #[derive(Debug)]

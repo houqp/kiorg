@@ -440,20 +440,21 @@ fn test_image_preview() {
     let mut harness = create_harness(&temp_dir);
 
     // Select the image file
-    {
-        let tab = harness.state_mut().tab_manager.current_tab_mut();
-        // Find the index of the image file
-        let image_index = tab
-            .entries
-            .iter()
-            .position(|e| e.path.extension().unwrap_or_default() == "png")
-            .expect("Image file should be in the entries");
-        tab.selected_index = image_index;
-    }
     harness.press_key(Key::J);
     harness.step();
     harness.press_key(Key::K);
     harness.step();
+
+    for _ in 0..100 {
+        harness.step();
+        match &harness.state().preview_content {
+            Some(PreviewContent::Image(_)) => {
+                break;
+            }
+            _ => {}
+        }
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    }
 
     // Check if the preview content is an image
     match &harness.state().preview_content {

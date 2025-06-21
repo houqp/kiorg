@@ -283,19 +283,18 @@ pub fn create_harness_with_config_dir<'a>(
         .expect("Failed to create Kiorg app");
 
     // Create a test harness with more steps to ensure all events are processed
-    let harness = Harness::builder()
+    let mut harness = Harness::builder()
         .with_size(egui::Vec2::new(800.0, 600.0))
         .with_max_steps(20)
         .build_eframe(|_cc| app);
-
     // Run one step to initialize the app
-    let mut harness = harness;
     harness.step();
 
     let mut harness = TestHarness {
         harness,
         _config_temp_dir: config_temp_dir,
     };
+
     // Ensure consistent sort order for reliable selection and verification
     harness.ensure_sorted_by_name_ascending();
 
