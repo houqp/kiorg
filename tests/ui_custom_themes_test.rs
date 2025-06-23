@@ -913,7 +913,8 @@ fn test_snapshot_all_themes() {
             let png_path = format!("tests/snapshots/{}", png_file);
 
             // Load the PNG image
-            let img = image::open(&png_path).unwrap_or_else(|_| panic!("Failed to open PNG file: {}", png_path));
+            let img = image::open(&png_path)
+                .unwrap_or_else(|_| panic!("Failed to open PNG file: {}", png_path));
             let rgba_img = img.to_rgba8();
 
             // Create a frame with delay (500ms per frame for good visibility)
