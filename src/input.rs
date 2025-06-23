@@ -255,14 +255,9 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: Shortcut
                 app.show_popup = Some(PopupType::OpenWith(String::new()));
             }
         }
-        ShortcutAction::PageUp => {
-            // Handle page up in center panel file list
-            app.move_selection_by_page(-1);
-        }
-        ShortcutAction::PageDown => {
-            // Handle page down in center panel file list
-            app.move_selection_by_page(1);
-        }
+        ShortcutAction::PageUp => app.move_selection_by_page(-1),
+        ShortcutAction::PageDown => app.move_selection_by_page(1),
+        ShortcutAction::SelectAllEntries => app.select_all_entries(),
     }
 }
 

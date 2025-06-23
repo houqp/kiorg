@@ -167,6 +167,7 @@ pub enum ShortcutAction {
     RenameEntry,
     AddEntry,
     SelectEntry,
+    SelectAllEntries,
     CopyEntry,
     CutEntry,
     PasteEntry,
@@ -391,6 +392,11 @@ pub fn default_shortcuts() -> Shortcuts {
     add_shortcut(KeyboardShortcut::new("a"), ShortcutAction::AddEntry);
 
     add_shortcut(KeyboardShortcut::new("space"), ShortcutAction::SelectEntry);
+
+    add_shortcut(
+        KeyboardShortcut::new("a").with_ctrl(),
+        ShortcutAction::SelectAllEntries,
+    );
 
     add_shortcut(KeyboardShortcut::new("y"), ShortcutAction::CopyEntry);
     add_shortcut(

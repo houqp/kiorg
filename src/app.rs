@@ -503,6 +503,15 @@ impl Kiorg {
         }
     }
 
+    pub fn select_all_entries(&mut self) {
+        let tab = self.tab_manager.current_tab_mut();
+        tab.marked_entries.clear();
+        let filtered_entries = tab.get_cached_filtered_entries().clone();
+        for (entry, _original_index) in filtered_entries {
+            tab.marked_entries.insert(entry.path);
+        }
+    }
+
     pub fn move_selection(&mut self, delta: isize) {
         let tab = self.tab_manager.current_tab_mut();
         let entries = tab.get_cached_filtered_entries(); // Get filtered entries with original indices

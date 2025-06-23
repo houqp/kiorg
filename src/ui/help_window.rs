@@ -76,6 +76,7 @@ pub fn show_help_window(
                             ),
                             (ShortcutAction::AddEntry, "Add file/directory"),
                             (ShortcutAction::SelectEntry, "Mark/unmark entry"),
+                            (ShortcutAction::SelectAllEntries, "Select all entries"),
                             (ShortcutAction::CopyEntry, "Copy selected entry"),
                             (ShortcutAction::CutEntry, "Cut selected entry"),
                             (ShortcutAction::PasteEntry, "Paste copied/cut entries"),
