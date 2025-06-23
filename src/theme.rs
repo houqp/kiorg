@@ -271,11 +271,9 @@ impl Theme {
 
     /// Load colors based on theme name from config, with fallback logic
     pub fn load_colors_from_config(config: &crate::config::Config) -> AppColors {
-        match (&config.colors, &config.theme) {
-            // If explicit colors are provided in config, use them
-            (Some(colors), _) => colors.clone(),
-            // Otherwise, load colors based on theme name
-            (None, Some(theme_name)) => {
+        match &config.theme {
+            // Load colors based on theme name
+            Some(theme_name) => {
                 // First check if it's a custom theme
                 if let Some(custom_themes) = &config.custom_themes {
                     if let Some(custom_theme) = custom_themes.iter().find(|t| t.name == *theme_name)
@@ -290,7 +288,7 @@ impl Theme {
                 theme_selection.get_colors().clone()
             }
             // Fallback to default (should not happen due to theme initialization)
-            (None, None) => get_default_theme().get_colors().clone(),
+            None => get_default_theme().get_colors().clone(),
         }
     }
 }

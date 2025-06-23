@@ -3,7 +3,6 @@ pub mod shortcuts;
 
 use crate::models::tab::{SortColumn, SortOrder};
 use crate::theme::Theme;
-use colors::AppColors;
 use serde::{Deserialize, Serialize};
 
 use std::error::Error;
@@ -40,7 +39,6 @@ pub struct SortPreference {
 
 #[derive(Deserialize, Serialize, Default, Debug)]
 pub struct Config {
-    pub colors: Option<AppColors>,
     pub theme: Option<String>,
     pub sort_preference: Option<SortPreference>,
     pub shortcuts: Option<shortcuts::Shortcuts>,
@@ -50,7 +48,6 @@ pub struct Config {
 impl Config {
     fn default() -> Self {
         Self {
-            colors: None,
             theme: None,
             sort_preference: None,
             shortcuts: None,

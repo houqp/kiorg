@@ -15,8 +15,7 @@ fn apply_and_save_theme(app: &mut Kiorg, theme: &Theme, ctx: &egui::Context) {
     // Apply the new theme to the UI context
     ctx.set_visuals(app.colors.to_visuals());
 
-    // Update the configuration with theme key only, set colors to None to keep config short
-    app.config.colors = None;
+    // Update the configuration with theme key
     app.config.theme = Some(theme.theme_key().to_string());
 
     // Save the configuration
