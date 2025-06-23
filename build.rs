@@ -36,9 +36,9 @@ fn main() {
         eprintln!("Error: PDF fonts directory not properly initialized");
         eprintln!("Directory: {}", standard_fonts_path);
         eprintln!("Please ensure the git submodule for PDF fonts has been initialized:");
-        eprintln!("");
+        eprintln!();
         eprintln!("  git submodule update --init --recursive");
-        eprintln!("");
+        eprintln!();
         eprintln!("The fonts directory should contain:");
         eprintln!("  - fonts.json configuration file");
         eprintln!("  - One or more .pfb font files");
