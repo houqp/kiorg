@@ -24,6 +24,8 @@ fn test_help_menu_close_behavior() {
         Some(kiorg::app::PopupType::Help),
         "Help menu should be open"
     );
+    #[cfg(feature = "snapshot")]
+    harness.snapshot("help_menu");
 
     // Test closing with Escape
     harness.press_key(Key::Escape);

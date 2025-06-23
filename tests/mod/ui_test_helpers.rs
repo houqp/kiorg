@@ -261,44 +261,83 @@ pub struct TestHarness<'a> {
     _config_temp_dir: tempfile::TempDir, // Prefixed with _ to indicate it's only kept for its Drop behavior
 }
 
+/// Builder for creating TestHarness instances with a fluent API
+pub struct TestHarnessBuilder {
+    temp_dir: Option<PathBuf>,
+    config_temp_dir: Option<tempfile::TempDir>,
+    window_size: egui::Vec2,
+}
+
+impl TestHarnessBuilder {
+    pub fn new() -> Self {
+        Self {
+            temp_dir: None,
+            config_temp_dir: None,
+            window_size: egui::Vec2::new(800.0, 800.0),
+        }
+    }
+
+    pub fn with_temp_dir(mut self, temp_dir: &tempfile::TempDir) -> Self {
+        self.temp_dir = Some(temp_dir.path().to_path_buf());
+        self
+    }
+
+    pub fn with_config_dir(mut self, config_temp_dir: tempfile::TempDir) -> Self {
+        self.config_temp_dir = Some(config_temp_dir);
+        self
+    }
+
+    pub fn with_window_size(mut self, size: egui::Vec2) -> Self {
+        self.window_size = size;
+        self
+    }
+
+    pub fn build<'a>(self) -> TestHarness<'a> {
+        let temp_dir = self.temp_dir.expect("temp_dir must be set");
+        let config_temp_dir = self.config_temp_dir.unwrap_or_else(|| tempdir().unwrap());
+        let test_config_dir = config_temp_dir.path().to_path_buf();
+
+        std::fs::create_dir_all(&test_config_dir).unwrap();
+
+        // Create a new egui context
+        let ctx = egui::Context::default();
+        let cc = eframe::CreationContext::_new_kittest(ctx);
+
+        let app = Kiorg::new_with_config_dir(&cc, Some(temp_dir), Some(test_config_dir))
+            .expect("Failed to create Kiorg app");
+
+        // Create a test harness with more steps to ensure all events are processed
+        let mut harness = Harness::builder()
+            .with_size(self.window_size)
+            .with_max_steps(20)
+            .build_eframe(|_cc| app);
+        // Run one step to initialize the app
+        harness.step();
+
+        let mut harness = TestHarness {
+            harness,
+            _config_temp_dir: config_temp_dir,
+        };
+
+        // Ensure consistent sort order for reliable selection and verification
+        harness.ensure_sorted_by_name_ascending();
+
+        harness
+    }
+}
+
 pub fn create_harness<'a>(temp_dir: &tempfile::TempDir) -> TestHarness<'a> {
-    // Create a separate temporary directory for config files
-    let config_temp_dir = tempdir().unwrap();
-    create_harness_with_config_dir(temp_dir, config_temp_dir)
+    TestHarnessBuilder::new().with_temp_dir(temp_dir).build()
 }
 
 pub fn create_harness_with_config_dir<'a>(
     temp_dir: &tempfile::TempDir,
     config_temp_dir: tempfile::TempDir,
 ) -> TestHarness<'a> {
-    let test_config_dir = config_temp_dir.path().to_path_buf();
-    std::fs::create_dir_all(&test_config_dir).unwrap();
-
-    // Create a new egui context
-    let ctx = egui::Context::default();
-    let cc = eframe::CreationContext::_new_kittest(ctx);
-
-    let path = temp_dir.path().to_path_buf();
-    let app = Kiorg::new_with_config_dir(&cc, Some(path), Some(test_config_dir))
-        .expect("Failed to create Kiorg app");
-
-    // Create a test harness with more steps to ensure all events are processed
-    let mut harness = Harness::builder()
-        .with_size(egui::Vec2::new(800.0, 600.0))
-        .with_max_steps(20)
-        .build_eframe(|_cc| app);
-    // Run one step to initialize the app
-    harness.step();
-
-    let mut harness = TestHarness {
-        harness,
-        _config_temp_dir: config_temp_dir,
-    };
-
-    // Ensure consistent sort order for reliable selection and verification
-    harness.ensure_sorted_by_name_ascending();
-
-    harness
+    TestHarnessBuilder::new()
+        .with_temp_dir(temp_dir)
+        .with_config_dir(config_temp_dir)
+        .build()
 }
 
 impl TestHarness<'_> {

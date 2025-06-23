@@ -338,11 +338,8 @@ fn test_mouse_click_selects_and_previews() {
     // wait for preview to be completed
     for _ in 0..100 {
         harness.step();
-        match harness.state().preview_content {
-            Some(PreviewContent::Text(_)) => {
-                break;
-            }
-            _ => {}
+        if let Some(PreviewContent::Text(_)) = harness.state().preview_content {
+            break;
         }
         std::thread::sleep(std::time::Duration::from_millis(10));
     }
@@ -447,11 +444,8 @@ fn test_image_preview() {
 
     for _ in 0..100 {
         harness.step();
-        match &harness.state().preview_content {
-            Some(PreviewContent::Image(_)) => {
-                break;
-            }
-            _ => {}
+        if let Some(PreviewContent::Image(_)) = &harness.state().preview_content {
+            break;
         }
         std::thread::sleep(std::time::Duration::from_millis(10));
     }

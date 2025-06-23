@@ -13,6 +13,7 @@ categories = ["filesystem", "gui", "command-line-utilities"]
 default = ["terminal"]
 terminal = ["dep:egui_term"]
 debug = []
+snapshot = ["egui_kittest/snapshot", "egui_kittest/wgpu"]
 
 [lib]
 name = "kiorg"

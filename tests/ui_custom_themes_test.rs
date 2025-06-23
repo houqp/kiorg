@@ -9,6 +9,7 @@ use kiorg::theme::Theme;
 use std::fs;
 use tempfile::tempdir;
 use ui_test_helpers::create_harness_with_config_dir;
+use ui_test_helpers::TestHarnessBuilder;
 
 fn theme_exists(theme_name: &str, config: &kiorg::config::Config) -> bool {
     // Check built-in themes
@@ -558,7 +559,6 @@ error = "#ff8888"
         .position(|t| t.theme_key() == "light_theme")
         .expect("Light theme should exist");
 
-    // Navigate from dark_theme to light_theme
     let dark_theme_index = all_themes
         .iter()
         .position(|t| t.theme_key() == "dark_theme")
@@ -811,4 +811,122 @@ display_name = "Malformed Theme"
     // This should return an error due to malformed TOML
     let result = kiorg::config::load_config_with_override(Some(&config_dir));
     assert!(result.is_err(), "Malformed TOML should return an error");
+}
+
+// Main purpose of this test is to create snapshots for all the builtin themes
+#[test]
+fn test_snapshot_all_themes() {
+    // Create a temporary directory for the test files
+    let temp_dir = tempdir().unwrap();
+    let file1 = temp_dir.path().join("file1.txt");
+    std::fs::write(&file1, "test content").unwrap();
+
+    // Create a temporary directory for the config (no custom themes, just built-ins)
+    let config_temp_dir = tempdir().unwrap();
+
+    // Create the test harness with default config (only built-in themes)
+    let mut harness = TestHarnessBuilder::new()
+        .with_temp_dir(&temp_dir)
+        .with_config_dir(config_temp_dir)
+        .with_window_size(egui::Vec2::new(800.0, 400.0))
+        .build();
+
+    // Get all built-in themes dynamically
+    let all_builtin_themes = kiorg::theme::Theme::all_themes();
+    let builtin_theme_info: Vec<(&str, &str)> = all_builtin_themes
+        .iter()
+        .map(|theme| (theme.theme_key(), theme.display_name()))
+        .collect();
+
+    // Open themes popup once
+    let default_theme_key = kiorg::theme::get_default_theme().theme_key();
+    harness.state_mut().show_popup =
+        Some(kiorg::app::PopupType::Themes(default_theme_key.to_string()));
+    harness.step();
+
+    // Verify themes popup is open
+    match &harness.state().show_popup {
+        Some(kiorg::app::PopupType::Themes(_)) => {
+            // Popup is open, this is expected
+        }
+        _ => panic!("Themes popup should be open"),
+    }
+
+    // Verify all built-in themes are present in the popup using query_by_label
+    for (_, display_name) in &builtin_theme_info {
+        assert!(
+            harness.query_by_label(display_name).is_some(),
+            "Built-in theme '{}' should be visible in the popup",
+            display_name
+        );
+    }
+    harness.step();
+    // NOTE: the 2nd step is needed so that the popup can be rendered at the right location
+    harness.step();
+
+    #[cfg(feature = "snapshot")]
+    let mut png_file_list = vec![];
+
+    for (expected_index, (theme_key, _display_name)) in builtin_theme_info.iter().enumerate() {
+        // If this is not the first theme, navigate to it using arrow down
+        if expected_index > 0 {
+            harness.press_key(Key::ArrowDown);
+            harness.step();
+        }
+
+        #[cfg(feature = "snapshot")]
+        {
+            let file_name = format!("theme_selection-{:02}-{}", expected_index, theme_key);
+            harness.snapshot(file_name.as_str());
+            png_file_list.push(format!("{file_name}.png"));
+        }
+
+        // Verify popup is still open during navigation and contains the expected theme key
+        match &harness.state().show_popup {
+            Some(kiorg::app::PopupType::Themes(current_theme_key)) => {
+                assert_eq!(
+                    current_theme_key, theme_key,
+                    "Theme key in popup should match expected theme key"
+                );
+            }
+            _ => panic!("Themes popup should remain open during navigation"),
+        }
+    }
+
+    #[cfg(feature = "snapshot")]
+    {
+        // Create GIF from PNG snapshots
+        use image::{codecs::gif::GifEncoder, Frame};
+        use std::fs::File;
+
+        // print current working directory for debugging
+        println!("Current working directory: {:?}", std::env::current_dir());
+        let gif_output_path = "tests/snapshots/theme_selection_animation.gif";
+        let gif_file = File::create(gif_output_path).expect("Failed to create GIF file");
+        let mut encoder = GifEncoder::new(gif_file);
+        encoder
+            .set_repeat(image::codecs::gif::Repeat::Infinite)
+            .expect("Failed to set GIF repeat");
+
+        // Load each PNG and add it as a frame to the GIF
+        for png_file in &png_file_list {
+            let png_path = format!("tests/snapshots/{}", png_file);
+
+            // Load the PNG image
+            let img = image::open(&png_path).unwrap_or_else(|_| panic!("Failed to open PNG file: {}", png_path));
+            let rgba_img = img.to_rgba8();
+
+            // Create a frame with delay (500ms per frame for good visibility)
+            let frame = Frame::from_parts(
+                rgba_img,
+                0,                                          // left offset
+                0,                                          // top offset
+                image::Delay::from_numer_denom_ms(1000, 1), // 500ms delay
+            );
+
+            encoder
+                .encode_frame(frame)
+                .expect("Failed to encode GIF frame");
+        }
+    }
 }

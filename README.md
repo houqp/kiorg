@@ -20,6 +20,18 @@ bindings. It is built using the [egui](https://www.egui.rs/#demo) framework.
 * Builtin terminal emulator
 * App state persistence
 
+<p align="center">
+  <img src="tests/snapshots/help_menu.png" alt="Help Menu" width="600px">
+  <br>
+  <em>Built-in help menu with keyboard shortcuts</em>
+</p>
+
+<p align="center">
+  <img src="tests/snapshots/theme_selection_animation.gif" alt="Theme Selection" width="600px">
+  <br>
+  <em>Customizable color themes</em>
+</p>
+
 ## Installation
 
 Pre-built binaries for all platforms are available on the [releases page](https://github.com/houqp/kiorg/releases).
