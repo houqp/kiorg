@@ -307,18 +307,18 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                 if app.ensure_selected_visible {
                     if let Some(selected_entry) = tab_ref.selected_entry() {
                         // Find the position of the selected entry in the filtered list
-                        let filtered_index = filtered_entries
+                        if let Some(filtered_index) = filtered_entries
                             .iter()
                             .position(|(entry, _)| entry.path == selected_entry.path)
-                            .expect("selected entry not in filtered list");
-
-                        scroll_area = scroll_by_filtered_index(
-                            scroll_area,
-                            filtered_index,
-                            app.scroll_range.as_ref(),
-                            spaced_row_height,
-                            total_rows,
-                        );
+                        {
+                            scroll_area = scroll_by_filtered_index(
+                                scroll_area,
+                                filtered_index,
+                                app.scroll_range.as_ref(),
+                                spaced_row_height,
+                                total_rows,
+                            );
+                        }
                     }
                     app.ensure_selected_visible = false;
                 }

@@ -184,7 +184,7 @@ impl Tab {
 
     #[must_use]
     pub fn selected_entry(&self) -> Option<&DirEntry> {
-        if self.entries.is_empty() {
+        if self.entries.is_empty() || self.selected_index >= self.entries.len() {
             None
         } else {
             Some(&self.entries[self.selected_index])
