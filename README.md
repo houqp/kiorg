@@ -41,7 +41,7 @@ Pre-built binaries for all platforms are available on the [releases page](https:
 Alternatively, you can build it from source using cargo:
 
 ```bash
-cargo install --git https://github.com/houqp/kiorg --locked
+git clone --recurse-submodules https://github.com/houqp/kiorg.git && cargo install --locked --path ./kiorg
 ```
 
 ## Configuration

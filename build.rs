@@ -29,10 +29,7 @@ fn main() {
         }
     };
 
-    if validate_fonts_directory(&standard_fonts_path) {
-        println!("cargo:rerun-if-changed={}", standard_fonts_path);
-        println!("cargo:rerun-if-env-changed=STANDARD_FONTS");
-    } else {
+    if !validate_fonts_directory(&standard_fonts_path) {
         eprintln!("Error: PDF fonts directory not properly initialized");
         eprintln!("Directory: {}", standard_fonts_path);
         eprintln!("Please ensure the git submodule for PDF fonts has been initialized:");
@@ -44,4 +41,7 @@ fn main() {
         eprintln!("  - One or more .pfb font files");
         process::exit(1);
     }
+
+    println!("cargo:rerun-if-changed={}", standard_fonts_path);
+    println!("cargo:rerun-if-env-changed=STANDARD_FONTS");
 }
