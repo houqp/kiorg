@@ -62,7 +62,7 @@ jobs:
         submodules: recursive
 
     - name: compare git tag with cargo metadata
-      if: github.event_name == 'push' || startsWith(github.ref, 'refs/tags/')
+      if: github.event_name == 'push' || startsWith(github.ref, 'refs/tags/v')
       run: |
         PUSHED_TAG=${GITHUB_REF##*/}
         CURR_VER=$( grep version Cargo.toml | head -n 1 | awk '{print $3}' | tr -d '"' )
@@ -130,7 +130,7 @@ jobs:
 
     - name: Upload binary to GitHub Release
       uses: svenstaro/upload-release-action@v2
-      if: github.event_name == 'push' || startsWith(github.ref, 'refs/tags/')
+      if: github.event_name == 'push' || startsWith(github.ref, 'refs/tags/v')
       with:
         overwrite: true
         repo_token: ${{ secrets.GITHUB_TOKEN }}
@@ -193,7 +193,7 @@ jobs:
 
     - name: Upload DMG to GitHub Release
       uses: svenstaro/upload-release-action@v2
-      if: github.event_name == 'push' || startsWith(github.ref, 'refs/tags/')
+      if: github.event_name == 'push' || startsWith(github.ref, 'refs/tags/v')
       with:
         overwrite: true
         repo_token: ${{ secrets.GITHUB_TOKEN }}
@@ -203,7 +203,7 @@ jobs:
 
     - name: Upload CLI binary to GitHub Release
       uses: svenstaro/upload-release-action@v2
-      if: github.event_name == 'push' || startsWith(github.ref, 'refs/tags/')
+      if: github.event_name == 'push' || startsWith(github.ref, 'refs/tags/v')
       with:
         overwrite: true
         repo_token: ${{ secrets.GITHUB_TOKEN }}
@@ -241,7 +241,7 @@ jobs:
 
     - name: Upload binary to GitHub Release
       uses: svenstaro/upload-release-action@v2
-      if: github.event_name == 'push' || startsWith(github.ref, 'refs/tags/')
+      if: github.event_name == 'push' || startsWith(github.ref, 'refs/tags/v')
       with:
         overwrite: true
         repo_token: ${{ secrets.GITHUB_TOKEN }}
