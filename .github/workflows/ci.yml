@@ -61,8 +61,8 @@ jobs:
       with:
         submodules: recursive
 
-    - name: compare git tag with cargo metadata
-      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    - name: compare git tag with cargo metadata (Unix)
+      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && runner.os != 'Windows'
       run: |
         PUSHED_TAG=${GITHUB_REF##*/}
         CURR_VER=$( grep version Cargo.toml | head -n 1 | awk '{print $3}' | tr -d '"' )
@@ -70,6 +70,36 @@ jobs:
           echo "Cargo metadata has version set to ${CURR_VER}, but got pushed tag ${PUSHED_TAG}."
           exit 1
         fi
+
+    - name: compare git tag with cargo metadata (Windows)
+      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && runner.os == 'Windows'
+      run: |
+        CURR_VER=$( grep version Cargo.toml | head -n 1 | awk '{print $3}' | tr -d '"' )
+        if [[ "${PUSHED_TAG}" != "v${CURR_VER}" ]]; then
+          echo "Cargo metadata has version set to ${CURR_VER}, but got pushed tag ${PUSHED_TAG}."
+          exit 1
+        fi
+
+        $PUSHED_TAG = (Split-Path -Path $env:GITHUB_REF -Leaf)
+        $CURR_VER_Line = Select-String -Path Cargo.toml -Pattern "version" | Select-Object -First 1
+        if ($null -eq $CURR_VER_Line) {
+            Write-Error "Could not find 'version' in Cargo.toml"
+            exit 1
+        }
+
+        # Example of a Cargo.toml version line: version = "0.1.0"
+        # We want to extract "0.1.0"
+        $CURR_VER_Match = $CURR_VER_Line.Line | Select-String -Pattern 'version\s*=\s*"(?<version>[^"]+)"'
+        if ($null -eq $CURR_VER_Match) {
+            Write-Error "Could not parse version from Cargo.toml line: $($CURR_VER_Line.Line)"
+            exit 1
+        }
+        $CURR_VER = $CURR_VER_Match.Matches[0].Groups['version'].Value
+
+        if ("v$CURR_VER" -ne $PUSHED_TAG) {
+            Write-Error "Cargo metadata has version set to $CURR_VER, but got pushed tag $PUSHED_TAG."
+            exit 1
+        }
 
     - name: Setup mold linker (Linux only)
       if: runner.os == 'Linux'
