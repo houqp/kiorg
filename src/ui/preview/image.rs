@@ -29,7 +29,7 @@ pub fn render(
     // Display image (centered)
     ui.vertical_centered(|ui| {
         ui.add(
-            Image::new(&image_meta.texture)
+            Image::new(image_meta.image_source.clone())
                 .max_size(egui::vec2(available_width, available_height * 0.6))
                 .maintain_aspect_ratio(true),
         );
@@ -193,6 +193,15 @@ pub fn read_image_with_metadata(
         }
     }
 
+    // Add file size
+    if let Ok(metadata_os) = std::fs::metadata(path) {
+        let size = metadata_os.len();
+        metadata.insert(
+            "File Size".to_string(),
+            humansize::format_size(size, humansize::BINARY),
+        );
+    }
+
     // Try to get format-specific information
     if let Ok(format) = image::ImageFormat::from_path(path) {
         // Format the image format in a more readable way
@@ -216,31 +225,14 @@ pub fn read_image_with_metadata(
 
         // Add format-specific metadata
         if format == ImageFormat::Gif {
-            // For GIF, we can check if it's animated by examining the file
-            // A simple heuristic: try to read the file and check if it has multiple frames
-            if let Ok(file_content) = std::fs::read(path) {
-                // Look for multiple image descriptors in the GIF file
-                // This is a very simplified approach - not 100% reliable
-                // The byte sequence 0x2C (image descriptor marker) appears for each frame
-                let image_descriptor_count = file_content
-                    .windows(2)
-                    .filter(|window| window[0] == 0x2C)
-                    .count();
-
-                if image_descriptor_count > 1 {
-                    metadata.insert("Animation".to_string(), "Animated GIF".to_string());
-                }
-            }
+            // For GIF files, use URI source to enable animation
+            return Ok(PreviewContent::image_from_uri(
+                title,
+                metadata,
+                format!("file://{}", path.display()),
+                exif_data,
+            ));
         }
-    }
-
-    // Add file size
-    if let Ok(metadata_os) = std::fs::metadata(path) {
-        let size = metadata_os.len();
-        metadata.insert(
-            "File Size".to_string(),
-            humansize::format_size(size, humansize::BINARY),
-        );
     }
 
     // Convert the image to RGBA8 format for egui

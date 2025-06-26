@@ -62,8 +62,10 @@ pub struct ImageMeta {
     pub metadata: HashMap<String, String>,
     /// EXIF metadata (key-value pairs), stored separately from regular metadata
     pub exif_data: Option<HashMap<String, String>>,
-    /// Texture handle for the image
-    pub texture: egui::TextureHandle,
+    /// Image source (can be texture handle or URI for animated images)
+    pub image_source: egui::widgets::ImageSource<'static>,
+    /// Keep the texture handle alive to prevent GPU texture from being freed
+    pub _texture_handle: Option<egui::TextureHandle>,
 }
 
 // Manual implementation of Debug for ImageMeta since TextureHandle doesn't implement Debug
@@ -73,7 +75,11 @@ impl std::fmt::Debug for ImageMeta {
             .field("title", &self.title)
             .field("metadata", &self.metadata)
             .field("exif_data", &self.exif_data)
-            .field("texture", &"TextureHandle")
+            .field("image_source", &"ImageSource")
+            .field(
+                "_texture_handle",
+                &self._texture_handle.as_ref().map(|_| "TextureHandle"),
+            )
             .finish()
     }
 }
@@ -134,7 +140,24 @@ impl PreviewContent {
             title: title.into(),
             metadata,
             exif_data,
-            texture,
+            image_source: egui::widgets::ImageSource::from(&texture),
+            _texture_handle: Some(texture),
+        })
+    }
+
+    /// Creates a new image preview content with a URI (for animated images like GIFs)
+    pub fn image_from_uri(
+        title: impl Into<String>,
+        metadata: HashMap<String, String>,
+        uri: String,
+        exif_data: Option<HashMap<String, String>>,
+    ) -> Self {
+        Self::Image(ImageMeta {
+            title: title.into(),
+            metadata,
+            exif_data,
+            image_source: egui::widgets::ImageSource::Uri(uri.into()),
+            _texture_handle: None, // No texture handle for URI-based images//
         })
     }
 

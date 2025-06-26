@@ -24,7 +24,7 @@ pub fn render_popup(
 
         // Add the image with maximum possible size
         ui.add(
-            Image::new(&image_meta.texture)
+            Image::new(image_meta.image_source.clone())
                 .max_size(egui::vec2(max_width, max_height))
                 .maintain_aspect_ratio(true),
         );
