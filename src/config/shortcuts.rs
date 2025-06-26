@@ -463,6 +463,7 @@ pub fn default_shortcuts() -> Shortcuts {
     add_shortcut(KeyboardShortcut::new("?"), ShortcutAction::ShowHelp);
 
     add_shortcut(KeyboardShortcut::new("q"), ShortcutAction::Exit);
+    add_shortcut(KeyboardShortcut::new("esc"), ShortcutAction::Exit);
 
     add_shortcut(KeyboardShortcut::new("/"), ShortcutAction::ActivateSearch);
     add_shortcut(
@@ -637,6 +638,7 @@ pub mod shortcuts_helpers {
                     "right" | "arrow_right" => "➡".to_string(),
                     "enter" => "Enter".to_string(),
                     "space" => "Space".to_string(),
+                    "esc" => "Esc".to_string(),
                     _ => key_lower,
                 };
                 parts.push(key_display);

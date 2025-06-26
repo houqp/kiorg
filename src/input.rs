@@ -16,15 +16,9 @@ fn is_cancel_keys(key: Key) -> bool {
 #[allow(clippy::too_many_lines)]
 fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: ShortcutAction) {
     match action {
-        ShortcutAction::ShowFilePreview => {
-            preview_popup::handle_show_file_preview(app, ctx);
-        }
-        ShortcutAction::MoveDown => {
-            app.move_selection(1);
-        }
-        ShortcutAction::MoveUp => {
-            app.move_selection(-1);
-        }
+        ShortcutAction::ShowFilePreview => preview_popup::handle_show_file_preview(app, ctx),
+        ShortcutAction::MoveDown => app.move_selection(1),
+        ShortcutAction::MoveUp => app.move_selection(-1),
         ShortcutAction::GoToParentDirectory => {
             let parent_path = app
                 .tab_manager
@@ -90,15 +84,9 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: Shortcut
             }
             app.last_lowercase_g_pressed_ms = 0;
         }
-        ShortcutAction::DeleteEntry => {
-            app.delete_selected_entry();
-        }
-        ShortcutAction::RenameEntry => {
-            app.rename_selected_entry();
-        }
-        ShortcutAction::AddEntry => {
-            app.show_popup = Some(PopupType::AddEntry(String::new()));
-        }
+        ShortcutAction::DeleteEntry => app.delete_selected_entry(),
+        ShortcutAction::RenameEntry => app.rename_selected_entry(),
+        ShortcutAction::AddEntry => app.show_popup = Some(PopupType::AddEntry(String::new())),
         ShortcutAction::SelectEntry => {
             let tab = app.tab_manager.current_tab_mut();
             if let Some(entry) = tab.entries.get(tab.selected_index) {
@@ -128,12 +116,8 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: Shortcut
                 }
             }
         }
-        ShortcutAction::CopyEntry => {
-            app.copy_selected_entries();
-        }
-        ShortcutAction::CutEntry => {
-            app.cut_selected_entries();
-        }
+        ShortcutAction::CopyEntry => app.copy_selected_entries(),
+        ShortcutAction::CutEntry => app.cut_selected_entries(),
         ShortcutAction::PasteEntry => {
             let tab = app.tab_manager.current_tab_mut();
             if center_panel::handle_clipboard_operations(
@@ -191,12 +175,8 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: Shortcut
                 app.refresh_entries();
             }
         }
-        ShortcutAction::ToggleBookmark => {
-            bookmark_popup::toggle_bookmark(app);
-        }
-        ShortcutAction::ShowBookmarks => {
-            app.show_popup = Some(PopupType::Bookmarks(0));
-        }
+        ShortcutAction::ToggleBookmark => bookmark_popup::toggle_bookmark(app),
+        ShortcutAction::ShowBookmarks => app.show_popup = Some(PopupType::Bookmarks(0)),
         ShortcutAction::OpenTerminal => {
             let path = app.tab_manager.current_tab_mut().current_path.clone();
             match terminal::TerminalContext::new(ctx, path) {
@@ -217,18 +197,10 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: Shortcut
                 app.show_popup = Some(PopupType::Help);
             }
         }
-        ShortcutAction::Exit => {
-            app.show_popup = Some(PopupType::Exit);
-        }
-        ShortcutAction::ActivateSearch => {
-            app.search_bar.activate();
-        }
-        ShortcutAction::GoBackInHistory => {
-            app.navigate_history_back();
-        }
-        ShortcutAction::GoForwardInHistory => {
-            app.navigate_history_forward();
-        }
+        ShortcutAction::Exit => app.show_popup = Some(PopupType::Exit),
+        ShortcutAction::ActivateSearch => app.search_bar.activate(),
+        ShortcutAction::GoBackInHistory => app.navigate_history_back(),
+        ShortcutAction::GoForwardInHistory => app.navigate_history_forward(),
         ShortcutAction::SwitchToNextTab => {
             let current_index = app.tab_manager.get_current_tab_index();
             let total_tabs = app.tab_manager.get_tab_count();
