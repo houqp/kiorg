@@ -289,7 +289,6 @@ pub fn toggle_bookmark(app: &mut Kiorg) {
             app.notify_error(format!("Failed to save bookmarks: {e}"));
         }
     } else {
-        // Show error notification when trying to bookmark a file
         app.notify_error("Bookmarks can only be applied to directories, not files".to_string());
     }
 }

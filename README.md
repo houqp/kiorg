@@ -1,4 +1,6 @@
 # Kiorg
+[![Releases](https://img.shields.io/badge/-releases-blue)](https://github.com/houqp/kiorg/releases)
+[![discord](https://dcbadge.limes.pink/api/server/https://discord.gg/TdTb2CHfpr?style=flat&compact=true)](https://discord.gg/TdTb2CHfpr)
 
 <p align="center">
   <img src="assets/icon.png" alt="Kiorg Logo" width="200px">
