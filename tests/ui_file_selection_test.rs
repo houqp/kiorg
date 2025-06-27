@@ -50,8 +50,7 @@ fn test_ctrl_a_select_all_and_delete() {
         for test_file in &test_files {
             assert!(
                 tab.marked_entries.contains(test_file),
-                "File {:?} should be selected",
-                test_file
+                "File {test_file:?} should be selected"
             );
         }
     }
@@ -95,8 +94,7 @@ fn test_ctrl_a_select_all_and_delete() {
         for test_file in &test_files {
             assert!(
                 test_file.exists(),
-                "File {:?} should still exist after first confirmation",
-                test_file
+                "File {test_file:?} should still exist after first confirmation"
             );
         }
     }
@@ -127,8 +125,7 @@ fn test_ctrl_a_select_all_and_delete() {
     for test_file in &test_files {
         assert!(
             !test_file.exists(),
-            "File {:?} should be deleted after confirmation",
-            test_file
+            "File {test_file:?} should be deleted after confirmation"
         );
     }
 
@@ -158,7 +155,6 @@ fn test_ctrl_a_select_all_and_delete() {
 
     assert!(
         remaining_entries.is_empty(),
-        "Directory should be empty after deleting all files, but found: {:?}",
-        remaining_entries
+        "Directory should be empty after deleting all files, but found: {remaining_entries:?}"
     );
 }

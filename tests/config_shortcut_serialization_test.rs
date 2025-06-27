@@ -69,7 +69,7 @@ key = "w"
     let saved_content =
         fs::read_to_string(config_dir.join("config.toml")).expect("Should read saved config file");
 
-    println!("Saved config content:\n{}", saved_content);
+    println!("Saved config content:\n{saved_content}");
 
     // The saved content should ONLY contain user overrides, not all the defaults
     // It should contain the user's custom shortcuts
@@ -107,8 +107,7 @@ key = "w"
     let line_count = saved_content.lines().count();
     assert!(
         line_count < 20,
-        "Saved config should be concise, got {} lines",
-        line_count
+        "Saved config should be concise, got {line_count} lines"
     );
 }
 
@@ -143,8 +142,7 @@ theme = "dark"
         fs::read_to_string(config_dir.join("config.toml")).expect("Should read saved config file");
 
     println!(
-        "Saved config content (no user shortcuts):\n{}",
-        saved_content
+        "Saved config content (no user shortcuts):\n{saved_content}"
     );
 
     // The saved content should not contain any shortcuts section since no user overrides were provided
@@ -205,8 +203,7 @@ fn test_runtime_shortcut_modification_serialization() {
         fs::read_to_string(config_dir.join("config.toml")).expect("Should read saved config file");
 
     println!(
-        "Saved config content (with runtime modification):\n{}",
-        saved_content
+        "Saved config content (with runtime modification):\n{saved_content}"
     );
 
     // The saved content should contain the user's modification

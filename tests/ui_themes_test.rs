@@ -856,8 +856,7 @@ fn test_snapshot_all_themes() {
     for (_, display_name) in &builtin_theme_info {
         assert!(
             harness.query_by_label(display_name).is_some(),
-            "Built-in theme '{}' should be visible in the popup",
-            display_name
+            "Built-in theme '{display_name}' should be visible in the popup"
         );
     }
     harness.step();
@@ -876,7 +875,7 @@ fn test_snapshot_all_themes() {
 
         #[cfg(feature = "snapshot")]
         {
-            let file_name = format!("theme_selection-{:02}-{}", expected_index, theme_key);
+            let file_name = format!("theme_selection-{expected_index:02}-{theme_key}");
             harness.snapshot(file_name.as_str());
             png_file_list.push(format!("{file_name}.png"));
         }
@@ -910,11 +909,11 @@ fn test_snapshot_all_themes() {
 
         // Load each PNG and add it as a frame to the GIF
         for png_file in &png_file_list {
-            let png_path = format!("tests/snapshots/{}", png_file);
+            let png_path = format!("tests/snapshots/{png_file}");
 
             // Load the PNG image
             let img = image::open(&png_path)
-                .unwrap_or_else(|_| panic!("Failed to open PNG file: {}", png_path));
+                .unwrap_or_else(|_| panic!("Failed to open PNG file: {png_path}"));
             let rgba_img = img.to_rgba8();
 
             // Create a frame with delay (500ms per frame for good visibility)

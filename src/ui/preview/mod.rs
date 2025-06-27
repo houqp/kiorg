@@ -12,12 +12,12 @@ use crate::models::preview_content::PreviewContent;
 
 #[inline]
 pub fn prefix_file_name(name: &str) -> String {
-    format!("📄 {}", name)
+    format!("📄 {name}")
 }
 
 #[inline]
 pub fn prefix_dir_name(name: &str) -> String {
-    format!("📁 {}", name)
+    format!("📁 {name}")
 }
 
 /// Update the preview cache based on the selected file

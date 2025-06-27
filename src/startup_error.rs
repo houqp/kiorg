@@ -38,7 +38,7 @@ impl StartupErrorApp {
         Self::show_error_dialog(
             error_message,
             "Configuration Error".to_string(),
-            Some(format!("Config file: {}", config_path)),
+            Some(format!("Config file: {config_path}")),
         )
     }
 
@@ -49,7 +49,7 @@ impl StartupErrorApp {
         additional_info: Option<String>,
     ) -> Result<(), eframe::Error> {
         let icon_data = crate::utils::icon::load_app_icon();
-        let window_title = format!("Kiorg - {}", title);
+        let window_title = format!("Kiorg - {title}");
 
         let options = eframe::NativeOptions {
             viewport: egui::ViewportBuilder::default()

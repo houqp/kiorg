@@ -31,7 +31,7 @@ fn main() {
 
     if !validate_fonts_directory(&standard_fonts_path) {
         eprintln!("Error: PDF fonts directory not properly initialized");
-        eprintln!("Directory: {}", standard_fonts_path);
+        eprintln!("Directory: {standard_fonts_path}");
         eprintln!("Please ensure the git submodule for PDF fonts has been initialized:");
         eprintln!();
         eprintln!("  git submodule update --init --recursive");
@@ -42,6 +42,6 @@ fn main() {
         process::exit(1);
     }
 
-    println!("cargo:rerun-if-changed={}", standard_fonts_path);
+    println!("cargo:rerun-if-changed={standard_fonts_path}");
     println!("cargo:rerun-if-env-changed=STANDARD_FONTS");
 }

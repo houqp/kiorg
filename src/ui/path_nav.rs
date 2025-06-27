@@ -67,8 +67,8 @@ pub fn draw_path_navigation(
 
             ui.label(RichText::new("/ ...").color(colors.fg_light));
             estimated_width += 4.0 * 8.0;
-            println!("estimated_width: {}", estimated_width);
-            println!("available width: {}", available_width);
+            println!("estimated_width: {estimated_width}");
+            println!("available width: {available_width}");
 
             // walk backwards to find the starting index for truncation
             let mut start_idx = components.len() - 1;

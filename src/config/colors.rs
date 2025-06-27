@@ -9,8 +9,7 @@ pub fn hex_to_color32(hex: &str) -> Result<Color32, String> {
     // Ensure hex string is at least 6 characters long
     if hex.len() < 6 {
         return Err(format!(
-            "Hex color string '{}' is too short, expected at least 6 characters",
-            hex
+            "Hex color string '{hex}' is too short, expected at least 6 characters"
         ));
     }
     let r = u8::from_str_radix(&hex[0..2], 16)

@@ -46,13 +46,13 @@ pub enum KiorgError {
 impl fmt::Display for KiorgError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            KiorgError::ConfigError(e) => write!(f, "Configuration error: {}", e),
+            KiorgError::ConfigError(e) => write!(f, "Configuration error: {e}"),
             KiorgError::DirectoryNotFound(path) => {
                 write!(f, "Directory not found: {}", path.display())
             }
             KiorgError::NotADirectory(path) => write!(f, "Not a directory: {}", path.display()),
-            KiorgError::WatcherError(e) => write!(f, "File system watcher error: {}", e),
-            KiorgError::Other(e) => write!(f, "{}", e),
+            KiorgError::WatcherError(e) => write!(f, "File system watcher error: {e}"),
+            KiorgError::Other(e) => write!(f, "{e}"),
         }
     }
 }
@@ -120,8 +120,7 @@ fn create_fs_watcher(
 
     if let Err(e) = fs_watcher.watch(watch_dir, RecursiveMode::NonRecursive) {
         return Err(std::io::Error::other(format!(
-            "Failed to watch path: {}",
-            e
+            "Failed to watch path: {e}"
         )));
     }
 
@@ -138,7 +137,7 @@ fn create_fs_watcher(
                     _ => {}
                 },
                 Err(e) => {
-                    eprintln!("File system watcher error: {}", e);
+                    eprintln!("File system watcher error: {e}");
                 }
             }
         }
@@ -577,7 +576,7 @@ impl Kiorg {
             .fs_watcher
             .watch(tab.current_path.as_path(), RecursiveMode::NonRecursive)
         {
-            self.notify_error(format!("Failed to watch directory: {}", e));
+            self.notify_error(format!("Failed to watch directory: {e}"));
         }
 
         self.refresh_entries();
@@ -622,7 +621,7 @@ impl Kiorg {
                 Ok(_) => {}
                 Err(e) => {
                     // Send the error message back to the main thread
-                    let _ = error_sender.send(format!("{}", e));
+                    let _ = error_sender.send(format!("{e}"));
                 }
             }
             signal.store(false, std::sync::atomic::Ordering::Relaxed);
@@ -633,7 +632,7 @@ impl Kiorg {
     pub fn open_file(&mut self, path: PathBuf) {
         let path_clone = path.clone();
         self.open_file_internal(path, move || {
-            open::that(&path_clone).map_err(|e| format!("Failed to open file: {}", e))
+            open::that(&path_clone).map_err(|e| format!("Failed to open file: {e}"))
         });
     }
 
@@ -643,7 +642,7 @@ impl Kiorg {
         let command_clone = command.clone();
         self.open_file_internal(path, move || {
             open::with(&path_clone, &command_clone)
-                .map_err(|e| format!("Failed to open file with '{}': {}", command_clone, e))
+                .map_err(|e| format!("Failed to open file with '{command_clone}': {e}"))
         });
     }
 
@@ -713,7 +712,7 @@ impl Kiorg {
         // Save application state before shutting down
         if let Err(e) = self.save_app_state() {
             self.toasts
-                .error(format!("Failed to save application state: {}", e));
+                .error(format!("Failed to save application state: {e}"));
         }
 
         ctx.send_viewport_cmd(egui::ViewportCommand::Close);
@@ -764,7 +763,7 @@ impl Kiorg {
                                 Some(tab_manager)
                             }
                             Err(e) => {
-                                eprintln!("Failed to parse app state: {}", e);
+                                eprintln!("Failed to parse app state: {e}");
                                 None
                             }
                         }
@@ -772,7 +771,7 @@ impl Kiorg {
                 }
             }
             Err(e) => {
-                eprintln!("Failed to read app state file: {}", e);
+                eprintln!("Failed to read app state file: {e}");
                 None
             }
         }
@@ -863,7 +862,7 @@ impl eframe::App for Kiorg {
                             &self.bookmarks,
                             self.config_dir_override.as_ref(),
                         ) {
-                            self.notify_error(format!("Failed to save bookmarks: {}", e));
+                            self.notify_error(format!("Failed to save bookmarks: {e}"));
                         }
                     }
                     bookmark_popup::BookmarkAction::None => {}
