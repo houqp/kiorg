@@ -288,5 +288,8 @@ pub fn toggle_bookmark(app: &mut Kiorg) {
         if let Err(e) = save_bookmarks(bookmarks, app.config_dir_override.as_ref()) {
             app.notify_error(format!("Failed to save bookmarks: {e}"));
         }
+    } else {
+        // Show error notification when trying to bookmark a file
+        app.notify_error("Bookmarks can only be applied to directories, not files".to_string());
     }
 }

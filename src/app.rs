@@ -324,7 +324,7 @@ impl Kiorg {
     pub fn notify_error<T: ToString>(&mut self, message: T) {
         self.toasts
             .error(message.to_string())
-            .duration(Some(std::time::Duration::from_secs(20)));
+            .duration(Some(std::time::Duration::from_secs(10)));
     }
 
     /// Get shortcuts from config or use defaults
