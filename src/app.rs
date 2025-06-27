@@ -119,9 +119,7 @@ fn create_fs_watcher(
     };
 
     if let Err(e) = fs_watcher.watch(watch_dir, RecursiveMode::NonRecursive) {
-        return Err(std::io::Error::other(format!(
-            "Failed to watch path: {e}"
-        )));
+        return Err(std::io::Error::other(format!("Failed to watch path: {e}")));
     }
 
     let notify_fs_change_clone = notify_fs_change.clone();

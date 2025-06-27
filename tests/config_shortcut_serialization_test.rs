@@ -141,9 +141,7 @@ theme = "dark"
     let saved_content =
         fs::read_to_string(config_dir.join("config.toml")).expect("Should read saved config file");
 
-    println!(
-        "Saved config content (no user shortcuts):\n{saved_content}"
-    );
+    println!("Saved config content (no user shortcuts):\n{saved_content}");
 
     // The saved content should not contain any shortcuts section since no user overrides were provided
     assert!(
@@ -202,9 +200,7 @@ fn test_runtime_shortcut_modification_serialization() {
     let saved_content =
         fs::read_to_string(config_dir.join("config.toml")).expect("Should read saved config file");
 
-    println!(
-        "Saved config content (with runtime modification):\n{saved_content}"
-    );
+    println!("Saved config content (with runtime modification):\n{saved_content}");
 
     // The saved content should contain the user's modification
     assert!(
