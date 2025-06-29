@@ -329,7 +329,6 @@ pub fn handle_delete_progress(ctx: &Context, app: &mut crate::app::Kiorg) {
     // Handle cleanup outside of the borrow
     if should_close {
         app.show_popup = None;
-        app.entries_to_delete.clear();
 
         app.tab_manager.current_tab_mut().marked_entries.clear();
         app.refresh_entries();
@@ -382,47 +381,49 @@ pub fn handle_delete_progress(ctx: &Context, app: &mut crate::app::Kiorg) {
 
 /// Handle the confirmation of deletion
 pub fn confirm_delete(app: &mut crate::app::Kiorg) {
-    if app.entries_to_delete.is_empty() {
+    let (state, entries_to_delete) =
+        if let Some(crate::app::PopupType::Delete(ref state, ref entries)) = app.show_popup {
+            (state.clone(), entries.clone())
+        } else {
+            return;
+        };
+
+    if entries_to_delete.is_empty() {
         return;
     }
 
-    // Get the state from the popup
-    let state = if let Some(crate::app::PopupType::Delete(ref state)) = app.show_popup {
-        state.clone()
-    } else {
-        return;
-    };
-
     // For bulk deletion (multiple entries)
-    if app.entries_to_delete.len() > 1 {
+    if entries_to_delete.len() > 1 {
         // Check if we're in the initial state and any of the entries is a directory
         if state == DeleteConfirmState::Initial {
             // For bulk deletion with directories, move to second confirmation
             app.show_popup = Some(crate::app::PopupType::Delete(
                 DeleteConfirmState::RecursiveConfirm,
+                entries_to_delete,
             ));
             return; // Return early without performing deletion
         }
     } else {
-        let path = &app.entries_to_delete[0];
+        let path = &entries_to_delete[0];
         // Check if we're in the initial state and dealing with a directory
         if state == DeleteConfirmState::Initial && path.is_dir() {
             // For directories in initial state, move to second confirmation
             app.show_popup = Some(crate::app::PopupType::Delete(
                 DeleteConfirmState::RecursiveConfirm,
+                entries_to_delete,
             ));
             return; // Return early without performing deletion
         }
     }
-    delete_async(app);
+    delete_async(app, entries_to_delete);
 }
 
 /// Start the async threaded deletion process
-fn delete_async(app: &mut crate::app::Kiorg) {
+fn delete_async(app: &mut crate::app::Kiorg, entries_to_delete: Vec<PathBuf>) {
     let (tx, rx) = mpsc::channel();
 
     // Set up progress state
-    let total_files = count_files_to_delete(&app.entries_to_delete);
+    let total_files = count_files_to_delete(&entries_to_delete);
     let progress_state = DeleteProgressState {
         total_files,
         current_file: 0,
@@ -440,7 +441,6 @@ fn delete_async(app: &mut crate::app::Kiorg) {
     app.show_popup = Some(crate::app::PopupType::DeleteProgress(progress_data));
 
     // Clone entries for the thread
-    let entries_to_delete = app.entries_to_delete.clone();
     thread::spawn(move || {
         let total_files = count_files_to_delete(&entries_to_delete);
         let mut current_file = 0;
@@ -470,5 +470,4 @@ fn delete_async(app: &mut crate::app::Kiorg) {
 
 pub fn cancel_delete(app: &mut crate::app::Kiorg) {
     app.show_popup = None;
-    app.entries_to_delete.clear(); // Clear the entries to delete
 }

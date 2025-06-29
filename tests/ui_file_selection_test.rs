@@ -63,14 +63,16 @@ fn test_ctrl_a_select_all_and_delete() {
     {
         let app = harness.state();
         assert!(
-            matches!(app.show_popup, Some(kiorg::app::PopupType::Delete(_))),
+            matches!(app.show_popup, Some(kiorg::app::PopupType::Delete(_, _))),
             "Delete popup should be shown"
         );
-        assert_eq!(
-            app.entries_to_delete.len(),
-            5,
-            "All 5 entries should be marked for deletion"
-        );
+        if let Some(kiorg::app::PopupType::Delete(_, ref entries)) = &app.show_popup {
+            assert_eq!(
+                entries.len(),
+                5,
+                "All 5 entries should be marked for deletion"
+            );
+        }
     }
 
     // Confirm the first deletion prompt
@@ -80,7 +82,7 @@ fn test_ctrl_a_select_all_and_delete() {
     // Verify we're in the recursive confirmation state
     {
         let app = harness.state();
-        if let Some(kiorg::app::PopupType::Delete(state)) = &app.show_popup {
+        if let Some(kiorg::app::PopupType::Delete(state, _)) = &app.show_popup {
             assert_eq!(
                 *state,
                 kiorg::ui::delete_popup::DeleteConfirmState::RecursiveConfirm,

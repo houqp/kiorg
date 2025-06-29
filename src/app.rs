@@ -78,7 +78,7 @@ pub enum PopupType {
     About,
     Help,
     Exit,
-    Delete(crate::ui::delete_popup::DeleteConfirmState),
+    Delete(crate::ui::delete_popup::DeleteConfirmState, Vec<PathBuf>),
     DeleteProgress(crate::ui::delete_popup::DeleteProgressData),
     Rename(String),   // New name for the file/directory being renamed
     OpenWith(String), // Command to use when opening a file with a custom command
@@ -182,7 +182,6 @@ pub struct Kiorg {
     pub scroll_range: Option<std::ops::Range<usize>>,
     // Popup management
     pub show_popup: Option<PopupType>,
-    pub entries_to_delete: Vec<PathBuf>, // Changed from Option<PathBuf> to Vec<PathBuf> for bulk deletion
     pub clipboard: Option<Clipboard>,
     pub search_bar: SearchBar,
     pub terminal_ctx: Option<terminal::TerminalContext>,
@@ -300,7 +299,6 @@ impl Kiorg {
             scroll_range: None,
             show_popup: None,
             clipboard: None,
-            entries_to_delete: Vec::new(), // Initialize empty vector for entries to delete
             search_bar: SearchBar::new(),
             files_being_opened: HashMap::new(),
             error_sender,
@@ -404,20 +402,20 @@ impl Kiorg {
             tab.range_selection_start = None;
         }
 
-        // Check if there are marked entries
-        if !tab.marked_entries.is_empty() {
+        let entries_to_delete = if !tab.marked_entries.is_empty() {
             // Use marked entries for bulk deletion
-            self.entries_to_delete = tab.marked_entries.iter().cloned().collect();
+            tab.marked_entries.iter().cloned().collect()
         } else if let Some(entry) = tab.selected_entry() {
             // Fall back to the currently selected entry if no entries are marked
-            self.entries_to_delete = vec![entry.path.clone()];
+            vec![entry.path.clone()]
         } else {
             // No entries to delete
             return;
-        }
+        };
 
         self.show_popup = Some(PopupType::Delete(
             crate::ui::delete_popup::DeleteConfirmState::Initial,
+            entries_to_delete,
         ));
     }
 
@@ -657,8 +655,8 @@ impl Kiorg {
     }
 
     fn handle_delete_confirmation(&mut self, ctx: &egui::Context) {
-        if let Some(PopupType::Delete(ref mut state)) = self.show_popup {
-            if self.entries_to_delete.is_empty() {
+        if let Some(PopupType::Delete(ref mut state, ref entries_to_delete)) = self.show_popup {
+            if entries_to_delete.is_empty() {
                 return;
             }
 
@@ -667,7 +665,7 @@ impl Kiorg {
             let result = delete_popup::handle_delete_confirmation(
                 ctx,
                 &mut show_delete_confirm,
-                &self.entries_to_delete,
+                entries_to_delete,
                 &self.colors,
                 state,
             );
@@ -817,7 +815,7 @@ impl eframe::App for Kiorg {
             Some(PopupType::Exit) => {
                 exit_popup::draw(ctx, self);
             }
-            Some(PopupType::Delete(_)) => {
+            Some(PopupType::Delete(_, _)) => {
                 self.handle_delete_confirmation(ctx);
             }
             Some(PopupType::DeleteProgress(_)) => {

@@ -242,9 +242,8 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: Shortcut
             let was_active = tab.is_range_selection_active();
             tab.toggle_range_selection();
 
-            // If we just entered range selection mode, clear entries_to_delete and clipboard
+            // If we just entered range selection mode, clear clipboard
             if !was_active && tab.is_range_selection_active() {
-                app.entries_to_delete.clear();
                 app.clipboard = None;
             }
         }
@@ -294,7 +293,7 @@ fn process_key(
             }
             return;
         }
-        Some(PopupType::Delete(_)) => {
+        Some(PopupType::Delete(_, _)) => {
             if key == Key::Enter {
                 crate::ui::delete_popup::confirm_delete(app);
             } else if is_cancel_keys(key) {

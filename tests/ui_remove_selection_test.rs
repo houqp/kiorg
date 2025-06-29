@@ -64,7 +64,7 @@ fn test_crash_reproduction_filtered_deletion() {
     harness.step();
 
     // Verify we're in the initial confirmation state
-    if let Some(kiorg::app::PopupType::Delete(state)) = &harness.state().show_popup {
+    if let Some(kiorg::app::PopupType::Delete(state, _)) = &harness.state().show_popup {
         assert_eq!(
             *state,
             kiorg::ui::delete_popup::DeleteConfirmState::Initial,
@@ -79,7 +79,7 @@ fn test_crash_reproduction_filtered_deletion() {
     harness.step();
 
     // Verify we're now in the recursive confirmation state
-    if let Some(kiorg::app::PopupType::Delete(state)) = &harness.state().show_popup {
+    if let Some(kiorg::app::PopupType::Delete(state, _)) = &harness.state().show_popup {
         assert_eq!(
             *state,
             kiorg::ui::delete_popup::DeleteConfirmState::RecursiveConfirm,
