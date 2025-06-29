@@ -399,6 +399,11 @@ impl Kiorg {
     pub fn delete_selected_entry(&mut self) {
         let tab = self.tab_manager.current_tab_mut();
 
+        if tab.is_range_selection_active() {
+            tab.apply_range_selection_to_marked();
+            tab.range_selection_start = None;
+        }
+
         // Check if there are marked entries
         if !tab.marked_entries.is_empty() {
             // Use marked entries for bulk deletion
@@ -423,26 +428,21 @@ impl Kiorg {
         }
     }
 
-    fn get_marked_entries(&mut self) -> Vec<PathBuf> {
+    /// Common logic for copy/cut operations
+    /// Returns the paths to operate on, handling range selection and marked entries
+    fn prepare_clipboard_operation(&mut self) -> Vec<PathBuf> {
         let tab = self.tab_manager.current_tab_mut();
-        if tab.marked_entries.is_empty() {
-            if let Some(entry) = tab.selected_entry() {
-                vec![entry.path.clone()]
-            } else {
-                vec![]
-            }
-        } else {
-            tab.marked_entries.iter().cloned().collect()
+
+        // copy/cut exits range selection mode if active
+        if tab.is_range_selection_active() {
+            tab.apply_range_selection_to_marked();
+            tab.range_selection_start = None;
         }
-    }
 
-    pub fn cut_selected_entries(&mut self) {
-        let tab = self.tab_manager.current_tab_mut();
-
-        // Check if we're cutting a single unmarked file while other files are marked
+        // Check if we're operating on a single unmarked file while other files are marked
+        // In such case, we should reset the marked state
         let should_clear_marked = if let Some(entry) = tab.selected_entry() {
             let selected_path = &entry.path;
-
             // If the selected file is not marked but there are other marked files
             !tab.marked_entries.contains(selected_path) && !tab.marked_entries.is_empty()
         } else {
@@ -452,49 +452,31 @@ impl Kiorg {
         if should_clear_marked {
             // Get the selected entry path before clearing marked entries
             let selected_path = tab.selected_entry().unwrap().path.clone();
-
-            // Clear all marked entries
             tab.marked_entries.clear();
-
-            // Update the cut buffer with only the newly selected file
-            self.clipboard = Some(Clipboard::Cut(vec![selected_path]));
-            return;
+            vec![selected_path]
+        } else {
+            // Otherwise, proceed with marked entries
+            if tab.marked_entries.is_empty() {
+                if let Some(entry) = tab.selected_entry() {
+                    vec![entry.path.clone()]
+                } else {
+                    vec![]
+                }
+            } else {
+                tab.marked_entries.iter().cloned().collect()
+            }
         }
+    }
 
-        // Otherwise, proceed with the normal behavior
-        let paths = self.get_marked_entries();
+    pub fn cut_selected_entries(&mut self) {
+        let paths = self.prepare_clipboard_operation();
         if !paths.is_empty() {
             self.clipboard = Some(Clipboard::Cut(paths));
         }
     }
 
     pub fn copy_selected_entries(&mut self) {
-        let tab = self.tab_manager.current_tab_mut();
-
-        // Check if we're copying a single unmarked file while other files are marked
-        let should_clear_marked = if let Some(entry) = tab.selected_entry() {
-            let selected_path = &entry.path;
-
-            // If the selected file is not marked but there are other marked files
-            !tab.marked_entries.contains(selected_path) && !tab.marked_entries.is_empty()
-        } else {
-            false
-        };
-
-        if should_clear_marked {
-            // Get the selected entry path before clearing marked entries
-            let selected_path = tab.selected_entry().unwrap().path.clone();
-
-            // Clear all marked entries
-            tab.marked_entries.clear();
-
-            // Update the clipboard with only the newly selected file
-            self.clipboard = Some(Clipboard::Copy(vec![selected_path]));
-            return;
-        }
-
-        // Otherwise, proceed with the normal behavior
-        let paths = self.get_marked_entries();
+        let paths = self.prepare_clipboard_operation();
         if !paths.is_empty() {
             self.clipboard = Some(Clipboard::Copy(paths));
         }
@@ -565,6 +547,8 @@ impl Kiorg {
         self.prev_path = Some(path);
         // Reset scroll_range to None when navigating to a new directory
         self.scroll_range = None;
+        // Exit range selection mode when changing directories
+        tab.range_selection_start = None;
         self.search_bar.close();
         // Reset filter when closing search bar
         tab.update_filtered_cache(&None, false);

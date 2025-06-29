@@ -89,6 +89,11 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: Shortcut
         ShortcutAction::AddEntry => app.show_popup = Some(PopupType::AddEntry(String::new())),
         ShortcutAction::SelectEntry => {
             let tab = app.tab_manager.current_tab_mut();
+
+            if tab.is_range_selection_active() {
+                return;
+            }
+
             if let Some(entry) = tab.entries.get(tab.selected_index) {
                 let path = &entry.path;
                 if tab.marked_entries.contains(path) {
@@ -120,6 +125,8 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: Shortcut
         ShortcutAction::CutEntry => app.cut_selected_entries(),
         ShortcutAction::PasteEntry => {
             let tab = app.tab_manager.current_tab_mut();
+            // Clear marked entries after paste operation
+            tab.marked_entries.clear();
             if center_panel::handle_clipboard_operations(
                 &mut app.clipboard,
                 &tab.current_path,
@@ -230,6 +237,17 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: Shortcut
         ShortcutAction::PageUp => app.move_selection_by_page(-1),
         ShortcutAction::PageDown => app.move_selection_by_page(1),
         ShortcutAction::SelectAllEntries => app.select_all_entries(),
+        ShortcutAction::ToggleRangeSelection => {
+            let tab = app.tab_manager.current_tab_mut();
+            let was_active = tab.is_range_selection_active();
+            tab.toggle_range_selection();
+
+            // If we just entered range selection mode, clear entries_to_delete and clipboard
+            if !was_active && tab.is_range_selection_active() {
+                app.entries_to_delete.clear();
+                app.clipboard = None;
+            }
+        }
     }
 }
 

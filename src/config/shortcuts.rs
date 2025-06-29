@@ -196,6 +196,7 @@ pub enum ShortcutAction {
     OpenTerminal,
     ShowFilePreview,
     Exit,
+    ToggleRangeSelection,
 }
 
 // Define a struct to represent an egui key combination for efficient lookups
@@ -494,7 +495,10 @@ pub fn default_shortcuts() -> Shortcuts {
     );
     add_shortcut(KeyboardShortcut::new("pageup"), ShortcutAction::PageUp);
     add_shortcut(KeyboardShortcut::new("pagedown"), ShortcutAction::PageDown);
-
+    add_shortcut(
+        KeyboardShortcut::new("v"),
+        ShortcutAction::ToggleRangeSelection,
+    );
     shortcuts
 }
 

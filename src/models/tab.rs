@@ -33,6 +33,8 @@ pub struct Tab {
     pub selected_index: usize,
     pub parent_selected_index: usize,
     pub marked_entries: std::collections::HashSet<PathBuf>,
+    // Range selection mode
+    pub range_selection_start: Option<usize>,
     // History of visited directories
     pub history: Vec<PathBuf>,
     pub history_position: usize,
@@ -103,6 +105,7 @@ impl Tab {
             selected_index: 0,
             parent_selected_index: 0,
             marked_entries: std::collections::HashSet::new(),
+            range_selection_start: None,
             history: Vec::new(),
             history_position: 0,
             path_to_index: std::collections::HashMap::new(),
@@ -132,6 +135,7 @@ impl Tab {
             selected_index: 0,
             parent_selected_index: 0,
             marked_entries: std::collections::HashSet::new(),
+            range_selection_start: None,
             history: Vec::new(),
             history_position: 0,
             path_to_index: std::collections::HashMap::new(),
@@ -188,6 +192,60 @@ impl Tab {
             None
         } else {
             Some(&self.entries[self.selected_index])
+        }
+    }
+
+    /// Check if range selection mode is active
+    #[must_use]
+    pub fn is_range_selection_active(&self) -> bool {
+        self.range_selection_start.is_some()
+    }
+
+    /// Toggle range selection mode
+    pub fn toggle_range_selection(&mut self) {
+        if self.range_selection_start.is_some() {
+            // Exit range selection mode
+            self.range_selection_start = None;
+        } else {
+            // Enter range selection mode with current selection as start
+            // Clear all existing marked entries when entering range selection mode
+            self.marked_entries.clear();
+            self.range_selection_start = Some(self.selected_index);
+        }
+    }
+
+    /// Get the range of indices that are currently selected in range selection mode
+    #[must_use]
+    pub fn get_range_selection_range(&self) -> Option<(usize, usize)> {
+        self.range_selection_start.map(|start| {
+            let end = self.selected_index;
+            if start <= end {
+                (start, end)
+            } else {
+                (end, start)
+            }
+        })
+    }
+
+    /// Get all entries that are currently selected via range selection
+    #[must_use]
+    pub fn get_range_selected_entries(&self) -> Option<&[DirEntry]> {
+        self.get_range_selection_range()
+            .map(|(start, end)| &self.entries[start..=end])
+    }
+
+    /// Apply the current range selection to marked entries
+    pub fn apply_range_selection_to_marked(&mut self) {
+        if let Some((start, end)) = self.get_range_selection_range() {
+            // Clear existing marked entries
+            self.marked_entries.clear();
+
+            // Add all entries in the visual selection range to marked entries
+            for i in start..=end {
+                if i < self.entries.len() {
+                    self.marked_entries.insert(self.entries[i].path.clone());
+                }
+            }
         }
     }
 
