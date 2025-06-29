@@ -36,6 +36,35 @@ fn copy_dir_recursively(src: &std::path::Path, dst: &std::path::Path) -> std::io
     Ok(())
 }
 
+fn new_unique_path_name_for_paste(
+    path: &std::path::Path,
+    current_path: &std::path::Path,
+) -> PathBuf {
+    let name = path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or_default();
+    let mut new_path = current_path.join(name);
+
+    // Handle duplicate names
+    let mut counter = 1;
+    while new_path.exists() {
+        let stem = path
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or_default();
+        let ext = path
+            .extension()
+            .and_then(|e| e.to_str())
+            .map(|e| format!(".{e}"))
+            .unwrap_or_default();
+        new_path = current_path.join(format!("{stem}_{counter}{ext}"));
+        counter += 1;
+    }
+
+    new_path
+}
+
 /// Handles clipboard paste operations (copy/cut)
 /// Returns true if any operation was performed
 pub fn handle_clipboard_operations(
@@ -43,62 +72,43 @@ pub fn handle_clipboard_operations(
     current_path: &std::path::Path,
     toasts: &mut egui_notify::Toasts,
 ) -> bool {
-    let (paths, is_cut) = match clipboard.take() {
-        Some(Clipboard::Copy(paths)) => (paths, false),
-        Some(Clipboard::Cut(paths)) => (paths, true),
-        _ => return false, // No clipboard operation to perform
-    };
-
-    for path in paths {
-        let name = path
-            .file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or_default();
-        let mut new_path = current_path.join(name);
-
-        // Handle duplicate names
-        let mut counter = 1;
-        while new_path.exists() {
-            let stem = path
-                .file_stem()
-                .and_then(|s| s.to_str())
-                .unwrap_or_default();
-            let ext = path
-                .extension()
-                .and_then(|e| e.to_str())
-                .map(|e| format!(".{e}"))
-                .unwrap_or_default();
-            new_path = current_path.join(format!("{stem}_{counter}{ext}"));
-            counter += 1;
-        }
-
-        if is_cut {
-            if let Err(e) = std::fs::rename(&path, &new_path) {
-                toasts.error(format!(
-                    "Failed to move {} to {}: {e}",
-                    path.to_string_lossy(),
-                    new_path.to_string_lossy()
-                ));
-            }
-        } else {
-            // Handle copying differently based on whether it's a file or directory
-            if path.is_dir() {
-                if let Err(e) = copy_dir_recursively(&path, &new_path) {
+    match clipboard.take() {
+        Some(Clipboard::Copy(paths)) => {
+            paths.iter().for_each(|path| {
+                let new_path = new_unique_path_name_for_paste(path, current_path);
+                // Handle copying differently based on whether it's a file or directory
+                if path.is_dir() {
+                    if let Err(e) = copy_dir_recursively(path, &new_path) {
+                        toasts.error(format!(
+                            "Failed to copy directory {} to {}: {e}",
+                            path.to_string_lossy(),
+                            new_path.to_string_lossy()
+                        ));
+                    }
+                } else if let Err(e) = std::fs::copy(path, &new_path) {
                     toasts.error(format!(
-                        "Failed to copy directory {} to {}: {e}",
+                        "Failed to copy file {} to {}: {e}",
                         path.to_string_lossy(),
                         new_path.to_string_lossy()
                     ));
                 }
-            } else if let Err(e) = std::fs::copy(&path, &new_path) {
-                toasts.error(format!(
-                    "Failed to copy file {} to {}: {e}",
-                    path.to_string_lossy(),
-                    new_path.to_string_lossy()
-                ));
-            }
+            });
         }
+        Some(Clipboard::Cut(paths)) => {
+            paths.iter().for_each(|path| {
+                let new_path = new_unique_path_name_for_paste(path, current_path);
+                if let Err(e) = std::fs::rename(path, &new_path) {
+                    toasts.error(format!(
+                        "Failed to move {} to {}: {e}",
+                        path.to_string_lossy(),
+                        new_path.to_string_lossy()
+                    ));
+                }
+            });
+        }
+        _ => return false, // No clipboard operation to perform
     }
+
     true
 }
 
@@ -335,13 +345,23 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                         return;
                     }
                     app.scroll_range = Some(row_range.clone());
+                    let selection_range = tab_ref.get_range_selection_range();
 
                     for row_index in row_range {
                         // Get the entry and original index for the current visible row from the filtered list
                         let (entry, original_index) = &filtered_entries[row_index];
 
                         let is_selected = *original_index == tab_ref.selected_index;
-                        let is_marked = tab_ref.marked_entries.contains(&entry.path);
+
+                        // Check if this entry is in the range selection range
+                        let is_in_range_selection = if let Some((start, end)) = selection_range {
+                            *original_index >= start && *original_index <= end
+                        } else {
+                            false
+                        };
+                        let is_marked =
+                            tab_ref.marked_entries.contains(&entry.path) || is_in_range_selection;
+
                         let being_opened = match app.files_being_opened.get(&entry.path) {
                             Some(signal) => {
                                 if signal.load(std::sync::atomic::Ordering::Relaxed) {
@@ -466,6 +486,8 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
         ContextMenuAction::Paste => {
             let current_path = &app.tab_manager.current_tab_ref().current_path;
             if handle_clipboard_operations(&mut app.clipboard, current_path, &mut app.toasts) {
+                // Clear marked entries after successful paste operation
+                app.tab_manager.current_tab_mut().marked_entries.clear();
                 app.refresh_entries();
             }
         }
