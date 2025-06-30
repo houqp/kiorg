@@ -130,8 +130,6 @@ pub struct EntryRowParams<'a> {
     pub is_being_opened: bool,
     pub is_in_cut_clipboard: bool,
     pub is_in_copy_clipboard: bool,
-    pub search_query: &'a Option<String>,
-    pub case_insensitive_search: bool,
 }
 
 fn draw_icon(
@@ -195,8 +193,6 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
         is_being_opened,
         is_in_cut_clipboard,
         is_in_copy_clipboard,
-        search_query,
-        case_insensitive_search,
     } = params;
 
     let (rect, response) = ui.allocate_exact_size(
@@ -260,83 +256,15 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
         ..Default::default()
     };
 
-    // TODO: why would name_text ever be empty?
-    match (search_query, name_text.is_empty()) {
-        (Some(query), false) => {
-            let mut last_match_end = 0;
-
-            // Get all match positions based on case sensitivity
-            let matches: Vec<(usize, &str)> = if case_insensitive_search {
-                // For case-insensitive search, we need to find matches in lowercase but track original positions
-                let lower_name = name_text.to_lowercase();
-                let lower_query = query.to_lowercase();
-                lower_name
-                    .match_indices(&lower_query)
-                    .map(|(start, _)| (start, &name_text[start..start + lower_query.len()]))
-                    .collect()
-            } else {
-                name_text.match_indices(query).collect()
-            };
-
-            for (start, matched_part) in matches {
-                let end = start + matched_part.len();
-                // Add non-matching part before the match
-                if start > last_match_end {
-                    job.append(
-                        &name_text[last_match_end..start],
-                        0.0,
-                        egui::TextFormat {
-                            color: name_color,
-                            ..Default::default()
-                        },
-                    );
-                }
-                // Add matching part
-                job.append(
-                    &name_text[start..end],
-                    0.0,
-                    egui::TextFormat {
-                        color: colors.highlight,
-                        ..Default::default()
-                    },
-                );
-                last_match_end = end;
-            }
-            // Add remaining non-matching part after the last match
-            if last_match_end < name_text.len() {
-                job.append(
-                    &name_text[last_match_end..],
-                    0.0,
-                    egui::TextFormat {
-                        color: name_color,
-                        ..Default::default()
-                    },
-                );
-            }
-            // If no matches were found, just add the whole text with normal color
-            if job.sections.is_empty() {
-                job.append(
-                    &name_text,
-                    0.0,
-                    egui::TextFormat {
-                        color: colors.fg_light,
-                        ..Default::default()
-                    },
-                ); // Show non-matches in gray
-            }
-        }
-        _ => {
-            // No search active, just add the whole text with normal color
-            job.append(
-                &name_text,
-                0.0,
-                egui::TextFormat {
-                    color: name_color,
-                    ..Default::default()
-                },
-            );
-        }
-    }
+    // Just add the whole text with normal color (no highlighting)
+    job.append(
+        &name_text,
+        0.0,
+        egui::TextFormat {
+            color: name_color,
+            ..Default::default()
+        },
+    );
 
     let galley = ui.fonts(|f| f.layout_job(job));
     let galley_pos = cursor + egui::vec2(0.0, ROW_HEIGHT / 2.0 - galley.size().y / 2.0); // Center vertically

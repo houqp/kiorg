@@ -407,8 +407,6 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                                 is_being_opened: being_opened,
                                 is_in_cut_clipboard,
                                 is_in_copy_clipboard,
-                                search_query: &app.search_bar.query,
-                                case_insensitive_search: app.search_bar.case_insensitive,
                             },
                         );
 

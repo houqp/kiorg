@@ -55,7 +55,7 @@ fn test_goto_first_entry_with_filter() {
     // Verify selection is at the first filtered entry
     let query = harness.state().search_bar.query.clone();
     let tab = harness.state_mut().tab_manager.current_tab_mut();
-    tab.update_filtered_cache(&query, true);
+    tab.update_filtered_cache(&query, true, false);
     let filtered_entries: Vec<&DirEntry> = tab
         .get_cached_filtered_entries()
         .iter()
@@ -125,7 +125,7 @@ fn test_goto_last_entry_with_filter() {
     // Verify selection is at the last filtered entry
     let query = harness.state().search_bar.query.clone();
     let tab = harness.state_mut().tab_manager.current_tab_mut();
-    tab.update_filtered_cache(&query, true);
+    tab.update_filtered_cache(&query, true, false);
     let filtered_entries: Vec<&DirEntry> = tab
         .get_cached_filtered_entries()
         .iter()

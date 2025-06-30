@@ -1,7 +1,8 @@
-use crate::config::Config;
+use crate::config::Config as AppConfig;
 use crate::models::dir_entry::DirEntry;
 use chrono::{DateTime, Local};
 use humansize::{format_size, BINARY};
+use nucleo::{Config as NucleoConfig, Matcher, Utf32Str};
 use std::path::PathBuf;
 
 #[derive(Clone, PartialEq, Debug, Hash, Eq, serde::Serialize, serde::Deserialize, Copy)]
@@ -287,9 +288,40 @@ impl Tab {
     // Returns a filtered list of entries based on the search query with case sensitivity option
 
     // Update cached filtered entries with new filter parameters
-    pub fn update_filtered_cache(&mut self, query: &Option<String>, case_insensitive: bool) {
+    pub fn update_filtered_cache(
+        &mut self,
+        query: &Option<String>,
+        case_insensitive: bool,
+        fuzzy: bool,
+    ) {
         // Inline the filtering logic instead of calling get_filtered_entries_with_indices_and_case
         let filtered_iter = match query.as_ref() {
+            Some(q) if fuzzy => {
+                let mut config = NucleoConfig::DEFAULT;
+                config.ignore_case = case_insensitive;
+                let mut matcher = Matcher::new(config);
+                let mut matches = Vec::new();
+
+                let mut needle_buf = Vec::new();
+                let needle = if case_insensitive {
+                    q.to_lowercase()
+                } else {
+                    q.clone()
+                };
+                let needle_utf32 = Utf32Str::new(&needle, &mut needle_buf);
+
+                for (index, entry) in self.entries.iter().enumerate() {
+                    let mut haystack_buf = Vec::new();
+                    let haystack_utf32 = Utf32Str::new(&entry.name, &mut haystack_buf);
+
+                    // TODO: rank result by score
+                    if let Some(_score) = matcher.fuzzy_match(haystack_utf32, needle_utf32) {
+                        matches.push((entry.clone(), index));
+                    }
+                }
+
+                matches
+            }
             Some(q) if case_insensitive => {
                 let lower_query = q.to_lowercase();
                 self.entries
@@ -407,7 +439,7 @@ impl TabManager {
     }
 
     #[must_use]
-    pub fn new_with_config(initial_path: PathBuf, config: Option<&Config>) -> Self {
+    pub fn new_with_config(initial_path: PathBuf, config: Option<&AppConfig>) -> Self {
         let sort_preference = config.and_then(|c| c.sort_preference.as_ref());
 
         // Initialize sort settings from config
@@ -542,7 +574,7 @@ impl TabManager {
         refresh_path_to_index(tab);
 
         // Reset filter cache to show all entries when sort order changes
-        tab.update_filtered_cache(&None, false);
+        tab.update_filtered_cache(&None, false, false);
     }
 
     pub fn refresh_entries(&mut self) {
@@ -581,7 +613,7 @@ impl TabManager {
         refresh_path_to_index(tab);
 
         // Reset filter cache to show all entries when entries change
-        tab.update_filtered_cache(&None, false);
+        tab.update_filtered_cache(&None, false, false);
 
         // Reset selection index if it's out of bounds (can happen after rehydrating from TabState)
         if tab.selected_index >= tab.entries.len() && !tab.entries.is_empty() {
@@ -884,5 +916,110 @@ mod tests {
         // Verify the indices are reset to default
         assert_eq!(new_tab.selected_index, 0);
         assert_eq!(new_tab.parent_selected_index, 0);
+    }
+
+    #[test]
+    fn test_fuzzy_search_functionality() {
+        // Create a tab with sample file entries
+        let mut tab = Tab::new(PathBuf::from("/demo"));
+
+        // Add some sample entries that will be good for testing fuzzy search
+        tab.entries = vec![
+            create_entry("readme.txt", false, 10, 100),
+            create_entry("src", true, 20, 0),
+            create_entry("config.toml", false, 30, 200),
+            create_entry("rust-project.json", false, 40, 150),
+            create_entry("main.rs", false, 50, 300),
+        ];
+
+        // Test fuzzy search with "rs" - should match "main.rs" and "rust-project.json"
+        tab.update_filtered_cache(&Some("rs".to_string()), true, true);
+        let fuzzy_rs_results: Vec<String> = tab
+            .get_cached_filtered_entries()
+            .iter()
+            .map(|(entry, _)| entry.name.clone())
+            .collect();
+        assert_eq!(fuzzy_rs_results.len(), 2);
+        assert!(fuzzy_rs_results.contains(&"main.rs".to_string()));
+        assert!(fuzzy_rs_results.contains(&"rust-project.json".to_string()));
+
+        // Test exact search with "rt" - should not match anything because "rt" doesn't appear consecutively
+        tab.update_filtered_cache(&Some("rt".to_string()), true, false);
+        let exact_rt_results: Vec<String> = tab
+            .get_cached_filtered_entries()
+            .iter()
+            .map(|(entry, _)| entry.name.clone())
+            .collect();
+        assert_eq!(exact_rt_results.len(), 0);
+
+        // Test fuzzy search with "cfg" - should match "config.toml"
+        tab.update_filtered_cache(&Some("cfg".to_string()), true, true);
+        let fuzzy_cfg_results: Vec<String> = tab
+            .get_cached_filtered_entries()
+            .iter()
+            .map(|(entry, _)| entry.name.clone())
+            .collect();
+        assert_eq!(fuzzy_cfg_results.len(), 1);
+        assert!(fuzzy_cfg_results.contains(&"config.toml".to_string()));
+
+        // Test fuzzy search with "rt" - should match "readme.txt" and "rust-project.json"
+        tab.update_filtered_cache(&Some("rt".to_string()), true, true);
+        let fuzzy_rt_results: Vec<String> = tab
+            .get_cached_filtered_entries()
+            .iter()
+            .map(|(entry, _)| entry.name.clone())
+            .collect();
+        assert_eq!(fuzzy_rt_results.len(), 2); // "readme.txt" and "rust-project.json" both match "rt"
+        assert!(fuzzy_rt_results.contains(&"rust-project.json".to_string()));
+        assert!(fuzzy_rt_results.contains(&"readme.txt".to_string()));
+
+        // Test case sensitivity in fuzzy search - use a pattern that exists in different cases
+        // First test case sensitive search with lowercase "config" - should match "config.toml"
+        tab.update_filtered_cache(&Some("config".to_string()), false, true); // case sensitive
+        let case_sensitive_results: Vec<String> = tab
+            .get_cached_filtered_entries()
+            .iter()
+            .map(|(entry, _)| entry.name.clone())
+            .collect();
+        assert_eq!(case_sensitive_results.len(), 1);
+        assert!(case_sensitive_results.contains(&"config.toml".to_string()));
+
+        // Test case sensitive search with uppercase "CONFIG" - should not match anything
+        tab.update_filtered_cache(&Some("CONFIG".to_string()), false, true); // case sensitive
+        let case_sensitive_upper_results: Vec<String> = tab
+            .get_cached_filtered_entries()
+            .iter()
+            .map(|(entry, _)| entry.name.clone())
+            .collect();
+        assert_eq!(case_sensitive_upper_results.len(), 0); // Should not match "config.toml"
+
+        // Test case insensitive search with uppercase "CONFIG" - should match "config.toml"
+        tab.update_filtered_cache(&Some("CONFIG".to_string()), true, true); // case insensitive
+        let case_insensitive_results: Vec<String> = tab
+            .get_cached_filtered_entries()
+            .iter()
+            .map(|(entry, _)| entry.name.clone())
+            .collect();
+        assert_eq!(case_insensitive_results.len(), 1);
+        assert!(case_insensitive_results.contains(&"config.toml".to_string()));
+
+        // Test that original indices are preserved correctly
+        tab.update_filtered_cache(&Some("rs".to_string()), true, true);
+        let results_with_indices = tab.get_cached_filtered_entries();
+
+        // Find the original indices for our matched files
+        for (entry, original_index) in results_with_indices {
+            if entry.name == "main.rs" {
+                assert_eq!(*original_index, 4); // main.rs was the 5th entry (index 4)
+            }
+            if entry.name == "rust-project.json" {
+                assert_eq!(*original_index, 3); // rust-project.json was the 4th entry (index 3)
+            }
+        }
+
+        // Test empty query shows all entries
+        tab.update_filtered_cache(&None, true, true);
+        let all_results = tab.get_cached_filtered_entries();
+        assert_eq!(all_results.len(), 5);
     }
 }

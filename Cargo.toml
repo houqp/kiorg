@@ -44,6 +44,7 @@ epub = "2"
 file_type = "0"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+nucleo = "0.5.0"
 
 # image handling
 image = { version = "0" }
