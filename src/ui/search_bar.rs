@@ -6,6 +6,7 @@ pub struct SearchBar {
     pub query: Option<String>,
     pub focus: bool,
     pub case_insensitive: bool,
+    pub fuzzy: bool,
 }
 
 impl SearchBar {
@@ -15,6 +16,7 @@ impl SearchBar {
             query: None,
             focus: false,
             case_insensitive: true, // Default to case insensitive
+            fuzzy: true,            // Default to fuzzy search
         }
     }
 
@@ -39,7 +41,11 @@ impl SearchBar {
 fn apply_new_query(app: &mut Kiorg) {
     // only need to apply search filter to the current active tab
     let tab = app.tab_manager.current_tab_mut();
-    tab.update_filtered_cache(&app.search_bar.query, app.search_bar.case_insensitive);
+    tab.update_filtered_cache(
+        &app.search_bar.query,
+        app.search_bar.case_insensitive,
+        app.search_bar.fuzzy,
+    );
 
     let first_filtered_index = tab
         .get_cached_filtered_entries()
@@ -85,7 +91,7 @@ pub fn handle_key_press(ctx: &Context, app: &mut Kiorg) -> bool {
                 app.search_bar.close();
                 // Reset filter when closing search bar
                 let tab = app.tab_manager.current_tab_mut();
-                tab.update_filtered_cache(&None, false);
+                tab.update_filtered_cache(&None, false, false);
             }
 
             consumed
@@ -166,12 +172,38 @@ pub fn draw(ctx: &Context, app: &mut Kiorg) {
                             apply_new_query(app);
                         }
 
+                        // Fuzzy search toggle button
+                        let fuzzy_toggle_color = if app.search_bar.fuzzy {
+                            app.colors.highlight
+                        } else {
+                            app.colors.fg_light
+                        };
+                        let fuzzy_tooltip_text = if app.search_bar.fuzzy {
+                            "Click to disable fuzzy search (exact match)"
+                        } else {
+                            "Click to enable fuzzy search"
+                        };
+                        let fuzzy_button_clicked = ui
+                            .add(
+                                egui::Button::new(
+                                    egui::RichText::new("Fz").color(fuzzy_toggle_color),
+                                )
+                                .small()
+                                .frame(false),
+                            )
+                            .on_hover_text(fuzzy_tooltip_text)
+                            .clicked();
+                        if fuzzy_button_clicked {
+                            app.search_bar.fuzzy = !app.search_bar.fuzzy;
+                            apply_new_query(app);
+                        }
+
                         // Close button
                         if ui.button("×").clicked() {
                             app.search_bar.close();
                             // Reset filter when closing search bar
                             let tab = app.tab_manager.current_tab_mut();
-                            tab.update_filtered_cache(&None, false);
+                            tab.update_filtered_cache(&None, false, false);
                         }
                     });
                 });

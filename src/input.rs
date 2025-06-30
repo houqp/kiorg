@@ -351,7 +351,7 @@ fn process_key(
         app.search_bar.close();
         // Reset filter when closing search bar
         let tab = app.tab_manager.current_tab_mut();
-        tab.update_filtered_cache(&None, false);
+        tab.update_filtered_cache(&None, false, false);
         return;
     }
 

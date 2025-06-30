@@ -368,7 +368,11 @@ impl Kiorg {
         if self.search_bar.query.is_some() {
             let case_insensitive = self.search_bar.case_insensitive;
             let tab = self.tab_manager.current_tab_mut();
-            tab.update_filtered_cache(&self.search_bar.query, case_insensitive);
+            tab.update_filtered_cache(
+                &self.search_bar.query,
+                case_insensitive,
+                self.search_bar.fuzzy,
+            );
         }
 
         // --- Start: Restore Selection Preservation (Post-Sort) ---
@@ -549,7 +553,7 @@ impl Kiorg {
         tab.range_selection_start = None;
         self.search_bar.close();
         // Reset filter when closing search bar
-        tab.update_filtered_cache(&None, false);
+        tab.update_filtered_cache(&None, false, false);
 
         // Watch the new directory
         if let Err(e) = self
