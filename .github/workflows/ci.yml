@@ -42,9 +42,6 @@ jobs:
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
 
-      - name: Install system dependencies (Linux only)
-        run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
-
       - name: Clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
 
