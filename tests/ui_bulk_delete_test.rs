@@ -63,7 +63,7 @@ fn test_bulk_delete_with_space_key() {
             matches!(app.show_popup, Some(kiorg::app::PopupType::Delete(_, _))),
             "Delete popup should be shown"
         );
-        if let Some(kiorg::app::PopupType::Delete(_, ref entries)) = &app.show_popup {
+        if let Some(kiorg::app::PopupType::Delete(_, entries)) = &app.show_popup {
             assert_eq!(
                 entries.len(),
                 2,

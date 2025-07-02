@@ -129,18 +129,18 @@ pub fn show_preview_popup(ctx: &Context, app: &mut Kiorg) {
 
                     // Display the preview content based on its type
                     match content {
-                        PreviewContent::Text(ref text) => {
+                        PreviewContent::Text(text) => {
                             ui.vertical_centered(|ui| {
                                 egui::ScrollArea::vertical().auto_shrink([false; 2]).show(
                                     ui,
                                     |ui| {
-                                        ui.label(egui::RichText::new(text).color(app.colors.fg));
+                                        ui.label(egui::RichText::new(text.as_str()).color(app.colors.fg));
                                     },
                                 );
                             });
                             // Use a scrollable area for text content in popup
                         }
-                        PreviewContent::Image(ref image_meta) => {
+                        PreviewContent::Image(image_meta) => {
                             // Use our specialized popup image renderer
                             image::render_popup(
                                 ui,
@@ -150,7 +150,7 @@ pub fn show_preview_popup(ctx: &Context, app: &mut Kiorg) {
                                 available_height,
                             );
                         }
-                        PreviewContent::Pdf(ref mut pdf_meta) => {
+                        PreviewContent::Pdf(pdf_meta) => {
                             // Use specialized PDF popup renderer with navigation
                             if let Some(path) = &selected_path {
                                 doc::render_pdf_popup(
@@ -163,7 +163,7 @@ pub fn show_preview_popup(ctx: &Context, app: &mut Kiorg) {
                                 );
                             }
                         }
-                        PreviewContent::Epub(ref epub_meta) => {
+                        PreviewContent::Epub(epub_meta) => {
                             // Use specialized EPUB popup renderer without navigation
                             doc::render_epub_popup(
                                 ui,
