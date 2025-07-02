@@ -5,7 +5,7 @@ use crate::app::Clipboard;
 use crate::app::Kiorg;
 use crate::config;
 use crate::config::SortPreference;
-use crate::ui::file_list::{self, TableHeaderParams, ROW_HEIGHT};
+use crate::ui::file_list::{self, ROW_HEIGHT, TableHeaderParams};
 
 // TODO: make this configurable
 const PADDING_ROWS: usize = 3;

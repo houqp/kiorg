@@ -205,12 +205,14 @@ fn test_prev_path_selection_with_sort() {
     // Navigate into bbb
     harness.press_key(Key::L);
     harness.step();
-    assert!(harness
-        .state()
-        .tab_manager
-        .current_tab_ref()
-        .current_path
-        .ends_with("ccc"));
+    assert!(
+        harness
+            .state()
+            .tab_manager
+            .current_tab_ref()
+            .current_path
+            .ends_with("ccc")
+    );
 
     // Manually set sort order to Descending Name *while inside bbb*
     // (Simulating header click is complex, direct state change is acceptable here)

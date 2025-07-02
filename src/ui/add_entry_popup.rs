@@ -112,7 +112,7 @@ pub(crate) fn handle_key_press(ctx: &Context, app: &mut Kiorg) -> bool {
                     // Store the path of the newly created entry
                     let created_path = current_path.join(&entry_name);
                     app.prev_path = Some(created_path); // Use prev_path to select the new entry
-                                                        // --- End: Preserve Selection After Creation ---
+                    // --- End: Preserve Selection After Creation ---
                     app.refresh_entries();
                 }
             }

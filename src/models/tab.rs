@@ -1,7 +1,7 @@
 use crate::config::Config as AppConfig;
 use crate::models::dir_entry::DirEntry;
 use chrono::{DateTime, Local};
-use humansize::{format_size, BINARY};
+use humansize::{BINARY, format_size};
 use nucleo::{Config as NucleoConfig, Matcher, Utf32Str};
 use std::path::PathBuf;
 
@@ -604,11 +604,11 @@ impl TabManager {
                 tab.parent_selected_index = pos;
             }
         } // else: No parent (e.g., root), parent_entries remains empty
-          // --- End: Parent Directory Logic ---
+        // --- End: Parent Directory Logic ---
 
         // --- Start: Current Directory Logic ---
         tab.entries = read_dir_entries(&current_path); // Read entries for the current path
-                                                       // Sort entries using the global sort settings
+        // Sort entries using the global sort settings
         sort_entries_by(&mut tab.entries, sort_column, sort_order);
         refresh_path_to_index(tab);
 

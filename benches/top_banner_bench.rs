@@ -1,7 +1,7 @@
 #![allow(clippy::let_underscore_untyped)]
 #![allow(dead_code)]
 
-use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
+use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
 use eframe::egui;
 use kiorg::Kiorg;
 use std::fs::File;

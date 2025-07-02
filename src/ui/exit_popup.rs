@@ -1,6 +1,6 @@
 use egui::Context;
 
-use super::popup_utils::{show_confirm_popup, ConfirmResult};
+use super::popup_utils::{ConfirmResult, show_confirm_popup};
 use crate::app::{Kiorg, PopupType};
 
 /// Handle exit confirmation

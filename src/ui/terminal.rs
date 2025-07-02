@@ -129,4 +129,4 @@ mod implementation {
     }
 }
 
-pub use implementation::{draw, TerminalContext};
+pub use implementation::{TerminalContext, draw};

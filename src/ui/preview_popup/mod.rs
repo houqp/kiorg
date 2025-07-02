@@ -134,7 +134,9 @@ pub fn show_preview_popup(ctx: &Context, app: &mut Kiorg) {
                                 egui::ScrollArea::vertical().auto_shrink([false; 2]).show(
                                     ui,
                                     |ui| {
-                                        ui.label(egui::RichText::new(text.as_str()).color(app.colors.fg));
+                                        ui.label(
+                                            egui::RichText::new(text.as_str()).color(app.colors.fg),
+                                        );
                                     },
                                 );
                             });

@@ -1,7 +1,7 @@
 #![allow(clippy::let_underscore_untyped)]
 #![allow(dead_code)]
 
-use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
+use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
 use eframe::egui;
 use kiorg::Kiorg;
 use std::fs::File;
@@ -93,7 +93,7 @@ fn bench_center_panel_with_search(c: &mut Criterion) {
                 let (mut app, temp_dir, config_temp_dir) = create_test_app(200);
                 // Set a search query to filter results
                 app.search_bar.query = Some("file_".to_string()); // More general search to match more files
-                                                                  // Clear selection to avoid index mismatch issues
+                // Clear selection to avoid index mismatch issues
                 app.tab_manager.current_tab_mut().selected_index = 0;
                 (app, temp_dir, config_temp_dir)
             },

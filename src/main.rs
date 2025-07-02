@@ -3,7 +3,7 @@ use clap::Parser;
 use eframe::egui;
 use std::fs;
 use std::path::PathBuf;
-use tracing_subscriber::{fmt, EnvFilter};
+use tracing_subscriber::{EnvFilter, fmt};
 
 use kiorg::app::Kiorg;
 

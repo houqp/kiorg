@@ -6,8 +6,8 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::fmt;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 
 use crate::config::{self, colors::AppColors};
 use crate::input;
@@ -123,19 +123,22 @@ fn create_fs_watcher(
     }
 
     let notify_fs_change_clone = notify_fs_change.clone();
-    std::thread::spawn(move || loop {
-        for res in &rx {
-            match res {
-                Ok(event) => match event.kind {
-                    notify::EventKind::Remove(_)
-                    | notify::EventKind::Modify(_)
-                    | notify::EventKind::Create(_) => {
-                        notify_fs_change_clone.store(true, std::sync::atomic::Ordering::Relaxed);
+    std::thread::spawn(move || {
+        loop {
+            for res in &rx {
+                match res {
+                    Ok(event) => match event.kind {
+                        notify::EventKind::Remove(_)
+                        | notify::EventKind::Modify(_)
+                        | notify::EventKind::Create(_) => {
+                            notify_fs_change_clone
+                                .store(true, std::sync::atomic::Ordering::Relaxed);
+                        }
+                        _ => {}
+                    },
+                    Err(e) => {
+                        eprintln!("File system watcher error: {e}");
                     }
-                    _ => {}
-                },
-                Err(e) => {
-                    eprintln!("File system watcher error: {e}");
                 }
             }
         }

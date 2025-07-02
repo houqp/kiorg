@@ -4,12 +4,12 @@ mod ui_test_helpers;
 use egui::Color32;
 use egui::Key;
 use egui_kittest::kittest::Queryable;
-use kiorg::config::{colors::AppColors, Config};
+use kiorg::config::{Config, colors::AppColors};
 use kiorg::theme::Theme;
 use std::fs;
 use tempfile::tempdir;
-use ui_test_helpers::create_harness_with_config_dir;
 use ui_test_helpers::TestHarnessBuilder;
+use ui_test_helpers::create_harness_with_config_dir;
 
 fn theme_exists(theme_name: &str, config: &kiorg::config::Config) -> bool {
     // Check built-in themes
@@ -895,7 +895,7 @@ fn test_snapshot_all_themes() {
     #[cfg(feature = "snapshot")]
     {
         // Create GIF from PNG snapshots
-        use image::{codecs::gif::GifEncoder, Frame};
+        use image::{Frame, codecs::gif::GifEncoder};
         use std::fs::File;
 
         // print current working directory for debugging

@@ -242,7 +242,7 @@ pub fn handle_preview_popup_input_pdf(
     modifiers: Modifiers,
     ctx: &egui::Context,
 ) {
-    use crate::config::shortcuts::{self, shortcuts_helpers, ShortcutAction};
+    use crate::config::shortcuts::{self, ShortcutAction, shortcuts_helpers};
 
     // Get shortcuts from config or use defaults
     let shortcuts = shortcuts::get_default_shortcuts();

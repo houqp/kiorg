@@ -1,4 +1,4 @@
-use crate::config::shortcuts::{shortcuts_helpers, ShortcutAction};
+use crate::config::shortcuts::{ShortcutAction, shortcuts_helpers};
 use crate::ui::terminal;
 use crate::ui::{add_entry_popup, bookmark_popup, center_panel, preview_popup};
 use egui::{Key, Modifiers};

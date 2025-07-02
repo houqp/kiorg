@@ -205,8 +205,8 @@ pub fn get_path_components(path: &Path) -> Vec<(String, PathBuf)> {
 mod tests {
     use super::*;
     use eframe::App;
-    use egui_kittest::kittest::Queryable;
     use egui_kittest::Harness;
+    use egui_kittest::kittest::Queryable;
     use std::path::PathBuf;
 
     struct TestApp {

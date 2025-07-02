@@ -1,7 +1,7 @@
 #[path = "mod/ui_test_helpers.rs"]
 mod ui_test_helpers;
 
-use kiorg::config::shortcuts::{shortcuts_helpers, KeyboardShortcut, ShortcutAction, Shortcuts};
+use kiorg::config::shortcuts::{KeyboardShortcut, ShortcutAction, Shortcuts, shortcuts_helpers};
 
 #[test]
 fn test_arrow_key_display() {

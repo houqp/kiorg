@@ -99,7 +99,10 @@ pub fn load_system_fonts(mut fonts: FontDefinitions) -> FontDefinitions {
                 .unwrap()
                 .push(region.to_owned());
         } else {
-            debug!("Could not load a font for region {region}. If you experience incorrect file names, try installing one of these fonts: [{}]", font_names.join(", "));
+            debug!(
+                "Could not load a font for region {region}. If you experience incorrect file names, try installing one of these fonts: [{}]",
+                font_names.join(", ")
+            );
         }
     }
 

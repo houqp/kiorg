@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use std::sync::mpsc;
 use std::thread;
 
-use super::popup_utils::{show_confirm_popup, ConfirmResult};
+use super::popup_utils::{ConfirmResult, show_confirm_popup};
 use super::window_utils::new_center_popup_window;
 use crate::config::colors::AppColors;
 

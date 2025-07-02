@@ -352,7 +352,7 @@ impl TestHarness<'_> {
             .state_mut()
             .tab_manager
             .toggle_sort(kiorg::models::tab::SortColumn::Name); // Sets Name/Ascending
-                                                                // sort_all_tabs is called implicitly by toggle_sort now, no need for explicit call
+        // sort_all_tabs is called implicitly by toggle_sort now, no need for explicit call
         self.harness.step(); // Allow sort to apply and UI to update
     }
 }

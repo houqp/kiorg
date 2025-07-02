@@ -3,7 +3,7 @@ use egui::{RichText, Ui};
 use crate::app::Kiorg;
 use crate::models::preview_content::PreviewContent;
 use crate::ui::preview;
-use crate::ui::style::{section_title_text, HEADER_ROW_HEIGHT};
+use crate::ui::style::{HEADER_ROW_HEIGHT, section_title_text};
 
 const PANEL_SPACING: f32 = 10.0;
 

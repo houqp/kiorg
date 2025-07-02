@@ -2,10 +2,10 @@
 
 use crate::config::colors::AppColors;
 use crate::models::preview_content::{EpubMeta, PdfMeta, PreviewContent};
-use egui::{load::SizedTexture, widgets::ImageSource, RichText, TextureId, Vec2}; // Corrected import for SizedTexture and ImageSource
+use egui::{RichText, TextureId, Vec2, load::SizedTexture, widgets::ImageSource}; // Corrected import for SizedTexture and ImageSource
 use pathfinder_geometry::transform2d::Transform2F;
 use pdf::file::{NoCache, NoLog};
-use pdf_render::{render_page, Cache, SceneBackend};
+use pdf_render::{Cache, SceneBackend, render_page};
 use std::path::Path;
 // Removed unused import: use std::sync::Arc;
 
