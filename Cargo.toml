@@ -51,12 +51,12 @@ image = { version = "0" }
 kamadak-exif = "0"
 
 # for pdf rendering
-pdf_render = { git = "https://github.com/pdf-rs/pdf_render.git", rev = "9a31988b091495c65a54236fd6cdce8f1fa2afd0", features = [
+pdf_render = { git = "https://github.com/houqp/pdf_render.git", rev = "280a5cbfda4b0418dda9808ee0e4e2c380a330fb", features = [
     "embed",
 ] }
 pdf = { git = "https://github.com/pdf-rs/pdf" }
-pathfinder_geometry = { git = "https://github.com/servo/pathfinder" }
-pathfinder_export = { git = "https://github.com/servo/pathfinder" }
+pathfinder_geometry = { git = "https://github.com/houqp/pathfinder", rev = "c82663778404c74c0d2cceb42a99b41f6e48e1e4" }
+pathfinder_export = { git = "https://github.com/houqp/pathfinder", rev = "c82663778404c74c0d2cceb42a99b41f6e48e1e4" }
 # pathfinder_rasterize = { git = "https://github.com/s3bk/pathfinder_rasterizer" }
 
 [[bench]]
@@ -76,3 +76,12 @@ tempfile = "3.8"
 name = "Kiorg"
 icon = ["assets/icon.png"]
 osx_url_schemes = ["com.kiorg.kiorg"]
+
+[patch.'https://github.com/servo/pathfinder']
+pathfinder_geometry = { git = "https://github.com/houqp/pathfinder", rev = "c82663778404c74c0d2cceb42a99b41f6e48e1e4" }
+pathfinder_gpu = { git = "https://github.com/houqp/pathfinder", rev = "c82663778404c74c0d2cceb42a99b41f6e48e1e4" }
+pathfinder_content = { git = "https://github.com/houqp/pathfinder", rev = "c82663778404c74c0d2cceb42a99b41f6e48e1e4" }
+pathfinder_color = { git = "https://github.com/houqp/pathfinder", rev = "c82663778404c74c0d2cceb42a99b41f6e48e1e4" }
+pathfinder_renderer = { git = "https://github.com/houqp/pathfinder", rev = "c82663778404c74c0d2cceb42a99b41f6e48e1e4" }
+pathfinder_resources = { git = "https://github.com/houqp/pathfinder", rev = "c82663778404c74c0d2cceb42a99b41f6e48e1e4" }
+pathfinder_simd = { git = "https://github.com/houqp/pathfinder", rev = "c82663778404c74c0d2cceb42a99b41f6e48e1e4" }

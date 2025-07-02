@@ -336,7 +336,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c1df21f715862ede32a0c525ce2ca4d52626bb0007f8c18b87a384503ac33e70"
 dependencies = [
  "clipboard-win",
- "image 0.25.6",
+ "image",
  "log",
  "objc2 0.6.1",
  "objc2-app-kit 0.3.1",
@@ -345,7 +345,7 @@ dependencies = [
  "objc2-foundation 0.3.1",
  "parking_lot",
  "percent-encoding",
- "windows-sys 0.59.0",
+ "windows-sys 0.52.0",
  "x11rb",
 ]
 
@@ -619,7 +619,7 @@ dependencies = [
  "arrayvec 0.7.6",
  "log",
  "nom 7.1.3",
- "num-rational 0.4.2",
+ "num-rational",
  "v_frame",
 ]
 
@@ -1037,7 +1037,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "117725a109d387c937a1533ce01b450cbde6b88abceea8473c4d7a85853cda3c"
 dependencies = [
  "lazy_static",
- "windows-sys 0.59.0",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]
@@ -1410,7 +1410,7 @@ dependencies = [
  "anyhow",
  "colored",
  "getopts",
- "image 0.25.6",
+ "image",
  "rayon",
 ]
 
@@ -1562,7 +1562,7 @@ dependencies = [
  "glow",
  "glutin",
  "glutin-winit",
- "image 0.25.6",
+ "image",
  "js-sys",
  "log",
  "objc2 0.5.2",
@@ -1659,7 +1659,7 @@ dependencies = [
  "egui",
  "ehttp",
  "enum-map",
- "image 0.25.6",
+ "image",
  "log",
  "mime_guess2",
  "profiling",
@@ -1694,7 +1694,7 @@ dependencies = [
  "eframe",
  "egui",
  "egui-wgpu",
- "image 0.25.6",
+ "image",
  "kittest",
  "pollster",
  "wgpu",
@@ -1850,7 +1850,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cea14ef9355e3beab063703aa9dab15afd25f0667c341310c1e5274bb1d0da18"
 dependencies = [
  "libc",
- "windows-sys 0.59.0",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -1889,7 +1889,7 @@ dependencies = [
  "bit_field",
  "half 2.6.0",
  "lebe",
- "miniz_oxide 0.8.8",
+ "miniz_oxide",
  "rayon-core",
  "smallvec",
  "zune-inflate",
@@ -1959,7 +1959,7 @@ checksum = "7ced92e76e966ca2fd84c8f7aa01a4aea65b0eb6648d72f7c8f3e2764a67fece"
 dependencies = [
  "crc32fast",
  "libz-rs-sys",
- "miniz_oxide 0.8.8",
+ "miniz_oxide",
 ]
 
 [[package]]
@@ -1999,7 +1999,7 @@ dependencies = [
  "nom 5.1.3",
  "pathfinder_color",
  "pathfinder_content",
- "pathfinder_geometry 0.5.1 (git+https://github.com/servo/pathfinder)",
+ "pathfinder_geometry 0.5.1 (git+https://github.com/houqp/pathfinder?rev=c82663778404c74c0d2cceb42a99b41f6e48e1e4)",
  "pdf_encoding 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.7.3",
  "slotmap",
@@ -2025,7 +2025,7 @@ dependencies = [
  "libc",
  "log",
  "pathfinder_geometry 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "pathfinder_simd 0.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pathfinder_simd 0.5.4",
  "walkdir",
  "winapi",
  "yeslogic-fontconfig-sys",
@@ -2357,9 +2357,9 @@ source = "git+https://github.com/s3bk/glyphmatcher#7bd5d40aaa8893fa4f2e07c758fa3
 dependencies = [
  "font",
  "istring 0.4.2",
- "itertools 0.14.0",
+ "itertools 0.10.5",
  "pathfinder_content",
- "pathfinder_geometry 0.5.1 (git+https://github.com/servo/pathfinder)",
+ "pathfinder_geometry 0.5.1 (git+https://github.com/houqp/pathfinder?rev=c82663778404c74c0d2cceb42a99b41f6e48e1e4)",
  "pdf_encoding 0.4.0 (git+https://github.com/pdf-rs/encoding)",
  "postcard",
  "serde",
@@ -2688,39 +2688,6 @@ dependencies = [
 
 [[package]]
 name = "image"
-version = "0.23.14"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "24ffcb7e7244a9bf19d35bf2883b9c080c4ced3c07a9895572178cdb8f13f6a1"
-dependencies = [
- "bytemuck",
- "byteorder",
- "color_quant",
- "num-iter",
- "num-rational 0.3.2",
- "num-traits",
- "png 0.16.8",
-]
-
-[[package]]
-name = "image"
-version = "0.24.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5690139d2f55868e080017335e4b94cb7414274c74f1669c84fb5feba2c9f69d"
-dependencies = [
- "bytemuck",
- "byteorder",
- "color_quant",
- "exr",
- "gif",
- "jpeg-decoder",
- "num-traits",
- "png 0.17.16",
- "qoi",
- "tiff",
-]
-
-[[package]]
-name = "image"
 version = "0.25.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "db35664ce6b9810857a38a906215e75a9c879f0696556a39f59c62829710251a"
@@ -2732,7 +2699,7 @@ dependencies = [
  "gif",
  "image-webp",
  "num-traits",
- "png 0.17.16",
+ "png",
  "qoi",
  "ravif",
  "rayon",
@@ -2863,7 +2830,7 @@ checksum = "e04d7f318608d35d4b61ddd75cbdaee86b023ebe2bd5a66ee0915f0bf93095a9"
 dependencies = [
  "hermit-abi 0.5.1",
  "libc",
- "windows-sys 0.59.0",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -2927,15 +2894,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "itertools"
-version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2b192c782037fadd9cfa75548310488aabdbf3d2da73885b31bd0abd03351285"
-dependencies = [
- "either",
-]
-
-[[package]]
 name = "itoa"
 version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2978,9 +2936,6 @@ name = "jpeg-decoder"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f5d4a7da358eff58addd2877a45865158f0d78c911d43a5784ceb7bbf52833b0"
-dependencies = [
- "rayon",
-]
 
 [[package]]
 name = "js-sys"
@@ -3036,13 +2991,13 @@ dependencies = [
  "file_type",
  "font-kit",
  "humansize",
- "image 0.25.6",
+ "image",
  "kamadak-exif",
  "notify",
  "nucleo",
  "open 4.2.0",
  "pathfinder_export",
- "pathfinder_geometry 0.5.1 (git+https://github.com/servo/pathfinder)",
+ "pathfinder_geometry 0.5.1 (git+https://github.com/houqp/pathfinder?rev=c82663778404c74c0d2cceb42a99b41f6e48e1e4)",
  "pdf",
  "pdf_render",
  "serde",
@@ -3369,15 +3324,6 @@ checksum = "68354c5c6bd36d73ff3feceb05efa59b6acb7626617f4962be322a825e61f79a"
 
 [[package]]
 name = "miniz_oxide"
-version = "0.3.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "791daaae1ed6889560f8c4359194f56648355540573244a5448a83ba1ecc7435"
-dependencies = [
- "adler32",
-]
-
-[[package]]
-name = "miniz_oxide"
 version = "0.8.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3be647b768db090acb35d5ec5db2b0e1f1de11133ca123b9eacf5137868f892a"
@@ -3615,28 +3561,6 @@ version = "0.1.46"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7969661fd2958a5cb096e56c8e1ad0444ac2bbcd0061bd28660485a44879858f"
 dependencies = [
- "num-traits",
-]
-
-[[package]]
-name = "num-iter"
-version = "0.1.45"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1429034a0490724d0075ebb2bc9e875d6503c3cf69e235a8941aa757d83ef5bf"
-dependencies = [
- "autocfg",
- "num-integer",
- "num-traits",
-]
-
-[[package]]
-name = "num-rational"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "12ac428b1cb17fce6f731001d307d351ec70a6d202fc2e60f7d4c5e42d8f4f07"
-dependencies = [
- "autocfg",
- "num-integer",
  "num-traits",
 ]
 
@@ -4094,35 +4018,35 @@ checksum = "df94ce210e5bc13cb6651479fa48d14f601d9858cfe0467f43ae157023b938d3"
 [[package]]
 name = "pathfinder_color"
 version = "0.5.0"
-source = "git+https://github.com/servo/pathfinder#8ccf6f7c2dd91f8e143998f91e55d1d24a4709bd"
+source = "git+https://github.com/houqp/pathfinder?rev=c82663778404c74c0d2cceb42a99b41f6e48e1e4#c82663778404c74c0d2cceb42a99b41f6e48e1e4"
 dependencies = [
- "pathfinder_simd 0.5.4 (git+https://github.com/servo/pathfinder)",
+ "pathfinder_simd 0.5.5",
 ]
 
 [[package]]
 name = "pathfinder_content"
 version = "0.5.0"
-source = "git+https://github.com/servo/pathfinder#8ccf6f7c2dd91f8e143998f91e55d1d24a4709bd"
+source = "git+https://github.com/houqp/pathfinder?rev=c82663778404c74c0d2cceb42a99b41f6e48e1e4#c82663778404c74c0d2cceb42a99b41f6e48e1e4"
 dependencies = [
  "arrayvec 0.5.2",
  "bitflags 1.3.2",
- "image 0.23.14",
+ "image",
  "log",
  "pathfinder_color",
- "pathfinder_geometry 0.5.1 (git+https://github.com/servo/pathfinder)",
- "pathfinder_simd 0.5.4 (git+https://github.com/servo/pathfinder)",
+ "pathfinder_geometry 0.5.1 (git+https://github.com/houqp/pathfinder?rev=c82663778404c74c0d2cceb42a99b41f6e48e1e4)",
+ "pathfinder_simd 0.5.5",
  "smallvec",
 ]
 
 [[package]]
 name = "pathfinder_export"
 version = "0.1.0"
-source = "git+https://github.com/servo/pathfinder#8ccf6f7c2dd91f8e143998f91e55d1d24a4709bd"
+source = "git+https://github.com/houqp/pathfinder?rev=c82663778404c74c0d2cceb42a99b41f6e48e1e4#c82663778404c74c0d2cceb42a99b41f6e48e1e4"
 dependencies = [
- "deflate 1.0.0",
+ "deflate 0.8.6",
  "pathfinder_color",
  "pathfinder_content",
- "pathfinder_geometry 0.5.1 (git+https://github.com/servo/pathfinder)",
+ "pathfinder_geometry 0.5.1 (git+https://github.com/houqp/pathfinder?rev=c82663778404c74c0d2cceb42a99b41f6e48e1e4)",
  "pathfinder_renderer",
 ]
 
@@ -4133,39 +4057,39 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b7b7e7b4ea703700ce73ebf128e1450eb69c3a8329199ffbfb9b2a0418e5ad3"
 dependencies = [
  "log",
- "pathfinder_simd 0.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pathfinder_simd 0.5.4",
 ]
 
 [[package]]
 name = "pathfinder_geometry"
 version = "0.5.1"
-source = "git+https://github.com/servo/pathfinder#8ccf6f7c2dd91f8e143998f91e55d1d24a4709bd"
+source = "git+https://github.com/houqp/pathfinder?rev=c82663778404c74c0d2cceb42a99b41f6e48e1e4#c82663778404c74c0d2cceb42a99b41f6e48e1e4"
 dependencies = [
  "log",
- "pathfinder_simd 0.5.4 (git+https://github.com/servo/pathfinder)",
+ "pathfinder_simd 0.5.5",
 ]
 
 [[package]]
 name = "pathfinder_gpu"
 version = "0.5.0"
-source = "git+https://github.com/servo/pathfinder#8ccf6f7c2dd91f8e143998f91e55d1d24a4709bd"
+source = "git+https://github.com/houqp/pathfinder?rev=c82663778404c74c0d2cceb42a99b41f6e48e1e4#c82663778404c74c0d2cceb42a99b41f6e48e1e4"
 dependencies = [
  "bitflags 1.3.2",
  "fxhash",
  "half 1.8.3",
- "image 0.23.14",
+ "image",
  "instant",
  "log",
  "pathfinder_color",
- "pathfinder_geometry 0.5.1 (git+https://github.com/servo/pathfinder)",
+ "pathfinder_geometry 0.5.1 (git+https://github.com/houqp/pathfinder?rev=c82663778404c74c0d2cceb42a99b41f6e48e1e4)",
  "pathfinder_resources",
- "pathfinder_simd 0.5.4 (git+https://github.com/servo/pathfinder)",
+ "pathfinder_simd 0.5.5",
 ]
 
 [[package]]
 name = "pathfinder_renderer"
 version = "0.5.0"
-source = "git+https://github.com/servo/pathfinder#8ccf6f7c2dd91f8e143998f91e55d1d24a4709bd"
+source = "git+https://github.com/houqp/pathfinder?rev=c82663778404c74c0d2cceb42a99b41f6e48e1e4#c82663778404c74c0d2cceb42a99b41f6e48e1e4"
 dependencies = [
  "bitflags 1.3.2",
  "byte-slice-cast",
@@ -4178,10 +4102,10 @@ dependencies = [
  "log",
  "pathfinder_color",
  "pathfinder_content",
- "pathfinder_geometry 0.5.1 (git+https://github.com/servo/pathfinder)",
+ "pathfinder_geometry 0.5.1 (git+https://github.com/houqp/pathfinder?rev=c82663778404c74c0d2cceb42a99b41f6e48e1e4)",
  "pathfinder_gpu",
  "pathfinder_resources",
- "pathfinder_simd 0.5.4 (git+https://github.com/servo/pathfinder)",
+ "pathfinder_simd 0.5.5",
  "pathfinder_ui",
  "rayon",
  "serde",
@@ -4193,7 +4117,7 @@ dependencies = [
 [[package]]
 name = "pathfinder_resources"
 version = "0.5.0"
-source = "git+https://github.com/servo/pathfinder#8ccf6f7c2dd91f8e143998f91e55d1d24a4709bd"
+source = "git+https://github.com/houqp/pathfinder?rev=c82663778404c74c0d2cceb42a99b41f6e48e1e4#c82663778404c74c0d2cceb42a99b41f6e48e1e4"
 
 [[package]]
 name = "pathfinder_simd"
@@ -4206,8 +4130,8 @@ dependencies = [
 
 [[package]]
 name = "pathfinder_simd"
-version = "0.5.4"
-source = "git+https://github.com/servo/pathfinder#8ccf6f7c2dd91f8e143998f91e55d1d24a4709bd"
+version = "0.5.5"
+source = "git+https://github.com/houqp/pathfinder?rev=c82663778404c74c0d2cceb42a99b41f6e48e1e4#c82663778404c74c0d2cceb42a99b41f6e48e1e4"
 dependencies = [
  "rustc_version",
 ]
@@ -4215,14 +4139,14 @@ dependencies = [
 [[package]]
 name = "pathfinder_ui"
 version = "0.5.0"
-source = "git+https://github.com/servo/pathfinder#8ccf6f7c2dd91f8e143998f91e55d1d24a4709bd"
+source = "git+https://github.com/houqp/pathfinder?rev=c82663778404c74c0d2cceb42a99b41f6e48e1e4#c82663778404c74c0d2cceb42a99b41f6e48e1e4"
 dependencies = [
  "hashbrown 0.7.2",
  "pathfinder_color",
- "pathfinder_geometry 0.5.1 (git+https://github.com/servo/pathfinder)",
+ "pathfinder_geometry 0.5.1 (git+https://github.com/houqp/pathfinder?rev=c82663778404c74c0d2cceb42a99b41f6e48e1e4)",
  "pathfinder_gpu",
  "pathfinder_resources",
- "pathfinder_simd 0.5.4 (git+https://github.com/servo/pathfinder)",
+ "pathfinder_simd 0.5.5",
  "serde",
  "serde_derive",
  "serde_json",
@@ -4296,21 +4220,21 @@ dependencies = [
 [[package]]
 name = "pdf_render"
 version = "0.1.0"
-source = "git+https://github.com/pdf-rs/pdf_render.git?rev=9a31988b091495c65a54236fd6cdce8f1fa2afd0#9a31988b091495c65a54236fd6cdce8f1fa2afd0"
+source = "git+https://github.com/houqp/pdf_render.git?rev=280a5cbfda4b0418dda9808ee0e4e2c380a330fb#280a5cbfda4b0418dda9808ee0e4e2c380a330fb"
 dependencies = [
  "custom_debug_derive",
  "font",
  "globalcache 0.3.2",
  "glyphmatcher",
- "image 0.24.9",
+ "image",
  "instant",
  "istring 0.4.2",
- "itertools 0.14.0",
+ "itertools 0.10.5",
  "log",
  "once_cell",
  "pathfinder_color",
  "pathfinder_content",
- "pathfinder_geometry 0.5.1 (git+https://github.com/servo/pathfinder)",
+ "pathfinder_geometry 0.5.1 (git+https://github.com/houqp/pathfinder?rev=c82663778404c74c0d2cceb42a99b41f6e48e1e4)",
  "pathfinder_renderer",
  "pathfinder_resources",
  "pdf",
@@ -4454,18 +4378,6 @@ dependencies = [
 
 [[package]]
 name = "png"
-version = "0.16.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3c3287920cb847dee3de33d301c463fba14dda99db24214ddf93f83d3021f4c6"
-dependencies = [
- "bitflags 1.3.2",
- "crc32fast",
- "deflate 0.8.6",
- "miniz_oxide 0.3.7",
-]
-
-[[package]]
-name = "png"
 version = "0.17.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "82151a2fc869e011c153adc57cf2789ccb8d9906ce52c0b39a6b5697749d7526"
@@ -4474,7 +4386,7 @@ dependencies = [
  "crc32fast",
  "fdeflate",
  "flate2",
- "miniz_oxide 0.8.8",
+ "miniz_oxide",
 ]
 
 [[package]]
@@ -4992,7 +4904,7 @@ dependencies = [
  "itoa",
  "libc",
  "linux-raw-sys 0.4.15",
- "windows-sys 0.59.0",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -5005,7 +4917,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys 0.9.4",
- "windows-sys 0.59.0",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -5195,7 +5107,7 @@ version = "3.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8b1fdf65dd6331831494dd616b30351c38e96e45921a27745cf98490458b90bb"
 dependencies = [
- "dirs 6.0.0",
+ "dirs 5.0.1",
 ]
 
 [[package]]
@@ -5505,7 +5417,7 @@ dependencies = [
  "getrandom 0.3.3",
  "once_cell",
  "rustix 1.0.7",
- "windows-sys 0.59.0",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -5608,7 +5520,7 @@ dependencies = [
  "bytemuck",
  "cfg-if 1.0.0",
  "log",
- "png 0.17.16",
+ "png",
  "tiny-skia-path",
 ]
 
@@ -6413,7 +6325,7 @@ version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf221c93e13a30d793f7645a0e7762c55d169dbb0a49671918a2319d289b10bb"
 dependencies = [
- "windows-sys 0.59.0",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]
