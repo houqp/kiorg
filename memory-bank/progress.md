@@ -47,6 +47,7 @@
 
 * Shortcut to toggle sort
 * Fuzzy directory jump (integrate with fzf)
+* Regular expression search support
 * Renaming a file doesn't clear the image rendering cache, so it still displays the old image
 * render PDF preview using pdfium_render or pathfinder_rasterize
   * see <https://github.com/servo/pathfinder/issues/157>
