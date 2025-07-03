@@ -1,6 +1,6 @@
 use crate::config::shortcuts::{ShortcutAction, shortcuts_helpers};
 use crate::ui::terminal;
-use crate::ui::{add_entry_popup, bookmark_popup, center_panel, preview_popup};
+use crate::ui::{add_entry_popup, bookmark_popup, center_panel, file_drop_popup, preview_popup};
 use egui::{Key, Modifiers};
 
 use super::app::{Kiorg, PopupType};
@@ -331,6 +331,11 @@ fn process_key(
         }
         Some(PopupType::AddEntry(_)) => {
             if add_entry_popup::handle_key_press(ctx, app) {
+                return;
+            }
+        }
+        Some(PopupType::FileDrop(files)) => {
+            if file_drop_popup::handle_key_press(ctx, app, files.clone()) {
                 return;
             }
         }

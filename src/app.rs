@@ -23,8 +23,8 @@ use crate::ui::separator::SEPARATOR_PADDING;
 use crate::ui::terminal;
 use crate::ui::top_banner;
 use crate::ui::{
-    about_popup, bookmark_popup, center_panel, help_window, left_panel, open_with_popup,
-    preview_popup, rename_popup, right_panel, theme_popup,
+    about_popup, bookmark_popup, center_panel, file_drop_popup, help_window, left_panel,
+    open_with_popup, preview_popup, rename_popup, right_panel, theme_popup,
 };
 use egui_notify::Toasts;
 
@@ -80,12 +80,13 @@ pub enum PopupType {
     Exit,
     Delete(crate::ui::delete_popup::DeleteConfirmState, Vec<PathBuf>),
     DeleteProgress(crate::ui::delete_popup::DeleteProgressData),
-    Rename(String),   // New name for the file/directory being renamed
-    OpenWith(String), // Command to use when opening a file with a custom command
-    AddEntry(String), // Name for the new file/directory being added
-    Bookmarks(usize), // Selected index in the bookmarks list
-    Preview,          // Show file preview in a popup window
-    Themes(String),   // Selected theme key in the themes list
+    Rename(String),         // New name for the file/directory being renamed
+    OpenWith(String),       // Command to use when opening a file with a custom command
+    AddEntry(String),       // Name for the new file/directory being added
+    Bookmarks(usize),       // Selected index in the bookmarks list
+    Preview,                // Show file preview in a popup window
+    Themes(String),         // Selected theme key in the themes list
+    FileDrop(Vec<PathBuf>), // List of dropped files
 }
 
 /// Clipboard operation types
@@ -860,6 +861,9 @@ impl eframe::App for Kiorg {
             }
             Some(PopupType::Themes(_)) => {
                 theme_popup::draw(self, ctx);
+            }
+            Some(PopupType::FileDrop(_)) => {
+                file_drop_popup::draw(ctx, self);
             }
             None => {}
         }

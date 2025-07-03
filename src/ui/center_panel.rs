@@ -266,6 +266,8 @@ fn show_context_menu(
 
 /// Draws the center panel content.
 pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
+    handle_file_drop(ui.ctx(), app);
+
     // Get cached filtered entries or compute them if cache is empty
     // Get the current tab reference for reading
     let tab_ref = app.tab_manager.current_tab_ref();
@@ -533,4 +535,25 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                 .error(format!("Failed to save sort preferences: {e}"));
         }
     }
+}
+
+fn handle_file_drop(ctx: &egui::Context, app: &mut Kiorg) {
+    ctx.input(|i| {
+        if !i.raw.dropped_files.is_empty() {
+            let mut dropped_paths = Vec::new();
+
+            for dropped_file in &i.raw.dropped_files {
+                let file_path = if let Some(path) = &dropped_file.path {
+                    path
+                } else {
+                    continue;
+                };
+                dropped_paths.push(file_path.clone());
+            }
+
+            if !dropped_paths.is_empty() {
+                app.show_popup = Some(crate::app::PopupType::FileDrop(dropped_paths));
+            }
+        }
+    });
 }
