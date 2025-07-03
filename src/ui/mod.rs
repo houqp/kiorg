@@ -4,6 +4,7 @@ pub mod bookmark_popup;
 pub mod center_panel;
 pub mod delete_popup;
 pub mod exit_popup;
+pub mod file_drop_popup;
 pub mod file_list;
 pub mod help_window;
 pub mod left_panel;

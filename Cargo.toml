@@ -51,7 +51,7 @@ image = { version = "0" }
 kamadak-exif = "0"
 
 # for pdf rendering
-pdf_render = { git = "https://github.com/houqp/pdf_render.git", rev = "280a5cbfda4b0418dda9808ee0e4e2c380a330fb", features = [
+pdf_render = { git = "https://github.com/houqp/pdf_render.git", rev = "00b907936e45d904f958197fa6039320d0ac098d", features = [
     "embed",
 ] }
 pdf = { git = "https://github.com/pdf-rs/pdf" }
