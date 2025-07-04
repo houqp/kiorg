@@ -14,6 +14,23 @@ pub struct DirEntry {
     pub formatted_size: String,
 }
 
+impl DirEntry {
+    pub fn accessibility_text(&self) -> String {
+        let file_type = if self.is_dir { "folder" } else { "file" };
+        if self.is_symlink {
+            format!(
+                "{} {}, symbolic link, modified {}, size {}",
+                file_type, self.name, self.formatted_modified, self.formatted_size
+            )
+        } else {
+            format!(
+                "{} {}, modified {}, size {}",
+                file_type, self.name, self.formatted_modified, self.formatted_size
+            )
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
