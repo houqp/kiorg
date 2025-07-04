@@ -9,6 +9,55 @@ use file_type::FileType;
 use std::io::Read;
 use std::path::PathBuf;
 
+/// Get language type from file extension or filename
+pub fn lang_type_from_ext(ext: &str) -> Option<&'static str> {
+    match ext {
+        "rs" => Some("rs"),
+        "js" | "mjs" | "cjs" => Some("js"),
+        "ts" | "tsx" => Some("ts"),
+        "py" | "pyw" | "pyi" => Some("py"),
+        "java" => Some("java"),
+        "c" | "h" => Some("c"),
+        "cpp" | "cc" | "cxx" | "hpp" | "hxx" => Some("cpp"),
+        "cs" => Some("cs"),
+        "go" => Some("go"),
+        "rb" => Some("ruby"),
+        "php" => Some("php"),
+        "swift" => Some("swift"),
+        "kt" | "kts" => Some("kotlin"),
+        "scala" => Some("scala"),
+        "clj" | "cljs" | "cljc" => Some("clojure"),
+        "hs" => Some("haskell"),
+        "elm" => Some("elm"),
+        "dart" => Some("dart"),
+        "lua" => Some("lua"),
+        "r" => Some("r"),
+        "m" => Some("objc"),
+        "sh" | "bash" | "zsh" | "fish" => Some("bash"),
+        "txt" | "text" | "log" => Some("txt"),
+        "ps1" => Some("powershell"),
+        "sql" => Some("sql"),
+        "html" | "htm" => Some("html"),
+        "css" => Some("css"),
+        "scss" | "sass" => Some("scss"),
+        "less" => Some("less"),
+        "xml" => Some("xml"),
+        "json" => Some("json"),
+        "yaml" | "yml" => Some("yaml"),
+        "toml" => Some("toml"),
+        "ini" | "cfg" | "conf" => Some("ini"),
+        "dockerfile" => Some("dockerfile"),
+        "makefile" => Some("makefile"),
+        "cmake" => Some("cmake"),
+        "tex" | "latex" => Some("latex"),
+        "md" => Some("md"),
+        "vim" => Some("vim"),
+        ".gitignore" => Some("gitignore"),
+        ".gitmodules" => Some("gitmodules"),
+        _ => None,
+    }
+}
+
 /// Render text content
 pub fn render(ui: &mut egui::Ui, text: &str, colors: &AppColors) {
     ui.label(RichText::new(text).color(colors.fg));
@@ -88,4 +137,123 @@ pub fn render_generic_file(path: PathBuf, size: u64) -> Result<PreviewContent, S
         file_type_info,
         size
     )))
+}
+
+/// Load full text content (not limited to first 1000 bytes like the regular preview)
+pub fn load_full_text(path: &PathBuf) -> Result<PreviewContent, String> {
+    match std::fs::read_to_string(path) {
+        Ok(content) => Ok(PreviewContent::text(content)),
+        Err(_) => {
+            // If UTF-8 reading fails, try to read as bytes and convert with lossy conversion
+            match std::fs::read(path) {
+                Ok(bytes) => Ok(PreviewContent::text(
+                    String::from_utf8_lossy(&bytes).to_string(),
+                )),
+                Err(e) => Err(format!("Failed to read file: {e}")),
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_lang_type_from_ext_rust() {
+        assert_eq!(lang_type_from_ext("rs"), Some("rs"));
+    }
+
+    #[test]
+    fn test_lang_type_from_ext_javascript() {
+        assert_eq!(lang_type_from_ext("js"), Some("js"));
+        assert_eq!(lang_type_from_ext("mjs"), Some("js"));
+        assert_eq!(lang_type_from_ext("cjs"), Some("js"));
+    }
+
+    #[test]
+    fn test_lang_type_from_ext_typescript() {
+        assert_eq!(lang_type_from_ext("ts"), Some("ts"));
+        assert_eq!(lang_type_from_ext("tsx"), Some("ts"));
+    }
+
+    #[test]
+    fn test_lang_type_from_ext_python() {
+        assert_eq!(lang_type_from_ext("py"), Some("py"));
+        assert_eq!(lang_type_from_ext("pyw"), Some("py"));
+        assert_eq!(lang_type_from_ext("pyi"), Some("py"));
+    }
+
+    #[test]
+    fn test_lang_type_from_ext_c_cpp() {
+        assert_eq!(lang_type_from_ext("c"), Some("c"));
+        assert_eq!(lang_type_from_ext("h"), Some("c"));
+        assert_eq!(lang_type_from_ext("cpp"), Some("cpp"));
+        assert_eq!(lang_type_from_ext("cc"), Some("cpp"));
+        assert_eq!(lang_type_from_ext("cxx"), Some("cpp"));
+        assert_eq!(lang_type_from_ext("hpp"), Some("cpp"));
+        assert_eq!(lang_type_from_ext("hxx"), Some("cpp"));
+    }
+
+    #[test]
+    fn test_lang_type_from_ext_shell_scripts() {
+        assert_eq!(lang_type_from_ext("sh"), Some("bash"));
+        assert_eq!(lang_type_from_ext("bash"), Some("bash"));
+        assert_eq!(lang_type_from_ext("zsh"), Some("bash"));
+        assert_eq!(lang_type_from_ext("fish"), Some("bash"));
+    }
+
+    #[test]
+    fn test_lang_type_from_ext_markup_languages() {
+        assert_eq!(lang_type_from_ext("html"), Some("html"));
+        assert_eq!(lang_type_from_ext("htm"), Some("html"));
+        assert_eq!(lang_type_from_ext("xml"), Some("xml"));
+        assert_eq!(lang_type_from_ext("css"), Some("css"));
+        assert_eq!(lang_type_from_ext("scss"), Some("scss"));
+        assert_eq!(lang_type_from_ext("sass"), Some("scss"));
+        assert_eq!(lang_type_from_ext("md"), Some("md"));
+    }
+
+    #[test]
+    fn test_lang_type_from_ext_config_files() {
+        assert_eq!(lang_type_from_ext("json"), Some("json"));
+        assert_eq!(lang_type_from_ext("yaml"), Some("yaml"));
+        assert_eq!(lang_type_from_ext("yml"), Some("yaml"));
+        assert_eq!(lang_type_from_ext("toml"), Some("toml"));
+        assert_eq!(lang_type_from_ext("ini"), Some("ini"));
+        assert_eq!(lang_type_from_ext("cfg"), Some("ini"));
+        assert_eq!(lang_type_from_ext("conf"), Some("ini"));
+    }
+
+    #[test]
+    fn test_lang_type_from_ext_special_filenames() {
+        // Test full filenames without extensions
+        assert_eq!(lang_type_from_ext("makefile"), Some("makefile"));
+        assert_eq!(lang_type_from_ext("dockerfile"), Some("dockerfile"));
+        assert_eq!(lang_type_from_ext(".gitignore"), Some("gitignore"));
+        assert_eq!(lang_type_from_ext(".gitmodules"), Some("gitmodules"));
+    }
+
+    #[test]
+    fn test_lang_type_from_ext_text_files() {
+        assert_eq!(lang_type_from_ext("txt"), Some("txt"));
+        assert_eq!(lang_type_from_ext("text"), Some("txt"));
+        assert_eq!(lang_type_from_ext("log"), Some("txt"));
+    }
+
+    #[test]
+    fn test_lang_type_from_ext_unknown() {
+        assert_eq!(lang_type_from_ext("unknown"), None);
+        assert_eq!(lang_type_from_ext("xyz"), None);
+        assert_eq!(lang_type_from_ext(""), None);
+    }
+
+    #[test]
+    fn test_lang_type_from_ext_case_sensitivity() {
+        // The function should work with lowercase extensions
+        assert_eq!(lang_type_from_ext("rs"), Some("rs"));
+        // Test that uppercase doesn't match (function expects lowercase)
+        assert_eq!(lang_type_from_ext("RS"), None);
+        assert_eq!(lang_type_from_ext("Makefile"), None);
+    }
 }

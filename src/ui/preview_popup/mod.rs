@@ -1,13 +1,26 @@
 //! Preview popup module for displaying file previews in a popup window
 
+use std::path::Path;
+
 use crate::app::{Kiorg, PopupType};
 use crate::models::preview_content::PreviewContent;
 use crate::ui::file_list::truncate_text;
 use crate::ui::window_utils::new_center_popup_window;
 use egui::Context;
+use egui_extras::syntax_highlighting::{self, CodeTheme};
 
 pub mod doc;
 pub mod image;
+
+// return extension if available, otherwise return file name
+fn path_to_ext_info(path: &Path) -> Option<String> {
+    path.extension()
+        .map(|e| e.to_string_lossy().to_lowercase())
+        .or_else(|| {
+            path.file_name()
+                .map(|name| name.to_string_lossy().to_lowercase())
+        })
+}
 
 /// Handle the `ShowFilePreview` shortcut action
 /// This function was extracted from input.rs to reduce complexity
@@ -18,10 +31,7 @@ pub fn handle_show_file_preview(app: &mut Kiorg, _ctx: &egui::Context) {
         if let Some(selected_entry) = tab.selected_entry() {
             (
                 selected_entry.is_dir,
-                selected_entry
-                    .path
-                    .extension()
-                    .map(|e| e.to_string_lossy().to_lowercase()),
+                path_to_ext_info(&selected_entry.path),
             )
         } else {
             // No entry selected
@@ -90,8 +100,25 @@ pub fn handle_show_file_preview(app: &mut Kiorg, _ctx: &egui::Context) {
             // Show preview popup for image files
             app.show_popup = Some(PopupType::Preview);
         }
+        Some(ext) if crate::ui::preview::text::lang_type_from_ext(ext).is_some() => {
+            let tab = app.tab_manager.current_tab_ref();
+            if let Some(entry) = tab.selected_entry() {
+                // Load the full text content for popup display
+                match crate::ui::preview::text::load_full_text(&entry.path) {
+                    Ok(full_content) => {
+                        app.preview_content = Some(full_content);
+                        app.show_popup = Some(PopupType::Preview);
+                    }
+                    Err(_) => {
+                        app.toasts.error("Failed to load text content for preview.");
+                    }
+                }
+            }
+        }
         _ => {
-            // Ignore unsupported file types
+            // send notification for unsupported file types
+            app.toasts
+                .error("Preview not implemented for this file type yet.");
         }
     }
 }
@@ -122,7 +149,7 @@ pub fn show_preview_popup(ctx: &Context, app: &mut Kiorg) {
             .min_size(popup_size)
             .open(&mut keep_open)
             .show(ctx, |ui| {
-                if let Some(ref mut content) = app.preview_content {
+                if let Some(content) = &mut app.preview_content {
                     // Calculate available space in the popup
                     let available_width = ui.available_width();
                     let available_height = ui.available_height();
@@ -130,17 +157,33 @@ pub fn show_preview_popup(ctx: &Context, app: &mut Kiorg) {
                     // Display the preview content based on its type
                     match content {
                         PreviewContent::Text(text) => {
-                            ui.vertical_centered(|ui| {
-                                egui::ScrollArea::vertical().auto_shrink([false; 2]).show(
-                                    ui,
-                                    |ui| {
-                                        ui.label(
-                                            egui::RichText::new(text.as_str()).color(app.colors.fg),
+                            // Display text with syntax highlighting if it's source code
+                            egui::ScrollArea::both()
+                                .auto_shrink([false; 2])
+                                .show(ui, |ui| {
+                                    // Try to detect if this is source code from the file path
+                                    let language = selected_path.as_ref().and_then(|path| {
+                                        path_to_ext_info(path).and_then(|ext| {
+                                            crate::ui::preview::text::lang_type_from_ext(&ext)
+                                        })
+                                    });
+                                    if let Some(lang) = language {
+                                        // Use syntax highlighting for source code
+                                        let theme = CodeTheme::from_memory(ui.ctx(), ui.style());
+                                        syntax_highlighting::code_view_ui(ui, &theme, text, lang);
+                                    } else {
+                                        // Fallback to plain text editor for non-source files
+                                        let mut text_str = text.as_str();
+                                        ui.add(
+                                            egui::TextEdit::multiline(&mut text_str)
+                                                .desired_width(f32::INFINITY)
+                                                .desired_rows(0)
+                                                .font(egui::TextStyle::Monospace)
+                                                .text_color(app.colors.fg)
+                                                .interactive(false),
                                         );
-                                    },
-                                );
-                            });
-                            // Use a scrollable area for text content in popup
+                                    }
+                                });
                         }
                         PreviewContent::Image(image_meta) => {
                             // Use our specialized popup image renderer

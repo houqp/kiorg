@@ -1,6 +1,6 @@
 [package]
 name = "kiorg"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2024"
 authors = ["houqp"]
 repository = "https://github.com/houqp/kiorg"
@@ -37,7 +37,7 @@ open = "4.0"
 clap = { version = "4.5.1", features = ["derive"] }
 egui_term = { git = "https://github.com/houqp/egui_term.git", rev = "b8b4a1b79e10e07bd64d8104449e8904b466b3cd", optional = true }
 notify = "8"
-egui_extras = { version = "0", features = ["all_loaders"] }
+egui_extras = { version = "0", features = ["all_loaders", "syntect"] }
 zip = "4"
 egui-notify = "0"
 epub = "2"

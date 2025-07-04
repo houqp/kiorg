@@ -126,7 +126,7 @@ fn test_preview_popup_unsupported_file() {
     let temp_dir = tempdir().unwrap();
 
     // Create a regular text file
-    let text_path = temp_dir.path().join("test.txt");
+    let text_path = temp_dir.path().join("test.foobar");
     std::fs::write(&text_path, "This is a text file").unwrap();
 
     // Start the harness

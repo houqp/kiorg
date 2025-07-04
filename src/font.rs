@@ -98,6 +98,13 @@ pub fn load_system_fonts(mut fonts: FontDefinitions) -> FontDefinitions {
                 .get_mut(&FontFamily::Proportional)
                 .unwrap()
                 .push(region.to_owned());
+
+            // Also add CJK fonts to Monospace family for better text preview support
+            fonts
+                .families
+                .get_mut(&FontFamily::Monospace)
+                .unwrap()
+                .push(region.to_owned());
         } else {
             debug!(
                 "Could not load a font for region {region}. If you experience incorrect file names, try installing one of these fonts: [{}]",
