@@ -200,6 +200,30 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
         egui::Sense::click_and_drag(), // Use click_and_drag to detect double clicks
     );
 
+    // Provide detailed accessibility information
+    response.widget_info(|| {
+        let mut state_info = Vec::new();
+        if is_marked {
+            state_info.push("marked");
+        }
+        if is_in_cut_clipboard {
+            state_info.push("cut to clipboard");
+        }
+        if is_in_copy_clipboard {
+            state_info.push("copied to clipboard");
+        }
+        let accessibility_text = if !state_info.is_empty() {
+            format!("{} {}", state_info.join(", "), entry.accessibility_text())
+        } else {
+            entry.accessibility_text()
+        };
+        if is_selected {
+            egui::WidgetInfo::selected(egui::WidgetType::Button, true, true, accessibility_text)
+        } else {
+            egui::WidgetInfo::labeled(egui::WidgetType::Button, true, accessibility_text)
+        }
+    });
+
     // Show a subtle pulsing effect for files being opened
     if is_being_opened && !entry.is_dir {
         let time = ui.ctx().input(|i| i.time);
@@ -320,6 +344,16 @@ pub fn draw_parent_entry_row(
         egui::vec2(ui.available_width(), ROW_HEIGHT),
         egui::Sense::click_and_drag(), // Use click_and_drag to detect double clicks
     );
+
+    // Provide detailed accessibility information
+    response.widget_info(|| {
+        let accessibility_text = entry.accessibility_text();
+        if is_selected {
+            egui::WidgetInfo::selected(egui::WidgetType::Button, true, true, accessibility_text)
+        } else {
+            egui::WidgetInfo::labeled(egui::WidgetType::Button, true, accessibility_text)
+        }
+    });
 
     if is_selected {
         ui.painter().rect_filled(rect, 0.0, colors.bg_selected);
