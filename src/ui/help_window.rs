@@ -143,7 +143,10 @@ pub fn show_help_window(
                         }
 
                         // Add tab switching shortcuts
-                        ui.label(RichText::new("1-9").color(colors.highlight));
+                        #[cfg(target_os = "macos")]
+                        ui.label(RichText::new("Cmd+1-9").color(colors.highlight));
+                        #[cfg(not(target_os = "macos"))]
+                        ui.label(RichText::new("Ctrl+1-9").color(colors.highlight));
                         ui.label("Switch to tab by number");
                         ui.end_row();
                     });

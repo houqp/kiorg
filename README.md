@@ -14,11 +14,11 @@ bindings. It is built using the [egui](https://www.egui.rs/#demo) framework.
 * Lightingly fast rendering and navigation
 * Multi-tab support
 * Vim-inspired keyboard shortcuts
-* Content preview for various file formats
+* Content preview for various file formats including code syntax highlight, image, pdf, epub, etc.
 * Customizable shortcuts and color themes through TOML config files
 * Cross-platform support (Linux, macOS, Windows)
 * Bookmarks for quick access to frequently used directories
-* Single binary with battery included
+* Single self-contained binary with battery included
 * Builtin terminal emulator
 * App state persistence
 

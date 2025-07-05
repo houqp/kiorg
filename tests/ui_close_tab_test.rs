@@ -3,7 +3,7 @@ mod ui_test_helpers;
 
 use egui::{Key, Modifiers};
 use tempfile::tempdir;
-use ui_test_helpers::create_harness;
+use ui_test_helpers::{create_harness, tab_num_modifiers};
 
 #[test]
 fn test_close_current_tab_shortcut() {
@@ -131,8 +131,9 @@ fn test_close_tab_preserves_other_tabs() {
         "Should have three tabs"
     );
 
-    // Switch to the second tab
-    harness.press_key(Key::Num2);
+    // Switch to the second tab with platform-specific modifier
+    let modifiers = tab_num_modifiers();
+    harness.press_key_modifiers(modifiers, Key::Num2);
     harness.step();
     {
         let tab_indexes = harness.state().tab_manager.tab_indexes();
@@ -156,8 +157,8 @@ fn test_close_tab_preserves_other_tabs() {
     harness.state_mut().refresh_entries();
     harness.step();
 
-    // Switch to the third tab
-    harness.press_key(Key::Num3);
+    // Switch to the third tab with platform-specific modifier
+    harness.press_key_modifiers(tab_num_modifiers(), Key::Num3);
     harness.step();
     {
         let tab_indexes = harness.state().tab_manager.tab_indexes();
@@ -199,8 +200,8 @@ fn test_close_tab_preserves_other_tabs() {
         "Second tab should still have its custom path"
     );
 
-    // Switch to the first tab
-    harness.press_key(Key::Num1);
+    // Switch to the first tab with platform-specific modifier
+    harness.press_key_modifiers(tab_num_modifiers(), Key::Num1);
     harness.step();
 
     // Verify the first tab has the original path

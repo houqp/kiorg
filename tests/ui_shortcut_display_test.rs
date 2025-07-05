@@ -142,7 +142,7 @@ fn test_shortcut_with_modifiers() {
         shift: true,
         ctrl: true,
         alt: false,
-        mac_cmd: false,
+        command: false,
         namespace: false,
     }];
     shortcuts.set_shortcuts(ShortcutAction::Exit, ctrl_shift_q_shortcuts);
