@@ -2,10 +2,9 @@ use crate::config::shortcuts::{ShortcutAction, shortcuts_helpers};
 use crate::ui::terminal;
 use crate::ui::{add_entry_popup, bookmark_popup, center_panel, file_drop_popup, preview_popup};
 use egui::{Key, Modifiers};
+use tracing::error;
 
 use super::app::{Kiorg, PopupType};
-
-const DOUBLE_KEY_PRESS_THRESHOLD_MS: u128 = 500;
 
 #[inline]
 fn is_cancel_keys(key: Key) -> bool {
@@ -66,7 +65,6 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: Shortcut
                     app.selection_changed = true;
                 }
             }
-            app.last_lowercase_g_pressed_ms = 0;
         }
         ShortcutAction::GoToLastEntry => {
             let tab = app.tab_manager.current_tab_mut();
@@ -82,7 +80,6 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: Shortcut
                     app.selection_changed = true;
                 }
             }
-            app.last_lowercase_g_pressed_ms = 0;
         }
         ShortcutAction::DeleteEntry => app.delete_selected_entry(),
         ShortcutAction::RenameEntry => app.rename_selected_entry(),
@@ -360,37 +357,25 @@ fn process_key(
         return;
     }
 
-    // Special case for g key to handle namespace
+    // Special case for g key to handle key buffer approach
     let mut namespace = false;
-    if key == Key::G && !modifiers.shift {
-        let now = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_millis();
-
-        let last = app.last_lowercase_g_pressed_ms;
-        if last > 0 && now - last < DOUBLE_KEY_PRESS_THRESHOLD_MS {
-            // Double-g press detected, use the namespace system
-            namespace = true;
-        } else {
-            // First g press, set the timestamp and namespace flag
-            app.last_lowercase_g_pressed_ms = now;
-            // consume the key
-            return;
+    match app.key_buffer.first() {
+        Some(k) => {
+            if k == &Key::G {
+                namespace = true;
+            } else {
+                // this should never hapen
+                error!("Unexpected key in key buffer: {:?}", k);
+            }
+            app.key_buffer.clear();
         }
-    } else if app.last_lowercase_g_pressed_ms > 0 {
-        // Any other key press after g, check if within threshold
-        let now = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_millis();
-
-        if now - app.last_lowercase_g_pressed_ms < DOUBLE_KEY_PRESS_THRESHOLD_MS {
-            namespace = true;
+        None => {
+            // First 'g' press, add to buffer and consume the key
+            if key == Key::G && !modifiers.shift {
+                app.key_buffer.push(Key::G);
+                return;
+            }
         }
-
-        // Reset the g timestamp after any other key is pressed
-        app.last_lowercase_g_pressed_ms = 0;
     }
 
     // Find and handle the action for this key combination

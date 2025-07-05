@@ -36,7 +36,9 @@ fn test_sort_by_name() {
     }
 
     // Toggle sort to None by clicking the Name header (first click cycles from Ascending to None)
-    harness.query_by_label_contains("Name").unwrap().click();
+    harness.query_by_label("Name \u{2B89}").unwrap().click();
+    // 2 steps needed to update column header label
+    harness.step();
     harness.step();
 
     // Verify entries are now unsorted (SortColumn::None)
@@ -49,7 +51,8 @@ fn test_sort_by_name() {
     }
 
     // Toggle sort to Descending by clicking the Name header again
-    harness.query_by_label_contains("Name").unwrap().click();
+    harness.query_by_label("Name").unwrap().click();
+    harness.step();
     harness.step();
 
     // Verify entries are now sorted in reverse alphabetical order
@@ -66,7 +69,7 @@ fn test_sort_by_name() {
     }
 
     // Toggle sort to Ascending by clicking the Name header again
-    harness.query_by_label_contains("Name").unwrap().click();
+    harness.query_by_label("Name \u{2B8B}").unwrap().click();
     harness.step();
 
     // Verify entries are sorted alphabetically again

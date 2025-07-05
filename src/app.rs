@@ -196,8 +196,8 @@ pub struct Kiorg {
     // Error channel for background operations
     pub error_sender: std::sync::mpsc::Sender<String>,
     pub error_receiver: std::sync::mpsc::Receiver<String>,
-    // ts variable for tracking key press times
-    pub last_lowercase_g_pressed_ms: u128,
+    // Key buffer for tracking unprocessed key presses
+    pub key_buffer: Vec<egui::Key>,
     pub shutdown_requested: bool,
     // Signal whether to scroll to display current directory in the left panel
     pub scroll_left_panel: bool,
@@ -307,7 +307,7 @@ impl Kiorg {
             files_being_opened: HashMap::new(),
             error_sender,
             error_receiver,
-            last_lowercase_g_pressed_ms: 0,
+            key_buffer: Vec::new(),
             terminal_ctx: None,
             shutdown_requested: false,
             notify_fs_change,
