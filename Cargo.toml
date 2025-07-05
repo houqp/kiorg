@@ -25,7 +25,12 @@ path = "src/main.rs"
 
 [dependencies]
 eframe = "0.31.1"
-egui = { version = "0.31.1", features = ["accesskit", "log", "rayon"] }
+egui = { version = "0.31.1", features = [
+    "accesskit",
+    "log",
+    "rayon",
+    "color-hex",
+] }
 font-kit = "0"
 chrono = "0.4.40"
 humansize = "2.1.3"
