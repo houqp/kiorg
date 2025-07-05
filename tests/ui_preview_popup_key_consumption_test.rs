@@ -5,7 +5,7 @@ use egui::{Key, Modifiers};
 use kiorg::app::PopupType;
 use kiorg::models::preview_content::PreviewContent;
 use tempfile::tempdir;
-use ui_test_helpers::{create_harness, create_test_image};
+use ui_test_helpers::{create_harness, create_test_image, tab_num_modifiers};
 
 /// Test that number keys don't trigger tab switches when preview popup is active
 #[test]
@@ -35,7 +35,8 @@ fn test_preview_popup_consumes_number_keys() {
     );
 
     // Switch to tab 1 (index 0)
-    harness.press_key(Key::Num1);
+    let modifiers = tab_num_modifiers();
+    harness.press_key_modifiers(modifiers, Key::Num1);
     harness.step();
     assert_eq!(
         harness.state().tab_manager.get_current_tab_index(),
@@ -44,7 +45,7 @@ fn test_preview_popup_consumes_number_keys() {
     );
 
     // Switch to tab 2 (index 1)
-    harness.press_key(Key::Num2);
+    harness.press_key_modifiers(modifiers, Key::Num2);
     harness.step();
     assert_eq!(
         harness.state().tab_manager.get_current_tab_index(),
@@ -145,13 +146,14 @@ fn test_preview_popup_consumes_number_keys() {
         "Preview popup should be closed after pressing Escape"
     );
 
-    // Now test that number keys work normally after closing the popup
-    harness.press_key(Key::Num1);
+    // Now test that tab switching with modifiers works normally after closing the popup
+    let modifiers = tab_num_modifiers();
+    harness.press_key_modifiers(modifiers, Key::Num1);
     harness.step();
     assert_eq!(
         harness.state().tab_manager.get_current_tab_index(),
         0,
-        "Number keys should work normally after closing preview popup"
+        "Tab switching with modifiers should work normally after closing preview popup"
     );
 }
 

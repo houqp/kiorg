@@ -3,7 +3,7 @@ mod ui_test_helpers;
 
 use egui::Key;
 use tempfile::tempdir;
-use ui_test_helpers::{create_harness, create_test_files};
+use ui_test_helpers::{create_harness, create_test_files, tab_num_modifiers};
 
 /// Test for directory history navigation with keyboard shortcuts
 #[test]
@@ -224,7 +224,7 @@ fn test_directory_history_navigation() {
         );
 
         // Switch back to first tab
-        harness.press_key(Key::Num1);
+        harness.press_key_modifiers(tab_num_modifiers(), Key::Num1);
         harness.step();
 
         // Verify first tab still has its history

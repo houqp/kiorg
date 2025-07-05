@@ -13,7 +13,7 @@ pub struct KeyboardShortcut {
     #[serde(default)]
     pub alt: bool,
     #[serde(default)]
-    pub mac_cmd: bool,
+    pub command: bool,
     #[serde(default)]
     pub namespace: bool,
 }
@@ -26,7 +26,7 @@ impl KeyboardShortcut {
             shift: false,
             ctrl: false,
             alt: false,
-            mac_cmd: false,
+            command: false,
             namespace: false,
         }
     }
@@ -50,8 +50,8 @@ impl KeyboardShortcut {
     }
 
     #[must_use]
-    pub const fn with_mac_cmd(mut self) -> Self {
-        self.mac_cmd = true;
+    pub const fn with_cmd(mut self) -> Self {
+        self.command = true;
         self
     }
 
@@ -139,7 +139,7 @@ impl KeyboardShortcut {
             && self.shift == modifiers.shift
             && self.ctrl == modifiers.ctrl
             && self.alt == modifiers.alt
-            && self.mac_cmd == modifiers.mac_cmd
+            && self.command == modifiers.command
             && self.namespace == namespace
     }
 }
@@ -249,8 +249,8 @@ impl Shortcuts {
                     alt: shortcut.alt,
                     ctrl: shortcut.ctrl,
                     shift: shortcut.shift,
-                    mac_cmd: shortcut.mac_cmd,
-                    command: shortcut.mac_cmd,
+                    mac_cmd: shortcut.command,
+                    command: shortcut.command,
                 },
                 namespace: shortcut.namespace,
             };
@@ -270,8 +270,8 @@ impl Shortcuts {
                             alt: shortcut.alt,
                             ctrl: shortcut.ctrl,
                             shift: shortcut.shift,
-                            mac_cmd: shortcut.mac_cmd,
-                            command: shortcut.mac_cmd,
+                            mac_cmd: shortcut.command,
+                            command: shortcut.command,
                         },
                         namespace: shortcut.namespace,
                     };
@@ -292,8 +292,8 @@ impl Shortcuts {
                         alt: shortcut.alt,
                         ctrl: shortcut.ctrl,
                         shift: shortcut.shift,
-                        mac_cmd: shortcut.mac_cmd,
-                        command: shortcut.mac_cmd,
+                        mac_cmd: shortcut.command,
+                        command: shortcut.command,
                     },
                     namespace: shortcut.namespace,
                 };
@@ -420,23 +420,85 @@ pub fn default_shortcuts() -> Shortcuts {
     // Tabs
     add_shortcut(KeyboardShortcut::new("t"), ShortcutAction::CreateTab);
 
-    add_shortcut(KeyboardShortcut::new("1"), ShortcutAction::SwitchToTab1);
-
-    add_shortcut(KeyboardShortcut::new("2"), ShortcutAction::SwitchToTab2);
-
-    add_shortcut(KeyboardShortcut::new("3"), ShortcutAction::SwitchToTab3);
-
-    add_shortcut(KeyboardShortcut::new("4"), ShortcutAction::SwitchToTab4);
-
-    add_shortcut(KeyboardShortcut::new("5"), ShortcutAction::SwitchToTab5);
-
-    add_shortcut(KeyboardShortcut::new("6"), ShortcutAction::SwitchToTab6);
-
-    add_shortcut(KeyboardShortcut::new("7"), ShortcutAction::SwitchToTab7);
-
-    add_shortcut(KeyboardShortcut::new("8"), ShortcutAction::SwitchToTab8);
-
-    add_shortcut(KeyboardShortcut::new("9"), ShortcutAction::SwitchToTab9);
+    // Tab switching shortcuts: Ctrl+number on Windows/Linux, Cmd+number on Mac
+    #[cfg(target_os = "macos")]
+    {
+        add_shortcut(
+            KeyboardShortcut::new("1").with_cmd(),
+            ShortcutAction::SwitchToTab1,
+        );
+        add_shortcut(
+            KeyboardShortcut::new("2").with_cmd(),
+            ShortcutAction::SwitchToTab2,
+        );
+        add_shortcut(
+            KeyboardShortcut::new("3").with_cmd(),
+            ShortcutAction::SwitchToTab3,
+        );
+        add_shortcut(
+            KeyboardShortcut::new("4").with_cmd(),
+            ShortcutAction::SwitchToTab4,
+        );
+        add_shortcut(
+            KeyboardShortcut::new("5").with_cmd(),
+            ShortcutAction::SwitchToTab5,
+        );
+        add_shortcut(
+            KeyboardShortcut::new("6").with_cmd(),
+            ShortcutAction::SwitchToTab6,
+        );
+        add_shortcut(
+            KeyboardShortcut::new("7").with_cmd(),
+            ShortcutAction::SwitchToTab7,
+        );
+        add_shortcut(
+            KeyboardShortcut::new("8").with_cmd(),
+            ShortcutAction::SwitchToTab8,
+        );
+        add_shortcut(
+            KeyboardShortcut::new("9").with_cmd(),
+            ShortcutAction::SwitchToTab9,
+        );
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        add_shortcut(
+            KeyboardShortcut::new("1").with_ctrl(),
+            ShortcutAction::SwitchToTab1,
+        );
+        add_shortcut(
+            KeyboardShortcut::new("2").with_ctrl(),
+            ShortcutAction::SwitchToTab2,
+        );
+        add_shortcut(
+            KeyboardShortcut::new("3").with_ctrl(),
+            ShortcutAction::SwitchToTab3,
+        );
+        add_shortcut(
+            KeyboardShortcut::new("4").with_ctrl(),
+            ShortcutAction::SwitchToTab4,
+        );
+        add_shortcut(
+            KeyboardShortcut::new("5").with_ctrl(),
+            ShortcutAction::SwitchToTab5,
+        );
+        add_shortcut(
+            KeyboardShortcut::new("6").with_ctrl(),
+            ShortcutAction::SwitchToTab6,
+        );
+        add_shortcut(
+            KeyboardShortcut::new("7").with_ctrl(),
+            ShortcutAction::SwitchToTab7,
+        );
+        add_shortcut(
+            KeyboardShortcut::new("8").with_ctrl(),
+            ShortcutAction::SwitchToTab8,
+        );
+        add_shortcut(
+            KeyboardShortcut::new("9").with_ctrl(),
+            ShortcutAction::SwitchToTab9,
+        );
+    }
 
     add_shortcut(
         KeyboardShortcut::new("q").with_ctrl(),
@@ -556,7 +618,7 @@ mod tests {
                 if shortcut.alt {
                     shortcut_str.push_str(", Alt");
                 }
-                if shortcut.mac_cmd {
+                if shortcut.command {
                     shortcut_str.push_str(", Cmd");
                 }
                 if shortcut.namespace {
@@ -629,7 +691,7 @@ pub mod shortcuts_helpers {
                     parts.push("Shift".to_string());
                 }
 
-                if shortcut.mac_cmd {
+                if shortcut.command {
                     parts.push("Cmd".to_string());
                 }
 

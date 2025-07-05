@@ -371,3 +371,16 @@ impl std::ops::DerefMut for TestHarness<'_> {
         &mut self.harness
     }
 }
+
+#[inline]
+pub fn tab_num_modifiers() -> egui::Modifiers {
+    egui::Modifiers {
+        #[cfg(target_os = "macos")]
+        mac_cmd: true,
+        #[cfg(target_os = "macos")]
+        command: true,
+        #[cfg(not(target_os = "macos"))]
+        ctrl: true,
+        ..Default::default()
+    }
+}
