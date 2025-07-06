@@ -37,7 +37,6 @@ pub fn render(ui: &mut egui::Ui, entries: &[TarEntry], colors: &AppColors) {
             // Display entries in the visible range
             for row_index in row_range {
                 let entry = &entries[row_index];
-
                 ui.horizontal(|ui| {
                     // Display permissions
                     ui.label(

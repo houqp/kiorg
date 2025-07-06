@@ -52,53 +52,6 @@ pub fn show_help_window(
 
                     ui.add_space(10.0); // Space between sections
 
-                    // Section: File Operations
-                    ui.heading(RichText::new("File Operations").color(colors.fg_light));
-                    let table = egui::Grid::new("file_op_help_grid");
-                    table.show(ui, |ui| {
-                        let file_actions = [
-                            (ShortcutAction::OpenDirectoryOrFile, "Open file"),
-                            (
-                                ShortcutAction::OpenWithCommand,
-                                "Open file with custom command",
-                            ),
-                            (
-                                ShortcutAction::ShowFilePreview,
-                                "Preview file in a popup window",
-                            ),
-                            (
-                                ShortcutAction::DeleteEntry,
-                                "Delete selected file/directory",
-                            ),
-                            (
-                                ShortcutAction::RenameEntry,
-                                "Rename selected file/directory",
-                            ),
-                            (ShortcutAction::AddEntry, "Add file/directory"),
-                            (ShortcutAction::SelectEntry, "Mark/unmark entry"),
-                            (
-                                ShortcutAction::ToggleRangeSelection,
-                                "Toggle range selection mode",
-                            ),
-                            (ShortcutAction::SelectAllEntries, "Select all entries"),
-                            (ShortcutAction::CopyEntry, "Copy selected entry"),
-                            (ShortcutAction::CutEntry, "Cut selected entry"),
-                            (ShortcutAction::PasteEntry, "Paste copied/cut entries"),
-                        ];
-                        for (action, description) in file_actions {
-                            let shortcut_display =
-                                shortcuts_helpers::get_shortcut_display(shortcuts, action);
-                            ui.label(RichText::new(shortcut_display).color(colors.highlight));
-                            ui.label(description);
-                            ui.end_row();
-                        }
-                    });
-                });
-
-                ui.separator(); // Vertical separator between columns
-
-                // Column 2: Bookmarks & Tabs
-                ui.vertical(|ui| {
                     ui.heading(RichText::new("Bookmarks").color(colors.fg_light));
                     let table = egui::Grid::new("bookmark_help_grid");
                     table.show(ui, |ui| {
@@ -150,7 +103,53 @@ pub fn show_help_window(
                         ui.label("Switch to tab by number");
                         ui.end_row();
                     });
+                });
 
+                ui.separator(); // Vertical separator between columns
+
+                // Column 2
+                ui.vertical(|ui| {
+                    // Section: File Operations
+                    ui.heading(RichText::new("File Operations").color(colors.fg_light));
+                    let table = egui::Grid::new("file_op_help_grid");
+                    table.show(ui, |ui| {
+                        let file_actions = [
+                            (ShortcutAction::OpenDirectoryOrFile, "Open file"),
+                            (
+                                ShortcutAction::OpenWithCommand,
+                                "Open file with custom command",
+                            ),
+                            (
+                                ShortcutAction::ShowFilePreview,
+                                "Preview file in a popup window",
+                            ),
+                            (
+                                ShortcutAction::DeleteEntry,
+                                "Delete selected file/directory",
+                            ),
+                            (
+                                ShortcutAction::RenameEntry,
+                                "Rename selected file/directory",
+                            ),
+                            (ShortcutAction::AddEntry, "Add file/directory"),
+                            (ShortcutAction::SelectEntry, "Mark/unmark entry"),
+                            (
+                                ShortcutAction::ToggleRangeSelection,
+                                "Toggle range selection mode",
+                            ),
+                            (ShortcutAction::SelectAllEntries, "Select all entries"),
+                            (ShortcutAction::CopyEntry, "Copy selected entry"),
+                            (ShortcutAction::CutEntry, "Cut selected entry"),
+                            (ShortcutAction::PasteEntry, "Paste copied/cut entries"),
+                        ];
+                        for (action, description) in file_actions {
+                            let shortcut_display =
+                                shortcuts_helpers::get_shortcut_display(shortcuts, action);
+                            ui.label(RichText::new(shortcut_display).color(colors.highlight));
+                            ui.label(description);
+                            ui.end_row();
+                        }
+                    });
                     ui.add_space(10.0); // Space between sections
 
                     // Section: Search
