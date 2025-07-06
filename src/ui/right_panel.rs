@@ -150,6 +150,9 @@ pub fn draw(app: &mut Kiorg, ctx: &egui::Context, ui: &mut Ui, width: f32, heigh
                         Some(PreviewContent::Zip(ref entries)) => {
                             preview::zip::render(ui, entries, colors);
                         }
+                        Some(PreviewContent::Tar(ref entries)) => {
+                            preview::tar::render(ui, entries, colors);
+                        }
                         Some(PreviewContent::Directory(ref entries)) => {
                             preview::directory::render(ui, entries, colors);
                         }

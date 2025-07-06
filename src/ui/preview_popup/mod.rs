@@ -1,7 +1,5 @@
 //! Preview popup module for displaying file previews in a popup window
 
-use std::path::Path;
-
 use crate::app::{Kiorg, PopupType};
 use crate::models::preview_content::PreviewContent;
 use crate::ui::file_list::truncate_text;
@@ -12,16 +10,6 @@ use egui_extras::syntax_highlighting::{self, CodeTheme};
 pub mod doc;
 pub mod image;
 
-// return extension if available, otherwise return file name
-fn path_to_ext_info(path: &Path) -> Option<String> {
-    path.extension()
-        .map(|e| e.to_string_lossy().to_lowercase())
-        .or_else(|| {
-            path.file_name()
-                .map(|name| name.to_string_lossy().to_lowercase())
-        })
-}
-
 /// Handle the `ShowFilePreview` shortcut action
 /// This function was extracted from input.rs to reduce complexity
 pub fn handle_show_file_preview(app: &mut Kiorg, _ctx: &egui::Context) {
@@ -31,7 +19,7 @@ pub fn handle_show_file_preview(app: &mut Kiorg, _ctx: &egui::Context) {
         if let Some(selected_entry) = tab.selected_entry() {
             (
                 selected_entry.is_dir,
-                path_to_ext_info(&selected_entry.path),
+                crate::ui::preview::path_to_ext_info(&selected_entry.path),
             )
         } else {
             // No entry selected
@@ -46,8 +34,8 @@ pub fn handle_show_file_preview(app: &mut Kiorg, _ctx: &egui::Context) {
     }
 
     // Handle different file types based on extension
-    match extension.as_deref() {
-        Some("pdf") => {
+    match extension.as_str() {
+        crate::ui::preview::pdf_extensions!() => {
             // Get the current selected path
             let selected_path = {
                 let tab = app.tab_manager.current_tab_ref();
@@ -92,15 +80,23 @@ pub fn handle_show_file_preview(app: &mut Kiorg, _ctx: &egui::Context) {
                 }
             }
         }
-        Some("epub") => {
+        crate::ui::preview::epub_extensions!() => {
             // Show preview popup for EPUB files
             app.show_popup = Some(PopupType::Preview);
         }
-        Some("jpg" | "jpeg" | "png" | "gif" | "bmp" | "webp" | "svg") => {
+        crate::ui::preview::zip_extensions!() => {
+            // Show preview popup for zip files
+            app.show_popup = Some(PopupType::Preview);
+        }
+        crate::ui::preview::tar_extensions!() => {
+            // Show preview popup for tar files
+            app.show_popup = Some(PopupType::Preview);
+        }
+        crate::ui::preview::image_extensions!() => {
             // Show preview popup for image files
             app.show_popup = Some(PopupType::Preview);
         }
-        Some(ext) if crate::ui::preview::text::lang_type_from_ext(ext).is_some() => {
+        ext if crate::ui::preview::text::lang_type_from_ext(ext).is_some() => {
             let tab = app.tab_manager.current_tab_ref();
             if let Some(entry) = tab.selected_entry() {
                 // Load the full text content for popup display
@@ -115,10 +111,10 @@ pub fn handle_show_file_preview(app: &mut Kiorg, _ctx: &egui::Context) {
                 }
             }
         }
-        _ => {
+        v => {
             // send notification for unsupported file types
             app.toasts
-                .error("Preview not implemented for this file type yet.");
+                .error(format!("Preview not implemented for file type: {v}."));
         }
     }
 }
@@ -163,9 +159,9 @@ pub fn show_preview_popup(ctx: &Context, app: &mut Kiorg) {
                                 .show(ui, |ui| {
                                     // Try to detect if this is source code from the file path
                                     let language = selected_path.as_ref().and_then(|path| {
-                                        path_to_ext_info(path).and_then(|ext| {
-                                            crate::ui::preview::text::lang_type_from_ext(&ext)
-                                        })
+                                        crate::ui::preview::text::lang_type_from_ext(
+                                            &crate::ui::preview::path_to_ext_info(path),
+                                        )
                                     });
                                     if let Some(lang) = language {
                                         // Use syntax highlighting for source code
@@ -217,6 +213,22 @@ pub fn show_preview_popup(ctx: &Context, app: &mut Kiorg) {
                                 available_width,
                                 available_height,
                             );
+                        }
+                        PreviewContent::Zip(zip_entries) => {
+                            // Use zip rendering for popup
+                            egui::ScrollArea::vertical()
+                                .id_salt("zip_popup_scroll")
+                                .show(ui, |ui| {
+                                    crate::ui::preview::zip::render(ui, zip_entries, &app.colors);
+                                });
+                        }
+                        PreviewContent::Tar(tar_entries) => {
+                            // Use tar rendering for popup
+                            egui::ScrollArea::vertical()
+                                .id_salt("tar_popup_scroll")
+                                .show(ui, |ui| {
+                                    crate::ui::preview::tar::render(ui, tar_entries, &app.colors);
+                                });
                         }
                         PreviewContent::Loading(path, _) => {
                             ui.vertical_centered(|ui| {

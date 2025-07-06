@@ -4,7 +4,7 @@ mod ui_test_helpers;
 use egui::Key;
 use kiorg::models::preview_content::PreviewContent;
 use tempfile::tempdir;
-use ui_test_helpers::{create_harness, create_test_image, create_test_zip};
+use ui_test_helpers::{create_harness, create_test_image, create_test_tar, create_test_zip};
 
 /// Test for text preview of regular text files
 #[test]
@@ -227,6 +227,53 @@ fn test_zip_preview() {
 
     panic!(
         "Preview content should eventually be Zip variant, got {:?}",
+        harness.state().preview_content
+    );
+}
+
+/// Test for tar preview
+#[test]
+fn test_tar_preview() {
+    // Create a temporary directory for testing
+    let temp_dir = tempdir().unwrap();
+
+    // Create test tar file
+    let tar_path = temp_dir.path().join("test.tar");
+    create_test_tar(&tar_path);
+
+    // Start the harness
+    let mut harness = create_harness(&temp_dir);
+
+    // Select the tar file using J shortcut
+    // Since entries are sorted by name, we can navigate to the tar file
+    harness.press_key(Key::J);
+    harness.step();
+
+    // Try multiple steps to allow async loading to complete
+    for _ in 0..100 {
+        if let Some(PreviewContent::Tar(entries)) = &harness.state().preview_content {
+            // Verify tar entries
+            assert!(!entries.is_empty(), "Tar entries should not be empty");
+
+            // Check for expected files
+            let file1 = entries.iter().find(|e| e.name == "file1.txt");
+            let file2 = entries.iter().find(|e| e.name == "file2.txt");
+            let subdir = entries.iter().find(|e| e.name == "subdir/" && e.is_dir);
+
+            assert!(file1.is_some(), "file1.txt should be in the tar entries");
+            assert!(file2.is_some(), "file2.txt should be in the tar entries");
+            assert!(subdir.is_some(), "subdir/ should be in the tar entries");
+
+            return;
+        } else {
+            // Still loading, try another step
+            std::thread::sleep(std::time::Duration::from_millis(10));
+            harness.step();
+        }
+    }
+
+    panic!(
+        "Preview content should eventually be Tar variant, got {:?}",
         harness.state().preview_content
     );
 }
