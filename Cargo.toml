@@ -51,6 +51,12 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 nucleo = "0.5.0"
 
+# tar handling
+tar = "0.4"
+flate2 = "1"
+bzip2 = "0.6"
+
+
 # image handling
 image = { version = "0" }
 kamadak-exif = "0"

@@ -359,6 +359,9 @@ fn test_mouse_click_selects_and_previews() {
         Some(PreviewContent::Zip(_)) => {
             panic!("Preview content should be Text variant, not Zip")
         }
+        Some(PreviewContent::Tar(_)) => {
+            panic!("Preview content should be Text variant, not Tar")
+        }
         Some(PreviewContent::Pdf(_)) => {
             panic!("Preview content should be Text variant, not PDF")
         }

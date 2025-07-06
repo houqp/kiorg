@@ -93,6 +93,8 @@ pub enum PreviewContent {
     Image(ImageMeta),
     /// Zip file content with a list of entries
     Zip(Vec<ZipEntry>),
+    /// Tar file content with a list of entries (supports both compressed and uncompressed)
+    Tar(Vec<TarEntry>),
     /// PDF document with page navigation support
     Pdf(PdfMeta),
     /// EPUB document without page navigation
@@ -121,6 +123,19 @@ pub struct ZipEntry {
     pub size: u64,
     /// Whether the entry is a directory
     pub is_dir: bool,
+}
+
+/// Represents an entry in a tar file
+#[derive(Clone, Debug)]
+pub struct TarEntry {
+    /// Name of the entry (file or directory)
+    pub name: String,
+    /// Size of the entry in bytes
+    pub size: u64,
+    /// Whether the entry is a directory
+    pub is_dir: bool,
+    /// Unix permissions in octal format (e.g., "755", "644")
+    pub permissions: String,
 }
 
 impl PreviewContent {
@@ -165,6 +180,12 @@ impl PreviewContent {
     #[must_use]
     pub const fn zip(entries: Vec<ZipEntry>) -> Self {
         Self::Zip(entries)
+    }
+
+    /// Creates a new tar preview content from a list of entries
+    #[must_use]
+    pub const fn tar(entries: Vec<TarEntry>) -> Self {
+        Self::Tar(entries)
     }
 
     /// Creates a new directory preview content from a list of entries

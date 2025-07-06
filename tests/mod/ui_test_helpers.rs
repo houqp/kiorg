@@ -5,6 +5,7 @@ use kiorg::Kiorg;
 use std::fmt::Write;
 use std::fs::File;
 use std::path::PathBuf;
+use tar::{Builder, Header};
 use tempfile::tempdir;
 
 /// Create files and directories from a list of paths.
@@ -64,6 +65,52 @@ pub fn create_test_zip(path: &PathBuf) -> PathBuf {
     zip.write_all(b"Content of file3.txt in subdir").unwrap();
 
     zip.finish().unwrap();
+    assert!(path.exists());
+    path.clone()
+}
+
+/// Create a test tar file with some entries
+pub fn create_test_tar(path: &PathBuf) -> PathBuf {
+    let file = File::create(path).unwrap();
+    let mut tar = Builder::new(file);
+
+    // Add file1.txt
+    let mut header = Header::new_gnu();
+    let content1 = b"Content of file1.txt";
+    header.set_path("file1.txt").unwrap();
+    header.set_size(content1.len() as u64);
+    header.set_mode(0o644);
+    header.set_cksum();
+    tar.append(&header, &content1[..]).unwrap();
+
+    // Add file2.txt
+    let mut header = Header::new_gnu();
+    let content2 = b"Content of file2.txt";
+    header.set_path("file2.txt").unwrap();
+    header.set_size(content2.len() as u64);
+    header.set_mode(0o644);
+    header.set_cksum();
+    tar.append(&header, &content2[..]).unwrap();
+
+    // Add subdirectory
+    let mut header = Header::new_gnu();
+    header.set_path("subdir/").unwrap();
+    header.set_size(0);
+    header.set_mode(0o755);
+    header.set_entry_type(tar::EntryType::Directory);
+    header.set_cksum();
+    tar.append(&header, std::io::empty()).unwrap();
+
+    // Add a file in the subdirectory
+    let mut header = Header::new_gnu();
+    let content3 = b"Content of file3.txt in subdir";
+    header.set_path("subdir/file3.txt").unwrap();
+    header.set_size(content3.len() as u64);
+    header.set_mode(0o644);
+    header.set_cksum();
+    tar.append(&header, &content3[..]).unwrap();
+
+    tar.finish().unwrap();
     assert!(path.exists());
     path.clone()
 }
