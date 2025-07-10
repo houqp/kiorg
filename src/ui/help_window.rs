@@ -39,6 +39,10 @@ pub fn show_help_window(
                             (ShortcutAction::GoToLastEntry, "Jump to the last entry"),
                             (ShortcutAction::GoBackInHistory, "Go back in history"),
                             (ShortcutAction::GoForwardInHistory, "Go forward in history"),
+                            (
+                                ShortcutAction::ShowTeleport,
+                                "Teleport with history fuzzy search",
+                            ),
                         ];
 
                         for (action, description) in navigation_actions {
@@ -156,13 +160,8 @@ pub fn show_help_window(
                     ui.heading(RichText::new("Search").color(colors.fg_light));
                     let table = egui::Grid::new("search_help_grid");
                     table.show(ui, |ui| {
-                        let search_actions = [
-                            (ShortcutAction::ActivateSearch, "Activate search filter"),
-                            (
-                                ShortcutAction::ShowTeleport,
-                                "Teleport to directory from history",
-                            ),
-                        ];
+                        let search_actions =
+                            [(ShortcutAction::ActivateSearch, "Activate search filter")];
                         for (action, description) in search_actions {
                             let shortcut_display =
                                 shortcuts_helpers::get_shortcut_display(shortcuts, action);
