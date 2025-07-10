@@ -3,12 +3,17 @@ mod ui_test_helpers;
 
 use egui::Key;
 use tempfile::tempdir;
-use ui_test_helpers::create_harness;
+use ui_test_helpers::TestHarnessBuilder;
 
 #[test]
 fn test_help_menu_close_behavior() {
     let temp_dir = tempdir().unwrap();
-    let mut harness = create_harness(&temp_dir);
+
+    // Create the test harness with default config (only built-in themes)
+    let mut harness = TestHarnessBuilder::new()
+        .with_temp_dir(&temp_dir)
+        .with_window_size(egui::Vec2::new(800.0, 800.0))
+        .build();
 
     // Open help menu with shift+?
     {
@@ -25,7 +30,12 @@ fn test_help_menu_close_behavior() {
         "Help menu should be open"
     );
     #[cfg(feature = "snapshot")]
-    harness.snapshot("help_menu");
+    {
+        // multiple steps to ensure the menu animation completes
+        harness.step();
+        harness.step();
+        harness.snapshot("help_menu");
+    }
 
     // Test closing with Escape
     harness.press_key(Key::Escape);

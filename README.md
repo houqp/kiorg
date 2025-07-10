@@ -14,6 +14,7 @@ bindings. It is built using the [egui](https://www.egui.rs/#demo) framework.
 * Lightingly fast rendering and navigation
 * Multi-tab support
 * Vim-inspired keyboard shortcuts
+* Built-in zoxide like fuzzy directory teleport
 * Content preview for various file formats including code syntax highlight, image, pdf, epub, etc.
 * Customizable shortcuts and color themes through TOML config files
 * Cross-platform support (Linux, macOS, Windows)
