@@ -203,6 +203,11 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: Shortcut
         }
         ShortcutAction::Exit => app.show_popup = Some(PopupType::Exit),
         ShortcutAction::ActivateSearch => app.search_bar.activate(),
+        ShortcutAction::ShowTeleport => {
+            app.show_popup = Some(PopupType::Teleport(
+                crate::ui::teleport_popup::TeleportState::default(),
+            ));
+        }
         ShortcutAction::GoBackInHistory => app.navigate_history_back(),
         ShortcutAction::GoForwardInHistory => app.navigate_history_forward(),
         ShortcutAction::SwitchToNextTab => {
@@ -343,6 +348,10 @@ fn process_key(
         }
         Some(PopupType::DeleteProgress(_)) => {
             // Delete progress popup doesn't handle input - just return
+            return;
+        }
+        Some(PopupType::Teleport(_)) => {
+            // Teleport popup handles its own input - just return
             return;
         }
         None => {}

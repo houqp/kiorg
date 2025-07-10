@@ -15,23 +15,27 @@ fn test_copy_directory() {
         temp_dir.path().join("source_dir"),
         temp_dir.path().join("target_dir"),
     ]);
+    let source_dir = &test_files[0];
+    let target_dir = &test_files[1];
 
     // Create files inside source_dir
     let source_files = create_test_files(&[
-        test_files[0].join("file1.txt"),
-        test_files[0].join("file2.txt"),
-        test_files[0].join("subdir"),
+        source_dir.join("file1.txt"),
+        source_dir.join("file2.txt"),
+        source_dir.join("subdir"),
     ]);
+    let subdir = &source_files[2];
 
     // Create files inside the subdirectory
-    let subdir_files = create_test_files(&[
-        source_files[2].join("subfile1.txt"),
-        source_files[2].join("subfile2.txt"),
-        source_files[2].join("nested_subdir"),
+    create_test_files(&[
+        subdir.join("subfile1.txt"),
+        subdir.join("subfile2.txt"),
+        subdir.join("nested_subdir"),
     ]);
 
     // Create a file in the nested subdirectory
-    let _nested_subdir_file = create_test_files(&[subdir_files[2].join("nested_file.txt")]);
+    let _nested_subdir_file =
+        create_test_files(&[subdir.join("nested_subdir").join("nested_file.txt")]);
 
     let mut harness = create_harness(&temp_dir);
 
@@ -56,10 +60,7 @@ fn test_copy_directory() {
                 1,
                 "Clipboard should contain exactly one directory"
             );
-            assert_eq!(
-                paths[0], test_files[0],
-                "Clipboard should contain source_dir"
-            );
+            assert_eq!(&paths[0], source_dir, "Clipboard should contain source_dir");
         } else {
             panic!("Clipboard should contain a Copy operation");
         }
@@ -69,16 +70,34 @@ fn test_copy_directory() {
     harness.press_key(Key::J);
     harness.step();
 
+    // confirm that we have selected target_dir by checking the selected path
+    {
+        let tab = harness.state().tab_manager.current_tab_ref();
+        assert_eq!(
+            tab.entries[tab.selected_index].path, *target_dir,
+            "Should have selected target_dir"
+        );
+    }
+
     // Navigate into target_dir
-    harness.press_key(Key::L);
+    harness.press_key(Key::Enter);
     harness.step();
+
+    // confirm that we are in target_dir
+    {
+        let tab = harness.state().tab_manager.current_tab_ref();
+        assert_eq!(
+            tab.current_path, *target_dir,
+            "Should be in target_dir after navigation"
+        );
+    }
 
     // Paste the directory
     harness.press_key(Key::P);
     harness.step();
 
     // Verify the directory was copied with all its contents
-    let copied_dir = test_files[1].join("source_dir");
+    let copied_dir = target_dir.join("source_dir");
     assert!(
         copied_dir.exists(),
         "source_dir should be copied to target_dir"
@@ -86,7 +105,7 @@ fn test_copy_directory() {
 
     // Verify original directory still exists
     assert!(
-        test_files[0].exists(),
+        source_dir.exists(),
         "Original source_dir should still exist"
     );
 

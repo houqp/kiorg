@@ -7,5 +7,6 @@ pub mod startup_error;
 pub mod theme;
 pub mod ui;
 pub mod utils;
+pub mod visit_history;
 
 pub use app::Kiorg;

@@ -195,6 +195,7 @@ pub enum ShortcutAction {
     ShowHelp,
     OpenTerminal,
     ShowFilePreview,
+    ShowTeleport,
     Exit,
     ToggleRangeSelection,
 }
@@ -532,6 +533,10 @@ pub fn default_shortcuts() -> Shortcuts {
     add_shortcut(
         KeyboardShortcut::new("f").with_ctrl(),
         ShortcutAction::ActivateSearch,
+    );
+    add_shortcut(
+        KeyboardShortcut::new("p").with_ctrl(),
+        ShortcutAction::ShowTeleport,
     );
 
     // Add new shortcuts for switching to preview tab and next/previous tab
