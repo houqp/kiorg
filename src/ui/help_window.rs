@@ -156,8 +156,13 @@ pub fn show_help_window(
                     ui.heading(RichText::new("Search").color(colors.fg_light));
                     let table = egui::Grid::new("search_help_grid");
                     table.show(ui, |ui| {
-                        let search_actions =
-                            [(ShortcutAction::ActivateSearch, "Activate search filter")];
+                        let search_actions = [
+                            (ShortcutAction::ActivateSearch, "Activate search filter"),
+                            (
+                                ShortcutAction::ShowTeleport,
+                                "Teleport to directory from history",
+                            ),
+                        ];
                         for (action, description) in search_actions {
                             let shortcut_display =
                                 shortcuts_helpers::get_shortcut_display(shortcuts, action);

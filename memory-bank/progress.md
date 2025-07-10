@@ -46,7 +46,6 @@
 ### What's left to build
 
 * Shortcut to toggle sort
-* Fuzzy directory jump (integrate with fzf)
 * render PDF preview using pdfium_render or pathfinder_rasterize
   * see <https://github.com/servo/pathfinder/issues/157>
 * Add debounce to preview with a delay to reduce io and compute

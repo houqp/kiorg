@@ -24,8 +24,9 @@ use crate::ui::terminal;
 use crate::ui::top_banner;
 use crate::ui::{
     about_popup, bookmark_popup, center_panel, file_drop_popup, help_window, left_panel,
-    open_with_popup, preview_popup, rename_popup, right_panel, theme_popup,
+    open_with_popup, preview_popup, rename_popup, right_panel, teleport_popup, theme_popup,
 };
+use crate::visit_history::{self, VisitHistoryEntry};
 use egui_notify::Toasts;
 
 /// Error type for Kiorg application
@@ -87,6 +88,7 @@ pub enum PopupType {
     Preview,                // Show file preview in a popup window
     Themes(String),         // Selected theme key in the themes list
     FileDrop(Vec<PathBuf>), // List of dropped files
+    Teleport(crate::ui::teleport_popup::TeleportState), // Teleport through visit history
 }
 
 /// Clipboard operation types
@@ -201,6 +203,10 @@ pub struct Kiorg {
     pub shutdown_requested: bool,
     // Signal whether to scroll to display current directory in the left panel
     pub scroll_left_panel: bool,
+    // Global visit history tracking
+    pub visit_history: HashMap<PathBuf, VisitHistoryEntry>,
+    // Async history saver for non-blocking save operations
+    pub history_saver: visit_history::HistorySaver,
 }
 
 impl Kiorg {
@@ -282,10 +288,20 @@ impl Kiorg {
 
         let bookmarks = bookmark_popup::load_bookmarks(config_dir_override.as_ref());
 
+        // Load visit history
+        let visit_history = visit_history::load_visit_history(config_dir_override.as_ref())
+            .unwrap_or_else(|e| {
+                tracing::error!(err =? e, "Failed to load visit history");
+                HashMap::new()
+            });
+
         // Create a channel for error messages
         let (tx, rx) = std::sync::mpsc::channel::<String>();
         let error_sender = tx;
         let error_receiver = rx;
+
+        // Create async history saver
+        let history_saver = visit_history::HistorySaver::new();
 
         let mut app = Self {
             tab_manager,
@@ -313,6 +329,8 @@ impl Kiorg {
             notify_fs_change,
             scroll_left_panel: false,
             fs_watcher,
+            visit_history,
+            history_saver,
         };
 
         app.refresh_entries();
@@ -571,7 +589,26 @@ impl Kiorg {
     }
 
     pub fn navigate_to_dir(&mut self, path: PathBuf) {
+        if !path.exists() || !path.is_dir() {
+            if self.visit_history.remove(&path).is_some() {
+                // Save updated visit history asynchronously
+                self.history_saver
+                    .save_async(&self.visit_history, self.config_dir_override.as_ref());
+            }
+            self.notify_error(format!(
+                "Cannot navigate to '{}': Path is not a directory or doesn't exist",
+                path.display()
+            ));
+            return;
+        }
         self.navigate_to_dir_without_history(path.clone());
+
+        // Track visit in global history
+        visit_history::update_visit_history(&mut self.visit_history, &path);
+        // Save visit history asynchronously (non-blocking)
+        self.history_saver
+            .save_async(&self.visit_history, self.config_dir_override.as_ref());
+
         self.tab_manager.current_tab_mut().add_to_history(path);
     }
 
@@ -697,6 +734,7 @@ impl Kiorg {
     }
 
     fn graceful_shutdown(&mut self, ctx: &egui::Context) {
+        self.history_saver.shutdown();
         // Save application state before shutting down
         if let Err(e) = self.save_app_state() {
             self.toasts
@@ -864,6 +902,9 @@ impl eframe::App for Kiorg {
             }
             Some(PopupType::FileDrop(_)) => {
                 file_drop_popup::draw(ctx, self);
+            }
+            Some(PopupType::Teleport(_)) => {
+                teleport_popup::draw(ctx, self);
             }
             None => {}
         }
