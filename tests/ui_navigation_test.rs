@@ -27,7 +27,7 @@ fn test_g_shortcuts() {
             shift: true,
             ..Default::default()
         };
-        harness.press_key_modifiers(modifiers, Key::G);
+        harness.key_press_modifiers(modifiers, Key::G);
         harness.step();
         let tab = harness.state().tab_manager.current_tab_ref();
         assert_eq!(tab.selected_index, tab.entries.len() - 1);
@@ -39,7 +39,7 @@ fn test_g_shortcuts() {
             shift: false,
             ..Default::default()
         };
-        harness.press_key_modifiers(modifiers, Key::G);
+        harness.key_press_modifiers(modifiers, Key::G);
         harness.step();
         let tab = harness.state().tab_manager.current_tab_ref();
         assert_eq!(tab.selected_index, tab.entries.len() - 1);
@@ -48,7 +48,7 @@ fn test_g_shortcuts() {
     // Test gg shortcut (go to first entry)
     {
         // Second g press should go back to the top
-        harness.press_key(Key::G);
+        harness.key_press(Key::G);
         harness.step();
         let tab = harness.state().tab_manager.current_tab_ref();
         assert_eq!(tab.selected_index, 0);
@@ -72,7 +72,7 @@ fn test_g_shortcuts_empty_list() {
             shift: true,
             ..Default::default()
         };
-        harness.press_key_modifiers(modifiers, Key::G);
+        harness.key_press_modifiers(modifiers, Key::G);
         harness.step();
         let tab = harness.state().tab_manager.current_tab_ref();
         assert_eq!(tab.selected_index, 0); // Should stay at 0
@@ -81,9 +81,9 @@ fn test_g_shortcuts_empty_list() {
     // Test gg shortcut with empty list
     {
         // First g press
-        harness.press_key(Key::G);
+        harness.key_press(Key::G);
         // Second g press
-        harness.press_key(Key::G);
+        harness.key_press(Key::G);
         harness.step();
         let tab = harness.state().tab_manager.current_tab_ref();
         assert_eq!(tab.selected_index, 0); // Should stay at 0
@@ -106,11 +106,11 @@ fn test_parent_directory_selection() {
     let mut harness = create_harness(&temp_dir);
 
     // Move down to select dir2
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
 
     // Navigate into dir2
-    harness.press_key(Key::L);
+    harness.key_press(Key::L);
     harness.step();
 
     // Create a file in dir2
@@ -118,11 +118,11 @@ fn test_parent_directory_selection() {
     std::fs::File::create(&dir2_file).unwrap();
 
     // Move down to select dir2_file.txt
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
 
     // Navigate to parent directory
-    harness.press_key(Key::H);
+    harness.key_press(Key::H);
     harness.step();
 
     // Verify that dir2 is still selected
@@ -149,11 +149,11 @@ fn test_parent_directory_with_minus_key() {
     let mut harness = create_harness(&temp_dir);
 
     // Move down to select dir2
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
 
     // Navigate into dir2
-    harness.press_key(Key::L);
+    harness.key_press(Key::L);
     harness.step();
 
     // Create a file in dir2
@@ -161,11 +161,11 @@ fn test_parent_directory_with_minus_key() {
     std::fs::File::create(&dir2_file).unwrap();
 
     // Move down to select dir2_file.txt
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
 
     // Navigate to parent directory using the minus key
-    harness.press_key(Key::Minus);
+    harness.key_press(Key::Minus);
     harness.step();
 
     // Verify that dir2 is still selected
@@ -193,9 +193,9 @@ fn test_prev_path_selection_with_sort() {
 
     // Initial state: aaa, bbb, ccc (now explicitly sorted Name/Ascending)
     // Select ccc (index 2)
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
     assert_eq!(
         harness.state().tab_manager.current_tab_ref().selected_index,
@@ -203,7 +203,7 @@ fn test_prev_path_selection_with_sort() {
     );
 
     // Navigate into bbb
-    harness.press_key(Key::L);
+    harness.key_press(Key::L);
     harness.step();
     assert!(
         harness
@@ -224,7 +224,7 @@ fn test_prev_path_selection_with_sort() {
     harness.step(); // Allow state update propagation if needed
 
     // Navigate back up to the parent directory
-    harness.press_key(Key::H);
+    harness.key_press(Key::H);
     harness.step();
 
     // Now in the parent directory, refresh_entries should have run:
@@ -274,9 +274,9 @@ fn test_mouse_click_selects_and_previews() {
     let mut harness = create_harness(&temp_dir);
 
     // Initially, index 0 ("a.txt") should be selected
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
-    harness.press_key(Key::K);
+    harness.key_press(Key::K);
     harness.step();
     // step twice for the refresh function to be triggered
     harness.step();
@@ -409,7 +409,7 @@ fn test_enter_directory() {
 
     // Simulate a double-click by using Enter key (which has the same effect)
     // This is a simplification since egui_kittest doesn't easily support double-click simulation
-    harness.press_key(Key::Enter);
+    harness.key_press(Key::Enter);
     harness.step();
 
     // Verify that we navigated to the directory
@@ -442,9 +442,9 @@ fn test_image_preview() {
     let mut harness = create_harness(&temp_dir);
 
     // Select the image file
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
-    harness.press_key(Key::K);
+    harness.key_press(Key::K);
     harness.step();
 
     for _ in 0..100 {
@@ -520,7 +520,7 @@ fn test_zip_preview() {
     let mut harness = create_harness(&temp_dir);
 
     // select the zip file
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
 
     // Check if the preview content is a zip or loading
@@ -595,7 +595,7 @@ fn test_open_directory_vs_open_directory_or_file() {
             .clone();
 
         // Press 'l' key which is mapped to OpenDirectory
-        harness.press_key(Key::L);
+        harness.key_press(Key::L);
         harness.step();
 
         // Verify that the current path hasn't changed (file wasn't opened)
@@ -627,7 +627,7 @@ fn test_open_directory_vs_open_directory_or_file() {
         harness.step();
 
         // Press Enter key which is mapped to OpenDirectoryOrFile
-        harness.press_key(Key::Enter);
+        harness.key_press(Key::Enter);
         harness.step();
 
         // Check that the specific file is being opened
@@ -657,7 +657,7 @@ fn test_open_directory_vs_open_directory_or_file() {
         let expected_path = current_path.join("dir1");
 
         // Press Enter key which is mapped to OpenDirectoryOrFile
-        harness.press_key(Key::Enter);
+        harness.key_press(Key::Enter);
         harness.step();
 
         // Verify that the current path has changed to the directory
@@ -697,7 +697,7 @@ fn test_page_navigation() {
     println!("scroll_range: {:?}", harness.state().scroll_range);
 
     // Test Page Down navigation
-    harness.press_key(Key::PageDown);
+    harness.key_press(Key::PageDown);
     harness.step();
 
     let tab = harness.state().tab_manager.current_tab_ref();
@@ -712,7 +712,7 @@ fn test_page_navigation() {
     );
 
     // Test Page Up navigation
-    harness.press_key(Key::PageUp);
+    harness.key_press(Key::PageUp);
     harness.step();
 
     let tab = harness.state().tab_manager.current_tab_ref();
@@ -731,7 +731,7 @@ fn test_page_navigation() {
         ctrl: true,
         ..Default::default()
     };
-    harness.press_key_modifiers(modifiers, Key::D);
+    harness.key_press_modifiers(modifiers, Key::D);
     harness.step();
 
     let tab = harness.state().tab_manager.current_tab_ref();
@@ -750,7 +750,7 @@ fn test_page_navigation() {
         ctrl: true,
         ..Default::default()
     };
-    harness.press_key_modifiers(modifiers, Key::U);
+    harness.key_press_modifiers(modifiers, Key::U);
     harness.step();
 
     let tab = harness.state().tab_manager.current_tab_ref();

@@ -44,7 +44,7 @@ fn test_copy_directory() {
     tab.selected_index = 0;
 
     // Copy source_dir
-    harness.press_key(Key::Y);
+    harness.key_press(Key::Y);
     harness.step();
 
     // Verify the directory is in the clipboard as a copy operation
@@ -67,7 +67,7 @@ fn test_copy_directory() {
     }
 
     // Move down to select target_dir
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
 
     // confirm that we have selected target_dir by checking the selected path
@@ -80,7 +80,7 @@ fn test_copy_directory() {
     }
 
     // Navigate into target_dir
-    harness.press_key(Key::Enter);
+    harness.key_press(Key::Enter);
     harness.step();
 
     // confirm that we are in target_dir
@@ -93,7 +93,7 @@ fn test_copy_directory() {
     }
 
     // Paste the directory
-    harness.press_key(Key::P);
+    harness.key_press(Key::P);
     harness.step();
 
     // Verify the directory was copied with all its contents
@@ -176,11 +176,11 @@ fn test_copy_directory_to_same_parent() {
     tab.selected_index = 0;
 
     // Copy source_dir
-    harness.press_key(Key::Y);
+    harness.key_press(Key::Y);
     harness.step();
 
     // Paste in the same directory
-    harness.press_key(Key::P);
+    harness.key_press(Key::P);
     harness.step();
 
     // Verify the directory was copied with a new suffix

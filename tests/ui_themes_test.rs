@@ -207,7 +207,7 @@ error = "#aa3333"
     }
 
     // Test closing with Q (Exit shortcut)
-    harness.press_key(Key::Q);
+    harness.key_press(Key::Q);
     harness.step();
     assert_eq!(
         harness.state().show_popup,
@@ -573,12 +573,12 @@ error = "#ff8888"
     };
 
     for _ in 0..steps_to_light {
-        harness.press_key(Key::ArrowDown);
+        harness.key_press(Key::ArrowDown);
         harness.step();
     }
 
     // Apply the light theme by pressing Enter
-    harness.press_key(Key::Enter);
+    harness.key_press(Key::Enter);
     harness.step();
 
     // Verify the popup closed and theme was applied
@@ -648,12 +648,12 @@ error = "#ff8888"
     };
 
     for _ in 0..steps_to_purple {
-        harness.press_key(Key::ArrowDown);
+        harness.key_press(Key::ArrowDown);
         harness.step();
     }
 
     // Apply the purple theme by pressing Enter
-    harness.press_key(Key::Enter);
+    harness.key_press(Key::Enter);
     harness.step();
 
     // Verify the popup closed and purple theme was applied
@@ -869,7 +869,7 @@ fn test_snapshot_all_themes() {
     for (expected_index, (theme_key, _display_name)) in builtin_theme_info.iter().enumerate() {
         // If this is not the first theme, navigate to it using arrow down
         if expected_index > 0 {
-            harness.press_key(Key::ArrowDown);
+            harness.key_press(Key::ArrowDown);
             harness.step();
         }
 

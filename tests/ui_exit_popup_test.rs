@@ -19,7 +19,7 @@ fn test_exit_popup_enter_key() {
     );
 
     // Press 'q' to request exit (shows exit popup)
-    harness.press_key(Key::Q);
+    harness.key_press(Key::Q);
     harness.step();
 
     // Verify exit popup is shown
@@ -30,7 +30,7 @@ fn test_exit_popup_enter_key() {
     );
 
     // Press Enter to confirm exit
-    harness.press_key(Key::Enter);
+    harness.key_press(Key::Enter);
     harness.step();
 
     // Verify shutdown was requested
@@ -54,7 +54,7 @@ fn test_exit_popup_escape_key() {
     );
 
     // Press 'q' to request exit (shows exit popup)
-    harness.press_key(Key::Q);
+    harness.key_press(Key::Q);
     harness.step();
 
     // Verify exit popup is shown
@@ -65,7 +65,7 @@ fn test_exit_popup_escape_key() {
     );
 
     // Press Escape to cancel exit
-    harness.press_key(Key::Escape);
+    harness.key_press(Key::Escape);
     harness.step();
 
     // Verify popup is closed
@@ -96,7 +96,7 @@ fn test_exit_popup_q_key() {
     );
 
     // Press 'q' to request exit (shows exit popup)
-    harness.press_key(Key::Q);
+    harness.key_press(Key::Q);
     harness.step();
 
     // Verify exit popup is shown
@@ -107,7 +107,7 @@ fn test_exit_popup_q_key() {
     );
 
     // Press 'q' again to cancel exit
-    harness.press_key(Key::Q);
+    harness.key_press(Key::Q);
     harness.step();
 
     // Verify popup is closed

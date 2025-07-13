@@ -3,6 +3,7 @@ pub mod add_entry_popup;
 pub mod bookmark_popup;
 pub mod center_panel;
 pub mod delete_popup;
+pub mod egui_notify;
 pub mod exit_popup;
 pub mod file_drop_popup;
 pub mod file_list;

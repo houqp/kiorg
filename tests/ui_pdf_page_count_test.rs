@@ -23,7 +23,7 @@ fn test_pdf_page_count_in_preview_content() {
     let mut harness = create_harness(&temp_dir);
 
     // Select the PDF file
-    harness.press_key(egui::Key::J);
+    harness.key_press(egui::Key::J);
 
     // Step to update the preview and allow time for loading
     harness.step();

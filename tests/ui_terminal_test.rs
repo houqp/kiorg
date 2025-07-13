@@ -23,7 +23,7 @@ fn test_open_terminal_shortcut() {
         shift: true,
         ..Default::default()
     };
-    harness.press_key_modifiers(modifiers, Key::T);
+    harness.key_press_modifiers(modifiers, Key::T);
     harness.step();
 
     // Verify terminal is shown

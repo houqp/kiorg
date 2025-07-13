@@ -18,7 +18,7 @@ fn test_exit_shortcut() {
     );
 
     // Press 'q' to request exit (shows exit popup)
-    harness.press_key(Key::Q);
+    harness.key_press(Key::Q);
     harness.step();
 
     // Verify exit popup is shown
@@ -29,7 +29,7 @@ fn test_exit_shortcut() {
     );
 
     // Press Enter to confirm exit
-    harness.press_key(Key::Enter);
+    harness.key_press(Key::Enter);
     harness.step();
 
     // Verify shutdown was requested
@@ -66,7 +66,7 @@ fn test_exit_with_unsaved_changes() {
     harness.step();
 
     // Cut the file (creating unsaved changes)
-    harness.press_key(Key::X);
+    harness.key_press(Key::X);
     harness.step();
 
     // Verify the file is marked as cut
@@ -81,7 +81,7 @@ fn test_exit_with_unsaved_changes() {
     }
 
     // Press 'q' to request exit (shows exit popup)
-    harness.press_key(Key::Q);
+    harness.key_press(Key::Q);
     harness.step();
 
     // Verify exit popup is shown
@@ -92,7 +92,7 @@ fn test_exit_with_unsaved_changes() {
     );
 
     // Press Enter to confirm exit
-    harness.press_key(Key::Enter);
+    harness.key_press(Key::Enter);
     harness.step();
 
     // Verify shutdown was requested despite unsaved changes
@@ -129,7 +129,7 @@ fn test_exit_saves_state() {
     harness.step();
 
     // Bookmark the directory with 'b' shortcut
-    harness.press_key(Key::B);
+    harness.key_press(Key::B);
     harness.step();
 
     // Verify bookmark was added
@@ -143,7 +143,7 @@ fn test_exit_saves_state() {
     }
 
     // Press 'q' to request exit (shows exit popup)
-    harness.press_key(Key::Q);
+    harness.key_press(Key::Q);
     harness.step();
 
     // Verify exit popup is shown
@@ -154,7 +154,7 @@ fn test_exit_saves_state() {
     );
 
     // Press Enter to confirm exit
-    harness.press_key(Key::Enter);
+    harness.key_press(Key::Enter);
     harness.step();
 
     // Verify shutdown was requested

@@ -21,7 +21,7 @@ fn test_rename_popup() {
     let mut harness = create_harness(&temp_dir);
 
     // Move down to select file2.txt (index 1)
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
 
     // Verify initial selection
@@ -32,7 +32,7 @@ fn test_rename_popup() {
     );
 
     // Press 'r' to start renaming
-    harness.press_key(Key::R);
+    harness.key_press(Key::R);
     harness.step();
 
     // Verify the rename popup is shown with the correct filename
@@ -53,7 +53,7 @@ fn test_rename_popup() {
     harness.step();
 
     // Press Enter to confirm rename
-    harness.press_key(Key::Enter);
+    harness.key_press(Key::Enter);
     harness.step();
 
     // Verify the popup is closed
@@ -86,11 +86,11 @@ fn test_rename_popup() {
 
     // Test canceling the rename popup
     // Select file3.txt
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
 
     // Press 'r' to start renaming
-    harness.press_key(Key::R);
+    harness.key_press(Key::R);
     harness.step();
 
     // Verify the rename popup is shown with the correct filename
@@ -111,7 +111,7 @@ fn test_rename_popup() {
     harness.step();
 
     // Press Escape to cancel rename
-    harness.press_key(Key::Escape);
+    harness.key_press(Key::Escape);
     harness.step();
 
     // Verify the popup is closed

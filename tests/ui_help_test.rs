@@ -21,7 +21,7 @@ fn test_help_menu_close_behavior() {
             shift: true,
             ..Default::default()
         };
-        harness.press_key_modifiers(modifiers, Key::Questionmark);
+        harness.key_press_modifiers(modifiers, Key::Questionmark);
         harness.step();
     }
     assert_eq!(
@@ -38,7 +38,7 @@ fn test_help_menu_close_behavior() {
     }
 
     // Test closing with Escape
-    harness.press_key(Key::Escape);
+    harness.key_press(Key::Escape);
     harness.step();
     assert_eq!(
         harness.state().show_popup,
@@ -52,12 +52,12 @@ fn test_help_menu_close_behavior() {
             shift: true,
             ..Default::default()
         };
-        harness.press_key_modifiers(modifiers, Key::Questionmark);
+        harness.key_press_modifiers(modifiers, Key::Questionmark);
         harness.step();
     }
 
     // Test closing with Q
-    harness.press_key(Key::Q);
+    harness.key_press(Key::Q);
     harness.step();
     assert_eq!(
         harness.state().show_popup,
@@ -71,12 +71,12 @@ fn test_help_menu_close_behavior() {
             shift: true,
             ..Default::default()
         };
-        harness.press_key_modifiers(modifiers, Key::Questionmark);
+        harness.key_press_modifiers(modifiers, Key::Questionmark);
         harness.step();
     }
 
     // Test closing with Enter
-    harness.press_key(Key::Enter);
+    harness.key_press(Key::Enter);
     harness.step();
     assert_eq!(
         harness.state().show_popup,
@@ -90,12 +90,12 @@ fn test_help_menu_close_behavior() {
             shift: true,
             ..Default::default()
         };
-        harness.press_key_modifiers(modifiers, Key::Questionmark);
+        harness.key_press_modifiers(modifiers, Key::Questionmark);
         harness.step();
     }
 
     // Test closing with ? (Questionmark)
-    harness.press_key(Key::Questionmark);
+    harness.key_press(Key::Questionmark);
     harness.step();
     assert_eq!(
         harness.state().show_popup,

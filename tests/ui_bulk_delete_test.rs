@@ -28,15 +28,15 @@ fn test_bulk_delete_with_space_key() {
     }
 
     // Select the first file using space
-    harness.press_key(Key::Space);
+    harness.key_press(Key::Space);
     harness.step();
 
     // Move to the second file
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
 
     // Select the second file
-    harness.press_key(Key::Space);
+    harness.key_press(Key::Space);
     harness.step();
 
     // Verify both first and second files are selected
@@ -53,7 +53,7 @@ fn test_bulk_delete_with_space_key() {
     }
 
     // Press delete key to trigger bulk deletion
-    harness.press_key(Key::D);
+    harness.key_press(Key::D);
     harness.step();
 
     // Verify the delete popup is shown with multiple entries
@@ -73,7 +73,7 @@ fn test_bulk_delete_with_space_key() {
     }
 
     // Press Enter for first confirmation
-    harness.press_key(Key::Enter);
+    harness.key_press(Key::Enter);
     harness.step();
 
     // Verify we're now in the recursive confirmation state (second confirmation required)
@@ -101,7 +101,7 @@ fn test_bulk_delete_with_space_key() {
     }
 
     // Press Enter for second confirmation
-    harness.press_key(Key::Enter);
+    harness.key_press(Key::Enter);
 
     for _ in 0..100 {
         harness.step();

@@ -21,7 +21,7 @@ fn test_goto_first_entry_with_filter() {
     let mut harness = create_harness(&temp_dir);
 
     // Activate search
-    harness.press_key(Key::Slash);
+    harness.key_press(Key::Slash);
     harness.step();
 
     // Input search query "berry" (should only match "elderberry.txt")
@@ -30,7 +30,7 @@ fn test_goto_first_entry_with_filter() {
         .events
         .push(egui::Event::Text("berry".to_string()));
     harness.step();
-    harness.press_key(Key::Enter);
+    harness.key_press(Key::Enter);
     harness.step();
 
     // Verify search is active and filtering works
@@ -41,15 +41,15 @@ fn test_goto_first_entry_with_filter() {
     );
 
     // Move selection to the middle of the list
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
 
     // Press 'gg' to go to first entry
-    harness.press_key(Key::G);
+    harness.key_press(Key::G);
     harness.step();
-    harness.press_key(Key::G);
+    harness.key_press(Key::G);
     harness.step();
 
     // Verify selection is at the first filtered entry
@@ -95,7 +95,7 @@ fn test_goto_last_entry_with_filter() {
     let mut harness = create_harness(&temp_dir);
 
     // Activate search
-    harness.press_key(Key::Slash);
+    harness.key_press(Key::Slash);
     harness.step();
 
     // Input search query "a" (should match "apple.txt", "banana.txt", "date.txt")
@@ -104,7 +104,7 @@ fn test_goto_last_entry_with_filter() {
         .events
         .push(egui::Event::Text("a".to_string()));
     harness.step();
-    harness.press_key(Key::Enter);
+    harness.key_press(Key::Enter);
     harness.step();
 
     // Verify search is active and filtering works
@@ -119,7 +119,7 @@ fn test_goto_last_entry_with_filter() {
         shift: true,
         ..Default::default()
     };
-    harness.press_key_modifiers(modifiers, Key::G);
+    harness.key_press_modifiers(modifiers, Key::G);
     harness.step();
 
     // Verify selection is at the last filtered entry

@@ -21,21 +21,21 @@ fn test_copy_unmarked_file_clears_marked_files() {
     let mut harness = create_harness(&temp_dir);
 
     // Move down twice to select test1.txt (after dir1 and dir2)
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
 
     // Mark test1.txt
-    harness.press_key(Key::Space);
+    harness.key_press(Key::Space);
     harness.step();
 
     // Move down to select test2.txt
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
 
     // Mark test2.txt
-    harness.press_key(Key::Space);
+    harness.key_press(Key::Space);
     harness.step();
 
     // Verify both files are marked
@@ -53,7 +53,7 @@ fn test_copy_unmarked_file_clears_marked_files() {
     }
 
     // Copy the marked files
-    harness.press_key(Key::Y);
+    harness.key_press(Key::Y);
     harness.step();
 
     // Verify both files are in the clipboard as a copy operation
@@ -79,7 +79,7 @@ fn test_copy_unmarked_file_clears_marked_files() {
     }
 
     // Move down to select test3.txt (which is not marked)
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
 
     // Verify test3.txt is not marked
@@ -93,7 +93,7 @@ fn test_copy_unmarked_file_clears_marked_files() {
     }
 
     // Copy test3.txt (which is not marked)
-    harness.press_key(Key::Y);
+    harness.key_press(Key::Y);
     harness.step();
 
     // Verify:
@@ -142,13 +142,13 @@ fn test_unmark_copied_file() {
     let mut harness = create_harness(&temp_dir);
 
     // Move down twice to select test1.txt (after dir1 and dir2)
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
 
     // Mark the file
-    harness.press_key(Key::Space);
+    harness.key_press(Key::Space);
     harness.step();
 
     // Verify the file is marked
@@ -162,7 +162,7 @@ fn test_unmark_copied_file() {
     }
 
     // Copy the marked file
-    harness.press_key(Key::Y);
+    harness.key_press(Key::Y);
     harness.step();
 
     // Verify the file is in the clipboard as a copy operation
@@ -184,7 +184,7 @@ fn test_unmark_copied_file() {
     }
 
     // Unmark the file
-    harness.press_key(Key::Space);
+    harness.key_press(Key::Space);
     harness.step();
 
     // Verify the file is unmarked and removed from the clipboard

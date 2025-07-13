@@ -19,11 +19,11 @@ fn test_close_current_tab_shortcut() {
     );
 
     // Create a second tab
-    harness.press_key(Key::T);
+    harness.key_press(Key::T);
     harness.step();
 
     // Create a third tab
-    harness.press_key(Key::T);
+    harness.key_press(Key::T);
     harness.step();
 
     // Verify we have three tabs
@@ -51,7 +51,7 @@ fn test_close_current_tab_shortcut() {
         ctrl: true,
         ..Default::default()
     };
-    harness.press_key_modifiers(modifiers, Key::Q);
+    harness.key_press_modifiers(modifiers, Key::Q);
     harness.step();
 
     // Verify we now have two tabs
@@ -75,7 +75,7 @@ fn test_close_current_tab_shortcut() {
     }
 
     // Close the current tab again
-    harness.press_key_modifiers(modifiers, Key::Q);
+    harness.key_press_modifiers(modifiers, Key::Q);
     harness.step();
 
     // Verify we now have one tab
@@ -99,7 +99,7 @@ fn test_close_current_tab_shortcut() {
     }
 
     // Try to close the last tab (should not close)
-    harness.press_key_modifiers(modifiers, Key::Q);
+    harness.key_press_modifiers(modifiers, Key::Q);
     harness.step();
 
     // Verify we still have one tab (can't close the last tab)
@@ -117,11 +117,11 @@ fn test_close_tab_preserves_other_tabs() {
     let mut harness = create_harness(&temp_dir);
 
     // Create a second tab
-    harness.press_key(Key::T);
+    harness.key_press(Key::T);
     harness.step();
 
     // Create a third tab
-    harness.press_key(Key::T);
+    harness.key_press(Key::T);
     harness.step();
 
     // Verify we have three tabs
@@ -133,7 +133,7 @@ fn test_close_tab_preserves_other_tabs() {
 
     // Switch to the second tab with platform-specific modifier
     let modifiers = tab_num_modifiers();
-    harness.press_key_modifiers(modifiers, Key::Num2);
+    harness.key_press_modifiers(modifiers, Key::Num2);
     harness.step();
     {
         let tab_indexes = harness.state().tab_manager.tab_indexes();
@@ -158,7 +158,7 @@ fn test_close_tab_preserves_other_tabs() {
     harness.step();
 
     // Switch to the third tab with platform-specific modifier
-    harness.press_key_modifiers(tab_num_modifiers(), Key::Num3);
+    harness.key_press_modifiers(tab_num_modifiers(), Key::Num3);
     harness.step();
     {
         let tab_indexes = harness.state().tab_manager.tab_indexes();
@@ -177,7 +177,7 @@ fn test_close_tab_preserves_other_tabs() {
         ctrl: true,
         ..Default::default()
     };
-    harness.press_key_modifiers(modifiers, Key::Q);
+    harness.key_press_modifiers(modifiers, Key::Q);
     harness.step();
 
     // Verify we're now on the second tab
@@ -201,7 +201,7 @@ fn test_close_tab_preserves_other_tabs() {
     );
 
     // Switch to the first tab with platform-specific modifier
-    harness.press_key_modifiers(tab_num_modifiers(), Key::Num1);
+    harness.key_press_modifiers(tab_num_modifiers(), Key::Num1);
     harness.step();
 
     // Verify the first tab has the original path

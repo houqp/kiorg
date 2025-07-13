@@ -25,7 +25,7 @@ fn test_bookmark_feature() {
     assert!(harness.state().show_popup.is_none());
 
     // Bookmark the directory with 'b'
-    harness.press_key(Key::B);
+    harness.key_press(Key::B);
     harness.step();
 
     // Verify bookmark was added
@@ -41,7 +41,7 @@ fn test_bookmark_feature() {
             shift: true,
             ..Default::default()
         };
-        harness.press_key_modifiers(modifiers, Key::B);
+        harness.key_press_modifiers(modifiers, Key::B);
         harness.step();
     }
 
@@ -54,7 +54,7 @@ fn test_bookmark_feature() {
 
     // Close bookmark popup with 'q'
     {
-        harness.press_key(Key::Q);
+        harness.key_press(Key::Q);
         harness.step();
     }
 
@@ -69,7 +69,7 @@ fn test_bookmark_feature() {
     harness.step();
 
     // Bookmark the second directory
-    harness.press_key(Key::B);
+    harness.key_press(Key::B);
     harness.step();
 
     // Verify second bookmark was added
@@ -84,7 +84,7 @@ fn test_bookmark_feature() {
         let tab = harness.state_mut().tab_manager.current_tab_mut();
         tab.selected_index = 2; // Select test1.txt
     }
-    harness.press_key(Key::B);
+    harness.key_press(Key::B);
     harness.step();
 
     // Verify no new bookmark was added (still 2)
@@ -100,12 +100,12 @@ fn test_bookmark_feature() {
             shift: true,
             ..Default::default()
         };
-        harness.press_key_modifiers(modifiers, Key::B);
+        harness.key_press_modifiers(modifiers, Key::B);
         harness.step();
     }
 
     // Delete the first bookmark with 'd'
-    harness.press_key(Key::D);
+    harness.key_press(Key::D);
     harness.step();
 
     // Verify bookmark was removed
@@ -116,7 +116,7 @@ fn test_bookmark_feature() {
     }
 
     // Close bookmark popup with 'q'
-    harness.press_key(Key::Q);
+    harness.key_press(Key::Q);
     harness.step();
 
     // Verify bookmark popup is closed
@@ -135,7 +135,7 @@ fn test_bookmark_popup_close_with_q_and_esc() {
     harness.step();
 
     // First bookmark a directory so we have something to show in the popup
-    harness.press_key(Key::B);
+    harness.key_press(Key::B);
     harness.step();
 
     // Verify bookmark was added
@@ -150,7 +150,7 @@ fn test_bookmark_popup_close_with_q_and_esc() {
             shift: true,
             ..Default::default()
         };
-        harness.press_key_modifiers(modifiers, Key::B);
+        harness.key_press_modifiers(modifiers, Key::B);
         harness.step();
     }
 
@@ -162,7 +162,7 @@ fn test_bookmark_popup_close_with_q_and_esc() {
     }
 
     // Close bookmark popup with 'q'
-    harness.press_key(Key::Q);
+    harness.key_press(Key::Q);
     harness.step();
 
     // Verify bookmark popup is closed
@@ -177,7 +177,7 @@ fn test_bookmark_popup_close_with_q_and_esc() {
             shift: true,
             ..Default::default()
         };
-        harness.press_key_modifiers(modifiers, Key::B);
+        harness.key_press_modifiers(modifiers, Key::B);
         harness.step();
     }
 
@@ -189,7 +189,7 @@ fn test_bookmark_popup_close_with_q_and_esc() {
     }
 
     // Close bookmark popup with 'Esc'
-    harness.press_key(Key::Escape);
+    harness.key_press(Key::Escape);
     harness.step();
 
     // Verify bookmark popup is closed

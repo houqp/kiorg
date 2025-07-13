@@ -20,13 +20,13 @@ fn test_unmark_cut_file() {
     let mut harness = create_harness(&temp_dir);
 
     // Move down twice to select test1.txt (after dir1 and dir2)
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
 
     // Mark the file
-    harness.press_key(Key::Space);
+    harness.key_press(Key::Space);
     harness.step();
 
     // Verify the file is marked
@@ -40,7 +40,7 @@ fn test_unmark_cut_file() {
     }
 
     // Cut the marked file
-    harness.press_key(Key::X);
+    harness.key_press(Key::X);
     harness.step();
 
     // Verify the file is in the clipboard as a cut operation
@@ -59,7 +59,7 @@ fn test_unmark_cut_file() {
     }
 
     // Unmark the file
-    harness.press_key(Key::Space);
+    harness.key_press(Key::Space);
     harness.step();
 
     // Verify the file is unmarked and removed from the clipboard

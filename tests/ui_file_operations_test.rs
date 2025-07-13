@@ -35,17 +35,17 @@ fn test_delete_shortcut() {
 
     // Test file deletion first
     // Move down twice to select test1.txt (after dir1 and dir2)
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
 
     // Simulate pressing 'd' key to delete test1.txt
-    harness.press_key(Key::D);
+    harness.key_press(Key::D);
     harness.step();
 
     // Simulate pressing Enter to confirm deletion
-    harness.press_key(Key::Enter);
+    harness.key_press(Key::Enter);
     for _ in 0..100 {
         harness.step();
         if harness.state().show_popup.is_none() {
@@ -71,17 +71,17 @@ fn test_delete_shortcut() {
 
     // Test recursive directory deletion
     // First entry should be dir1, move 2 entries up
-    harness.press_key(Key::K);
+    harness.key_press(Key::K);
     harness.step();
-    harness.press_key(Key::K);
+    harness.key_press(Key::K);
     harness.step();
     // Delete dir1 (directory with nested files and subdirectory)
-    harness.press_key(Key::D);
+    harness.key_press(Key::D);
     harness.step();
-    harness.press_key(Key::Enter);
+    harness.key_press(Key::Enter);
     harness.step();
     // confirm twice
-    harness.press_key(Key::Enter);
+    harness.key_press(Key::Enter);
     harness.step();
     for _ in 0..100 {
         harness.step();
@@ -124,11 +124,11 @@ fn test_rename_shortcut() {
     let mut harness = create_harness(&temp_dir);
 
     // move down to test2.txt
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
 
     // Press 'r' to start renaming
-    harness.press_key(Key::R);
+    harness.key_press(Key::R);
     harness.step();
 
     // verify we are in rename mode
@@ -146,7 +146,7 @@ fn test_rename_shortcut() {
     harness.step();
 
     // Press Enter to confirm rename
-    harness.press_key(Key::Enter);
+    harness.key_press(Key::Enter);
     harness.step();
 
     // Verify the file was renamed
@@ -187,25 +187,25 @@ fn test_copy_paste_shortcuts() {
     let mut harness = create_harness(&temp_dir);
 
     // Move down twice to select test1.txt (after dir1 and dir2)
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
 
     // Copy test1.txt
-    harness.press_key(Key::Y);
+    harness.key_press(Key::Y);
     harness.step();
 
     // Move up to select dir2
-    harness.press_key(Key::K);
+    harness.key_press(Key::K);
     harness.step();
 
     // Navigate into dir2
-    harness.press_key(Key::L);
+    harness.key_press(Key::L);
     harness.step();
 
     // Paste the file
-    harness.press_key(Key::P);
+    harness.key_press(Key::P);
     harness.step();
 
     // Verify the file was copied to dir2 while original remains
@@ -246,11 +246,11 @@ fn test_copy_paste_same_directory() {
     tab.selected_index = 0;
 
     // Copy test1.txt
-    harness.press_key(Key::Y);
+    harness.key_press(Key::Y);
     harness.step();
 
     // Paste in the same directory
-    harness.press_key(Key::P);
+    harness.key_press(Key::P);
     harness.step();
 
     // Verify the file was copied with a new suffix
@@ -281,13 +281,13 @@ fn test_cut_paste_shortcuts() {
     let mut harness = create_harness(&temp_dir);
 
     // Move down twice to select test1.txt (after dir1 and dir2)
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
 
     // Cut test1.txt
-    harness.press_key(Key::X);
+    harness.key_press(Key::X);
     harness.step();
 
     // Verify the file still exists in the original location
@@ -297,15 +297,15 @@ fn test_cut_paste_shortcuts() {
     );
 
     // Move up to select dir2
-    harness.press_key(Key::K);
+    harness.key_press(Key::K);
     harness.step();
 
     // Navigate into dir2
-    harness.press_key(Key::L);
+    harness.key_press(Key::L);
     harness.step();
 
     // Paste the file
-    harness.press_key(Key::P);
+    harness.key_press(Key::P);
     harness.step();
 
     // Verify the file was moved to dir2
@@ -328,7 +328,7 @@ fn test_cut_paste_shortcuts() {
     }
 
     // Navigate back to parent to verify original file is removed from UI list
-    harness.press_key(Key::H);
+    harness.key_press(Key::H);
     harness.step();
 
     // Verify UI list in parent directory is updated

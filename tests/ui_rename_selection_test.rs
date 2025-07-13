@@ -21,7 +21,7 @@ fn test_rename_preserves_selected_index() {
     let mut harness = create_harness(&temp_dir);
 
     // Move down to select file2.txt (index 1)
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
 
     // Verify initial selection
@@ -32,7 +32,7 @@ fn test_rename_preserves_selected_index() {
     );
 
     // Press 'r' to start renaming
-    harness.press_key(Key::R);
+    harness.key_press(Key::R);
     harness.step();
 
     // Simulate text input for the new name
@@ -43,7 +43,7 @@ fn test_rename_preserves_selected_index() {
     harness.step();
 
     // Press Enter to confirm rename
-    harness.press_key(Key::Enter);
+    harness.key_press(Key::Enter);
     harness.step();
 
     // Verify the file was renamed
@@ -75,7 +75,7 @@ fn test_rename_preserves_selected_index() {
     );
 
     // Move selection up and down to ensure navigation still works properly
-    harness.press_key(Key::K);
+    harness.key_press(Key::K);
     harness.step();
     assert_eq!(
         harness.state().tab_manager.current_tab_ref().selected_index,
@@ -83,7 +83,7 @@ fn test_rename_preserves_selected_index() {
         "Should be able to move selection up after rename"
     );
 
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
     assert_eq!(
         harness.state().tab_manager.current_tab_ref().selected_index,

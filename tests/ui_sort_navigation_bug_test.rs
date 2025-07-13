@@ -77,7 +77,7 @@ fn test_sort_navigation_bug() {
 
     // Now let's demonstrate how this affects navigation
     // Press J to move down (should select b.txt which is now at index 1)
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
 
     // Check what entry is selected
@@ -94,7 +94,7 @@ fn test_sort_navigation_bug() {
     }
 
     // Press J again to move down (should select a.txt which is now at index 2)
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
 
     // Check what entry is selected
@@ -111,9 +111,9 @@ fn test_sort_navigation_bug() {
     }
 
     // Press K twice to move back up (should select c.txt which is at index 1)
-    harness.press_key(Key::K);
+    harness.key_press(Key::K);
     harness.step();
-    harness.press_key(Key::K);
+    harness.key_press(Key::K);
     harness.step();
 
     // Check what entry is selected

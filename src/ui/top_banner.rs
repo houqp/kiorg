@@ -31,7 +31,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui) {
 
                     if ui.button("Bookmarks").clicked() {
                         app.show_popup = Some(crate::app::PopupType::Bookmarks(0));
-                        ui.close_menu();
+                        ui.close();
                     }
 
                     if ui.button("Themes").clicked() {
@@ -42,26 +42,26 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui) {
                             .clone()
                             .unwrap_or_else(|| "dark_kiorg".to_string());
                         app.show_popup = Some(crate::app::PopupType::Themes(current_theme_key));
-                        ui.close_menu();
+                        ui.close();
                     }
 
                     ui.separator();
 
                     if ui.button("Help").clicked() {
                         app.show_popup = Some(crate::app::PopupType::Help);
-                        ui.close_menu();
+                        ui.close();
                     }
 
                     if ui.button("About").clicked() {
                         app.show_popup = Some(crate::app::PopupType::About);
-                        ui.close_menu();
+                        ui.close();
                     }
 
                     ui.separator();
 
                     if ui.button("Exit").clicked() {
                         app.show_popup = Some(crate::app::PopupType::Exit);
-                        ui.close_menu();
+                        ui.close();
                     }
                 });
 
