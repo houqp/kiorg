@@ -2,7 +2,7 @@ use crate::config::colors::AppColors;
 use crate::config::shortcuts::{ShortcutAction, Shortcuts, shortcuts_helpers};
 use egui::{self, RichText};
 
-use super::window_utils::new_center_popup_window;
+use super::popup::window_utils::new_center_popup_window;
 
 pub fn show_help_window(
     ctx: &egui::Context,

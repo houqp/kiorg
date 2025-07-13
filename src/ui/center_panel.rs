@@ -6,6 +6,7 @@ use crate::app::Kiorg;
 use crate::config;
 use crate::config::SortPreference;
 use crate::ui::file_list::{self, ROW_HEIGHT, TableHeaderParams};
+use crate::ui::popup::PopupType;
 
 // TODO: make this configurable
 const PADDING_ROWS: usize = 3;
@@ -481,7 +482,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
     // Handle context menu action captured from closures
     match context_menu_action {
         ContextMenuAction::Add => {
-            app.show_popup = Some(crate::app::PopupType::AddEntry(String::new()));
+            app.show_popup = Some(PopupType::AddEntry(String::new()));
         }
         ContextMenuAction::Paste => {
             let current_path = &app.tab_manager.current_tab_ref().current_path;
@@ -512,7 +513,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
             let tab = app.tab_manager.current_tab_ref();
             if let Some(_selected_entry) = tab.selected_entry() {
                 // Now works for both files and directories
-                app.show_popup = Some(crate::app::PopupType::OpenWith(String::new()));
+                app.show_popup = Some(PopupType::OpenWith(String::new()));
             }
         }
         ContextMenuAction::None => {} // Do nothing
@@ -552,7 +553,7 @@ fn handle_file_drop(ctx: &egui::Context, app: &mut Kiorg) {
             }
 
             if !dropped_paths.is_empty() {
-                app.show_popup = Some(crate::app::PopupType::FileDrop(dropped_paths));
+                app.show_popup = Some(PopupType::FileDrop(dropped_paths));
             }
         }
     });

@@ -1,7 +1,7 @@
 #[path = "mod/ui_test_helpers.rs"]
 mod ui_test_helpers;
 
-use kiorg::app::PopupType;
+use kiorg::ui::popup::PopupType;
 use tempfile::tempdir;
 use ui_test_helpers::create_harness;
 
@@ -60,7 +60,7 @@ fn test_teleport_nonexistent_directory_shows_error_and_removes_from_history() {
 
     // Test teleport popup behavior with the cleaned up history
     harness.state_mut().show_popup = Some(PopupType::Teleport(
-        kiorg::ui::teleport_popup::TeleportState::default(),
+        kiorg::ui::popup::teleport::TeleportState::default(),
     ));
     harness.step();
 
@@ -73,7 +73,7 @@ fn test_teleport_nonexistent_directory_shows_error_and_removes_from_history() {
     // The search results should not include the deleted directory since it was removed
     // from the visit history and get_search_results filters out non-existent paths
     let search_results =
-        kiorg::ui::teleport_popup::get_search_results("", &harness.state().visit_history);
+        kiorg::ui::popup::teleport::get_search_results("", &harness.state().visit_history);
 
     // The deleted directory should not appear in search results
     let contains_deleted_dir = search_results.iter().any(|result| result.path == test_dir);

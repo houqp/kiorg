@@ -1,4 +1,5 @@
-use crate::app::{Kiorg, PopupType};
+use crate::app::Kiorg;
+use crate::ui::popup::PopupType;
 use crate::visit_history::VisitHistoryEntry;
 use egui::{self, Align, Color32, Key, Layout, Shadow, TextEdit, Vec2};
 use nucleo::{Config as NucleoConfig, Matcher, Utf32Str};

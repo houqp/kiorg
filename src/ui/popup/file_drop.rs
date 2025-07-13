@@ -3,9 +3,10 @@ use std::path::PathBuf;
 
 use super::window_utils::new_center_popup_window;
 use crate::app::Clipboard;
-use crate::app::{Kiorg, PopupType};
+use crate::app::Kiorg;
 use crate::config::shortcuts::ShortcutAction;
 use crate::ui::center_panel::handle_clipboard_operations;
+use crate::ui::popup::PopupType;
 
 /// File drop operation types
 #[derive(Clone, Copy, PartialEq)]

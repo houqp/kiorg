@@ -2,6 +2,7 @@
 mod ui_test_helpers;
 
 use egui::Key;
+use kiorg::ui::popup::PopupType;
 use tempfile::tempdir;
 use ui_test_helpers::{create_harness, create_test_files};
 
@@ -24,7 +25,7 @@ fn test_exit_shortcut() {
     // Verify exit popup is shown
     assert_eq!(
         harness.state().show_popup,
-        Some(kiorg::app::PopupType::Exit),
+        Some(PopupType::Exit),
         "Exit popup should be shown after pressing 'q'"
     );
 
@@ -87,7 +88,7 @@ fn test_exit_with_unsaved_changes() {
     // Verify exit popup is shown
     assert_eq!(
         harness.state().show_popup,
-        Some(kiorg::app::PopupType::Exit),
+        Some(PopupType::Exit),
         "Exit popup should be shown after pressing 'q'"
     );
 
@@ -149,7 +150,7 @@ fn test_exit_saves_state() {
     // Verify exit popup is shown
     assert_eq!(
         harness.state().show_popup,
-        Some(kiorg::app::PopupType::Exit),
+        Some(PopupType::Exit),
         "Exit popup should be shown after pressing 'q'"
     );
 

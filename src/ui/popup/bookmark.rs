@@ -4,6 +4,7 @@ use std::fs;
 use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf; // Removed unused Path
 
+use super::PopupType;
 use super::window_utils::new_center_popup_window;
 use crate::app::Kiorg;
 use crate::config::get_kiorg_config_dir;
@@ -153,7 +154,7 @@ fn display_bookmarks_grid(
 pub fn show_bookmark_popup(ctx: &Context, app: &mut Kiorg) -> BookmarkAction {
     // Extract the current selected index from the popup type, or return early if not showing bookmarks
     let current_index = match &app.show_popup {
-        Some(crate::app::PopupType::Bookmarks(index)) => *index,
+        Some(PopupType::Bookmarks(index)) => *index,
         _ => return BookmarkAction::None,
     };
 
@@ -249,7 +250,7 @@ pub fn show_bookmark_popup(ctx: &Context, app: &mut Kiorg) -> BookmarkAction {
 
             // Update the popup state with the current index
             if window_open && !response.response.clicked_elsewhere() {
-                app.show_popup = Some(crate::app::PopupType::Bookmarks(current_index));
+                app.show_popup = Some(PopupType::Bookmarks(current_index));
             } else {
                 app.show_popup = None;
             }

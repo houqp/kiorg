@@ -1,5 +1,6 @@
 use crate::app::Kiorg;
-use crate::ui::path_nav;
+use crate::ui::popup::PopupType;
+use crate::ui::{path_nav, update};
 use egui::{RichText, Ui};
 
 pub fn draw(app: &mut Kiorg, ui: &mut Ui) {
@@ -30,7 +31,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui) {
                     ui.set_min_width(150.0);
 
                     if ui.button("Bookmarks").clicked() {
-                        app.show_popup = Some(crate::app::PopupType::Bookmarks(0));
+                        app.show_popup = Some(PopupType::Bookmarks(0));
                         ui.close();
                     }
 
@@ -41,26 +42,31 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui) {
                             .theme
                             .clone()
                             .unwrap_or_else(|| "dark_kiorg".to_string());
-                        app.show_popup = Some(crate::app::PopupType::Themes(current_theme_key));
+                        app.show_popup = Some(PopupType::Themes(current_theme_key));
+                        ui.close();
+                    }
+
+                    if ui.button("Check for update").clicked() {
+                        update::check_for_updates(app);
                         ui.close();
                     }
 
                     ui.separator();
 
                     if ui.button("Help").clicked() {
-                        app.show_popup = Some(crate::app::PopupType::Help);
+                        app.show_popup = Some(PopupType::Help);
                         ui.close();
                     }
 
                     if ui.button("About").clicked() {
-                        app.show_popup = Some(crate::app::PopupType::About);
+                        app.show_popup = Some(PopupType::About);
                         ui.close();
                     }
 
                     ui.separator();
 
                     if ui.button("Exit").clicked() {
-                        app.show_popup = Some(crate::app::PopupType::Exit);
+                        app.show_popup = Some(PopupType::Exit);
                         ui.close();
                     }
                 });

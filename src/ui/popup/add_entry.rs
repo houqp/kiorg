@@ -1,4 +1,5 @@
-use crate::app::{Kiorg, PopupType};
+use crate::app::Kiorg;
+use crate::ui::popup::PopupType;
 use egui::{Context, Frame, Key, TextEdit};
 use std::fs;
 

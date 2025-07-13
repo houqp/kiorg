@@ -1,5 +1,6 @@
 use egui::{Context, Image, RichText};
 
+use super::PopupType;
 use super::window_utils::new_center_popup_window;
 use crate::app::Kiorg;
 use crate::utils::icon;
@@ -7,7 +8,7 @@ use crate::utils::icon;
 /// Show about popup with application information
 pub fn show_about_popup(ctx: &Context, app: &mut Kiorg) {
     // Check if the popup should be shown based on the show_popup field
-    if app.show_popup != Some(crate::app::PopupType::About) {
+    if app.show_popup != Some(PopupType::About) {
         return;
     }
 

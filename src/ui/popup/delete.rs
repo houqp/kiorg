@@ -3,7 +3,8 @@ use std::path::{Path, PathBuf};
 use std::sync::mpsc;
 use std::thread;
 
-use super::popup_utils::{ConfirmResult, show_confirm_popup};
+use super::PopupType;
+use super::utils::{ConfirmResult, show_confirm_popup};
 use super::window_utils::new_center_popup_window;
 use crate::config::colors::AppColors;
 
@@ -38,13 +39,6 @@ impl std::fmt::Debug for DeleteProgressData {
             .field("state", &self.state)
             .field("receiver", &"<receiver>")
             .finish()
-    }
-}
-
-impl Clone for DeleteProgressData {
-    fn clone(&self) -> Self {
-        // This should never be called in practice since we don't need to clone the receiver
-        panic!("DeleteProgressData cannot be cloned")
     }
 }
 
@@ -301,7 +295,7 @@ pub fn handle_delete_progress(ctx: &Context, app: &mut crate::app::Kiorg) {
     let mut error_msg = None;
 
     // Check for progress updates
-    if let Some(crate::app::PopupType::DeleteProgress(ref mut progress_data)) = app.show_popup {
+    if let Some(PopupType::DeleteProgress(ref mut progress_data)) = app.show_popup {
         while let Ok(update) = progress_data.receiver.try_recv() {
             match update {
                 DeleteProgressUpdate::Progress {
@@ -341,7 +335,7 @@ pub fn handle_delete_progress(ctx: &Context, app: &mut crate::app::Kiorg) {
     }
 
     // Show progress popup
-    if let Some(crate::app::PopupType::DeleteProgress(ref progress_data)) = app.show_popup {
+    if let Some(PopupType::DeleteProgress(ref progress_data)) = app.show_popup {
         let state = &progress_data.state;
         new_center_popup_window("Deletion Progress").show(ctx, |ui| {
             ui.set_min_width(400.0);
@@ -382,7 +376,7 @@ pub fn handle_delete_progress(ctx: &Context, app: &mut crate::app::Kiorg) {
 /// Handle the confirmation of deletion
 pub fn confirm_delete(app: &mut crate::app::Kiorg) {
     let (state, entries_to_delete) =
-        if let Some(crate::app::PopupType::Delete(ref state, ref entries)) = app.show_popup {
+        if let Some(PopupType::Delete(ref state, ref entries)) = app.show_popup {
             (state.clone(), entries.clone())
         } else {
             return;
@@ -397,7 +391,7 @@ pub fn confirm_delete(app: &mut crate::app::Kiorg) {
         // Check if we're in the initial state and any of the entries is a directory
         if state == DeleteConfirmState::Initial {
             // For bulk deletion with directories, move to second confirmation
-            app.show_popup = Some(crate::app::PopupType::Delete(
+            app.show_popup = Some(PopupType::Delete(
                 DeleteConfirmState::RecursiveConfirm,
                 entries_to_delete,
             ));
@@ -408,7 +402,7 @@ pub fn confirm_delete(app: &mut crate::app::Kiorg) {
         // Check if we're in the initial state and dealing with a directory
         if state == DeleteConfirmState::Initial && path.is_dir() {
             // For directories in initial state, move to second confirmation
-            app.show_popup = Some(crate::app::PopupType::Delete(
+            app.show_popup = Some(PopupType::Delete(
                 DeleteConfirmState::RecursiveConfirm,
                 entries_to_delete,
             ));
@@ -438,7 +432,7 @@ fn delete_async(app: &mut crate::app::Kiorg, entries_to_delete: Vec<PathBuf>) {
     };
 
     // Switch to progress popup
-    app.show_popup = Some(crate::app::PopupType::DeleteProgress(progress_data));
+    app.show_popup = Some(PopupType::DeleteProgress(progress_data));
 
     // Clone entries for the thread
     thread::spawn(move || {
