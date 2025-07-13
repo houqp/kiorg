@@ -15,6 +15,7 @@ use crate::models::preview_content::PreviewContent;
 use crate::models::tab::{TabManager, TabManagerState};
 use crate::ui::add_entry_popup; // Import the new module
 use crate::ui::delete_popup::{self, DeleteConfirmResult};
+use crate::ui::egui_notify::Toasts;
 use crate::ui::exit_popup;
 use crate::ui::preview;
 use crate::ui::search_bar::{self, SearchBar};
@@ -27,7 +28,6 @@ use crate::ui::{
     open_with_popup, preview_popup, rename_popup, right_panel, teleport_popup, theme_popup,
 };
 use crate::visit_history::{self, VisitHistoryEntry};
-use egui_notify::Toasts;
 
 /// Error type for Kiorg application
 #[derive(Debug)]
@@ -310,7 +310,7 @@ impl Kiorg {
             config,              // Store the loaded config
             merged_shortcuts,    // Initialize merged_shortcuts
             colors,              // Add the colors field here
-            toasts: Toasts::default().with_anchor(egui_notify::Anchor::BottomLeft),
+            toasts: Toasts::default().with_anchor(crate::ui::egui_notify::Anchor::BottomLeft),
             selection_changed: true,
             ensure_selected_visible: false,
             prev_path: None,

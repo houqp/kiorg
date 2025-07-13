@@ -63,7 +63,7 @@ fn test_file_drop_popup_copy() {
     }
 
     // Test copy operation using the CopyEntry shortcut
-    harness.press_key(Key::Y); // 'Y' for copy (CopyEntry shortcut)
+    harness.key_press(Key::Y); // 'Y' for copy (CopyEntry shortcut)
     harness.step();
 
     // Wait for the clipboard operation to complete
@@ -171,7 +171,7 @@ fn test_file_drop_popup_move() {
     }
 
     // Test move operation by using the keyboard shortcut
-    harness.press_key(Key::X); // 'X' for move/cut (as per our shortcut mapping)
+    harness.key_press(Key::X); // 'X' for move/cut (as per our shortcut mapping)
     harness.step();
 
     // Wait for the clipboard operation to complete
@@ -267,7 +267,7 @@ fn test_file_drop_popup_cancel() {
     }
 
     // Test cancel operation by pressing Escape
-    harness.press_key(Key::Escape);
+    harness.key_press(Key::Escape);
     harness.step();
 
     // Verify the popup is closed

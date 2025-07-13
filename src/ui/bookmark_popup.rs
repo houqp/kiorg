@@ -141,7 +141,7 @@ fn display_bookmarks_grid(
                 combined_response.context_menu(|ui| {
                     if ui.button("Remove bookmark").clicked() {
                         remove_bookmark_path = Some(bookmark.clone());
-                        ui.close_menu();
+                        ui.close();
                     }
                 });
             }

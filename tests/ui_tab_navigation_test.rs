@@ -19,15 +19,15 @@ fn test_tab_navigation_shortcuts() {
     );
 
     // Create a second tab
-    harness.press_key(Key::T);
+    harness.key_press(Key::T);
     harness.step();
 
     // Create a third tab
-    harness.press_key(Key::T);
+    harness.key_press(Key::T);
     harness.step();
 
     // Create a fourth tab
-    harness.press_key(Key::T);
+    harness.key_press(Key::T);
     harness.step();
 
     // Verify we have four tabs
@@ -45,7 +45,7 @@ fn test_tab_navigation_shortcuts() {
     );
 
     // Test switching to the next tab (wrapping from last to first)
-    harness.press_key(Key::CloseBracket); // ']' key for next tab
+    harness.key_press(Key::CloseBracket); // ']' key for next tab
     harness.step();
 
     // Should now be on the first tab (index 0)
@@ -56,7 +56,7 @@ fn test_tab_navigation_shortcuts() {
     );
 
     // Test switching to the next tab again
-    harness.press_key(Key::CloseBracket);
+    harness.key_press(Key::CloseBracket);
     harness.step();
 
     // Should now be on the second tab (index 1)
@@ -67,7 +67,7 @@ fn test_tab_navigation_shortcuts() {
     );
 
     // Test switching to the previous tab
-    harness.press_key(Key::OpenBracket);
+    harness.key_press(Key::OpenBracket);
     harness.step();
 
     // Should now be back on the first tab (index 0)
@@ -78,7 +78,7 @@ fn test_tab_navigation_shortcuts() {
     );
 
     // Test switching to the previous tab again (wrapping from first to last)
-    harness.press_key(Key::OpenBracket);
+    harness.key_press(Key::OpenBracket);
     harness.step();
 
     // Should now be on the fourth tab (index 3)
@@ -90,9 +90,9 @@ fn test_tab_navigation_shortcuts() {
 
     // Test multiple tab navigation in sequence
     // Go forward two tabs
-    harness.press_key(Key::CloseBracket);
+    harness.key_press(Key::CloseBracket);
     harness.step();
-    harness.press_key(Key::CloseBracket);
+    harness.key_press(Key::CloseBracket);
     harness.step();
 
     // Should now be on the second tab (index 1)
@@ -103,13 +103,13 @@ fn test_tab_navigation_shortcuts() {
     );
 
     // Go back three tabs (wrapping around)
-    harness.press_key(Key::OpenBracket);
+    harness.key_press(Key::OpenBracket);
     harness.step();
-    harness.press_key(Key::OpenBracket);
+    harness.key_press(Key::OpenBracket);
     harness.step();
-    harness.press_key(Key::OpenBracket);
+    harness.key_press(Key::OpenBracket);
     harness.step();
-    harness.press_key(Key::OpenBracket);
+    harness.key_press(Key::OpenBracket);
     harness.step();
 
     // Should now be on the second tab again (index 1)

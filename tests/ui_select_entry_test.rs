@@ -27,7 +27,7 @@ fn test_select_entry_shortcut() {
     }
 
     // Select the first file using space
-    harness.press_key(Key::Space);
+    harness.key_press(Key::Space);
     harness.step();
 
     // Verify the first file is now selected
@@ -44,11 +44,11 @@ fn test_select_entry_shortcut() {
     }
 
     // Move to the second file
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
 
     // Select the second file
-    harness.press_key(Key::Space);
+    harness.key_press(Key::Space);
     harness.step();
 
     // Verify both first and second files are selected
@@ -65,7 +65,7 @@ fn test_select_entry_shortcut() {
     }
 
     // Deselect the second file by pressing space again
-    harness.press_key(Key::Space);
+    harness.key_press(Key::Space);
     harness.step();
 
     // Verify only the first file is selected
@@ -82,11 +82,11 @@ fn test_select_entry_shortcut() {
     }
 
     // Move to the third file
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
 
     // Select the third file
-    harness.press_key(Key::Space);
+    harness.key_press(Key::Space);
     harness.step();
 
     // Verify first and third files are selected
@@ -122,23 +122,23 @@ fn test_select_entry_with_operations() {
     // Select both files
     {
         // Select first file (dir1)
-        harness.press_key(Key::Space);
+        harness.key_press(Key::Space);
         harness.step();
 
         // Move to second file (file1.txt)
-        harness.press_key(Key::J);
+        harness.key_press(Key::J);
         harness.step();
 
         // Select second file
-        harness.press_key(Key::Space);
+        harness.key_press(Key::Space);
         harness.step();
 
         // Move to third file (file2.txt)
-        harness.press_key(Key::J);
+        harness.key_press(Key::J);
         harness.step();
 
         // Select third file
-        harness.press_key(Key::Space);
+        harness.key_press(Key::Space);
         harness.step();
     }
 
@@ -154,7 +154,7 @@ fn test_select_entry_with_operations() {
     }
 
     // Copy the selected entries
-    harness.press_key(Key::Y);
+    harness.key_press(Key::Y);
     harness.step();
 
     // Create a subdirectory to paste into
@@ -180,11 +180,11 @@ fn test_select_entry_with_operations() {
     harness.step();
 
     // Navigate into the subdirectory
-    harness.press_key(Key::L);
+    harness.key_press(Key::L);
     harness.step();
 
     // Paste the selected entries
-    harness.press_key(Key::P);
+    harness.key_press(Key::P);
     harness.step();
 
     // Verify all three entries were copied to the subdirectory

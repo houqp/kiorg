@@ -22,7 +22,7 @@ fn test_image_preview_popup_shortcut() {
     // Start the harness
     let mut harness = create_harness(&temp_dir);
 
-    harness.press_key(egui::Key::J);
+    harness.key_press(egui::Key::J);
 
     // Wait for the image preview to load
     for _ in 0..100 {
@@ -46,7 +46,7 @@ fn test_image_preview_popup_shortcut() {
         shift: true,
         ..Default::default()
     };
-    harness.press_key_modifiers(modifiers, Key::K);
+    harness.key_press_modifiers(modifiers, Key::K);
     harness.step();
 
     // Verify the preview popup is shown
@@ -56,7 +56,7 @@ fn test_image_preview_popup_shortcut() {
     }
 
     // Close the popup with Escape
-    harness.press_key(Key::Escape);
+    harness.key_press(Key::Escape);
     harness.step();
 
     // Verify the popup is closed
@@ -82,7 +82,7 @@ fn test_pdf_preview_popup_error_handling() {
     let mut harness = create_harness(&temp_dir);
 
     // Select the invalid PDF file
-    harness.press_key(Key::ArrowDown);
+    harness.key_press(Key::ArrowDown);
     harness.step();
 
     // Open preview popup with Shift+K
@@ -90,7 +90,7 @@ fn test_pdf_preview_popup_error_handling() {
         shift: true,
         ..Default::default()
     };
-    harness.press_key_modifiers(modifiers, Key::K);
+    harness.key_press_modifiers(modifiers, Key::K);
     harness.step();
 
     // Verify the preview popup is NOT shown (it should have closed due to the error)
@@ -137,7 +137,7 @@ fn test_preview_popup_unsupported_file() {
         shift: true,
         ..Default::default()
     };
-    harness.press_key_modifiers(modifiers, Key::K);
+    harness.key_press_modifiers(modifiers, Key::K);
     harness.step();
 
     // Verify the preview popup is NOT shown for unsupported file types
@@ -182,7 +182,7 @@ fn test_doc_preview_popup_page_count_metadata() {
         shift: true,
         ..Default::default()
     };
-    harness.press_key_modifiers(modifiers, Key::K);
+    harness.key_press_modifiers(modifiers, Key::K);
     harness.step();
 
     // Verify the preview popup is shown with correct page count metadata
@@ -207,7 +207,7 @@ fn test_doc_preview_popup_page_count_metadata() {
     }
 
     // Close the popup
-    harness.press_key(Key::Escape);
+    harness.key_press(Key::Escape);
     harness.step();
 
     // Verify the popup is closed

@@ -18,7 +18,7 @@ fn test_paste_copy_clears_marked_entries() {
     let mut harness = create_harness(&temp_dir);
 
     // Mark multiple files (file1.txt and file2.txt)
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
     // verify that file1.txt is selected
     {
@@ -29,11 +29,11 @@ fn test_paste_copy_clears_marked_entries() {
             "file1.txt should be selected"
         );
     }
-    harness.press_key(Key::Space);
+    harness.key_press(Key::Space);
     harness.step();
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
-    harness.press_key(Key::Space);
+    harness.key_press(Key::Space);
     harness.step();
 
     // Verify both files are marked
@@ -56,7 +56,7 @@ fn test_paste_copy_clears_marked_entries() {
     }
 
     // Copy the marked files
-    harness.press_key(Key::Y);
+    harness.key_press(Key::Y);
     harness.step();
 
     // Verify the files are in the clipboard as a copy operation
@@ -82,15 +82,15 @@ fn test_paste_copy_clears_marked_entries() {
     }
 
     // Navigate to target_dir
-    harness.press_key(Key::G);
-    harness.press_key(Key::G);
+    harness.key_press(Key::G);
+    harness.key_press(Key::G);
     harness.step();
     // Enter target_dir
-    harness.press_key(Key::L);
+    harness.key_press(Key::L);
     harness.step();
 
     // Paste the copied files
-    harness.press_key(Key::P);
+    harness.key_press(Key::P);
     harness.step();
 
     // Verify marked entries are cleared after paste operation
@@ -140,15 +140,15 @@ fn test_paste_cut_clears_marked_entries() {
     let mut harness = create_harness(&temp_dir);
 
     // Move to file3.txt
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
 
     // Mark file3.txt
-    harness.press_key(Key::Space);
+    harness.key_press(Key::Space);
     harness.step();
 
     // Verify file3.txt is marked
@@ -166,12 +166,12 @@ fn test_paste_cut_clears_marked_entries() {
         );
     }
 
-    harness.press_key(Key::X);
+    harness.key_press(Key::X);
     harness.step();
 
     // Enter target_dir
-    harness.press_key(Key::G);
-    harness.press_key(Key::G);
+    harness.key_press(Key::G);
+    harness.key_press(Key::G);
     harness.step();
     // confirm that we have target_dir selected
     {
@@ -182,11 +182,11 @@ fn test_paste_cut_clears_marked_entries() {
             "target_dir should be selected"
         );
     }
-    harness.press_key(Key::L);
+    harness.key_press(Key::L);
     harness.step();
 
     // Paste the cut files
-    harness.press_key(Key::P);
+    harness.key_press(Key::P);
     harness.step();
     harness.step();
 

@@ -58,7 +58,7 @@ key = "n"
     );
 
     // Press the new shortcut key 'n' to move down
-    harness.press_key(Key::N);
+    harness.key_press(Key::N);
     harness.step();
 
     // Verify selection moved down to index 1
@@ -68,7 +68,7 @@ key = "n"
     );
 
     // The original 'j' key should no longer work for moving down
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
 
     // Selection should still be at index 1
@@ -118,7 +118,7 @@ fn test_default_shortcuts() {
     );
 
     // Press the default shortcut key 'j' to move down
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
 
     // Verify selection moved down to index 1
@@ -128,7 +128,7 @@ fn test_default_shortcuts() {
     );
 
     // Press 'k' to move back up
-    harness.press_key(Key::K);
+    harness.key_press(Key::K);
     harness.step();
 
     // Selection should be back at index 0
@@ -187,7 +187,7 @@ shift = true
     );
 
     // Press the custom shortcut key 'm' to move down
-    harness.press_key(Key::M);
+    harness.key_press(Key::M);
     harness.step();
 
     // Verify selection moved down to index 1
@@ -197,7 +197,7 @@ shift = true
     );
 
     // Press 'i' to move back up
-    harness.press_key(Key::I);
+    harness.key_press(Key::I);
     harness.step();
 
     // Selection should be back at index 0
@@ -207,7 +207,7 @@ shift = true
     );
 
     // The original 'j' key should no longer work for moving down
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
 
     // Selection should still be at index 0
@@ -261,7 +261,7 @@ key = "m"
     );
 
     // Press 'z' without Ctrl - should not move
-    harness.press_key(Key::Z);
+    harness.key_press(Key::Z);
     harness.step();
     assert_eq!(
         harness.state().tab_manager.current_tab_ref().selected_index,
@@ -273,7 +273,7 @@ key = "m"
         ctrl: true,
         ..Default::default()
     };
-    harness.press_key_modifiers(modifiers, Key::Z);
+    harness.key_press_modifiers(modifiers, Key::Z);
     harness.step();
 
     // Verify selection moved down to index 1
@@ -283,7 +283,7 @@ key = "m"
     );
 
     // Move back to index 0 using the explicitly defined MoveUp shortcut
-    harness.press_key(Key::M);
+    harness.key_press(Key::M);
     harness.step();
 
     // Verify selection is back at index 0
@@ -332,7 +332,7 @@ key = "n"
     );
 
     // Test that the custom shortcut for MoveDown works
-    harness.press_key(Key::N);
+    harness.key_press(Key::N);
     harness.step();
 
     // Verify selection moved down to index 1
@@ -343,7 +343,7 @@ key = "n"
 
     // Test that the default shortcut for MoveUp still works
     // This verifies that default shortcuts for actions not overridden by the user are preserved
-    harness.press_key(Key::K);
+    harness.key_press(Key::K);
     harness.step();
 
     // Verify selection moved back up to index 0
@@ -354,7 +354,7 @@ key = "n"
 
     // The original 'j' key should no longer work for moving down
     // since it was replaced by the custom 'n' shortcut
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
 
     // Selection should still be at index 0

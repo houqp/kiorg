@@ -249,7 +249,7 @@ jobs:
 
     - name: Build release binary
       run: |
-        cargo build --release
+        cargo build --no-default-features --release
         cd target\release
         Compress-Archive -Path kiorg.exe -DestinationPath ..\..\kiorg-x86_64-windows.zip
 

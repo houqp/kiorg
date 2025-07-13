@@ -63,7 +63,7 @@ fn test_file_list_refresh_should_preserve_selected_file() {
     let mut harness = create_harness(&temp_dir);
 
     // Move selection to file2.txt (index 1)
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
 
     // Store the selected file name (not index)

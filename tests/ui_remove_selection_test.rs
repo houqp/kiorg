@@ -28,14 +28,14 @@ fn test_crash_reproduction_filtered_deletion() {
     let mut harness = create_harness(&temp_dir);
 
     // Step 1: Apply filter
-    harness.press_key(Key::Slash);
+    harness.key_press(Key::Slash);
     harness.step();
     harness
         .input_mut()
         .events
         .push(egui::Event::Text(".txt".to_string()));
     harness.step();
-    harness.press_key(Key::Enter);
+    harness.key_press(Key::Enter);
     harness.step();
 
     // Verify filter is applied
@@ -50,7 +50,7 @@ fn test_crash_reproduction_filtered_deletion() {
         ctrl: true,
         ..Default::default()
     };
-    harness.press_key_modifiers(modifiers, Key::A);
+    harness.key_press_modifiers(modifiers, Key::A);
     harness.step();
 
     // Verify entries are selected
@@ -60,7 +60,7 @@ fn test_crash_reproduction_filtered_deletion() {
     }
 
     // Step 3: Delete all selected entries - this triggers the bug
-    harness.press_key(Key::D);
+    harness.key_press(Key::D);
     harness.step();
 
     // Verify we're in the initial confirmation state
@@ -75,7 +75,7 @@ fn test_crash_reproduction_filtered_deletion() {
     }
 
     // Press Enter for first confirmation
-    harness.press_key(Key::Enter);
+    harness.key_press(Key::Enter);
     harness.step();
 
     // Verify we're now in the recursive confirmation state
@@ -90,7 +90,7 @@ fn test_crash_reproduction_filtered_deletion() {
     }
 
     // Press Enter for 2nd confirmation
-    harness.press_key(Key::Enter);
+    harness.key_press(Key::Enter);
     harness.step();
 
     for _ in 0..100 {

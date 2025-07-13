@@ -16,7 +16,7 @@ fn test_add_file_and_directory() {
     let expected_file_path = temp_dir.path().join(file_name);
 
     // Press 'a' to activate add mode
-    harness.press_key(Key::A);
+    harness.key_press(Key::A);
     harness.step();
 
     // Check if add mode is active
@@ -41,7 +41,7 @@ fn test_add_file_and_directory() {
     }
 
     // Press Enter to confirm creation
-    harness.press_key(Key::Enter);
+    harness.key_press(Key::Enter);
     harness.step(); // Step to process creation and refresh
 
     // Verify file exists on filesystem
@@ -86,7 +86,7 @@ fn test_add_file_and_directory() {
     let expected_dir_path = temp_dir.path().join(dir_name_actual);
 
     // Press 'a' to activate add mode
-    harness.press_key(Key::A);
+    harness.key_press(Key::A);
     harness.step();
 
     // Check if add mode is active
@@ -114,7 +114,7 @@ fn test_add_file_and_directory() {
     }
 
     // Press Enter to confirm creation
-    harness.press_key(Key::Enter);
+    harness.key_press(Key::Enter);
     harness.step(); // Step to process creation and refresh
 
     // Verify directory exists on filesystem
@@ -158,7 +158,7 @@ fn test_add_file_and_directory() {
     let expected_file_q_path = temp_dir.path().join(file_name_q);
 
     // Press 'a'
-    harness.press_key(Key::A);
+    harness.key_press(Key::A);
     harness.step();
     // Input name
     harness
@@ -167,7 +167,7 @@ fn test_add_file_and_directory() {
         .push(egui::Event::Text(file_name_q.to_string()));
     harness.step();
     // Press Enter
-    harness.press_key(Key::Enter);
+    harness.key_press(Key::Enter);
     harness.step();
 
     // Verify file exists
@@ -200,7 +200,7 @@ fn test_add_file_and_directory() {
     let expected_dir_q_path = temp_dir.path().join(dir_name_q_actual);
 
     // Press 'a'
-    harness.press_key(Key::A);
+    harness.key_press(Key::A);
     harness.step();
     // Input name
     harness
@@ -209,7 +209,7 @@ fn test_add_file_and_directory() {
         .push(egui::Event::Text(dir_name_q_input.to_string()));
     harness.step();
     // Press Enter
-    harness.press_key(Key::Enter);
+    harness.key_press(Key::Enter);
     harness.step();
 
     // Verify directory exists
@@ -244,7 +244,7 @@ fn test_add_entry_cancel() {
     let mut harness = create_harness(&temp_dir);
 
     // Press 'a' to activate add mode
-    harness.press_key(Key::A);
+    harness.key_press(Key::A);
     harness.step();
 
     // Check if add mode is active
@@ -273,7 +273,7 @@ fn test_add_entry_cancel() {
     }
 
     // Press Escape to cancel
-    harness.press_key(Key::Escape);
+    harness.key_press(Key::Escape);
     harness.step();
 
     // Verify add mode is inactive and input is cleared
@@ -307,7 +307,7 @@ fn test_add_entry_name_conflict() {
     // --- Test 1: Try to create a file with a name that already exists ---
 
     // Press 'a' to activate add mode
-    harness.press_key(Key::A);
+    harness.key_press(Key::A);
     harness.step();
 
     // Check if add mode is active
@@ -325,7 +325,7 @@ fn test_add_entry_name_conflict() {
     harness.step();
 
     // Press Enter to attempt creation
-    harness.press_key(Key::Enter);
+    harness.key_press(Key::Enter);
     harness.step();
 
     // Verify add mode is still active (popup remains open)
@@ -347,13 +347,13 @@ fn test_add_entry_name_conflict() {
     }
 
     // Press Escape to cancel
-    harness.press_key(Key::Escape);
+    harness.key_press(Key::Escape);
     harness.step();
 
     // --- Test 2: Try to create a directory with a name that already exists ---
 
     // Press 'a' to activate add mode
-    harness.press_key(Key::A);
+    harness.key_press(Key::A);
     harness.step();
 
     // Input the existing directory name with trailing slash
@@ -365,7 +365,7 @@ fn test_add_entry_name_conflict() {
     harness.step();
 
     // Press Enter to attempt creation
-    harness.press_key(Key::Enter);
+    harness.key_press(Key::Enter);
     harness.step();
 
     // Verify add mode is still active (popup remains open)
@@ -386,7 +386,7 @@ fn test_add_entry_name_conflict() {
     }
 
     // Press Escape to cancel
-    harness.press_key(Key::Escape);
+    harness.key_press(Key::Escape);
     harness.step();
 
     // Verify add mode is now inactive

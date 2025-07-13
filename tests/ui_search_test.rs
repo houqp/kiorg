@@ -22,7 +22,7 @@ fn test_search_edit_existing_query() {
     let mut harness = create_harness(&temp_dir);
 
     // Activate search
-    harness.press_key(Key::Slash);
+    harness.key_press(Key::Slash);
     harness.step();
 
     // Input search query "test"
@@ -44,7 +44,7 @@ fn test_search_edit_existing_query() {
     );
 
     // Press '/' again while search is active
-    harness.press_key(Key::Slash);
+    harness.key_press(Key::Slash);
     harness.step();
 
     // Verify search bar query is preserved
@@ -72,9 +72,9 @@ fn test_search_resets_selection() {
     let mut harness = create_harness(&temp_dir);
 
     // Select the third entry (banana.txt)
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
     assert_eq!(
         harness.state().tab_manager.current_tab_ref().selected_index,
@@ -86,7 +86,7 @@ fn test_search_resets_selection() {
     );
 
     // Activate search
-    harness.press_key(Key::Slash);
+    harness.key_press(Key::Slash);
     harness.step();
 
     // Input search query "ap" (matches apple and apricot)
@@ -95,7 +95,7 @@ fn test_search_resets_selection() {
         .events
         .push(egui::Event::Text("ap".to_string()));
     harness.step();
-    harness.press_key(Key::Enter);
+    harness.key_press(Key::Enter);
     harness.step();
 
     // Verify selection is reset to the first matching entry (apple.txt)
@@ -119,7 +119,7 @@ fn test_search_cleared_on_directory_change() {
     let mut harness = create_harness(&temp_dir);
 
     // Activate search
-    harness.press_key(Key::Slash);
+    harness.key_press(Key::Slash);
     harness.step();
 
     // Input search query "test"
@@ -128,7 +128,7 @@ fn test_search_cleared_on_directory_change() {
         .events
         .push(egui::Event::Text("dir".to_string()));
     harness.step();
-    harness.press_key(Key::Enter);
+    harness.key_press(Key::Enter);
     harness.step();
 
     // Verify search bar has the query
@@ -149,7 +149,7 @@ fn test_search_cleared_on_directory_change() {
     );
 
     // Navigate into dir1
-    harness.press_key(Key::L);
+    harness.key_press(Key::L);
     harness.step();
 
     // Verify search query is cleared (is None) after directory change
@@ -173,7 +173,7 @@ fn test_search_cleared_on_escape() {
     let mut harness = create_harness(&temp_dir);
 
     // Activate search
-    harness.press_key(Key::Slash);
+    harness.key_press(Key::Slash);
     harness.step();
 
     // Input search query "test"
@@ -195,7 +195,7 @@ fn test_search_cleared_on_escape() {
     );
 
     // Press Enter to apply the filter
-    harness.press_key(Key::Enter);
+    harness.key_press(Key::Enter);
     harness.step();
 
     // Verify search query is still active after pressing Enter
@@ -219,7 +219,7 @@ fn test_search_cleared_on_escape() {
     );
 
     // Press Escape to clear the search
-    harness.press_key(Key::Escape);
+    harness.key_press(Key::Escape);
     harness.step();
 
     // Verify search query is cleared (is None) after pressing Escape
@@ -254,7 +254,7 @@ fn test_search_filters_realtime_without_enter() {
     );
 
     // Activate search
-    harness.press_key(Key::Slash);
+    harness.key_press(Key::Slash);
     harness.step();
 
     // Type "a" - should match apple, apricot
@@ -308,7 +308,7 @@ fn test_search_filters_realtime_without_enter() {
     );
 
     // Clear one character using backspace
-    harness.press_key(Key::Backspace);
+    harness.key_press(Key::Backspace);
     harness.step();
 
     // Verify filtered list expands again to match "ap"
@@ -359,7 +359,7 @@ fn test_search_escape_clears_query_and_resets_file_list() {
     );
 
     // Activate search
-    harness.press_key(Key::Slash);
+    harness.key_press(Key::Slash);
     harness.step();
 
     // Type "apple" - should match only apple.txt
@@ -393,7 +393,7 @@ fn test_search_escape_clears_query_and_resets_file_list() {
     );
 
     // Press Escape to close search bar
-    harness.press_key(Key::Escape);
+    harness.key_press(Key::Escape);
     harness.step();
 
     // Verify search query is cleared
@@ -474,7 +474,7 @@ fn test_fs_notify_preserves_search_query() {
     let mut harness = create_harness(&temp_dir);
 
     // Activate search mode by pressing '/'
-    harness.press_key(Key::Slash);
+    harness.key_press(Key::Slash);
     harness.step();
 
     // Verify search is active

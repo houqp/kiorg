@@ -29,7 +29,7 @@ fn test_range_selection_toggle() {
     }
 
     // Press 'v' to enter range selection mode
-    harness.press_key(Key::V);
+    harness.key_press(Key::V);
     harness.step();
 
     // Range selection should now be active
@@ -56,9 +56,9 @@ fn test_range_selection_toggle() {
     }
 
     // Move down to expand the selection
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
 
     // Check the range selection range
@@ -100,7 +100,7 @@ fn test_range_selection_toggle() {
     }
 
     // Press 'v' again to exit range selection mode
-    harness.press_key(Key::V);
+    harness.key_press(Key::V);
     harness.step();
 
     // Range selection should now be inactive
@@ -138,15 +138,15 @@ fn test_range_selection_with_operations() {
     let mut harness = create_harness(&temp_dir);
 
     // Enter visual bulk selection mode and select files 1-3
-    harness.press_key(Key::V);
+    harness.key_press(Key::V);
     harness.step();
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
 
     // Copy the range selection
-    harness.press_key(Key::Y);
+    harness.key_press(Key::Y);
     harness.step();
 
     // Check that range selection mode is exited and marked entries are set
@@ -216,17 +216,17 @@ fn test_range_selection_backwards() {
     let mut harness = create_harness(&temp_dir);
 
     // Move to the third file (index 2)
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
 
     // Enter range selection mode
-    harness.press_key(Key::V);
+    harness.key_press(Key::V);
     harness.step();
 
     // Move up to create a backwards selection
-    harness.press_key(Key::K);
+    harness.key_press(Key::K);
     harness.step();
 
     // Check the range selection range (should be normalized)
@@ -286,7 +286,7 @@ fn test_range_selection_with_goto_last_entry() {
     }
 
     // Enter range selection mode
-    harness.press_key(Key::V);
+    harness.key_press(Key::V);
     harness.step();
 
     // Verify range selection is active and starts at index 0
@@ -309,7 +309,7 @@ fn test_range_selection_with_goto_last_entry() {
     }
 
     // Use Shift+G to jump to the last entry (this should expand the range selection)
-    harness.press_key_modifiers(egui::Modifiers::SHIFT, Key::G);
+    harness.key_press_modifiers(egui::Modifiers::SHIFT, Key::G);
     harness.step();
 
     // Verify the selection jumped to the last entry and range expanded
@@ -354,7 +354,7 @@ fn test_range_selection_with_goto_last_entry() {
 
     // Now test going in reverse: start from last entry and use gg to go to first
     // First, exit range selection mode
-    harness.press_key(Key::V);
+    harness.key_press(Key::V);
     harness.step();
 
     // Verify range selection is now inactive
@@ -367,7 +367,7 @@ fn test_range_selection_with_goto_last_entry() {
     }
 
     // Enter range selection mode again (should start at current position - last entry)
-    harness.press_key(Key::V);
+    harness.key_press(Key::V);
     harness.step();
 
     // Verify range selection starts at the last entry
@@ -385,9 +385,9 @@ fn test_range_selection_with_goto_last_entry() {
     }
 
     // Use gg (double g) to jump to the first entry
-    harness.press_key(Key::G);
+    harness.key_press(Key::G);
     harness.step();
-    harness.press_key(Key::G);
+    harness.key_press(Key::G);
     harness.step();
 
     // Verify the selection jumped to the first entry and range expanded backwards
@@ -464,7 +464,7 @@ fn test_range_selection_clears_marked_entries() {
     }
 
     // Enter range selection mode by pressing 'v'
-    harness.press_key(Key::V);
+    harness.key_press(Key::V);
     harness.step();
 
     // Verify that marked entries were cleared when entering range selection mode
@@ -488,7 +488,7 @@ fn test_range_selection_clears_marked_entries() {
     }
 
     // Exit range selection mode
-    harness.press_key(Key::V);
+    harness.key_press(Key::V);
     harness.step();
 
     // Verify marked entries remain cleared after exiting range selection mode
@@ -528,11 +528,11 @@ fn test_range_selection_disabled_on_directory_change() {
     let mut harness = create_harness(&temp_dir);
 
     // Enter range selection mode
-    harness.press_key(Key::V);
+    harness.key_press(Key::V);
     harness.step();
 
     // Move down to select multiple files
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
 
     // Verify range selection is active
@@ -582,11 +582,11 @@ fn test_marked_entries_cleared_on_range_selection_entry() {
     let mut harness = create_harness(&temp_dir);
 
     // Mark some entries first using space key
-    harness.press_key(Key::Space); // Mark file1.txt
+    harness.key_press(Key::Space); // Mark file1.txt
     harness.step();
-    harness.press_key(Key::J); // Move to file2.txt
+    harness.key_press(Key::J); // Move to file2.txt
     harness.step();
-    harness.press_key(Key::Space); // Mark file2.txt
+    harness.key_press(Key::Space); // Mark file2.txt
     harness.step();
 
     // Verify that entries are marked
@@ -612,7 +612,7 @@ fn test_marked_entries_cleared_on_range_selection_entry() {
     }
 
     // Enter range selection mode
-    harness.press_key(Key::V);
+    harness.key_press(Key::V);
     harness.step();
 
     // Verify that marked entries are cleared and range selection is active
@@ -649,11 +649,11 @@ fn test_select_entry_has_no_effect_during_range_selection() {
     let mut harness = create_harness(&temp_dir);
 
     // Move to the second file
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
 
     // Enter range selection mode
-    harness.press_key(Key::V);
+    harness.key_press(Key::V);
     harness.step();
 
     // Verify range selection is active
@@ -671,7 +671,7 @@ fn test_select_entry_has_no_effect_during_range_selection() {
     }
 
     // Try to use SelectEntry action (Space key) - this should have no effect
-    harness.press_key(Key::Space);
+    harness.key_press(Key::Space);
     harness.step();
 
     // Verify that marked_entries was not modified
@@ -689,7 +689,7 @@ fn test_select_entry_has_no_effect_during_range_selection() {
     }
 
     // Move down to extend the range selection
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
 
     // Verify range selection range expanded but marked_entries is still empty
@@ -712,7 +712,7 @@ fn test_select_entry_has_no_effect_during_range_selection() {
     }
 
     // Try Space key again while range selection is active
-    harness.press_key(Key::Space);
+    harness.key_press(Key::Space);
     harness.step();
 
     // Verify it still has no effect
@@ -735,7 +735,7 @@ fn test_select_entry_has_no_effect_during_range_selection() {
     }
 
     // Exit range selection mode
-    harness.press_key(Key::V);
+    harness.key_press(Key::V);
     harness.step();
 
     // Verify range selection is now inactive and we can use Space key normally
@@ -748,7 +748,7 @@ fn test_select_entry_has_no_effect_during_range_selection() {
     }
 
     // Now Space key should work normally
-    harness.press_key(Key::Space);
+    harness.key_press(Key::Space);
     harness.step();
 
     // Verify that Space key now works to mark entries

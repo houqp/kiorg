@@ -21,11 +21,11 @@ fn test_preview_popup_consumes_number_keys() {
     let mut harness = create_harness(&temp_dir);
 
     // Create multiple tabs first to test tab switching
-    harness.press_key(Key::T);
+    harness.key_press(Key::T);
     harness.step();
-    harness.press_key(Key::T);
+    harness.key_press(Key::T);
     harness.step();
-    harness.press_key(Key::T);
+    harness.key_press(Key::T);
     harness.step();
 
     // Verify we have multiple tabs
@@ -36,7 +36,7 @@ fn test_preview_popup_consumes_number_keys() {
 
     // Switch to tab 1 (index 0)
     let modifiers = tab_num_modifiers();
-    harness.press_key_modifiers(modifiers, Key::Num1);
+    harness.key_press_modifiers(modifiers, Key::Num1);
     harness.step();
     assert_eq!(
         harness.state().tab_manager.get_current_tab_index(),
@@ -45,7 +45,7 @@ fn test_preview_popup_consumes_number_keys() {
     );
 
     // Switch to tab 2 (index 1)
-    harness.press_key_modifiers(modifiers, Key::Num2);
+    harness.key_press_modifiers(modifiers, Key::Num2);
     harness.step();
     assert_eq!(
         harness.state().tab_manager.get_current_tab_index(),
@@ -87,7 +87,7 @@ fn test_preview_popup_consumes_number_keys() {
         shift: true,
         ..Default::default()
     };
-    harness.press_key_modifiers(modifiers, Key::K);
+    harness.key_press_modifiers(modifiers, Key::K);
     harness.step();
 
     // Verify the preview popup is shown
@@ -100,7 +100,7 @@ fn test_preview_popup_consumes_number_keys() {
     let tab_index_before = harness.state().tab_manager.get_current_tab_index();
 
     // Press number keys while the popup is active - these should NOT trigger tab switches
-    harness.press_key(Key::Num1);
+    harness.key_press(Key::Num1);
     harness.step();
 
     // Verify tab didn't change
@@ -117,9 +117,9 @@ fn test_preview_popup_consumes_number_keys() {
     }
 
     // Try pressing more number keys
-    harness.press_key(Key::Num3);
+    harness.key_press(Key::Num3);
     harness.step();
-    harness.press_key(Key::Num9);
+    harness.key_press(Key::Num9);
     harness.step();
 
     // Verify tab still didn't change
@@ -136,7 +136,7 @@ fn test_preview_popup_consumes_number_keys() {
     }
 
     // Close the popup with Escape
-    harness.press_key(Key::Escape);
+    harness.key_press(Key::Escape);
     harness.step();
 
     // Verify the popup is closed
@@ -148,7 +148,7 @@ fn test_preview_popup_consumes_number_keys() {
 
     // Now test that tab switching with modifiers works normally after closing the popup
     let modifiers = tab_num_modifiers();
-    harness.press_key_modifiers(modifiers, Key::Num1);
+    harness.key_press_modifiers(modifiers, Key::Num1);
     harness.step();
     assert_eq!(
         harness.state().tab_manager.get_current_tab_index(),
@@ -197,7 +197,7 @@ fn test_preview_popup_consumes_other_keys() {
         shift: true,
         ..Default::default()
     };
-    harness.press_key_modifiers(modifiers, Key::K);
+    harness.key_press_modifiers(modifiers, Key::K);
     harness.step();
 
     // Verify the preview popup is shown
@@ -210,7 +210,7 @@ fn test_preview_popup_consumes_other_keys() {
     let initial_selection = harness.state().tab_manager.current_tab_ref().selected_index;
 
     // Press J (normally moves down) - should be consumed
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
 
     // Verify selection didn't change and popup is still open
@@ -225,7 +225,7 @@ fn test_preview_popup_consumes_other_keys() {
     }
 
     // Press K (normally moves up) - should be consumed
-    harness.press_key(Key::K);
+    harness.key_press(Key::K);
     harness.step();
 
     // Verify selection didn't change and popup is still open
@@ -240,7 +240,7 @@ fn test_preview_popup_consumes_other_keys() {
     }
 
     // Test that Escape still works to close the popup
-    harness.press_key(Key::Escape);
+    harness.key_press(Key::Escape);
     harness.step();
 
     // Verify the popup is closed

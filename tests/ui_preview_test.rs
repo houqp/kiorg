@@ -21,7 +21,7 @@ fn test_text_file_preview() {
 
     // Select the text file using J shortcut
     // Since entries are sorted by name, we can navigate to the text file
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
 
     for _ in 0..100 {
@@ -65,7 +65,7 @@ fn test_binary_file_preview() {
 
     // Select the binary file using J shortcut
     // Since entries are sorted by name, we can navigate to the binary file
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
 
     for _ in 0..100 {
@@ -112,7 +112,7 @@ fn test_directory_preview() {
 
     // Select the directory using J shortcut
     // Since entries are sorted by name, we can navigate to the directory
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
 
     for _ in 0..100 {
@@ -155,7 +155,7 @@ fn test_image_preview() {
 
     // Select the image file using J shortcut
     // Since entries are sorted by name, we can navigate to the image file
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
 
     for _ in 0..100 {
@@ -199,7 +199,7 @@ fn test_zip_preview() {
 
     // Select the zip file using J shortcut
     // Since entries are sorted by name, we can navigate to the zip file
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
 
     // Try multiple steps to allow async loading to complete
@@ -246,7 +246,7 @@ fn test_tar_preview() {
 
     // Select the tar file using J shortcut
     // Since entries are sorted by name, we can navigate to the tar file
-    harness.press_key(Key::J);
+    harness.key_press(Key::J);
     harness.step();
 
     // Try multiple steps to allow async loading to complete

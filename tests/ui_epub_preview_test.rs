@@ -21,9 +21,9 @@ fn test_epub_preview() {
 
     let mut harness = create_harness(&temp_dir);
 
-    harness.press_key(egui::Key::J);
+    harness.key_press(egui::Key::J);
     harness.step();
-    harness.press_key(egui::Key::K);
+    harness.key_press(egui::Key::K);
     harness.step();
 
     // Try multiple steps to allow async loading to complete

@@ -34,7 +34,7 @@ fn test_ctrl_a_select_all_and_delete() {
         ctrl: true,
         ..Default::default()
     };
-    harness.press_key_modifiers(modifiers, Key::A);
+    harness.key_press_modifiers(modifiers, Key::A);
     harness.step();
 
     // Verify all entries are now selected
@@ -56,7 +56,7 @@ fn test_ctrl_a_select_all_and_delete() {
     }
 
     // Press 'd' to trigger delete operation
-    harness.press_key(Key::D);
+    harness.key_press(Key::D);
     harness.step();
 
     // Verify the delete popup is shown with all entries
@@ -76,7 +76,7 @@ fn test_ctrl_a_select_all_and_delete() {
     }
 
     // Confirm the first deletion prompt
-    harness.press_key(Key::Enter);
+    harness.key_press(Key::Enter);
     harness.step();
 
     // Verify we're in the recursive confirmation state
@@ -102,7 +102,7 @@ fn test_ctrl_a_select_all_and_delete() {
     }
 
     // Confirm the second deletion prompt
-    harness.press_key(Key::Enter);
+    harness.key_press(Key::Enter);
     harness.step();
 
     // Give time for deletion to process (deletion happens asynchronously)

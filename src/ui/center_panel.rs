@@ -70,7 +70,7 @@ fn new_unique_path_name_for_paste(
 pub fn handle_clipboard_operations(
     clipboard: &mut Option<Clipboard>,
     current_path: &std::path::Path,
-    toasts: &mut egui_notify::Toasts,
+    toasts: &mut crate::ui::egui_notify::Toasts,
 ) -> bool {
     match clipboard.take() {
         Some(Clipboard::Copy(paths)) => {
@@ -196,7 +196,7 @@ fn show_context_menu(
 
     if ui.button("Add new file/directory").clicked() {
         action = ContextMenuAction::Add;
-        ui.close_menu();
+        ui.close();
     }
 
     // File operations - only enabled when a file is selected
@@ -207,7 +207,7 @@ fn show_context_menu(
         .clicked()
     {
         action = ContextMenuAction::Rename;
-        ui.close_menu();
+        ui.close();
     }
 
     // Show bulk delete option when there are marked entries
@@ -215,14 +215,14 @@ fn show_context_menu(
         // TODO: do we need to add enabled
         if ui.button("Delete all marked items").clicked() {
             action = ContextMenuAction::BulkDelete;
-            ui.close_menu();
+            ui.close();
         }
     } else if ui
         .add_enabled(has_selection, egui::Button::new("Delete"))
         .clicked()
     {
         action = ContextMenuAction::Delete;
-        ui.close_menu();
+        ui.close();
     }
 
     // Add "Open with" option - enabled for both files and directories
@@ -231,7 +231,7 @@ fn show_context_menu(
         .clicked()
     {
         action = ContextMenuAction::OpenWith;
-        ui.close_menu();
+        ui.close();
     }
 
     ui.separator();
@@ -241,7 +241,7 @@ fn show_context_menu(
         .clicked()
     {
         action = ContextMenuAction::Copy;
-        ui.close_menu();
+        ui.close();
     }
 
     if ui
@@ -249,7 +249,7 @@ fn show_context_menu(
         .clicked()
     {
         action = ContextMenuAction::Cut;
-        ui.close_menu();
+        ui.close();
     }
 
     // Use the passed boolean directly
@@ -258,7 +258,7 @@ fn show_context_menu(
         .clicked()
     {
         action = ContextMenuAction::Paste;
-        ui.close_menu();
+        ui.close();
     }
 
     action

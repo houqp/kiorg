@@ -37,7 +37,7 @@ fn test_folder_delete_double_confirmation() {
     harness.step();
 
     // Press 'd' to initiate deletion
-    harness.press_key(Key::D);
+    harness.key_press(Key::D);
     harness.step();
 
     // Verify delete popup is shown
@@ -61,7 +61,7 @@ fn test_folder_delete_double_confirmation() {
     }
 
     // Press Enter for first confirmation
-    harness.press_key(Key::Enter);
+    harness.key_press(Key::Enter);
     harness.step();
 
     // Verify we're now in the recursive confirmation state
@@ -82,7 +82,7 @@ fn test_folder_delete_double_confirmation() {
     );
 
     // Press Enter for second confirmation
-    harness.press_key(Key::Enter);
+    harness.key_press(Key::Enter);
     for _ in 0..100 {
         harness.step();
         if harness.state().show_popup.is_none() {
@@ -122,7 +122,7 @@ fn test_folder_delete_cancel_first_confirmation() {
     harness.step();
 
     // Press 'd' to initiate deletion
-    harness.press_key(Key::D);
+    harness.key_press(Key::D);
     harness.step();
 
     // Verify delete popup is shown
@@ -135,7 +135,7 @@ fn test_folder_delete_cancel_first_confirmation() {
     );
 
     // Press Escape to cancel
-    harness.press_key(Key::Escape);
+    harness.key_press(Key::Escape);
     harness.step();
 
     // Verify popup is closed
@@ -168,11 +168,11 @@ fn test_folder_delete_cancel_second_confirmation() {
     harness.step();
 
     // Press 'd' to initiate deletion
-    harness.press_key(Key::D);
+    harness.key_press(Key::D);
     harness.step();
 
     // Press Enter for first confirmation
-    harness.press_key(Key::Enter);
+    harness.key_press(Key::Enter);
     harness.step();
 
     // Verify we're in the recursive confirmation state
@@ -187,7 +187,7 @@ fn test_folder_delete_cancel_second_confirmation() {
     }
 
     // Press Escape to cancel
-    harness.press_key(Key::Escape);
+    harness.key_press(Key::Escape);
     harness.step();
 
     // Verify popup is closed
