@@ -2,6 +2,7 @@ use crate::app::Kiorg;
 use egui::Context;
 use humansize::{BINARY, format_size};
 use self_update::cargo_crate_version;
+use semver::Version;
 use std::io::Write;
 use std::sync::mpsc;
 
@@ -93,9 +94,9 @@ pub fn check_for_updates(app: &mut Kiorg) {
                 let _ = notification_sender.send(NotificationMessage::UpdateAvailable(release));
             }
             Ok(None) => {
-                // No update available
-                let _ = notification_sender.send(NotificationMessage::Error(
-                    "No updates available. You're using the latest version.".to_string(),
+                // No update available - we're already on the latest or newer version
+                let _ = notification_sender.send(NotificationMessage::Info(
+                    "You're already using the latest version.".to_string(),
                 ));
             }
             Err(e) => {
@@ -324,10 +325,14 @@ fn create_base_updater() -> self_update::backends::github::UpdateBuilder {
 fn check_for_latest_version() -> Result<Option<Release>, Box<dyn std::error::Error>> {
     let updater = create_base_updater().build()?;
     let latest_release = updater.get_latest_release()?;
-    let current_version = cargo_crate_version!();
+    let current_version_str = cargo_crate_version!();
 
-    // Compare versions
-    if latest_release.version != current_version {
+    // Parse versions for proper comparison
+    let current_version = Version::parse(current_version_str)?;
+    let latest_version = Version::parse(&latest_release.version)?;
+
+    // Only offer update if latest version is actually newer than current version
+    if latest_version > current_version {
         Ok(Some(Release::new(latest_release)))
     } else {
         Ok(None)

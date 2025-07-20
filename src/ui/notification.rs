@@ -9,6 +9,7 @@ use crate::ui::update::Release;
 #[derive(Debug, Clone)]
 pub enum NotificationMessage {
     Error(String),
+    Info(String),
     UpdateAvailable(Release), // Version string
     UpdateSuccess,            // Version string
     UpdateFailed(String),     // Error message
@@ -74,6 +75,9 @@ pub fn check_notifications(app: &mut Kiorg) {
             }
             NotificationMessage::Error(error) => {
                 notify_error(&mut app.toasts, &error);
+            }
+            NotificationMessage::Info(info) => {
+                notify_info(&mut app.toasts, &info);
             }
         }
     }

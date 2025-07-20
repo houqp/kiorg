@@ -3233,6 +3233,7 @@ dependencies = [
  "pdf_render",
  "self-replace",
  "self_update",
+ "semver",
  "serde",
  "serde_json",
  "tar",
