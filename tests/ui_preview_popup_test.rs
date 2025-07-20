@@ -2,8 +2,8 @@
 mod ui_test_helpers;
 
 use egui::{Key, Modifiers};
-use kiorg::app::PopupType;
 use kiorg::models::preview_content::PreviewContent;
+use kiorg::ui::popup::PopupType;
 use std::thread;
 use std::time::Duration;
 use tempfile::tempdir;

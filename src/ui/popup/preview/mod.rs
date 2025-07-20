@@ -1,9 +1,10 @@
 //! Preview popup module for displaying file previews in a popup window
 
-use crate::app::{Kiorg, PopupType};
+use crate::app::Kiorg;
 use crate::models::preview_content::PreviewContent;
 use crate::ui::file_list::truncate_text;
-use crate::ui::window_utils::new_center_popup_window;
+use crate::ui::popup::PopupType;
+use crate::ui::popup::window_utils::new_center_popup_window;
 use egui::Context;
 use egui_extras::syntax_highlighting::{self, CodeTheme};
 

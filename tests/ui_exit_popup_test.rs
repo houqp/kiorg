@@ -2,6 +2,7 @@
 mod ui_test_helpers;
 
 use egui::Key;
+use kiorg::ui::popup::PopupType;
 use tempfile::tempdir;
 use ui_test_helpers::create_harness;
 
@@ -25,7 +26,7 @@ fn test_exit_popup_enter_key() {
     // Verify exit popup is shown
     assert_eq!(
         harness.state().show_popup,
-        Some(kiorg::app::PopupType::Exit),
+        Some(PopupType::Exit),
         "Exit popup should be shown after pressing 'q'"
     );
 
@@ -60,7 +61,7 @@ fn test_exit_popup_escape_key() {
     // Verify exit popup is shown
     assert_eq!(
         harness.state().show_popup,
-        Some(kiorg::app::PopupType::Exit),
+        Some(PopupType::Exit),
         "Exit popup should be shown after pressing 'q'"
     );
 
@@ -102,7 +103,7 @@ fn test_exit_popup_q_key() {
     // Verify exit popup is shown
     assert_eq!(
         harness.state().show_popup,
-        Some(kiorg::app::PopupType::Exit),
+        Some(PopupType::Exit),
         "Exit popup should be shown after pressing 'q'"
     );
 

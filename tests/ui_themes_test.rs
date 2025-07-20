@@ -6,6 +6,7 @@ use egui::Key;
 use egui_kittest::kittest::Queryable;
 use kiorg::config::{Config, colors::AppColors};
 use kiorg::theme::Theme;
+use kiorg::ui::popup::PopupType;
 use std::fs;
 use tempfile::tempdir;
 use ui_test_helpers::TestHarnessBuilder;
@@ -195,12 +196,12 @@ error = "#aa3333"
     );
 
     // Manually trigger themes popup (simulating menu click)
-    harness.state_mut().show_popup = Some(kiorg::app::PopupType::Themes("dark_kiorg".to_string()));
+    harness.state_mut().show_popup = Some(PopupType::Themes("dark_kiorg".to_string()));
     harness.step();
 
     // Verify themes popup is open
     match &harness.state().show_popup {
-        Some(kiorg::app::PopupType::Themes(_)) => {
+        Some(PopupType::Themes(_)) => {
             // Popup is open, this is expected
         }
         _ => panic!("Themes popup should be open"),
@@ -498,12 +499,12 @@ error = "#ff8888"
     assert_eq!(all_themes.len(), builtin_count + 3);
 
     // Manually trigger themes popup
-    harness.state_mut().show_popup = Some(kiorg::app::PopupType::Themes("dark_theme".to_string()));
+    harness.state_mut().show_popup = Some(PopupType::Themes("dark_theme".to_string()));
     harness.step();
 
     // Verify themes popup is open
     match &harness.state().show_popup {
-        Some(kiorg::app::PopupType::Themes(_)) => {
+        Some(PopupType::Themes(_)) => {
             // Popup is open, this is expected
         }
         _ => panic!("Themes popup should be open"),
@@ -625,7 +626,7 @@ error = "#ff8888"
 
     // Test switching to another custom theme (Purple Custom Theme)
     // Open the themes popup again
-    harness.state_mut().show_popup = Some(kiorg::app::PopupType::Themes("light_theme".to_string()));
+    harness.state_mut().show_popup = Some(PopupType::Themes("light_theme".to_string()));
     harness.step();
 
     // Navigate to the Purple Custom Theme
@@ -840,13 +841,12 @@ fn test_snapshot_all_themes() {
 
     // Open themes popup once
     let default_theme_key = kiorg::theme::get_default_theme().theme_key();
-    harness.state_mut().show_popup =
-        Some(kiorg::app::PopupType::Themes(default_theme_key.to_string()));
+    harness.state_mut().show_popup = Some(PopupType::Themes(default_theme_key.to_string()));
     harness.step();
 
     // Verify themes popup is open
     match &harness.state().show_popup {
-        Some(kiorg::app::PopupType::Themes(_)) => {
+        Some(PopupType::Themes(_)) => {
             // Popup is open, this is expected
         }
         _ => panic!("Themes popup should be open"),
@@ -882,7 +882,7 @@ fn test_snapshot_all_themes() {
 
         // Verify popup is still open during navigation and contains the expected theme key
         match &harness.state().show_popup {
-            Some(kiorg::app::PopupType::Themes(current_theme_key)) => {
+            Some(PopupType::Themes(current_theme_key)) => {
                 assert_eq!(
                     current_theme_key, theme_key,
                     "Theme key in popup should match expected theme key"

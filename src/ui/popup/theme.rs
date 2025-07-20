@@ -3,6 +3,7 @@ use crate::config;
 use crate::config::shortcuts::ShortcutAction;
 use crate::theme::Theme;
 
+use super::PopupType;
 use super::window_utils::new_center_popup_window;
 
 /// Helper function to apply a theme and save it to the configuration
@@ -90,7 +91,7 @@ fn display_themes_grid(
 
 pub fn draw(app: &mut Kiorg, ctx: &egui::Context) {
     // Extract the selected theme key from the app's popup state
-    let selected_theme_key = if let Some(crate::app::PopupType::Themes(key)) = &app.show_popup {
+    let selected_theme_key = if let Some(PopupType::Themes(key)) = &app.show_popup {
         key.clone()
     } else {
         // Default to the first theme if no key is found
@@ -173,9 +174,7 @@ pub fn draw(app: &mut Kiorg, ctx: &egui::Context) {
             ctx.set_visuals(app.colors.to_visuals());
 
             // Update the popup with the new selected theme key
-            app.show_popup = Some(crate::app::PopupType::Themes(
-                new_selected_theme_key.clone(),
-            ));
+            app.show_popup = Some(PopupType::Themes(new_selected_theme_key.clone()));
         }
     }
 

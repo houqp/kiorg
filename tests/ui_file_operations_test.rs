@@ -2,6 +2,7 @@
 mod ui_test_helpers;
 
 use egui::Key;
+use kiorg::ui::popup::PopupType;
 use tempfile::tempdir;
 use ui_test_helpers::{create_harness, create_test_files};
 
@@ -132,7 +133,7 @@ fn test_rename_shortcut() {
     harness.step();
 
     // verify we are in rename mode
-    if let Some(kiorg::app::PopupType::Rename(_)) = &harness.state().show_popup {
+    if let Some(PopupType::Rename(_)) = &harness.state().show_popup {
         // Rename popup is open, which is what we want
     } else {
         panic!("Rename popup should be open");

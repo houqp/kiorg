@@ -2,6 +2,7 @@
 mod ui_test_helpers;
 
 use egui::Key;
+use kiorg::ui::popup::PopupType;
 use tempfile::tempdir;
 use ui_test_helpers::{create_harness, create_test_files};
 
@@ -48,12 +49,12 @@ fn test_file_drop_popup_copy() {
         source_files[2].clone(), // subdir
     ];
 
-    harness.state_mut().show_popup = Some(kiorg::app::PopupType::FileDrop(dropped_files.clone()));
+    harness.state_mut().show_popup = Some(PopupType::FileDrop(dropped_files.clone()));
     harness.step();
 
     // Verify the file drop popup is shown
     match &harness.state().show_popup {
-        Some(kiorg::app::PopupType::FileDrop(files)) => {
+        Some(PopupType::FileDrop(files)) => {
             assert_eq!(files.len(), 3, "Should have 3 dropped files");
             assert_eq!(files[0], source_files[0]);
             assert_eq!(files[1], source_files[1]);
@@ -159,12 +160,12 @@ fn test_file_drop_popup_move() {
         source_files[1].clone(), // move_file2.txt
     ];
 
-    harness.state_mut().show_popup = Some(kiorg::app::PopupType::FileDrop(dropped_files.clone()));
+    harness.state_mut().show_popup = Some(PopupType::FileDrop(dropped_files.clone()));
     harness.step();
 
     // Verify the file drop popup is shown
     match &harness.state().show_popup {
-        Some(kiorg::app::PopupType::FileDrop(files)) => {
+        Some(PopupType::FileDrop(files)) => {
             assert_eq!(files.len(), 2, "Should have 2 dropped files");
         }
         other => panic!("File drop popup should be shown, got {other:?}"),
@@ -257,12 +258,12 @@ fn test_file_drop_popup_cancel() {
     // Simulate file drop by directly setting the popup state
     let dropped_files = vec![source_files[0].clone()];
 
-    harness.state_mut().show_popup = Some(kiorg::app::PopupType::FileDrop(dropped_files.clone()));
+    harness.state_mut().show_popup = Some(PopupType::FileDrop(dropped_files.clone()));
     harness.step();
 
     // Verify the file drop popup is shown
     match &harness.state().show_popup {
-        Some(kiorg::app::PopupType::FileDrop(_)) => {}
+        Some(PopupType::FileDrop(_)) => {}
         other => panic!("File drop popup should be shown, got {other:?}"),
     }
 

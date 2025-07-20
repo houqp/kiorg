@@ -2,6 +2,7 @@
 mod ui_test_helpers;
 
 use egui::Key;
+use kiorg::ui::popup::PopupType;
 use tempfile::tempdir;
 use ui_test_helpers::{create_harness, create_test_files};
 
@@ -46,7 +47,7 @@ fn test_bookmark_feature() {
     }
 
     // Verify bookmark popup is shown
-    if let Some(kiorg::app::PopupType::Bookmarks(_)) = harness.state().show_popup {
+    if let Some(PopupType::Bookmarks(_)) = harness.state().show_popup {
         // Bookmark popup is shown
     } else {
         panic!("Bookmark popup should be shown");
@@ -155,7 +156,7 @@ fn test_bookmark_popup_close_with_q_and_esc() {
     }
 
     // Verify bookmark popup is shown
-    if let Some(kiorg::app::PopupType::Bookmarks(_)) = harness.state().show_popup {
+    if let Some(PopupType::Bookmarks(_)) = harness.state().show_popup {
         // Bookmark popup is shown
     } else {
         panic!("Bookmark popup should be shown");
@@ -182,7 +183,7 @@ fn test_bookmark_popup_close_with_q_and_esc() {
     }
 
     // Verify bookmark popup is shown again
-    if let Some(kiorg::app::PopupType::Bookmarks(_)) = harness.state().show_popup {
+    if let Some(PopupType::Bookmarks(_)) = harness.state().show_popup {
         // Bookmark popup is shown
     } else {
         panic!("Bookmark popup should be shown again");

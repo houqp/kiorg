@@ -1,4 +1,5 @@
-use crate::app::{Kiorg, PopupType};
+use crate::app::Kiorg;
+use crate::ui::popup::PopupType;
 use egui::{Frame, TextEdit};
 
 use super::window_utils::new_center_popup_window;

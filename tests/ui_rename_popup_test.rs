@@ -2,6 +2,7 @@
 mod ui_test_helpers;
 
 use egui::Key;
+use kiorg::ui::popup::PopupType;
 use tempfile::tempdir;
 use ui_test_helpers::{create_harness, create_test_files};
 
@@ -36,7 +37,7 @@ fn test_rename_popup() {
     harness.step();
 
     // Verify the rename popup is shown with the correct filename
-    if let Some(kiorg::app::PopupType::Rename(name)) = &harness.state().show_popup {
+    if let Some(PopupType::Rename(name)) = &harness.state().show_popup {
         assert_eq!(
             name, "file2.txt",
             "Rename popup should contain the current filename"
@@ -94,7 +95,7 @@ fn test_rename_popup() {
     harness.step();
 
     // Verify the rename popup is shown with the correct filename
-    if let Some(kiorg::app::PopupType::Rename(name)) = &harness.state().show_popup {
+    if let Some(PopupType::Rename(name)) = &harness.state().show_popup {
         assert_eq!(
             name, "file3.txt",
             "Rename popup should contain the current filename"

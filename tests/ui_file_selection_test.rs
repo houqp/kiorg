@@ -2,6 +2,7 @@
 mod ui_test_helpers;
 
 use egui::{Key, Modifiers};
+use kiorg::ui::popup::PopupType;
 use tempfile::tempdir;
 use ui_test_helpers::{create_harness, create_test_files};
 
@@ -63,10 +64,10 @@ fn test_ctrl_a_select_all_and_delete() {
     {
         let app = harness.state();
         assert!(
-            matches!(app.show_popup, Some(kiorg::app::PopupType::Delete(_, _))),
+            matches!(app.show_popup, Some(PopupType::Delete(_, _))),
             "Delete popup should be shown"
         );
-        if let Some(kiorg::app::PopupType::Delete(_, entries)) = &app.show_popup {
+        if let Some(PopupType::Delete(_, entries)) = &app.show_popup {
             assert_eq!(
                 entries.len(),
                 5,
@@ -82,10 +83,10 @@ fn test_ctrl_a_select_all_and_delete() {
     // Verify we're in the recursive confirmation state
     {
         let app = harness.state();
-        if let Some(kiorg::app::PopupType::Delete(state, _)) = &app.show_popup {
+        if let Some(PopupType::Delete(state, _)) = &app.show_popup {
             assert_eq!(
                 *state,
-                kiorg::ui::delete_popup::DeleteConfirmState::RecursiveConfirm,
+                kiorg::ui::popup::delete::DeleteConfirmState::RecursiveConfirm,
                 "Should be in recursive confirmation state after first Enter"
             );
         } else {

@@ -2,8 +2,8 @@
 mod ui_test_helpers;
 
 use egui::{Key, Modifiers};
-use kiorg::app::PopupType;
 use kiorg::models::preview_content::PreviewContent;
+use kiorg::ui::popup::PopupType;
 use tempfile::tempdir;
 use ui_test_helpers::{create_harness, create_test_image, tab_num_modifiers};
 

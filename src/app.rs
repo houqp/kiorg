@@ -13,20 +13,19 @@ use crate::config::{self, colors::AppColors};
 use crate::input;
 use crate::models::preview_content::PreviewContent;
 use crate::models::tab::{TabManager, TabManagerState};
-use crate::ui::add_entry_popup; // Import the new module
-use crate::ui::delete_popup::{self, DeleteConfirmResult};
 use crate::ui::egui_notify::Toasts;
-use crate::ui::exit_popup;
-use crate::ui::preview;
+use crate::ui::popup::delete::DeleteConfirmResult;
+use crate::ui::popup::{
+    PopupType, about, add_entry, bookmark, delete, exit, file_drop, open_with,
+    preview as popup_preview, rename, teleport, theme,
+};
 use crate::ui::search_bar::{self, SearchBar};
 use crate::ui::separator;
 use crate::ui::separator::SEPARATOR_PADDING;
 use crate::ui::terminal;
 use crate::ui::top_banner;
-use crate::ui::{
-    about_popup, bookmark_popup, center_panel, file_drop_popup, help_window, left_panel,
-    open_with_popup, preview_popup, rename_popup, right_panel, teleport_popup, theme_popup,
-};
+use crate::ui::update;
+use crate::ui::{center_panel, help_window, left_panel, notification, preview, right_panel};
 use crate::visit_history::{self, VisitHistoryEntry};
 
 /// Error type for Kiorg application
@@ -71,24 +70,6 @@ impl From<config::ConfigError> for KiorgError {
     fn from(err: config::ConfigError) -> Self {
         KiorgError::ConfigError(err)
     }
-}
-
-/// Popup types that can be shown in the application
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum PopupType {
-    About,
-    Help,
-    Exit,
-    Delete(crate::ui::delete_popup::DeleteConfirmState, Vec<PathBuf>),
-    DeleteProgress(crate::ui::delete_popup::DeleteProgressData),
-    Rename(String),         // New name for the file/directory being renamed
-    OpenWith(String),       // Command to use when opening a file with a custom command
-    AddEntry(String),       // Name for the new file/directory being added
-    Bookmarks(usize),       // Selected index in the bookmarks list
-    Preview,                // Show file preview in a popup window
-    Themes(String),         // Selected theme key in the themes list
-    FileDrop(Vec<PathBuf>), // List of dropped files
-    Teleport(crate::ui::teleport_popup::TeleportState), // Teleport through visit history
 }
 
 /// Clipboard operation types
@@ -195,9 +176,8 @@ pub struct Kiorg {
     pub fs_watcher: notify::RecommendedWatcher,
     // Track files that are currently being opened
     pub files_being_opened: HashMap<PathBuf, Arc<AtomicBool>>,
-    // Error channel for background operations
-    pub error_sender: std::sync::mpsc::Sender<String>,
-    pub error_receiver: std::sync::mpsc::Receiver<String>,
+    // Async notification system for background operations
+    pub notification_system: notification::AsyncNotification,
     // Key buffer for tracking unprocessed key presses
     pub key_buffer: Vec<egui::Key>,
     pub shutdown_requested: bool,
@@ -286,7 +266,7 @@ impl Kiorg {
             Err(e) => return Err(KiorgError::WatcherError(e.to_string())),
         };
 
-        let bookmarks = bookmark_popup::load_bookmarks(config_dir_override.as_ref());
+        let bookmarks = bookmark::load_bookmarks(config_dir_override.as_ref());
 
         // Load visit history
         let visit_history = visit_history::load_visit_history(config_dir_override.as_ref())
@@ -295,10 +275,8 @@ impl Kiorg {
                 HashMap::new()
             });
 
-        // Create a channel for error messages
-        let (tx, rx) = std::sync::mpsc::channel::<String>();
-        let error_sender = tx;
-        let error_receiver = rx;
+        // Create async notification system
+        let notification_system = notification::AsyncNotification::default();
 
         // Create async history saver
         let history_saver = visit_history::HistorySaver::new();
@@ -321,8 +299,7 @@ impl Kiorg {
             clipboard: None,
             search_bar: SearchBar::new(),
             files_being_opened: HashMap::new(),
-            error_sender,
-            error_receiver,
+            notification_system,
             key_buffer: Vec::new(),
             terminal_ctx: None,
             shutdown_requested: false,
@@ -339,9 +316,22 @@ impl Kiorg {
 
     /// Display an error notification with a consistent timeout
     pub fn notify_error<T: ToString>(&mut self, message: T) {
-        self.toasts
-            .error(message.to_string())
-            .duration(Some(std::time::Duration::from_secs(10)));
+        notification::notify_error(&mut self.toasts, message);
+    }
+
+    /// Display an info notification with a consistent timeout
+    pub fn notify_info<T: ToString>(&mut self, message: T) {
+        notification::notify_info(&mut self.toasts, message);
+    }
+
+    /// Display a success notification with a consistent timeout
+    pub fn notify_success<T: ToString>(&mut self, message: T) {
+        notification::notify_success(&mut self.toasts, message);
+    }
+
+    /// Check and process notification messages from background operations
+    pub fn check_notifications(&mut self) {
+        notification::check_notifications(self);
     }
 
     /// Get shortcuts from config or use defaults
@@ -440,7 +430,7 @@ impl Kiorg {
         };
 
         self.show_popup = Some(PopupType::Delete(
-            crate::ui::delete_popup::DeleteConfirmState::Initial,
+            crate::ui::popup::delete::DeleteConfirmState::Initial,
             entries_to_delete,
         ));
     }
@@ -637,8 +627,8 @@ impl Kiorg {
         let signal = Arc::new(AtomicBool::new(true));
         self.files_being_opened.insert(path.clone(), signal.clone());
 
-        // Clone the error sender for the thread
-        let error_sender = self.error_sender.clone();
+        // Clone the notification sender for the thread
+        let notification_sender = self.notification_system.get_sender();
 
         // Spawn a thread to open the file asynchronously
         std::thread::spawn(move || {
@@ -646,7 +636,8 @@ impl Kiorg {
                 Ok(_) => {}
                 Err(e) => {
                     // Send the error message back to the main thread
-                    let _ = error_sender.send(format!("{e}"));
+                    let _ = notification_sender
+                        .send(notification::NotificationMessage::Error(format!("{e}")));
                 }
             }
             signal.store(false, std::sync::atomic::Ordering::Relaxed);
@@ -707,7 +698,7 @@ impl Kiorg {
 
             let mut show_delete_confirm = true; // Temporary variable for compatibility
 
-            let result = delete_popup::handle_delete_confirmation(
+            let result = delete::handle_delete_confirmation(
                 ctx,
                 &mut show_delete_confirm,
                 entries_to_delete,
@@ -721,10 +712,10 @@ impl Kiorg {
 
             match result {
                 DeleteConfirmResult::Confirm => {
-                    delete_popup::confirm_delete(self);
+                    delete::confirm_delete(self);
                 }
                 DeleteConfirmResult::Cancel => {
-                    delete_popup::cancel_delete(self);
+                    delete::cancel_delete(self);
                 }
                 DeleteConfirmResult::None => {
                     // No action taken yet
@@ -733,15 +724,13 @@ impl Kiorg {
         }
     }
 
-    fn graceful_shutdown(&mut self, ctx: &egui::Context) {
+    pub fn persist_app_state(&mut self) {
         self.history_saver.shutdown();
         // Save application state before shutting down
         if let Err(e) = self.save_app_state() {
             self.toasts
                 .error(format!("Failed to save application state: {e}"));
         }
-
-        ctx.send_viewport_cmd(egui::ViewportCommand::Close);
     }
 
     fn save_app_state(&self) -> Result<(), Box<dyn std::error::Error>> {
@@ -825,12 +814,8 @@ impl eframe::App for Kiorg {
                 .store(false, std::sync::atomic::Ordering::Relaxed);
         }
 
-        // Check for error messages from background threads
-        // Process all pending error messages
-        while let Ok(error_message) = self.error_receiver.try_recv() {
-            // Add the error to the toasts
-            self.notify_error(error_message);
-        }
+        // Check for notification messages from background threads
+        self.check_notifications();
 
         // Update preview cache only if selection changed
         if self.selection_changed {
@@ -856,55 +841,64 @@ impl eframe::App for Kiorg {
                 }
             }
             Some(PopupType::About) => {
-                about_popup::show_about_popup(ctx, self);
+                about::show_about_popup(ctx, self);
             }
             Some(PopupType::Exit) => {
-                exit_popup::draw(ctx, self);
+                exit::draw(ctx, self);
             }
             Some(PopupType::Delete(_, _)) => {
                 self.handle_delete_confirmation(ctx);
             }
             Some(PopupType::DeleteProgress(_)) => {
-                delete_popup::handle_delete_progress(ctx, self);
+                delete::handle_delete_progress(ctx, self);
             }
             Some(PopupType::Rename(_)) => {
-                rename_popup::draw(ctx, self);
+                rename::draw(ctx, self);
             }
             Some(PopupType::OpenWith(_)) => {
-                open_with_popup::draw(ctx, self);
+                open_with::draw(ctx, self);
             }
             Some(PopupType::AddEntry(_)) => {
-                add_entry_popup::draw(ctx, self);
+                add_entry::draw(ctx, self);
             }
             Some(PopupType::Bookmarks(_)) => {
                 // Handle bookmark popup
-                let bookmark_action = bookmark_popup::show_bookmark_popup(ctx, self);
+                let bookmark_action = bookmark::show_bookmark_popup(ctx, self);
                 // Process the bookmark action
                 match bookmark_action {
-                    bookmark_popup::BookmarkAction::Navigate(path) => self.navigate_to_dir(path),
-                    bookmark_popup::BookmarkAction::SaveBookmarks => {
+                    bookmark::BookmarkAction::Navigate(path) => self.navigate_to_dir(path),
+                    bookmark::BookmarkAction::SaveBookmarks => {
                         // Save bookmarks when the popup signals a change (e.g., deletion)
-                        if let Err(e) = bookmark_popup::save_bookmarks(
+                        if let Err(e) = bookmark::save_bookmarks(
                             &self.bookmarks,
                             self.config_dir_override.as_ref(),
                         ) {
                             self.notify_error(format!("Failed to save bookmarks: {e}"));
                         }
                     }
-                    bookmark_popup::BookmarkAction::None => {}
+                    bookmark::BookmarkAction::None => {}
                 };
             }
             Some(PopupType::Preview) => {
-                preview_popup::show_preview_popup(ctx, self);
+                popup_preview::show_preview_popup(ctx, self);
             }
             Some(PopupType::Themes(_)) => {
-                theme_popup::draw(self, ctx);
+                theme::draw(self, ctx);
             }
             Some(PopupType::FileDrop(_)) => {
-                file_drop_popup::draw(ctx, self);
+                file_drop::draw(ctx, self);
             }
             Some(PopupType::Teleport(_)) => {
-                teleport_popup::draw(ctx, self);
+                teleport::draw(ctx, self);
+            }
+            Some(PopupType::UpdateConfirm(_)) => {
+                update::show_update_confirm_popup(ctx, self);
+            }
+            Some(PopupType::UpdateProgress(_)) => {
+                update::show_update_progress(ctx, self);
+            }
+            Some(PopupType::UpdateRestart) => {
+                update::show_update_restart_popup(ctx, self);
             }
             None => {}
         }
@@ -947,7 +941,8 @@ impl eframe::App for Kiorg {
         search_bar::draw(ctx, self);
 
         if self.shutdown_requested {
-            self.graceful_shutdown(ctx);
+            self.persist_app_state();
+            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
         }
 
         // Draw toast notifications

@@ -1,10 +1,12 @@
 use crate::config::shortcuts::{ShortcutAction, shortcuts_helpers};
+use crate::ui::center_panel;
+use crate::ui::popup::{add_entry, bookmark, file_drop, preview as popup_preview};
 use crate::ui::terminal;
-use crate::ui::{add_entry_popup, bookmark_popup, center_panel, file_drop_popup, preview_popup};
 use egui::{Key, Modifiers};
 use tracing::error;
 
-use super::app::{Kiorg, PopupType};
+use super::app::Kiorg;
+use super::ui::popup::PopupType;
 
 #[inline]
 fn is_cancel_keys(key: Key) -> bool {
@@ -15,7 +17,7 @@ fn is_cancel_keys(key: Key) -> bool {
 #[allow(clippy::too_many_lines)]
 fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: ShortcutAction) {
     match action {
-        ShortcutAction::ShowFilePreview => preview_popup::handle_show_file_preview(app, ctx),
+        ShortcutAction::ShowFilePreview => popup_preview::handle_show_file_preview(app, ctx),
         ShortcutAction::MoveDown => app.move_selection(1),
         ShortcutAction::MoveUp => app.move_selection(-1),
         ShortcutAction::GoToParentDirectory => {
@@ -179,7 +181,7 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: Shortcut
                 app.refresh_entries();
             }
         }
-        ShortcutAction::ToggleBookmark => bookmark_popup::toggle_bookmark(app),
+        ShortcutAction::ToggleBookmark => bookmark::toggle_bookmark(app),
         ShortcutAction::ShowBookmarks => app.show_popup = Some(PopupType::Bookmarks(0)),
         ShortcutAction::OpenTerminal => {
             let path = app.tab_manager.current_tab_mut().current_path.clone();
@@ -205,7 +207,7 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: Shortcut
         ShortcutAction::ActivateSearch => app.search_bar.activate(),
         ShortcutAction::ShowTeleport => {
             app.show_popup = Some(PopupType::Teleport(
-                crate::ui::teleport_popup::TeleportState::default(),
+                crate::ui::popup::teleport::TeleportState::default(),
             ));
         }
         ShortcutAction::GoBackInHistory => app.navigate_history_back(),
@@ -275,7 +277,7 @@ fn process_key(
             // Handle preview popup input (PDF page navigation, etc.)
             match &mut app.preview_content {
                 Some(crate::models::preview_content::PreviewContent::Pdf(pdf_meta)) => {
-                    preview_popup::doc::handle_preview_popup_input_pdf(
+                    popup_preview::doc::handle_preview_popup_input_pdf(
                         pdf_meta, key, modifiers, ctx,
                     );
                 }
@@ -289,33 +291,33 @@ fn process_key(
         }
         Some(PopupType::Exit) => {
             if key == Key::Enter {
-                crate::ui::exit_popup::confirm_exit(app);
+                crate::ui::popup::exit::confirm_exit(app);
             } else if is_cancel_keys(key) {
-                crate::ui::exit_popup::cancel_exit(app);
+                crate::ui::popup::exit::cancel_exit(app);
             }
             return;
         }
         Some(PopupType::Delete(_, _)) => {
             if key == Key::Enter {
-                crate::ui::delete_popup::confirm_delete(app);
+                crate::ui::popup::delete::confirm_delete(app);
             } else if is_cancel_keys(key) {
-                crate::ui::delete_popup::cancel_delete(app);
+                crate::ui::popup::delete::cancel_delete(app);
             }
             return;
         }
         Some(PopupType::Rename(_)) => {
             if key == Key::Enter {
-                crate::ui::rename_popup::handle_rename_confirmation(app, ctx);
+                crate::ui::popup::rename::handle_rename_confirmation(app, ctx);
             } else if key == Key::Escape {
-                crate::ui::rename_popup::close_rename_popup(app, ctx);
+                crate::ui::popup::rename::close_rename_popup(app, ctx);
             }
             return;
         }
         Some(PopupType::OpenWith(cmd)) => {
             if key == Key::Enter {
-                crate::ui::open_with_popup::confirm_open_with(app, cmd.clone());
+                crate::ui::popup::open_with::confirm_open_with(app, cmd.clone());
             } else if key == Key::Escape {
-                crate::ui::open_with_popup::close_popup(app);
+                crate::ui::popup::open_with::close_popup(app);
             }
             return;
         }
@@ -332,12 +334,12 @@ fn process_key(
             return;
         }
         Some(PopupType::AddEntry(_)) => {
-            if add_entry_popup::handle_key_press(ctx, app) {
+            if add_entry::handle_key_press(ctx, app) {
                 return;
             }
         }
         Some(PopupType::FileDrop(files)) => {
-            if file_drop_popup::handle_key_press(ctx, app, files.clone()) {
+            if file_drop::handle_key_press(ctx, app, files.clone()) {
                 return;
             }
         }
@@ -352,6 +354,18 @@ fn process_key(
         }
         Some(PopupType::Teleport(_)) => {
             // Teleport popup handles its own input - just return
+            return;
+        }
+        Some(PopupType::UpdateConfirm(_)) => {
+            // Update confirm popup handles its own input - just return
+            return;
+        }
+        Some(PopupType::UpdateProgress(_)) => {
+            // Update progress popup doesn't handle input - just return
+            return;
+        }
+        Some(PopupType::UpdateRestart) => {
+            // Update restart popup handles its own input - just return
             return;
         }
         None => {}

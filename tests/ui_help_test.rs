@@ -2,6 +2,7 @@
 mod ui_test_helpers;
 
 use egui::Key;
+use kiorg::ui::popup::PopupType;
 use tempfile::tempdir;
 use ui_test_helpers::TestHarnessBuilder;
 
@@ -26,7 +27,7 @@ fn test_help_menu_close_behavior() {
     }
     assert_eq!(
         harness.state().show_popup,
-        Some(kiorg::app::PopupType::Help),
+        Some(PopupType::Help),
         "Help menu should be open"
     );
     #[cfg(feature = "snapshot")]
