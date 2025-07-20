@@ -55,6 +55,7 @@ self_update = { version = "0.42", features = ["rustls"] }
 self-replace = "1"
 tempfile = "3"
 ureq = "2"
+semver = "1.0"
 
 # tar handling
 tar = "0.4"
