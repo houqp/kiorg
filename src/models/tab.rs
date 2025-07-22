@@ -306,7 +306,7 @@ impl Tab {
                 let needle = if case_insensitive {
                     q.to_lowercase()
                 } else {
-                    q.clone()
+                    q.to_string()
                 };
                 let needle_utf32 = Utf32Str::new(&needle, &mut needle_buf);
 
@@ -331,15 +331,13 @@ impl Tab {
                     .map(|(i, e)| (e.clone(), i))
                     .collect()
             }
-            Some(q) => {
-                let q = q.clone();
-                self.entries
-                    .iter()
-                    .enumerate()
-                    .filter(move |(_, entry)| entry.name.contains(&q))
-                    .map(|(i, e)| (e.clone(), i))
-                    .collect()
-            }
+            Some(q) => self
+                .entries
+                .iter()
+                .enumerate()
+                .filter(move |(_, entry)| entry.name.contains(q))
+                .map(|(i, e)| (e.clone(), i))
+                .collect(),
             None => self
                 .entries
                 .iter()

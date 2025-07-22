@@ -218,7 +218,7 @@ impl Kiorg {
         cc.egui_ctx.set_visuals(colors.to_visuals());
 
         // Determine the initial path and tab manager
-        let (tab_manager, initial_path) = match &initial_dir {
+        let (tab_manager, initial_path) = match initial_dir {
             // If initial directory is provided, use it
             Some(path) => {
                 // For explicitly provided paths, validate and return error if invalid
@@ -230,7 +230,7 @@ impl Kiorg {
                 }
 
                 let tab_manager = TabManager::new_with_config(path.clone(), Some(&config));
-                (tab_manager, path.clone())
+                (tab_manager, path)
             }
             // If no initial directory is provided, try to load from saved state
             None => {

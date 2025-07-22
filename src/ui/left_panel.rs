@@ -11,7 +11,7 @@ use super::style::section_title_text;
 /// Returns Some(PathBuf) if a directory was clicked for navigation.
 pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) -> Option<PathBuf> {
     let tab = app.tab_manager.current_tab_ref();
-    let parent_entries = tab.parent_entries.clone();
+    let parent_entries = &tab.parent_entries;
     let parent_selected_index = tab.parent_selected_index;
     let colors = &app.colors;
     let bookmarks = &app.bookmarks;
