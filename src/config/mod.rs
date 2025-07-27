@@ -11,6 +11,10 @@ use std::fs;
 use std::io::Read;
 use std::path::PathBuf;
 
+// Panel size ratios (relative to usable width)
+pub const LEFT_PANEL_RATIO: f32 = 0.15;
+pub const PREVIEW_PANEL_RATIO: f32 = 0.40;
+
 // Custom error type for shortcut conflicts
 #[derive(Debug)]
 pub struct ShortcutConflictError {
@@ -37,12 +41,18 @@ pub struct SortPreference {
     pub order: SortOrder,
 }
 
+#[derive(Deserialize, Serialize, Clone, Debug)]
+pub struct Layout {
+    pub preview: Option<f32>,
+}
+
 #[derive(Deserialize, Serialize, Default, Debug)]
 pub struct Config {
     pub theme: Option<String>,
     pub sort_preference: Option<SortPreference>,
     pub shortcuts: Option<shortcuts::Shortcuts>,
     pub custom_themes: Option<Vec<Theme>>,
+    pub layout: Option<Layout>,
 }
 
 impl Config {
@@ -52,6 +62,7 @@ impl Config {
             sort_preference: None,
             shortcuts: None,
             custom_themes: None,
+            layout: None,
         }
     }
 }
@@ -61,6 +72,7 @@ impl Config {
 pub enum ConfigError {
     TomlError(toml::de::Error, PathBuf),
     ShortcutConflict(ShortcutConflictError, PathBuf),
+    ValueError(String, PathBuf),
 }
 
 impl fmt::Display for ConfigError {
@@ -68,6 +80,7 @@ impl fmt::Display for ConfigError {
         match self {
             Self::TomlError(e, _) => write!(f, "Invalid config: {e}"),
             Self::ShortcutConflict(e, _) => write!(f, "Shortcut conflict: {e}"),
+            Self::ValueError(msg, _) => write!(f, "Value error: {msg}"),
         }
     }
 }
@@ -77,6 +90,8 @@ impl Error for ConfigError {
         match self {
             Self::TomlError(e, _) => Some(e),
             Self::ShortcutConflict(e, _) => Some(e),
+            // TODO: return a type with error trait implemented
+            Self::ValueError(_, _) => None,
         }
     }
 }
@@ -87,6 +102,7 @@ impl ConfigError {
         match self {
             Self::TomlError(_, path) => path,
             Self::ShortcutConflict(_, path) => path,
+            Self::ValueError(_, path) => path,
         }
     }
 }
@@ -140,6 +156,17 @@ pub fn load_config_with_override(
     if let Some(ref user_shortcuts) = user_config.shortcuts {
         if let Err(conflict_error) = validate_user_shortcuts(user_shortcuts) {
             return Err(ConfigError::ShortcutConflict(conflict_error, config_path));
+        }
+    }
+
+    if let Some(layout) = &user_config.layout {
+        if let Some(preview) = layout.preview {
+            if preview <= 0.0 || preview + LEFT_PANEL_RATIO >= 1.0 {
+                return Err(ConfigError::ValueError(
+                    "Invalid preview panel ratio".to_string(),
+                    config_path,
+                ));
+            }
         }
     }
 

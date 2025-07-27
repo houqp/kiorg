@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
-use crate::config::{self, colors::AppColors};
+use crate::config::{self, LEFT_PANEL_RATIO, PREVIEW_PANEL_RATIO, colors::AppColors};
 use crate::input;
 use crate::models::preview_content::PreviewContent;
 use crate::models::tab::{TabManager, TabManagerState};
@@ -84,12 +84,6 @@ const STATE_FILE_NAME: &str = "state.json";
 
 // Layout constants
 const PANEL_SPACING: f32 = 5.0; // Space between panels
-
-// Panel size ratios (relative to usable width)
-const LEFT_PANEL_RATIO: f32 = 0.15;
-const RIGHT_PANEL_RATIO: f32 = 0.25;
-const LEFT_PANEL_MIN_WIDTH: f32 = 150.0;
-const RIGHT_PANEL_MIN_WIDTH: f32 = 200.0;
 
 fn create_fs_watcher(
     watch_dir: &Path,
@@ -683,8 +677,14 @@ impl Kiorg {
                           8.0; // Margins from both sides
 
         let usable_width = available_width - total_spacing;
-        let left_width = (usable_width * LEFT_PANEL_RATIO).max(LEFT_PANEL_MIN_WIDTH);
-        let right_width = (usable_width * RIGHT_PANEL_RATIO).max(RIGHT_PANEL_MIN_WIDTH);
+        let left_width = usable_width * LEFT_PANEL_RATIO;
+        let right_width = usable_width
+            * self
+                .config
+                .layout
+                .as_ref()
+                .and_then(|l| l.preview)
+                .unwrap_or(PREVIEW_PANEL_RATIO);
         let center_width = usable_width - left_width - right_width;
 
         (left_width, center_width, right_width)

@@ -408,7 +408,7 @@ pub fn truncate_text(text: &str, available_width: f32) -> String {
         return text.to_string();
     }
 
-    let half_chars = (max_chars - 3) / 2;
+    let half_chars = max_chars / 2;
 
     let start = text.chars().take(half_chars).collect::<String>();
     let end = text
@@ -429,7 +429,7 @@ mod tests {
         assert_eq!(truncate_text("short", 100.0), "short");
         assert_eq!(
             truncate_text("this_is_a_very_long_filename.txt", 80.0),
-            "thi...txt"
+            "this_...e.txt"
         );
     }
 
@@ -438,7 +438,7 @@ mod tests {
         assert_eq!(
             // set to 136.0 so it tries to subindex at the Narrow No-Break Space char
             truncate_text("Screenshot 2025-04-21 at 2.45.13 AM.png", 136.0),
-            "Screens...\u{202f}AM.png"
+            "Screensh...3\u{202f}AM.png"
         );
     }
 }
