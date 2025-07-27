@@ -63,6 +63,9 @@ Kiorg uses TOML configuration files stored in the user's config directory:
 column = "Name"             # Sort column: "Name", "Modified", "Size", or "None"
 order = "Ascending"         # Sort order: "Ascending" or "Descending"
 
+[layout]
+preview = 0.5 # Increase preview default width ratio to 50%
+
 # Override default shortcuts (optional)
 [shortcuts]
 MoveDown = [
