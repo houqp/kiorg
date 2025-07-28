@@ -6,6 +6,7 @@ pub mod image;
 pub mod loading;
 pub mod tar;
 pub mod text;
+pub mod video;
 pub mod zip;
 
 use crate::app::Kiorg;
@@ -62,6 +63,13 @@ macro_rules! image_extensions {
 }
 
 #[macro_export]
+macro_rules! video_extensions {
+    () => {
+        "mp4" | "m4v" | "mkv" | "webm" | "mov" | "avi" | "wmv" | "mpg" | "flv"
+    };
+}
+
+#[macro_export]
 macro_rules! zip_extensions {
     () => {
         "zip" | "jar" | "war" | "ear"
@@ -92,6 +100,7 @@ macro_rules! epub_extensions {
 // Public macros for use in other modules
 pub use epub_extensions;
 pub use image_extensions;
+pub use video_extensions;
 pub use pdf_extensions;
 pub use tar_extensions;
 pub use zip_extensions;
@@ -145,6 +154,12 @@ pub fn update_cache(app: &mut Kiorg, ctx: &egui::Context) {
             let ctx_clone = ctx.clone();
             loading::load_preview_async(app, entry.path, move |path| {
                 image::read_image_with_metadata(&path, &ctx_clone)
+            });
+        }
+        video_extensions!() => {
+            let ctx_clone = ctx.clone();
+            loading::load_preview_async(app, entry.path, move |path| {
+                video::read_video_with_metadata(&path, &ctx_clone)
             });
         }
         zip_extensions!() => {
