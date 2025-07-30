@@ -100,9 +100,9 @@ macro_rules! epub_extensions {
 // Public macros for use in other modules
 pub use epub_extensions;
 pub use image_extensions;
-pub use video_extensions;
 pub use pdf_extensions;
 pub use tar_extensions;
+pub use video_extensions;
 pub use zip_extensions;
 
 #[inline]
