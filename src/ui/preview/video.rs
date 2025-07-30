@@ -6,6 +6,7 @@ use egui::{Image, RichText};
 use ffmpeg_next::{
     codec::context::Context as CodecContext,
     format, init,
+    log::Level,
     media::Type,
     software::scaling::{context::Context as ScalerContext, flag::Flags},
     util::{
@@ -130,6 +131,7 @@ fn extract_video_thumbnail(
 ) -> Result<egui::TextureHandle, String> {
     // Initialize ffmpeg
     init().map_err(|e| format!("Failed to initialize ffmpeg: {e}"))?;
+    ffmpeg_next::log::set_level(Level::Quiet);
 
     let path_str = path.to_str().ok_or("Invalid path encoding")?;
     let mut ictx = format::input(path_str).map_err(|e| format!("Failed to open input: {e}"))?;
