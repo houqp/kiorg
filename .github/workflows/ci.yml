@@ -34,6 +34,9 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Install system dependencies (macOS only)
+        run: brew install ffmpeg
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -98,7 +101,30 @@ jobs:
 
     - name: Install system dependencies (Linux only)
       if: runner.os == 'Linux'
-      run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
+      run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev libavcodec-dev libavformat-dev libavutil-dev libswscale-dev libavfilter-dev libavdevice-dev pkg-config
+
+    - name: Install system dependencies (macOS only)
+      if: runner.os == 'macOS'
+      run: brew install ffmpeg
+
+    - name: Cache vcpkg (Windows only)
+      if: runner.os == 'Windows'
+      uses: actions/cache@v4
+      with:
+        path: C:\vcpkg
+        key: ${{ runner.os }}-vcpkg-ffmpeg-v3
+        restore-keys: |
+          ${{ runner.os }}-vcpkg-ffmpeg-
+
+    - name: Install system dependencies (Windows only)
+      if: runner.os == 'Windows'
+      run: |
+        if (-not (Test-Path "C:\vcpkg")) {
+          git clone https://github.com/Microsoft/vcpkg.git C:\vcpkg
+          C:\vcpkg\bootstrap-vcpkg.bat
+        }
+        C:\vcpkg\vcpkg.exe install ffmpeg:x64-windows
+        echo "VCPKG_ROOT=C:\vcpkg" >> $env:GITHUB_ENV
 
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@stable
@@ -108,12 +134,16 @@ jobs:
 
     - name: Run tests (Linux)
       if: runner.os == 'Linux'
+      env:
+        PKG_CONFIG_PATH: /usr/lib/x86_64-linux-gnu/pkgconfig
       run: mold -run cargo test
     - name: Run tests (macOS)
       if: runner.os == 'macOS'
       run: cargo test
     - name: Run tests (Windows)
       if: runner.os == 'Windows'
+      env:
+        VCPKG_ROOT: C:\vcpkg
       # disable terminal on windows
       run: cargo test --no-default-features
 
@@ -131,12 +161,14 @@ jobs:
       uses: dtolnay/rust-toolchain@stable
 
     - name: Install system dependencies (Linux only)
-      run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
+      run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev libavcodec-dev libavformat-dev libavutil-dev libswscale-dev libavfilter-dev libavdevice-dev pkg-config
 
     - name: Cache dependencies
       uses: Swatinem/rust-cache@v2
 
     - name: Build release binary
+      env:
+        PKG_CONFIG_PATH: /usr/lib/x86_64-linux-gnu/pkgconfig
       run: |
         mold -run cargo build --release
         cd target/release
@@ -167,6 +199,9 @@ jobs:
     - uses: actions/checkout@v4
       with:
         submodules: recursive
+
+    - name: Install system dependencies (macOS only)
+      run: brew install ffmpeg
 
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@stable
@@ -251,6 +286,24 @@ jobs:
       with:
         submodules: recursive
 
+    - name: Cache vcpkg (Windows only)
+      if: runner.os == 'Windows'
+      uses: actions/cache@v4
+      with:
+        path: C:\vcpkg
+        key: ${{ runner.os }}-vcpkg-ffmpeg-v3
+        restore-keys: |
+          ${{ runner.os }}-vcpkg-ffmpeg-
+
+    - name: Install system dependencies (Windows only)
+      run: |
+        if (-not (Test-Path "C:\vcpkg")) {
+          git clone https://github.com/Microsoft/vcpkg.git C:\vcpkg
+          C:\vcpkg\bootstrap-vcpkg.bat
+        }
+        C:\vcpkg\vcpkg.exe install ffmpeg:x64-windows
+        echo "VCPKG_ROOT=C:\vcpkg" >> $env:GITHUB_ENV
+
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@stable
 
@@ -258,6 +311,8 @@ jobs:
       uses: Swatinem/rust-cache@v2
 
     - name: Build release binary
+      env:
+        VCPKG_ROOT: C:\vcpkg
       run: |
         cargo build --no-default-features --release
         cd target\release

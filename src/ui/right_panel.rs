@@ -129,6 +129,15 @@ pub fn draw(app: &mut Kiorg, ctx: &egui::Context, ui: &mut Ui, width: f32, heigh
                                 available_height,
                             );
                         }
+                        Some(PreviewContent::Video(ref video_meta)) => {
+                            preview::video::render(
+                                ui,
+                                video_meta,
+                                colors,
+                                available_width,
+                                available_height,
+                            );
+                        }
                         Some(PreviewContent::Pdf(ref pdf_meta)) => {
                             preview::doc::render(
                                 ui,
