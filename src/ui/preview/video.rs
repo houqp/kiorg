@@ -8,6 +8,7 @@ use ffmpeg_next::{
     format, init,
     log::Level,
     media::Type,
+    packet::side_data::Type as SideDataType,
     software::scaling::{context::Context as ScalerContext, flag::Flags},
     util::{
         format::pixel::Pixel,
@@ -151,6 +152,9 @@ fn extract_video_thumbnail(
     // Get video dimensions and add to metadata
     let width = decoder.width();
     let height = decoder.height();
+
+    // Check for rotation metadata
+    let rotation = extract_rotation_from_stream(&stream);
 
     // Check for the pixel aspect ratio
     let par = decoder.aspect_ratio();
@@ -306,8 +310,15 @@ fn extract_video_thumbnail(
 
     let (frame_width, frame_height, rgb_data) = &frames[best_frame_index];
 
+    // Apply rotation if needed
+    let (final_width, final_height, final_rgb_data) = if rotation != 0 {
+        apply_rotation(rgb_data, *frame_width, *frame_height, rotation)
+    } else {
+        (*frame_width, *frame_height, rgb_data.clone())
+    };
+
     // Create egui image from RGB data
-    let color_image = egui::ColorImage::from_rgb([*frame_width, *frame_height], rgb_data);
+    let color_image = egui::ColorImage::from_rgb([final_width, final_height], &final_rgb_data);
 
     // Create the texture with path-based ID for caching
     let texture_id = format!("video_thumbnail_{}", path.display());
@@ -461,4 +472,145 @@ fn calculate_frame_quality(rgb_data: &[(u8, u8, u8)], width: u32, height: u32) -
 
     // Combined score (weighted average)
     brightness_score * 0.33 + variance_score * 0.33 + sharpness_score * 0.33
+}
+
+fn extract_rotation_from_stream(stream: &ffmpeg_next::Stream) -> i32 {
+    // Parse display matrix from side data
+    let side_data = stream.side_data();
+    for data in side_data {
+        if data.kind() == SideDataType::DisplayMatrix {
+            let matrix_data = data.data();
+
+            if matrix_data.len() < 36 {
+                continue;
+            }
+
+            // Read first 8 bytes for a,b values from the transformation matrix
+            let a_bytes = &matrix_data[0..4];
+            let b_bytes = &matrix_data[4..8];
+
+            // Video formats store matrix values as 16.16 fixed-point (65536 = 2^16)
+            let a = i32::from_be_bytes([a_bytes[0], a_bytes[1], a_bytes[2], a_bytes[3]]) as f64
+                / 65536.0;
+            let b = i32::from_be_bytes([b_bytes[0], b_bytes[1], b_bytes[2], b_bytes[3]]) as f64
+                / 65536.0;
+
+            // Rotation matrix for angle θ:
+            // [cos(θ)  -sin(θ)]  =  [a   b]
+            // [sin(θ)   cos(θ)]     [c   d]
+            let rotation_radians = (-b).atan2(a);
+            let rotation_degrees = rotation_radians.to_degrees();
+            let normalized = ((rotation_degrees.round() as i32 % 360) + 360) % 360;
+
+            // Snap to nearest 90-degree increment
+            return if normalized <= 45 || normalized >= 315 {
+                0
+            } else if normalized <= 135 {
+                90
+            } else if normalized <= 225 {
+                180
+            } else if normalized <= 314 {
+                270
+            } else {
+                0
+            };
+        }
+    }
+
+    0
+}
+
+/// Apply rotation to RGB image data using matrix operations
+/// Returns (new_width, new_height, rotated_rgb_data)
+fn apply_rotation(
+    rgb_data: &[u8],
+    width: usize,
+    height: usize,
+    rotation: i32,
+) -> (usize, usize, Vec<u8>) {
+    match rotation {
+        90 => {
+            // 90° counter-clockwise: transpose + reverse columns
+            let (new_width, new_height, transposed) = transpose(rgb_data, width, height);
+            let rotated = reverse_columns(&transposed, new_width, new_height);
+            (new_width, new_height, rotated)
+        }
+        180 => {
+            // 180°: reverse rows + reverse columns
+            let reversed_rows = reverse_rows(rgb_data, width, height);
+            let rotated = reverse_columns(&reversed_rows, width, height);
+            (width, height, rotated)
+        }
+        270 => {
+            // 270° (90° clockwise): transpose + reverse rows
+            let (new_width, new_height, transposed) = transpose(rgb_data, width, height);
+            let rotated = reverse_rows(&transposed, new_width, new_height);
+            (new_width, new_height, rotated)
+        }
+        _ => (width, height, rgb_data.to_vec()),
+    }
+}
+
+/// Transpose image matrix (swap rows and columns)
+fn transpose(rgb_data: &[u8], width: usize, height: usize) -> (usize, usize, Vec<u8>) {
+    let new_width = height;
+    let new_height = width;
+    let mut transposed = vec![0u8; new_width * new_height * 3];
+
+    for y in 0..height {
+        for x in 0..width {
+            let src_idx = (y * width + x) * 3;
+            let dst_idx = (x * new_width + y) * 3;
+
+            if src_idx + 2 < rgb_data.len() && dst_idx + 2 < transposed.len() {
+                transposed[dst_idx] = rgb_data[src_idx];
+                transposed[dst_idx + 1] = rgb_data[src_idx + 1];
+                transposed[dst_idx + 2] = rgb_data[src_idx + 2];
+            }
+        }
+    }
+
+    (new_width, new_height, transposed)
+}
+
+/// Reverse rows (flip horizontally)
+fn reverse_rows(rgb_data: &[u8], width: usize, height: usize) -> Vec<u8> {
+    let mut reversed = vec![0u8; width * height * 3];
+
+    for y in 0..height {
+        for x in 0..width {
+            let src_idx = (y * width + x) * 3;
+            let dst_x = width - 1 - x;
+            let dst_idx = (y * width + dst_x) * 3;
+
+            if src_idx + 2 < rgb_data.len() && dst_idx + 2 < reversed.len() {
+                reversed[dst_idx] = rgb_data[src_idx];
+                reversed[dst_idx + 1] = rgb_data[src_idx + 1];
+                reversed[dst_idx + 2] = rgb_data[src_idx + 2];
+            }
+        }
+    }
+
+    reversed
+}
+
+/// Reverse columns (flip vertically)
+fn reverse_columns(rgb_data: &[u8], width: usize, height: usize) -> Vec<u8> {
+    let mut reversed = vec![0u8; width * height * 3];
+
+    for y in 0..height {
+        for x in 0..width {
+            let src_idx = (y * width + x) * 3;
+            let dst_y = height - 1 - y;
+            let dst_idx = (dst_y * width + x) * 3;
+
+            if src_idx + 2 < rgb_data.len() && dst_idx + 2 < reversed.len() {
+                reversed[dst_idx] = rgb_data[src_idx];
+                reversed[dst_idx + 1] = rgb_data[src_idx + 1];
+                reversed[dst_idx + 2] = rgb_data[src_idx + 2];
+            }
+        }
+    }
+
+    reversed
 }
