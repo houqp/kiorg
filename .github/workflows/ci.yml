@@ -35,7 +35,7 @@ jobs:
           submodules: recursive
 
       - name: Install system dependencies (macOS only)
-        run: brew install ffmpeg pkg-config
+        run: brew install ffmpeg
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -105,7 +105,7 @@ jobs:
 
     - name: Install system dependencies (macOS only)
       if: runner.os == 'macOS'
-      run: brew install ffmpeg pkg-config
+      run: brew install ffmpeg
 
     - name: Cache vcpkg (Windows only)
       if: runner.os == 'Windows'
@@ -201,7 +201,7 @@ jobs:
         submodules: recursive
 
     - name: Install system dependencies (macOS only)
-      run: brew install ffmpeg pkg-config
+      run: brew install ffmpeg
 
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@stable
