@@ -198,11 +198,23 @@ jobs:
         cd target/aarch64-apple-darwin/release
         zip -r ../../../kiorg-aarch64-macos.zip kiorg
 
+    - name: Create App bundle zip
+      run: |
+        cd target/aarch64-apple-darwin/release/bundle/osx
+        tar -czf ../../../../../Kiorg-aarch64.app.bundle.tar.gz Kiorg.app
+
     - name: Upload DMG artifact
       uses: actions/upload-artifact@v4
       with:
-        name: Kiorg_${{ github.event.pull_request.head.sha || github.sha }}-aarch64.dmg
+        name: Kiorg-${{ github.event.pull_request.head.sha || github.sha }}-aarch64.dmg
         path: Kiorg-aarch64.dmg
+        if-no-files-found: error
+
+    - name: Upload App bundle artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Kiorg-${{ github.event.pull_request.head.sha || github.sha }}-app.bundle.tar.gz
+        path: Kiorg-aarch64.app.bundle.tar.gz
         if-no-files-found: error
 
     - name: Upload macOS CLI binary
@@ -211,16 +223,6 @@ jobs:
         name: kiorg-${{ github.event.pull_request.head.sha || github.sha }}-aarch64-macos.zip
         path: kiorg-aarch64-macos.zip
         if-no-files-found: error
-
-    # - name: Upload DMG to GitHub Release
-    #   uses: svenstaro/upload-release-action@v2
-    #   if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-    #   with:
-    #     overwrite: true
-    #     repo_token: ${{ secrets.GITHUB_TOKEN }}
-    #     asset_name: Kiorg_${{ github.ref_name }}-aarch64.dmg
-    #     file: Kiorg-aarch64.dmg
-    #     tag: ${{ github.ref }}
 
     - name: Upload CLI binary to GitHub Release
       uses: svenstaro/upload-release-action@v2
@@ -240,6 +242,16 @@ jobs:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
         asset_name: Kiorg-${{ github.ref_name }}-aarch64.dmg
         file: Kiorg-aarch64.dmg
+        tag: ${{ github.ref }}
+
+    - name: Upload App bundle to GitHub Release
+      uses: svenstaro/upload-release-action@v2
+      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+      with:
+        overwrite: true
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        asset_name: Kiorg-${{ github.ref_name }}-aarch64-app.bundle.tar.gz
+        file: Kiorg-aarch64.app.bundle.tar.gz
         tag: ${{ github.ref }}
 
   bundle-windows:

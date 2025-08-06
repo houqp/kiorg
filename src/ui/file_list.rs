@@ -9,8 +9,9 @@ const ICON_SIZE: f32 = 14.0;
 const ICON_WIDTH: f32 = 22.0;
 const HORIZONTAL_PADDING: f32 = 10.0;
 const INTER_COLUMN_PADDING: f32 = 10.0; // Explicit padding between columns
-const MODIFIED_DATE_WIDTH: f32 = 160.0;
-const FILE_SIZE_WIDTH: f32 = 80.0;
+const MODIFIED_DATE_WIDTH: f32 = 120.0;
+const FILE_SIZE_WIDTH: f32 = 60.0;
+const SECONDARY_COLUMN_FONT_SIZE: f32 = 12.0;
 pub const ROW_HEIGHT: f32 = 20.0;
 
 pub struct TableHeaderParams<'a> {
@@ -298,33 +299,29 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
         .galley(galley_pos, galley, name_color);
     cursor.x += name_width + INTER_COLUMN_PADDING; // Advance cursor including padding
 
-    // --- Draw Modified Column ---
-    let date_color = if is_selected {
+    let secondary_font_color = if is_selected {
         colors.fg_selected
     } else {
         colors.fg_light
     };
+
+    // --- Draw Modified Column ---
     ui.painter().text(
         cursor + egui::vec2(0.0, ROW_HEIGHT / 2.0),
         Align2::LEFT_CENTER,
         &entry.formatted_modified,
-        egui::FontId::proportional(14.0),
-        date_color,
+        egui::FontId::proportional(SECONDARY_COLUMN_FONT_SIZE),
+        secondary_font_color,
     );
     cursor.x += MODIFIED_DATE_WIDTH + INTER_COLUMN_PADDING; // Advance cursor including padding
 
     // --- Draw Size Column ---
-    let size_color = if is_selected {
-        colors.fg_selected
-    } else {
-        colors.fg_light
-    };
     ui.painter().text(
-        cursor + egui::vec2(0.0, ROW_HEIGHT / 2.0),
-        Align2::LEFT_CENTER,
+        cursor + egui::vec2(FILE_SIZE_WIDTH - HORIZONTAL_PADDING, ROW_HEIGHT / 2.0),
+        Align2::RIGHT_CENTER,
         &entry.formatted_size,
-        egui::FontId::proportional(14.0),
-        size_color,
+        egui::FontId::proportional(SECONDARY_COLUMN_FONT_SIZE),
+        secondary_font_color,
     );
     // No cursor advance needed after the last column
 
