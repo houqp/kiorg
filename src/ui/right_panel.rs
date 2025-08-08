@@ -31,44 +31,42 @@ pub fn draw(app: &mut Kiorg, ctx: &egui::Context, ui: &mut Ui, width: f32, heigh
     };
 
     // Process loading state outside the UI closure
-    if is_loading {
-        if let (Some(_path), Some(receiver)) = (&loading_path, &loading_receiver) {
-            // Check if we have a receiver to poll for results
-            let receiver_opt = Some(receiver.clone());
-            let receiver = if let Some(receiver) = receiver_opt {
-                receiver
-            } else {
-                // We can't process the loading state, so render empty
-                preview::text::render_empty(ui, colors);
-                return;
-            };
+    if is_loading && let (Some(_path), Some(receiver)) = (&loading_path, &loading_receiver) {
+        // Check if we have a receiver to poll for results
+        let receiver_opt = Some(receiver.clone());
+        let receiver = if let Some(receiver) = receiver_opt {
+            receiver
+        } else {
+            // We can't process the loading state, so render empty
+            preview::text::render_empty(ui, colors);
+            return;
+        };
 
-            // Try to get a lock on the receiver
-            let receiver_lock = if let Ok(lock) = receiver.lock() {
-                lock
-            } else {
-                // We can't process the loading state, so render empty
-                preview::text::render_empty(ui, colors);
-                return;
-            };
+        // Try to get a lock on the receiver
+        let receiver_lock = if let Ok(lock) = receiver.lock() {
+            lock
+        } else {
+            // We can't process the loading state, so render empty
+            preview::text::render_empty(ui, colors);
+            return;
+        };
 
-            // Try to receive the result without blocking
-            if let Ok(result) = receiver_lock.try_recv() {
-                // Request a repaint to update the UI with the result
-                ctx.request_repaint();
-                // Update the preview content with the result
-                match result {
-                    Ok(content) => {
-                        // Set the preview content directly with the received content
-                        app.preview_content = Some(content);
-                        // We've updated the content, so we're no longer loading
-                        is_loading = false;
-                    }
-                    Err(e) => {
-                        app.preview_content =
-                            Some(PreviewContent::text(format!("Error loading file: {e}")));
-                        is_loading = false;
-                    }
+        // Try to receive the result without blocking
+        if let Ok(result) = receiver_lock.try_recv() {
+            // Request a repaint to update the UI with the result
+            ctx.request_repaint();
+            // Update the preview content with the result
+            match result {
+                Ok(content) => {
+                    // Set the preview content directly with the received content
+                    app.preview_content = Some(content);
+                    // We've updated the content, so we're no longer loading
+                    is_loading = false;
+                }
+                Err(e) => {
+                    app.preview_content =
+                        Some(PreviewContent::text(format!("Error loading file: {e}")));
+                    is_loading = false;
                 }
             }
         }

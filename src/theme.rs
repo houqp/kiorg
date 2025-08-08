@@ -275,11 +275,10 @@ impl Theme {
             // Load colors based on theme name
             Some(theme_name) => {
                 // First check if it's a custom theme
-                if let Some(custom_themes) = &config.custom_themes {
-                    if let Some(custom_theme) = custom_themes.iter().find(|t| t.name == *theme_name)
-                    {
-                        return custom_theme.colors.clone();
-                    }
+                if let Some(custom_themes) = &config.custom_themes
+                    && let Some(custom_theme) = custom_themes.iter().find(|t| t.name == *theme_name)
+                {
+                    return custom_theme.colors.clone();
                 }
 
                 // Then check built-in themes

@@ -279,10 +279,10 @@ impl PreviewContent {
         let title_keys = ["title", "dc:title"];
 
         for key in &title_keys {
-            if let Some(values) = metadata.get(*key) {
-                if !values.is_empty() {
-                    return values[0].clone();
-                }
+            if let Some(values) = metadata.get(*key)
+                && !values.is_empty()
+            {
+                return values[0].clone();
             }
         }
         // If no title found, return a default

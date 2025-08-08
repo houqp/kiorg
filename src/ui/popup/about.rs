@@ -33,11 +33,10 @@ pub fn show_about_popup(ctx: &Context, app: &mut Kiorg) {
                 if ui
                     .link(RichText::new(repo_url).color(app.colors.link_text))
                     .clicked()
+                    && let Err(e) = open::that(repo_url)
                 {
-                    if let Err(e) = open::that(repo_url) {
-                        // Call notify_error wrapper
-                        app.notify_error(format!("Failed to open URL: {e}"));
-                    }
+                    // Call notify_error wrapper
+                    app.notify_error(format!("Failed to open URL: {e}"));
                 }
                 ui.add_space(10.0);
 

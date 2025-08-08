@@ -161,16 +161,13 @@ key = ""
     let result = kiorg::config::load_config_with_override(Some(&config_dir));
 
     // If it doesn't error, the shortcut should at least have an empty key
-    if let Ok(config) = result {
-        if let Some(shortcuts) = &config.shortcuts {
-            if let Some(move_down_shortcuts) =
-                shortcuts.get(&kiorg::config::shortcuts::ShortcutAction::MoveDown)
-            {
-                if !move_down_shortcuts.is_empty() {
-                    assert_eq!(move_down_shortcuts[0].key, "", "Key should be empty string");
-                }
-            }
-        }
+    if let Ok(config) = result
+        && let Some(shortcuts) = &config.shortcuts
+        && let Some(move_down_shortcuts) =
+            shortcuts.get(&kiorg::config::shortcuts::ShortcutAction::MoveDown)
+        && !move_down_shortcuts.is_empty()
+    {
+        assert_eq!(move_down_shortcuts[0].key, "", "Key should be empty string");
     }
 }
 

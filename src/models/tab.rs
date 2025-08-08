@@ -541,11 +541,11 @@ impl TabManager {
 
     pub fn select_child(&mut self, child: &PathBuf) -> bool {
         let tab = self.current_tab_mut();
-        if child.parent().is_some_and(|p| p == tab.current_path) {
-            if let Some(pos) = tab.entries.iter().position(|e| &e.path == child) {
-                tab.update_selection(pos);
-                return true;
-            }
+        if child.parent().is_some_and(|p| p == tab.current_path)
+            && let Some(pos) = tab.entries.iter().position(|e| &e.path == child)
+        {
+            tab.update_selection(pos);
+            return true;
         }
         false
     }

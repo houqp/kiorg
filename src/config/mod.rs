@@ -153,21 +153,20 @@ pub fn load_config_with_override(
     };
 
     // Validate user shortcuts for conflicts
-    if let Some(ref user_shortcuts) = user_config.shortcuts {
-        if let Err(conflict_error) = validate_user_shortcuts(user_shortcuts) {
-            return Err(ConfigError::ShortcutConflict(conflict_error, config_path));
-        }
+    if let Some(ref user_shortcuts) = user_config.shortcuts
+        && let Err(conflict_error) = validate_user_shortcuts(user_shortcuts)
+    {
+        return Err(ConfigError::ShortcutConflict(conflict_error, config_path));
     }
 
-    if let Some(layout) = &user_config.layout {
-        if let Some(preview) = layout.preview {
-            if preview <= 0.0 || preview + LEFT_PANEL_RATIO >= 1.0 {
-                return Err(ConfigError::ValueError(
-                    "Invalid preview panel ratio".to_string(),
-                    config_path,
-                ));
-            }
-        }
+    if let Some(layout) = &user_config.layout
+        && let Some(preview) = layout.preview
+        && (preview <= 0.0 || preview + LEFT_PANEL_RATIO >= 1.0)
+    {
+        return Err(ConfigError::ValueError(
+            "Invalid preview panel ratio".to_string(),
+            config_path,
+        ));
     }
 
     Ok(user_config)

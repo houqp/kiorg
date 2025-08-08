@@ -187,13 +187,12 @@ pub fn get_path_components(path: &Path) -> Vec<(String, PathBuf)> {
     // Normalize the path by removing redundant components
     let mut normalized: Vec<(String, PathBuf)> = Vec::new();
     for (name, path) in components {
-        if name == ".." {
-            if let Some((_, parent_path)) = normalized.last() {
-                if parent_path.as_os_str() != "/" {
-                    normalized.pop();
-                    continue;
-                }
-            }
+        if name == ".."
+            && let Some((_, parent_path)) = normalized.last()
+            && parent_path.as_os_str() != "/"
+        {
+            normalized.pop();
+            continue;
         }
         normalized.push((name, path));
     }

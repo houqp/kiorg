@@ -29,10 +29,10 @@ pub fn save_bookmarks(
 ) -> Result<(), Box<dyn Error>> {
     let bookmarks_file = get_bookmarks_file_path(config_dir_override);
     // Ensure the directory exists before creating the file
-    if let Some(parent_dir) = bookmarks_file.parent() {
-        if !parent_dir.exists() {
-            fs::create_dir_all(parent_dir)?;
-        }
+    if let Some(parent_dir) = bookmarks_file.parent()
+        && !parent_dir.exists()
+    {
+        fs::create_dir_all(parent_dir)?;
     }
     let mut file = fs::File::create(bookmarks_file)?;
 

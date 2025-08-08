@@ -163,19 +163,18 @@ pub fn draw(app: &mut Kiorg, ctx: &egui::Context) {
     }
 
     // Apply preview theme when theme key changes
-    if theme_key_changed {
-        if let Some(preview_theme) = themes
+    if theme_key_changed
+        && let Some(preview_theme) = themes
             .iter()
             .find(|t| t.theme_key() == new_selected_theme_key)
-        {
-            // Apply the theme immediately for preview
-            let new_colors = preview_theme.get_colors().clone();
-            app.colors = new_colors;
-            ctx.set_visuals(app.colors.to_visuals());
+    {
+        // Apply the theme immediately for preview
+        let new_colors = preview_theme.get_colors().clone();
+        app.colors = new_colors;
+        ctx.set_visuals(app.colors.to_visuals());
 
-            // Update the popup with the new selected theme key
-            app.show_popup = Some(PopupType::Themes(new_selected_theme_key.clone()));
-        }
+        // Update the popup with the new selected theme key
+        app.show_popup = Some(PopupType::Themes(new_selected_theme_key.clone()));
     }
 
     let mut selected_theme = None;

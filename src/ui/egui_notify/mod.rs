@@ -204,10 +204,10 @@ impl Toasts {
 
         toasts.retain_mut(|toast| {
             // Start disappearing expired toasts
-            if let Some((_initial_d, current_d)) = toast.duration {
-                if current_d <= 0. {
-                    toast.state = ToastState::Disappear;
-                }
+            if let Some((_initial_d, current_d)) = toast.duration
+                && current_d <= 0.
+            {
+                toast.state = ToastState::Disappear;
             }
 
             let anim_offset = toast.width * (1. - ease_in_cubic(toast.value));
@@ -365,27 +365,27 @@ impl Toasts {
                     min: cross_pos,
                 };
 
-                if let Some(pos) = ctx.input(|i| i.pointer.press_origin()) {
-                    if screen_cross.contains(pos) && !*held {
-                        toast.dismiss();
-                        *held = true;
-                    }
+                if let Some(pos) = ctx.input(|i| i.pointer.press_origin())
+                    && screen_cross.contains(pos)
+                    && !*held
+                {
+                    toast.dismiss();
+                    *held = true;
                 }
             }
 
             // Draw duration
-            if toast.show_progress_bar {
-                if let Some((initial, current)) = toast.duration {
-                    if !toast.state.disappearing() {
-                        p.line_segment(
-                            [
-                                rect.min + vec2(0., toast.height),
-                                rect.max - vec2((1. - (current / initial)) * toast.width, 0.),
-                            ],
-                            Stroke::new(4., visuals.fg_stroke.color),
-                        );
-                    }
-                }
+            if toast.show_progress_bar
+                && let Some((initial, current)) = toast.duration
+                && !toast.state.disappearing()
+            {
+                p.line_segment(
+                    [
+                        rect.min + vec2(0., toast.height),
+                        rect.max - vec2((1. - (current / initial)) * toast.width, 0.),
+                    ],
+                    Stroke::new(4., visuals.fg_stroke.color),
+                );
             }
 
             toast.adjust_next_pos(&mut pos, *anchor, *spacing);

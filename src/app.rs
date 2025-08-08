@@ -352,12 +352,11 @@ impl Kiorg {
                     pressed: true,
                     ..
                 } = event
-                {
-                    if let Some(action) = crate::config::shortcuts::shortcuts_helpers::find_action(
+                    && let Some(action) = crate::config::shortcuts::shortcuts_helpers::find_action(
                         shortcuts, *key, *modifiers, namespace,
-                    ) {
-                        return Some(action);
-                    }
+                    )
+                {
+                    return Some(action);
                 }
             }
             None

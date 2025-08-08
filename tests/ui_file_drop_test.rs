@@ -21,7 +21,7 @@ fn test_file_drop_popup_copy() {
 
     // Create a nested file in the subdirectory
     let nested_file = source_files[2].join("nested.txt");
-    create_test_files(&[nested_file.clone()]);
+    create_test_files(std::slice::from_ref(&nested_file));
 
     // Create a target subdirectory where we'll "drop" the files
     let target_dir = temp_dir.path().join("target");

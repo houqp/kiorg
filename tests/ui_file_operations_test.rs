@@ -30,7 +30,7 @@ fn test_delete_shortcut() {
 
     // Create a file inside the subdirectory of dir1
     let subdir_file = dir1_files[2].join("subfile.txt");
-    create_test_files(&[subdir_file.clone()]);
+    create_test_files(std::slice::from_ref(&subdir_file));
 
     let mut harness = create_harness(&temp_dir);
 

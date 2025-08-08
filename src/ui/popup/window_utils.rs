@@ -1,4 +1,4 @@
-pub fn new_center_popup_window(title: &str) -> egui::Window {
+pub fn new_center_popup_window(title: &str) -> egui::Window<'_> {
     egui::Window::new(egui::RichText::from(title).size(14.0))
         .collapsible(false)
         .resizable(false)
