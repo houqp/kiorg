@@ -26,9 +26,35 @@ fn test_open_terminal_shortcut() {
     harness.key_press_modifiers(modifiers, Key::T);
     harness.step();
 
-    // Verify terminal is shown
-    assert!(
-        harness.state().terminal_ctx.is_some(),
-        "Terminal should be open"
-    );
+    // On Windows, we should show a popup message instead of opening terminal
+    #[cfg(target_os = "windows")]
+    {
+        use kiorg::ui::popup::PopupType;
+
+        match &harness.state().show_popup {
+            Some(popup) => {
+                // Verify it's a generic message popup (not terminal or other types)
+                match popup {
+                    PopupType::GenericMessage { .. } => {
+                        // This is the expected popup type for Windows
+                    }
+                    _ => panic!("Expected GenericMessage popup on Windows, got: {:?}", popup),
+                }
+            }
+            None => panic!("A popup message should be shown on Windows"),
+        }
+        assert!(
+            harness.state().terminal_ctx.is_none(),
+            "Terminal should not be opened on Windows"
+        );
+    }
+
+    // On non-Windows platforms, terminal should be opened
+    #[cfg(not(target_os = "windows"))]
+    {
+        assert!(
+            harness.state().terminal_ctx.is_some(),
+            "Terminal should be open on non-Windows platforms"
+        );
+    }
 }

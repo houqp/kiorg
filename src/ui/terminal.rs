@@ -85,46 +85,27 @@ mod implementation {
 #[cfg(target_os = "windows")]
 mod implementation {
     use super::*;
-    use crate::ui::style::section_title_text;
+    use crate::ui::popup::PopupType;
 
-    pub struct TerminalContext {
-        show_disabled_popup: bool,
-    }
+    pub struct TerminalContext {}
 
     impl TerminalContext {
         pub fn new(
             _ctx: &egui::Context,
             _working_directory: std::path::PathBuf,
         ) -> Result<Self, String> {
-            Ok(Self {
-                show_disabled_popup: true,
-            })
+            Ok(Self {})
         }
     }
 
-    pub fn draw(ctx: &egui::Context, app: &mut Kiorg) {
-        if let Some(terminal_ctx) = &mut app.terminal_ctx {
-            if terminal_ctx.show_disabled_popup {
-                egui::Window::new("Terminal Disabled")
-                    .open(&mut terminal_ctx.show_disabled_popup)
-                    .collapsible(false)
-                    .resizable(false)
-                    .anchor(egui::Align2::CENTER_CENTER, egui::Vec2::ZERO)
-                    .show(ctx, |ui| {
-                        ui.vertical_centered(|ui| {
-                            ui.add_space(10.0);
-                            ui.label(section_title_text(
-                                "Terminal feature disabled for this release",
-                                &app.colors,
-                            ));
-                            ui.add_space(10.0);
-                        });
-                    });
-
-                if !terminal_ctx.show_disabled_popup {
-                    app.terminal_ctx = None;
-                }
-            }
+    pub fn draw(_ctx: &egui::Context, app: &mut Kiorg) {
+        if app.terminal_ctx.is_some() {
+            // Show the feature disabled popup
+            app.show_popup = Some(PopupType::GenericMessage(
+                "Terminal feature disabled".to_string(),
+                "Terminal feature disabled for this release".to_string(),
+            ));
+            app.terminal_ctx = None;
         }
     }
 }

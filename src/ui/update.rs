@@ -416,6 +416,7 @@ fn extract_tar_gz(
 
 /// method to copy the complete directory `src` to `dest` but skipping the binary `binary_name`
 /// since we have to use `self-replace` for that.
+#[cfg(target_os = "macos")]
 fn copy_bundle_without_binary(
     src: &std::path::Path,
     dest: &std::path::Path,
@@ -775,6 +776,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(target_os = "macos")]
     fn test_copy_bundle_without_binary_nested_dirs() {
         // Create source directory structure
         let temp_dir = TempDir::new().unwrap();
