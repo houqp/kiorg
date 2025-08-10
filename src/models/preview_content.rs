@@ -4,6 +4,7 @@ use std::sync::mpsc::Receiver;
 use std::sync::{Arc, Mutex};
 
 /// Type alias for the async preview content receiver
+// TODO: can we delete the option wrapper?
 pub type PreviewReceiver = Option<Arc<Mutex<Receiver<Result<PreviewContent, String>>>>>;
 
 /// Metadata for PDF documents

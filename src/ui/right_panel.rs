@@ -9,8 +9,6 @@ const PANEL_SPACING: f32 = 10.0;
 
 /// Draws the right panel (preview).
 pub fn draw(app: &mut Kiorg, ctx: &egui::Context, ui: &mut Ui, width: f32, height: f32) {
-    // No longer need tab reference since we're using the preview_content enum
-    // let tab = app.tab_manager.current_tab_ref();
     let colors = &app.colors;
 
     // Handle the loading case separately to avoid borrowing app in the closure

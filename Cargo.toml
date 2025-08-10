@@ -10,8 +10,6 @@ keywords = ["file-manager", "gui", "productivity", "rust", "egui"]
 categories = ["filesystem", "gui", "command-line-utilities"]
 
 [features]
-default = ["terminal"]
-terminal = ["dep:egui_term"]
 debug = []
 snapshot = ["egui_kittest/snapshot", "egui_kittest/wgpu"]
 
@@ -31,7 +29,6 @@ egui = { version = "0.32.0", features = [
     "rayon",
     "color-hex",
 ] }
-egui_term = { git = "https://github.com/houqp/egui_term.git", rev = "51041055115dd7af3a8cd344ad0e34578b9c3295", optional = true }
 
 font-kit = "0"
 chrono = "0.4.40"
@@ -86,6 +83,9 @@ pdf = { git = "https://github.com/pdf-rs/pdf" }
 pathfinder_geometry = { git = "https://github.com/houqp/pathfinder", rev = "c82663778404c74c0d2cceb42a99b41f6e48e1e4" }
 pathfinder_export = { git = "https://github.com/houqp/pathfinder", rev = "c82663778404c74c0d2cceb42a99b41f6e48e1e4" }
 # pathfinder_rasterize = { git = "https://github.com/s3bk/pathfinder_rasterizer" }
+
+[target.'cfg(not(target_os = "windows"))'.dependencies]
+egui_term = { git = "https://github.com/houqp/egui_term.git", rev = "51041055115dd7af3a8cd344ad0e34578b9c3295" }
 
 [[bench]]
 name = "center_panel_bench"
