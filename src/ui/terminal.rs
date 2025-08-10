@@ -1,6 +1,6 @@
 use crate::app::Kiorg;
 
-#[cfg(feature = "terminal")]
+#[cfg(not(target_os = "windows"))]
 mod implementation {
     use super::Kiorg;
     use crate::ui::style::section_title_text;
@@ -82,7 +82,7 @@ mod implementation {
     }
 }
 
-#[cfg(not(feature = "terminal"))]
+#[cfg(target_os = "windows")]
 mod implementation {
     use super::*;
     use crate::ui::style::section_title_text;
