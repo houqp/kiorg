@@ -2,3 +2,6 @@
 tests/snapshots/*.old.png
 tests/snapshots/*.diff.png
 tests/snapshots/theme_selection-*.png
+node_modules
+package-lock.json
+package.json

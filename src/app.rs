@@ -16,7 +16,7 @@ use crate::models::tab::{TabManager, TabManagerState};
 use crate::ui::egui_notify::Toasts;
 use crate::ui::popup::delete::DeleteConfirmResult;
 use crate::ui::popup::{
-    PopupType, about, add_entry, bookmark, delete, exit, file_drop, open_with,
+    PopupType, about, add_entry, bookmark, delete, exit, file_drop, generic_message, open_with,
     preview as popup_preview, rename, teleport, theme,
 };
 use crate::ui::search_bar::{self, SearchBar};
@@ -841,6 +841,9 @@ impl eframe::App for Kiorg {
             }
             Some(PopupType::About) => {
                 about::show_about_popup(ctx, self);
+            }
+            Some(PopupType::GenericMessage(_, _)) => {
+                generic_message::show_generic_message_popup(ctx, self);
             }
             Some(PopupType::Exit) => {
                 exit::draw(ctx, self);

@@ -333,6 +333,12 @@ fn process_key(
             }
             return;
         }
+        Some(PopupType::GenericMessage(_, _)) => {
+            if is_cancel_keys(key) {
+                app.show_popup = None;
+            }
+            return;
+        }
         Some(PopupType::AddEntry(_)) => {
             if add_entry::handle_key_press(ctx, app) {
                 return;

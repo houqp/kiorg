@@ -8,6 +8,7 @@ pub mod bookmark;
 pub mod delete;
 pub mod exit;
 pub mod file_drop;
+pub mod generic_message;
 pub mod open_with;
 pub mod preview;
 pub mod rename;
@@ -22,6 +23,7 @@ pub enum PopupType {
     About,
     Help,
     Exit,
+    GenericMessage(String, String), // Title and message for generic popup
     Delete(crate::ui::popup::delete::DeleteConfirmState, Vec<PathBuf>),
     DeleteProgress(crate::ui::popup::delete::DeleteProgressData),
     Rename(String),         // New name for the file/directory being renamed
