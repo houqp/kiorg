@@ -3,6 +3,9 @@ use egui::Context;
 use humansize::{BINARY, format_size};
 use self_update::cargo_crate_version;
 use semver::Version;
+use std::env::consts::ARCH;
+#[cfg(not(target_os = "macos"))]
+use std::env::consts::OS;
 use std::io::Write;
 use std::sync::mpsc;
 
@@ -128,20 +131,19 @@ pub fn perform_update_async(ctx: &Context, app: &mut Kiorg, to_release: Release)
     let notification_sender = app.notification_system.get_sender();
     let ctx_clone = ctx.clone(); // Clone the context so it can be moved into the thread
 
-    std::thread::spawn(
-        move || match perform_self_update(&ctx_clone, to_release, progress_tx) {
+    std::thread::spawn(move || {
+        match perform_self_update(&ctx_clone, to_release, progress_tx.clone()) {
             Ok(_to_release) => {
                 let _ = notification_sender.send(NotificationMessage::UpdateSuccess);
                 ctx_clone.request_repaint();
             }
             Err(e) => {
-                let _ = notification_sender.send(NotificationMessage::UpdateFailed(format!(
-                    "Update failed: {e}"
-                )));
+                let _ =
+                    progress_tx.send(UpdateProgressUpdate::Error(format!("Update failed: {e}")));
                 ctx_clone.request_repaint();
             }
-        },
-    );
+        }
+    });
 }
 
 /// Show update confirmation popup
@@ -197,7 +199,7 @@ fn restart_app() {
         eprintln!("Failed to restart application: {e}");
         std::process::exit(-1);
     }
-    #[cfg(windows)]
+    #[cfg(target_os = "windows")]
     {
         std::process::Command::new(current_exe)
             .args(args)
@@ -344,6 +346,25 @@ fn extract_into(
     archive_path: &std::path::Path,
     destination: &std::path::Path,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    let archive_name = archive_path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .ok_or("Invalid archive filename")?;
+
+    if archive_name.ends_with(".zip") {
+        extract_zip(archive_path, destination)
+    } else if archive_name.ends_with(".tar.gz") || archive_name.ends_with(".tgz") {
+        extract_tar_gz(archive_path, destination)
+    } else {
+        Err(format!("Unsupported archive format: {:?}", archive_path).into())
+    }
+}
+
+/// Extract zip archive contents to a directory
+fn extract_zip(
+    archive_path: &std::path::Path,
+    destination: &std::path::Path,
+) -> Result<(), Box<dyn std::error::Error>> {
     let archive_file = std::fs::File::open(archive_path)?;
     let mut archive = zip::ZipArchive::new(archive_file)?;
 
@@ -379,17 +400,107 @@ fn extract_into(
     Ok(())
 }
 
+/// Extract tar.gz archive contents to a directory
+fn extract_tar_gz(
+    archive_path: &std::path::Path,
+    destination: &std::path::Path,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let archive_file = std::fs::File::open(archive_path)?;
+    let decompressor = flate2::read::GzDecoder::new(archive_file);
+    let mut archive = tar::Archive::new(decompressor);
+
+    archive.unpack(destination)?;
+
+    Ok(())
+}
+
+/// method to copy the complete directory `src` to `dest` but skipping the binary `binary_name`
+/// since we have to use `self-replace` for that.
+fn copy_bundle_without_binary(
+    src: &std::path::Path,
+    dest: &std::path::Path,
+    binary_name: &str,
+) -> std::io::Result<()> {
+    // return error if source directory does not exist
+    if !dest.is_dir() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            format!("Destination directory does not exist: {}", dest.display()),
+        ));
+    }
+
+    // Iterate through entries in the source directory
+    for entry in std::fs::read_dir(src)? {
+        let entry = entry?;
+        let path = entry.path();
+        let dest_path = dest.join(entry.file_name());
+
+        if path.is_dir() {
+            if !dest_path.exists() {
+                std::fs::create_dir(&dest_path)?;
+            }
+            // Recursively copy subdirectories
+            copy_bundle_without_binary(&path, &dest_path, binary_name)?;
+        } else if let Some(file_name) = path.file_name()
+            && file_name != binary_name
+        {
+            // Copy files except for the binary
+            std::fs::copy(&path, &dest_path)?;
+        }
+    }
+
+    Ok(())
+}
+
 /// custom update function for use with bundles
-/// takeen from: https://github.com/jaemk/self_update/pull/147/files
+/// taken from: https://github.com/jaemk/self_update/pull/147/files
 pub fn perform_self_update(
     ctx: &Context,
     to_release: Release,
     progress_tx: mpsc::Sender<UpdateProgressUpdate>,
 ) -> Result<Release, Box<dyn std::error::Error>> {
+    let binary_path = std::env::current_exe()?;
+    let binary = binary_path
+        .file_name()
+        .ok_or("failed to extract current binary name")?
+        .to_str()
+        .ok_or("failed to convert OsStr")?;
+
     // get the first available release
-    let asset = to_release
-        .asset_for(self_update::get_target(), None)
-        .ok_or("no compatible binary target found for release")?;
+    #[cfg(target_os = "macos")]
+    let (asset, bundle_contents_dir) = {
+        // get the parent directory of the `Application.app` bundle
+        let contents_dir = binary_path
+            .parent() // MacOS
+            .ok_or("Failed to derive app bundle OS directory")?
+            .parent() // Contents
+            .ok_or("Failed to derive app bundle contents directory")?;
+        let plist = contents_dir.join("Info.plist");
+
+        if plist.exists() {
+            (
+                to_release.assets.iter().find(|asset| {
+                    asset.name.contains(ARCH) && asset.name.ends_with("app.bundle.tar.gz")
+                }),
+                Some(contents_dir),
+            )
+        } else {
+            (
+                to_release
+                    .assets
+                    .iter()
+                    .find(|asset| asset.name.contains(ARCH) && asset.name.ends_with("macos.zip")),
+                None,
+            )
+        }
+    };
+    #[cfg(not(target_os = "macos"))]
+    let asset = {
+        to_release.assets.iter().find(|asset| {
+            asset.name.contains(OS) && asset.name.contains(ARCH) && asset.name.ends_with(".zip")
+        })
+    };
+    let asset = asset.ok_or("No compatible release found for the current platform")?;
 
     let tmp_archive_dir = tempfile::TempDir::new()?;
     let tmp_archive_path = tmp_archive_dir.path().join(&asset.name);
@@ -444,13 +555,6 @@ pub fn perform_self_update(
     // Extract the zip archive
     extract_into(&tmp_archive_path, tmp_archive_dir.path())?;
 
-    let binary_path = std::env::current_exe()?;
-    let binary = binary_path
-        .file_name()
-        .ok_or("failed to extract current binary name")?
-        .to_str()
-        .ok_or("failed to convert OsStr")?;
-
     let new_exe = {
         #[cfg(target_os = "windows")]
         {
@@ -462,9 +566,28 @@ pub fn perform_self_update(
         }
         #[cfg(target_os = "macos")]
         {
-            // TODO: support app bundle atomic swap, see:
-            // https://github.com/jaemk/self_update/pull/147/files
-            tmp_archive_dir.path().join(binary)
+            if let Some(contents_dir) = bundle_contents_dir {
+                let app_dir = contents_dir
+                    .parent() // Kiorg.app dir
+                    .ok_or("Failed to derive app bundle root directory")?
+                    .to_path_buf();
+                let app_name = app_dir
+                    .file_name()
+                    .and_then(|s| s.to_str())
+                    .ok_or("Failed to derive app name")?;
+
+                copy_bundle_without_binary(
+                    &tmp_archive_dir.path().join(app_name),
+                    &app_dir,
+                    binary,
+                )?;
+                tmp_archive_dir
+                    .path()
+                    .join(format!("{app_name}/Contents/MacOS/{binary}"))
+            } else {
+                // not an app bundle, just swap the binary
+                tmp_archive_dir.path().join(binary)
+            }
         }
     };
 
@@ -485,7 +608,7 @@ mod tests {
     use tempfile::TempDir;
 
     #[test]
-    fn test_extract_into() {
+    fn test_extract_into_zip() {
         // Create a temporary directory for testing
         let temp_dir = TempDir::new().unwrap();
         let test_zip_path = temp_dir.path().join("test.zip");
@@ -540,6 +663,95 @@ mod tests {
     }
 
     #[test]
+    fn test_extract_into_tar_gz() {
+        use flate2::write::GzEncoder;
+        use tar::{Builder, Header};
+
+        // Create a temporary directory for testing
+        let temp_dir = TempDir::new().unwrap();
+        let test_tar_gz_path = temp_dir.path().join("test.tar.gz");
+
+        // Create a test tar.gz file
+        {
+            let tar_gz_file = fs::File::create(&test_tar_gz_path).unwrap();
+            let encoder = GzEncoder::new(tar_gz_file, flate2::Compression::default());
+            let mut tar_builder = Builder::new(encoder);
+
+            // Add a file to the tar
+            let mut header = Header::new_gnu();
+            header.set_path("test_file.txt").unwrap();
+            header.set_size(13);
+            header.set_cksum();
+            tar_builder
+                .append(&header, b"Hello, world!" as &[u8])
+                .unwrap();
+
+            // Add a directory and nested file
+            let mut dir_header = Header::new_gnu();
+            dir_header.set_path("test_dir/").unwrap();
+            dir_header.set_entry_type(tar::EntryType::Directory);
+            dir_header.set_size(0);
+            dir_header.set_cksum();
+            tar_builder.append(&dir_header, std::io::empty()).unwrap();
+
+            let mut nested_header = Header::new_gnu();
+            nested_header.set_path("test_dir/nested_file.txt").unwrap();
+            nested_header.set_size(14);
+            nested_header.set_cksum();
+            tar_builder
+                .append(&nested_header, b"Nested content" as &[u8])
+                .unwrap();
+
+            // Finish the tar builder and encoder
+            let encoder = tar_builder.into_inner().unwrap();
+            encoder.finish().unwrap();
+        } // Drop scope to ensure file is closed
+
+        // Create extraction destination
+        let extract_dir = TempDir::new().unwrap();
+
+        // Test the extraction
+        let result = extract_into(&test_tar_gz_path, extract_dir.path());
+        assert!(
+            result.is_ok(),
+            "Extraction should succeed, got: {:?}",
+            result
+        );
+
+        // Verify extracted contents
+        let root_file = extract_dir.path().join("test_file.txt");
+        assert!(root_file.exists(), "Root file should exist");
+        let content = fs::read_to_string(&root_file).unwrap();
+        assert_eq!(content, "Hello, world!");
+
+        let nested_file = extract_dir.path().join("test_dir/nested_file.txt");
+        assert!(nested_file.exists(), "Nested file should exist");
+        let nested_content = fs::read_to_string(&nested_file).unwrap();
+        assert_eq!(nested_content, "Nested content");
+
+        let dir_path = extract_dir.path().join("test_dir");
+        assert!(dir_path.exists(), "Directory should exist");
+        assert!(dir_path.is_dir(), "Should be a directory");
+    }
+
+    #[test]
+    fn test_extract_into_unsupported_format() {
+        let temp_dir = TempDir::new().unwrap();
+        let unsupported_file = temp_dir.path().join("test.rar");
+        fs::write(&unsupported_file, b"not supported").unwrap();
+
+        let extract_dir = TempDir::new().unwrap();
+        let result = extract_into(&unsupported_file, extract_dir.path());
+        assert!(result.is_err(), "Should fail for unsupported format");
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("Unsupported archive format")
+        );
+    }
+
+    #[test]
     fn test_extract_into_nonexistent_archive() {
         let temp_dir = TempDir::new().unwrap();
         let nonexistent_zip = temp_dir.path().join("nonexistent.zip");
@@ -560,5 +772,73 @@ mod tests {
         let extract_dir = TempDir::new().unwrap();
         let result = extract_into(&invalid_zip, extract_dir.path());
         assert!(result.is_err(), "Should fail for invalid zip file");
+    }
+
+    #[test]
+    fn test_copy_bundle_without_binary_nested_dirs() {
+        // Create source directory structure
+        let temp_dir = TempDir::new().unwrap();
+        let src_dir = temp_dir.path().join("source");
+        std::fs::create_dir_all(&src_dir).unwrap();
+
+        // Create nested directory structure in source
+        let nested_dir = src_dir.join("nested").join("deeply").join("nested");
+        std::fs::create_dir_all(&nested_dir).unwrap();
+
+        // Create some test files
+        std::fs::write(src_dir.join("root_file.txt"), "root content").unwrap();
+        std::fs::write(src_dir.join("binary_to_skip"), "binary content").unwrap();
+        std::fs::write(
+            src_dir.join("nested").join("mid_file.txt"),
+            "middle content",
+        )
+        .unwrap();
+        std::fs::write(nested_dir.join("deep_file.txt"), "deep content").unwrap();
+
+        // Create empty destination directory (target is empty)
+        let dest_dir = temp_dir.path().join("destination");
+        std::fs::create_dir_all(&dest_dir).unwrap();
+        // Note: We intentionally don't create dest_dir to test directory creation
+
+        // Test copying bundle without the binary
+        let result = copy_bundle_without_binary(&src_dir, &dest_dir, "binary_to_skip");
+        assert!(result.is_ok(), "Copy should succeed: {:?}", result);
+
+        // Verify destination directory was created
+        assert!(dest_dir.is_dir(), "Destination should be a directory");
+
+        // Verify files were copied correctly
+        let root_file = dest_dir.join("root_file.txt");
+        assert!(root_file.exists(), "Root file should be copied");
+        assert_eq!(std::fs::read_to_string(&root_file).unwrap(), "root content");
+
+        // Verify binary was skipped
+        let binary_file = dest_dir.join("binary_to_skip");
+        assert!(!binary_file.exists(), "Binary file should be skipped");
+
+        // Verify nested directories were created
+        let nested_dir_dest = dest_dir.join("nested");
+        assert!(
+            nested_dir_dest.is_dir(),
+            "Nested path should be a directory"
+        );
+
+        let deeply_nested_dest = dest_dir.join("nested").join("deeply").join("nested");
+        assert!(
+            deeply_nested_dest.is_dir(),
+            "Deeply nested path should be a directory"
+        );
+
+        // Verify nested files were copied
+        let mid_file = dest_dir.join("nested").join("mid_file.txt");
+        assert!(mid_file.exists(), "Middle file should be copied");
+        assert_eq!(
+            std::fs::read_to_string(&mid_file).unwrap(),
+            "middle content"
+        );
+
+        let deep_file = deeply_nested_dest.join("deep_file.txt");
+        assert!(deep_file.exists(), "Deep file should be copied");
+        assert_eq!(std::fs::read_to_string(&deep_file).unwrap(), "deep content");
     }
 }
