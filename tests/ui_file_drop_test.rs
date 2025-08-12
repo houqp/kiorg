@@ -4,7 +4,7 @@ mod ui_test_helpers;
 use egui::Key;
 use kiorg::ui::popup::PopupType;
 use tempfile::tempdir;
-use ui_test_helpers::{create_harness, create_test_files};
+use ui_test_helpers::{create_harness, create_test_files, wait_for_condition};
 
 /// Test that the file drop popup allows copying files to the current directory
 #[test]
@@ -68,14 +68,11 @@ fn test_file_drop_popup_copy() {
     harness.step();
 
     // Wait for the clipboard operation to complete
-    for _ in 0..100 {
+    wait_for_condition(|| {
         harness.step();
         // Check if popup is closed (operation completed)
-        if harness.state().show_popup.is_none() {
-            break;
-        }
-        std::thread::sleep(std::time::Duration::from_millis(10));
-    }
+        harness.state().show_popup.is_none()
+    });
 
     // Verify the popup is closed
     assert_eq!(
@@ -176,14 +173,11 @@ fn test_file_drop_popup_move() {
     harness.step();
 
     // Wait for the clipboard operation to complete
-    for _ in 0..100 {
+    wait_for_condition(|| {
         harness.step();
         // Check if popup is closed (operation completed)
-        if harness.state().show_popup.is_none() {
-            break;
-        }
-        std::thread::sleep(std::time::Duration::from_millis(10));
-    }
+        harness.state().show_popup.is_none()
+    });
 
     // Verify the popup is closed
     assert_eq!(

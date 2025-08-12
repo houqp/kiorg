@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex};
 
 /// Type alias for the async preview content receiver
 // TODO: can we delete the option wrapper?
-pub type PreviewReceiver = Option<Arc<Mutex<Receiver<Result<PreviewContent, String>>>>>;
+pub type PreviewReceiver = Arc<Mutex<Receiver<Result<PreviewContent, String>>>>;
 
 /// Metadata for PDF documents
 #[derive(Clone)]
@@ -103,7 +103,7 @@ pub enum PreviewContent {
     /// Directory content with a list of entries
     Directory(Vec<DirectoryEntry>),
     /// Loading state with path being loaded and optional receiver for async loading
-    Loading(PathBuf, PreviewReceiver),
+    Loading(PathBuf, PreviewReceiver, std::sync::mpsc::Sender<()>),
 }
 
 /// Represents an entry in a directory listing for preview
@@ -195,17 +195,13 @@ impl PreviewContent {
         Self::Directory(entries)
     }
 
-    /// Creates a new loading preview content for a path
-    pub fn loading(path: impl Into<PathBuf>) -> Self {
-        Self::Loading(path.into(), None)
-    }
-
     /// Creates a new loading preview content with a receiver for async updates
     pub fn loading_with_receiver(
         path: impl Into<PathBuf>,
         receiver: Receiver<Result<Self, String>>,
+        cancel_sender: std::sync::mpsc::Sender<()>,
     ) -> Self {
-        Self::Loading(path.into(), Some(Arc::new(Mutex::new(receiver))))
+        Self::Loading(path.into(), Arc::new(Mutex::new(receiver)), cancel_sender)
     }
 
     /// Creates a new PDF document preview content with cached PDF file

@@ -3224,6 +3224,7 @@ dependencies = [
  "humansize",
  "image",
  "kamadak-exif",
+ "kiorg",
  "notify",
  "nucleo",
  "open 4.2.0",

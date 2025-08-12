@@ -4,7 +4,7 @@ mod ui_test_helpers;
 use egui::Key;
 use kiorg::ui::popup::PopupType;
 use tempfile::tempdir;
-use ui_test_helpers::{create_harness, create_test_files};
+use ui_test_helpers::{create_harness, create_test_files, wait_for_condition};
 
 #[test]
 fn test_bulk_delete_with_space_key() {
@@ -104,13 +104,10 @@ fn test_bulk_delete_with_space_key() {
     // Press Enter for second confirmation
     harness.key_press(Key::Enter);
 
-    for _ in 0..100 {
+    wait_for_condition(|| {
         harness.step();
-        if harness.state().show_popup.is_none() {
-            break;
-        }
-        std::thread::sleep(std::time::Duration::from_millis(10));
-    }
+        harness.state().show_popup.is_none()
+    });
 
     // Verify the files are deleted after second confirmation
     {

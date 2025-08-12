@@ -12,7 +12,7 @@ mod ui_test_helpers;
 use egui::{Key, Modifiers};
 use kiorg::ui::popup::PopupType;
 use tempfile::tempdir;
-use ui_test_helpers::{create_harness, create_test_files};
+use ui_test_helpers::{create_harness, create_test_files, wait_for_condition};
 
 #[test]
 fn test_crash_reproduction_filtered_deletion() {
@@ -94,13 +94,10 @@ fn test_crash_reproduction_filtered_deletion() {
     harness.key_press(Key::Enter);
     harness.step();
 
-    for _ in 0..100 {
+    wait_for_condition(|| {
         harness.step();
-        if harness.state().show_popup.is_none() {
-            break;
-        }
-        std::thread::sleep(std::time::Duration::from_millis(10));
-    }
+        harness.state().show_popup.is_none()
+    });
 
     // Verify popup is closed
     assert_eq!(

@@ -11,6 +11,7 @@ categories = ["filesystem", "gui", "command-line-utilities"]
 
 [features]
 debug = []
+testing = []
 snapshot = ["egui_kittest/snapshot", "egui_kittest/wgpu"]
 
 [lib]
@@ -98,6 +99,7 @@ harness = false
 [dev-dependencies]
 criterion = "0.5"
 egui_kittest = { version = "0.32.0", features = ["eframe"] }
+kiorg = { path = ".", features = ["testing"] }
 
 [package.metadata.bundle]
 name = "Kiorg"
