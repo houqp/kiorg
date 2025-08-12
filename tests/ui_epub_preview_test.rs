@@ -3,7 +3,7 @@ mod ui_test_helpers;
 
 use kiorg::models::preview_content::PreviewContent;
 use tempfile::tempdir;
-use ui_test_helpers::{create_harness, create_test_epub};
+use ui_test_helpers::{create_harness, create_test_epub, wait_for_condition};
 
 /// Test for EPUB preview
 #[test]
@@ -27,60 +27,63 @@ fn test_epub_preview() {
     harness.step();
 
     // Try multiple steps to allow async loading to complete
-    for _ in 0..300 {
-        match &harness.state().preview_content {
-            Some(PreviewContent::Epub(epub_meta)) => {
-                // Verify EPUB metadata
-                assert!(
-                    !epub_meta.metadata.is_empty(),
-                    "EPUB metadata should not be empty"
-                );
-
-                // Check for expected metadata fields
-                let creator = epub_meta
-                    .metadata
-                    .get("creator")
-                    .or_else(|| epub_meta.metadata.get("dc:creator"));
-                let language = epub_meta
-                    .metadata
-                    .get("language")
-                    .or_else(|| epub_meta.metadata.get("dc:language"));
-
-                // Title is now stored in the title field, not in metadata
-                assert!(!epub_meta.title.is_empty(), "Title should not be empty");
-                assert!(creator.is_some(), "Creator should be in the EPUB metadata");
-                assert!(
-                    language.is_some(),
-                    "Language should be in the EPUB metadata"
-                );
-
-                // Check specific values
-                assert!(
-                    epub_meta.title.contains("Test EPUB Book"),
-                    "Title should contain 'Test EPUB Book'"
-                );
-
-                if let Some(creator_value) = creator {
-                    assert!(
-                        creator_value.contains("Test Author"),
-                        "Creator should contain 'Test Author'"
-                    );
-                }
-
-                return;
-            }
-            Some(_) => {
-                std::thread::sleep(std::time::Duration::from_millis(10));
-                harness.step();
-            }
-            None => panic!("Preview content should not be None"),
+    wait_for_condition(|| match &harness.state().preview_content {
+        Some(PreviewContent::Epub(_)) => true,
+        _ => {
+            harness.step();
+            false
         }
-    }
+    });
 
-    panic!(
-        "Preview content should eventually be EPUB variant, got: {:?}",
-        harness.state().preview_content
-    );
+    match &harness.state().preview_content {
+        Some(PreviewContent::Epub(epub_meta)) => {
+            // Verify EPUB metadata
+            assert!(
+                !epub_meta.metadata.is_empty(),
+                "EPUB metadata should not be empty"
+            );
+
+            // Check for expected metadata fields
+            let creator = epub_meta
+                .metadata
+                .get("creator")
+                .or_else(|| epub_meta.metadata.get("dc:creator"));
+            let language = epub_meta
+                .metadata
+                .get("language")
+                .or_else(|| epub_meta.metadata.get("dc:language"));
+
+            // Title is now stored in the title field, not in metadata
+            assert!(!epub_meta.title.is_empty(), "Title should not be empty");
+            assert!(creator.is_some(), "Creator should be in the EPUB metadata");
+            assert!(
+                language.is_some(),
+                "Language should be in the EPUB metadata"
+            );
+
+            // Check specific values
+            assert!(
+                epub_meta.title.contains("Test EPUB Book"),
+                "Title should contain 'Test EPUB Book'"
+            );
+
+            assert!(
+                epub_meta.page_count > 0,
+                "EPUB page count should be available and greater than 0"
+            );
+
+            if let Some(creator_value) = creator {
+                assert!(
+                    creator_value.contains("Test Author"),
+                    "Creator should contain 'Test Author'"
+                );
+            }
+        }
+        Some(_) => {
+            panic!("Preview content should be EPUB, but got something else");
+        }
+        None => panic!("Preview content should not be None"),
+    }
 }
 
 /// Test that EPUB metadata contains page count for right panel display
@@ -113,9 +116,7 @@ fn test_epub_page_count_metadata_available() {
 
     // Wait for EPUB processing in a loop, checking for preview content
     let mut epub_loaded = false;
-    for _ in 0..50 {
-        // Max iterations but exit early when loaded
-        std::thread::sleep(std::time::Duration::from_millis(10));
+    wait_for_condition(|| {
         harness.step();
 
         // Check if EPUB preview content is loaded
@@ -143,9 +144,11 @@ fn test_epub_page_count_metadata_available() {
             );
 
             epub_loaded = true;
-            break;
+            true
+        } else {
+            false
         }
-    }
+    });
 
     assert!(
         epub_loaded,

@@ -4,10 +4,8 @@ mod ui_test_helpers;
 use egui::{Key, Modifiers};
 use kiorg::models::preview_content::PreviewContent;
 use kiorg::ui::popup::PopupType;
-use std::thread;
-use std::time::Duration;
 use tempfile::tempdir;
-use ui_test_helpers::{create_harness, create_test_epub, create_test_image};
+use ui_test_helpers::{create_harness, create_test_epub, create_test_image, wait_for_condition};
 
 /// Test that the image preview popup can be opened with the Shift+K shortcut
 #[test]
@@ -25,15 +23,13 @@ fn test_image_preview_popup_shortcut() {
     harness.key_press(egui::Key::J);
 
     // Wait for the image preview to load
-    for _ in 0..100 {
+    wait_for_condition(|| {
         harness.step();
-        match harness.state().preview_content.as_ref() {
-            Some(PreviewContent::Image(_)) => break,
-            _ => {
-                std::thread::sleep(Duration::from_millis(10));
-            }
-        }
-    }
+        matches!(
+            harness.state().preview_content.as_ref(),
+            Some(PreviewContent::Image(_))
+        )
+    });
 
     // Verify image preview is loaded
     match harness.state().preview_content.as_ref() {
@@ -99,24 +95,28 @@ fn test_pdf_preview_popup_error_handling() {
         "Preview popup should be opened to display the error"
     );
 
-    for _ in 0..100 {
+    wait_for_condition(|| {
         harness.step();
         // Verify the error message is displayed in the preview content
         if let Some(PreviewContent::Text(text)) = harness.state().preview_content.as_ref() {
-            assert!(
-                text.contains(
-                    "Error loading file: Failed to open PDF file: file header is missing"
-                ),
-                "Expected error message not found in preview content: {text}"
-            );
-            return;
+            text.contains("Error loading file: Failed to open PDF file: file header is missing")
+        } else {
+            false
         }
-        thread::sleep(Duration::from_millis(10));
+    });
+
+    // Final verification
+    if let Some(PreviewContent::Text(text)) = harness.state().preview_content.as_ref() {
+        assert!(
+            text.contains("Error loading file: Failed to open PDF file: file header is missing"),
+            "Expected error message not found in preview content: {text}"
+        );
+    } else {
+        panic!(
+            "Preview content should be Text with error message, but got: {:?}",
+            harness.state().preview_content
+        );
     }
-    panic!(
-        "Preview content should be Text with error message, but got: {:?}",
-        harness.state().preview_content
-    );
 }
 
 /// Test that the preview popup doesn't open for unsupported file types
@@ -163,13 +163,13 @@ fn test_doc_preview_popup_page_count_metadata() {
     let mut harness = create_harness(&temp_dir);
 
     // Wait for the document preview to load
-    for _ in 0..200 {
-        match harness.state().preview_content.as_ref() {
-            Some(PreviewContent::Epub(_)) => break,
-            _ => harness.step(),
-        }
-        thread::sleep(Duration::from_millis(10));
-    }
+    wait_for_condition(|| {
+        harness.step();
+        matches!(
+            harness.state().preview_content.as_ref(),
+            Some(PreviewContent::Epub(_))
+        )
+    });
 
     // Verify document preview is loaded
     match harness.state().preview_content.as_ref() {

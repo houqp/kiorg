@@ -373,6 +373,20 @@ impl TestHarnessBuilder {
     }
 }
 
+/// Helper function to wait for a condition with sleep intervals
+/// Runs the callback up to 300 times with 10ms sleep between attempts
+pub fn wait_for_condition<F>(mut condition: F)
+where
+    F: FnMut() -> bool,
+{
+    for _ in 0..300 {
+        if condition() {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    }
+}
+
 pub fn create_harness<'a>(temp_dir: &tempfile::TempDir) -> TestHarness<'a> {
     TestHarnessBuilder::new().with_temp_dir(temp_dir).build()
 }

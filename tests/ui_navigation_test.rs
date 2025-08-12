@@ -3,11 +3,15 @@ mod ui_test_helpers;
 
 use egui::Key;
 use kiorg::models::preview_content::PreviewContent;
+use kiorg::open_wrap::{clear_open_calls, get_open_that_calls};
+use std::path::PathBuf;
 use tempfile::tempdir;
-use ui_test_helpers::{create_harness, create_test_files, create_test_image, create_test_zip};
+use ui_test_helpers::{
+    create_harness, create_test_files, create_test_image, create_test_zip, wait_for_condition,
+};
 
 #[test]
-fn test_g_shortcuts() {
+fn test_ui_navigation_g_shortcuts() {
     // Create test files and directories
     let temp_dir = tempdir().unwrap();
     create_test_files(&[
@@ -56,7 +60,7 @@ fn test_g_shortcuts() {
 }
 
 #[test]
-fn test_g_shortcuts_empty_list() {
+fn test_ui_navigation_g_shortcuts_empty_list() {
     let temp_dir = tempdir().unwrap();
     let mut harness = create_harness(&temp_dir);
 
@@ -91,7 +95,7 @@ fn test_g_shortcuts_empty_list() {
 }
 
 #[test]
-fn test_parent_directory_selection() {
+fn test_ui_navigation_parent_directory_selection() {
     // Create a temporary directory for testing
     let temp_dir = tempdir().unwrap();
 
@@ -134,7 +138,7 @@ fn test_parent_directory_selection() {
 }
 
 #[test]
-fn test_parent_directory_with_minus_key() {
+fn test_ui_navigation_parent_directory_with_minus_key() {
     // Create a temporary directory for testing
     let temp_dir = tempdir().unwrap();
 
@@ -177,7 +181,7 @@ fn test_parent_directory_with_minus_key() {
 }
 
 #[test]
-fn test_prev_path_selection_with_sort() {
+fn test_ui_navigation_prev_path_selection_with_sort() {
     // Create a temporary directory for testing
     let temp_dir = tempdir().unwrap();
 
@@ -256,7 +260,7 @@ fn test_prev_path_selection_with_sort() {
 }
 
 #[test]
-fn test_mouse_click_selects_and_previews() {
+fn test_ui_navigation_mouse_click_selects_and_previews() {
     // Create a temporary directory for testing
     let temp_dir = tempdir().unwrap();
 
@@ -337,14 +341,13 @@ fn test_mouse_click_selects_and_previews() {
         Some(test_files[1].clone()),
         "Cached preview path should be b.txt after selection"
     );
-    // wait for preview to be completed
-    for _ in 0..100 {
+    wait_for_condition(|| {
         harness.step();
-        if let Some(PreviewContent::Text(_)) = harness.state().preview_content {
-            break;
-        }
-        std::thread::sleep(std::time::Duration::from_millis(10));
-    }
+        matches!(
+            harness.state().preview_content,
+            Some(PreviewContent::Text(_))
+        )
+    });
     match &harness.state().preview_content {
         Some(PreviewContent::Text(text)) => {
             assert!(
@@ -379,7 +382,7 @@ fn test_mouse_click_selects_and_previews() {
 }
 
 #[test]
-fn test_enter_directory() {
+fn test_ui_navigation_enter_directory() {
     // Create a temporary directory for testing
     let temp_dir = tempdir().unwrap();
 
@@ -426,7 +429,7 @@ fn test_enter_directory() {
 }
 
 #[test]
-fn test_image_preview() {
+fn test_ui_navigation_image_preview() {
     // Create a temporary directory for testing
     let temp_dir = tempdir().unwrap();
 
@@ -447,13 +450,13 @@ fn test_image_preview() {
     harness.key_press(Key::K);
     harness.step();
 
-    for _ in 0..100 {
+    wait_for_condition(|| {
         harness.step();
-        if let Some(PreviewContent::Image(_)) = &harness.state().preview_content {
-            break;
-        }
-        std::thread::sleep(std::time::Duration::from_millis(10));
-    }
+        matches!(
+            &harness.state().preview_content,
+            Some(PreviewContent::Image(_))
+        )
+    });
 
     // Check if the preview content is an image
     match &harness.state().preview_content {
@@ -466,13 +469,13 @@ fn test_image_preview() {
         }
         Some(PreviewContent::Loading(..)) => {
             // Wait for loading to complete
-            for _ in 0..100 {
+            wait_for_condition(|| {
                 harness.step();
-                if let Some(PreviewContent::Image(_)) = &harness.state().preview_content {
-                    break;
-                }
-                std::thread::sleep(std::time::Duration::from_millis(10));
-            }
+                matches!(
+                    &harness.state().preview_content,
+                    Some(PreviewContent::Image(_))
+                )
+            });
             // Check again after waiting
             match &harness.state().preview_content {
                 Some(PreviewContent::Image(image_meta)) => {
@@ -504,7 +507,7 @@ fn test_image_preview() {
 }
 
 #[test]
-fn test_zip_preview() {
+fn test_ui_navigation_zip_preview() {
     // Create a temporary directory for testing
     let temp_dir = tempdir().unwrap();
 
@@ -527,32 +530,24 @@ fn test_zip_preview() {
     let mut is_zip_content = false;
 
     // Try multiple steps to allow async loading to complete
-    for _ in 0..100 {
-        match &harness.state().preview_content {
-            Some(PreviewContent::Zip(entries)) => {
-                // Verify zip entries
-                assert!(!entries.is_empty(), "Zip entries should not be empty");
-
+    wait_for_condition(|| {
+        harness.step();
+        if let Some(PreviewContent::Zip(entries)) = &harness.state().preview_content {
+            // Verify zip entries
+            if !entries.is_empty() {
                 // Check for expected files
                 let file1 = entries.iter().find(|e| e.name == "file1.txt");
                 let file2 = entries.iter().find(|e| e.name == "file2.txt");
                 let subdir = entries.iter().find(|e| e.name == "subdir/" && e.is_dir);
 
-                assert!(file1.is_some(), "file1.txt should be in the zip entries");
-                assert!(file2.is_some(), "file2.txt should be in the zip entries");
-                assert!(subdir.is_some(), "subdir/ should be in the zip entries");
-
-                is_zip_content = true;
-                break;
+                if file1.is_some() && file2.is_some() && subdir.is_some() {
+                    is_zip_content = true;
+                    return true;
+                }
             }
-            Some(_) => {
-                // Still loading, try another step
-                std::thread::sleep(std::time::Duration::from_millis(10));
-                harness.step();
-            }
-            None => panic!("Preview content should not be None"),
         }
-    }
+        false
+    });
 
     assert!(
         is_zip_content,
@@ -561,7 +556,7 @@ fn test_zip_preview() {
 }
 
 #[test]
-fn test_open_directory_vs_open_directory_or_file() {
+fn test_ui_navigation_open_directory_vs_open_directory_or_file() {
     // Create a temporary directory for testing
     let temp_dir = tempdir().unwrap();
 
@@ -576,14 +571,12 @@ fn test_open_directory_vs_open_directory_or_file() {
 
     // Start the harness
     let mut harness = create_harness(&temp_dir);
+    clear_open_calls();
 
     // Test 1: OpenDirectory should not open a file
     {
         // Select the text file (index 1)
-        {
-            let tab = harness.state_mut().tab_manager.current_tab_mut();
-            tab.selected_index = 1; // Select test1.txt
-        }
+        harness.key_press(Key::J);
         harness.step();
 
         // Get the current path before attempting to open
@@ -610,41 +603,29 @@ fn test_open_directory_vs_open_directory_or_file() {
             "OpenDirectory should not change the current path when selecting a file"
         );
 
-        // Verify that the file is not in the files_being_opened map
         assert!(
-            harness.state().files_being_opened.is_empty(),
-            "No files should be in the files_being_opened map"
+            get_open_that_calls().is_empty(),
+            "No files should be in the get_open_that_calls list"
         );
     }
 
     // Test 2: OpenDirectoryOrFile should open a file
     {
-        // Select the text file (index 1)
-        {
-            let tab = harness.state_mut().tab_manager.current_tab_mut();
-            tab.selected_index = 1; // Select test1.txt
-        }
-        harness.step();
-
         // Press Enter key which is mapped to OpenDirectoryOrFile
         harness.key_press(Key::Enter);
-        harness.step();
-
+        wait_for_condition(|| {
+            harness.step();
+            !get_open_that_calls().is_empty()
+        });
         // Check that the specific file is being opened
         let file_path = &test_files[1];
-        assert!(
-            harness.state().files_being_opened.contains_key(file_path),
-            "The specific file should be in the files_being_opened map"
-        );
+        assert_eq!(&PathBuf::from(&get_open_that_calls()[0].path), file_path);
     }
 
     // Test 3: OpenDirectoryOrFile should also open a directory
     {
         // Select the directory (index 0)
-        {
-            let tab = harness.state_mut().tab_manager.current_tab_mut();
-            tab.selected_index = 0; // Select dir1
-        }
+        harness.key_press(Key::K);
         harness.step();
 
         // Get the current path before attempting to open
@@ -675,7 +656,7 @@ fn test_open_directory_vs_open_directory_or_file() {
 }
 
 #[test]
-fn test_page_navigation() {
+fn test_ui_navigation_page_navigation() {
     // Create a directory with many files to test page navigation
     let temp_dir = tempdir().unwrap();
     let mut test_files = Vec::new();

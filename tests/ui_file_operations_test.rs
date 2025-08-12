@@ -4,7 +4,7 @@ mod ui_test_helpers;
 use egui::Key;
 use kiorg::ui::popup::PopupType;
 use tempfile::tempdir;
-use ui_test_helpers::{create_harness, create_test_files};
+use ui_test_helpers::{create_harness, create_test_files, wait_for_condition};
 
 #[test]
 fn test_delete_shortcut() {
@@ -47,13 +47,10 @@ fn test_delete_shortcut() {
 
     // Simulate pressing Enter to confirm deletion
     harness.key_press(Key::Enter);
-    for _ in 0..100 {
+    wait_for_condition(|| {
         harness.step();
-        if harness.state().show_popup.is_none() {
-            break;
-        }
-        std::thread::sleep(std::time::Duration::from_millis(10));
-    }
+        harness.state().show_popup.is_none()
+    });
 
     // Verify only test1.txt was deleted
     assert!(!test_files[2].exists(), "test1.txt should be deleted");
@@ -84,13 +81,10 @@ fn test_delete_shortcut() {
     // confirm twice
     harness.key_press(Key::Enter);
     harness.step();
-    for _ in 0..100 {
+    wait_for_condition(|| {
         harness.step();
-        if harness.state().show_popup.is_none() {
-            break;
-        }
-        std::thread::sleep(std::time::Duration::from_millis(10));
-    }
+        harness.state().show_popup.is_none()
+    });
 
     // Verify dir1 and all its contents were deleted recursively
     assert!(!test_files[0].exists(), "dir1 should be deleted");

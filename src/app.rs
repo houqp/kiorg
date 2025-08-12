@@ -13,11 +13,12 @@ use crate::config::{self, LEFT_PANEL_RATIO, PREVIEW_PANEL_RATIO, colors::AppColo
 use crate::input;
 use crate::models::preview_content::PreviewContent;
 use crate::models::tab::{TabManager, TabManagerState};
+use crate::open_wrap::{open_that, open_with};
 use crate::ui::egui_notify::Toasts;
 use crate::ui::popup::delete::DeleteConfirmResult;
 use crate::ui::popup::{
-    PopupType, about, add_entry, bookmark, delete, exit, file_drop, generic_message, open_with,
-    preview as popup_preview, rename, teleport, theme,
+    PopupType, about, add_entry, bookmark, delete, exit, file_drop, generic_message,
+    open_with as open_with_popup, preview as popup_preview, rename, teleport, theme,
 };
 use crate::ui::search_bar::{self, SearchBar};
 use crate::ui::separator;
@@ -641,7 +642,7 @@ impl Kiorg {
     pub fn open_file(&mut self, path: PathBuf) {
         let path_clone = path.clone();
         self.open_file_internal(path, move || {
-            open::that(&path_clone).map_err(|e| format!("Failed to open file: {e}"))
+            open_that(&path_clone).map_err(|e| format!("Failed to open file: {e}"))
         });
     }
 
@@ -650,7 +651,7 @@ impl Kiorg {
         let path_clone = path.clone();
         let command_clone = command.clone();
         self.open_file_internal(path, move || {
-            open::with(&path_clone, &command_clone)
+            open_with(&path_clone, &command_clone)
                 .map_err(|e| format!("Failed to open file with '{command_clone}': {e}"))
         });
     }
@@ -858,7 +859,7 @@ impl eframe::App for Kiorg {
                 rename::draw(ctx, self);
             }
             Some(PopupType::OpenWith(_)) => {
-                open_with::draw(ctx, self);
+                open_with_popup::draw(ctx, self);
             }
             Some(PopupType::AddEntry(_)) => {
                 add_entry::draw(ctx, self);

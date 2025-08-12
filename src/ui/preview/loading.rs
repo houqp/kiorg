@@ -5,6 +5,8 @@ use crate::config::colors::AppColors;
 use crate::models::preview_content::{PreviewContent, PreviewReceiver};
 use egui::RichText;
 use std::path::{Path, PathBuf};
+use std::sync::mpsc;
+use std::time::Duration;
 
 /// Render loading state
 pub fn render(
@@ -12,7 +14,7 @@ pub fn render(
     ctx: &egui::Context,
     ui: &mut egui::Ui,
     path: &Path,
-    receiver_opt: PreviewReceiver,
+    receiver: PreviewReceiver,
     colors: &AppColors,
 ) {
     // Display loading indicator
@@ -29,11 +31,6 @@ pub fn render(
         );
     });
 
-    // Check if we have a receiver to poll for results
-    let receiver = match receiver_opt {
-        Some(receiver) => receiver,
-        None => return,
-    };
     // Try to get a lock on the receiver
     let receiver = receiver.lock().expect("failed to obtain lock");
     // Try to receive the result without blocking
@@ -70,17 +67,34 @@ pub fn load_preview_async<F>(app: &mut Kiorg, path: PathBuf, processor: F)
 where
     F: FnOnce(PathBuf) -> Result<PreviewContent, String> + Send + 'static,
 {
-    // Create a channel for communication
+    // Create a channel for process result communication
     let (sender, receiver) = std::sync::mpsc::channel();
+    // Create a channel for cancel signaling
+    let (cancel_sender, cancel_receiver) = mpsc::channel();
 
+    // Check for existing loading content and trigger cancel signal
+    if let Some(PreviewContent::Loading(_, _, existing_cancel_sender)) = &app.preview_content {
+        let _ = existing_cancel_sender.send(());
+    }
     // Set the initial loading state with the receiver
     app.preview_content = Some(PreviewContent::loading_with_receiver(
         path.clone(),
         receiver,
+        cancel_sender,
     ));
 
     // Spawn a thread to process the file
     std::thread::spawn(move || {
+        // Wait for debounce treshold
+        match cancel_receiver.recv_timeout(Duration::from_millis(200)) {
+            Ok(_) | Err(mpsc::RecvTimeoutError::Disconnected) => {
+                // Cancel signal received or dropped, terminate early
+                return;
+            }
+            Err(mpsc::RecvTimeoutError::Timeout) => {
+                // Timeout reached, proceed with processing
+            }
+        }
         let preview_result = processor(path);
         let _ = sender.send(preview_result);
     });

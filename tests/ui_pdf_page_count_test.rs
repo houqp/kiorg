@@ -3,7 +3,7 @@ mod ui_test_helpers;
 
 use kiorg::models::preview_content::PreviewContent;
 use tempfile::tempdir;
-use ui_test_helpers::{create_harness, create_test_pdf};
+use ui_test_helpers::{create_harness, create_test_pdf, wait_for_condition};
 
 /// Test that PDF page count is displayed in the right side panel preview
 #[test]
@@ -29,24 +29,15 @@ fn test_pdf_page_count_in_preview_content() {
     harness.step();
 
     // Wait for PDF processing in a loop, checking for preview content
-    let mut pdf_loaded = false;
-    for _ in 0..100 {
-        // Increase max iterations but exit early when loaded
-        std::thread::sleep(std::time::Duration::from_millis(10));
+    wait_for_condition(|| {
         harness.step();
-
         dbg!(&harness.state().preview_content);
         // Check if PDF preview content is loaded
-        if let Some(PreviewContent::Pdf(_)) = &harness.state().preview_content {
-            pdf_loaded = true;
-            break;
-        }
-    }
-
-    assert!(
-        pdf_loaded,
-        "PDF should have loaded within the timeout period"
-    );
+        matches!(
+            &harness.state().preview_content,
+            Some(PreviewContent::Pdf(_))
+        )
+    });
 
     // Check if PDF preview loaded successfully
     // The main goal is to test that IF a PDF loads, the page count is accessible

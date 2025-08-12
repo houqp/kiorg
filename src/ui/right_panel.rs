@@ -12,20 +12,19 @@ pub fn draw(app: &mut Kiorg, ctx: &egui::Context, ui: &mut Ui, width: f32, heigh
     let colors = &app.colors;
 
     // Handle the loading case separately to avoid borrowing app in the closure
-    let mut is_loading = false;
     let mut loading_path = None;
     let mut loading_receiver = None;
 
     // Clone the preview content to avoid borrow issues
-    // TODO: avoid the full clone here
-    let preview_content = match &app.preview_content {
-        Some(PreviewContent::Loading(path, receiver)) => {
-            is_loading = true;
+    let (is_loading, preview_content) = match &app.preview_content {
+        Some(PreviewContent::Loading(path, receiver, _cancel_sender)) => {
             loading_path = Some(path.clone());
-            loading_receiver = receiver.clone();
-            None
+            loading_receiver = Some(receiver.clone());
+
+            (true, None)
         }
-        other => other.clone(),
+        // TODO: avoid the full clone here
+        other => (false, other.clone()),
     };
 
     // Process loading state outside the UI closure
@@ -58,15 +57,14 @@ pub fn draw(app: &mut Kiorg, ctx: &egui::Context, ui: &mut Ui, width: f32, heigh
                 Ok(content) => {
                     // Set the preview content directly with the received content
                     app.preview_content = Some(content);
-                    // We've updated the content, so we're no longer loading
-                    is_loading = false;
                 }
                 Err(e) => {
                     app.preview_content =
                         Some(PreviewContent::text(format!("Error loading file: {e}")));
-                    is_loading = false;
                 }
             }
+            // refresh with next frame
+            return;
         }
     }
 

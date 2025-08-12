@@ -4,7 +4,7 @@ mod ui_test_helpers;
 use egui::{Key, Modifiers};
 use kiorg::ui::popup::PopupType;
 use tempfile::tempdir;
-use ui_test_helpers::{create_harness, create_test_files};
+use ui_test_helpers::{create_harness, create_test_files, wait_for_condition};
 
 /// Integration test that uses Ctrl+A to select all current files and then deletes them
 #[test]
@@ -107,13 +107,10 @@ fn test_ctrl_a_select_all_and_delete() {
     harness.step();
 
     // Give time for deletion to process (deletion happens asynchronously)
-    for _ in 0..10 {
+    wait_for_condition(|| {
         harness.step();
-        let app = harness.state();
-        if app.show_popup.is_none() {
-            break;
-        }
-    }
+        harness.state().show_popup.is_none()
+    });
 
     // Verify the delete popup is closed
     {

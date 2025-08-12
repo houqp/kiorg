@@ -231,7 +231,7 @@ pub fn show_preview_popup(ctx: &Context, app: &mut Kiorg) {
                                     crate::ui::preview::tar::render(ui, tar_entries, &app.colors);
                                 });
                         }
-                        PreviewContent::Loading(path, _) => {
+                        PreviewContent::Loading(path, _, _) => {
                             ui.vertical_centered(|ui| {
                                 ui.add_space(20.0);
                                 ui.spinner();

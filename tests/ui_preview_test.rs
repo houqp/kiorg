@@ -4,7 +4,9 @@ mod ui_test_helpers;
 use egui::Key;
 use kiorg::models::preview_content::PreviewContent;
 use tempfile::tempdir;
-use ui_test_helpers::{create_harness, create_test_image, create_test_tar, create_test_zip};
+use ui_test_helpers::{
+    create_harness, create_test_image, create_test_tar, create_test_zip, wait_for_condition,
+};
 
 /// Test for text preview of regular text files
 #[test]
@@ -24,15 +26,15 @@ fn test_text_file_preview() {
     harness.key_press(Key::J);
     harness.step();
 
-    for _ in 0..100 {
+    wait_for_condition(|| {
         match harness.state().preview_content.as_ref() {
-            Some(PreviewContent::Text(_)) => break, // Text preview loaded
+            Some(PreviewContent::Text(_)) => true, // Text preview loaded
             _ => {
-                std::thread::sleep(std::time::Duration::from_millis(10));
                 harness.step(); // Continue stepping until the text preview loads
+                false
             }
         }
-    }
+    });
 
     // Check if the preview content is text and contains the expected content
     match &harness.state().preview_content {
@@ -68,15 +70,13 @@ fn test_binary_file_preview() {
     harness.key_press(Key::J);
     harness.step();
 
-    for _ in 0..100 {
-        match harness.state().preview_content.as_ref() {
-            Some(PreviewContent::Text(_)) => break, // Text preview loaded
-            _ => {
-                std::thread::sleep(std::time::Duration::from_millis(10));
-                harness.step(); // Continue stepping until the text preview loads
-            }
-        }
-    }
+    wait_for_condition(|| {
+        harness.step();
+        matches!(
+            harness.state().preview_content.as_ref(),
+            Some(PreviewContent::Text(_))
+        )
+    });
 
     // Check if the preview content is text and indicates it's a binary file
     match &harness.state().preview_content {
@@ -115,15 +115,13 @@ fn test_directory_preview() {
     harness.key_press(Key::J);
     harness.step();
 
-    for _ in 0..100 {
-        match harness.state().preview_content.as_ref() {
-            Some(PreviewContent::Directory(_)) => break,
-            _ => {
-                std::thread::sleep(std::time::Duration::from_millis(10));
-                harness.step(); // Continue stepping until the text preview loads
-            }
-        }
-    }
+    wait_for_condition(|| {
+        harness.step();
+        matches!(
+            harness.state().preview_content.as_ref(),
+            Some(PreviewContent::Directory(_))
+        )
+    });
 
     // Check if the preview content is text and indicates it's a directory
     match &harness.state().preview_content {
@@ -158,15 +156,13 @@ fn test_image_preview() {
     harness.key_press(Key::J);
     harness.step();
 
-    for _ in 0..100 {
-        match harness.state().preview_content.as_ref() {
-            Some(PreviewContent::Image(_)) => break, // Image preview loaded
-            _ => {
-                std::thread::sleep(std::time::Duration::from_millis(10));
-                harness.step(); // Continue stepping until the image preview loads
-            }
-        }
-    }
+    wait_for_condition(|| {
+        harness.step();
+        matches!(
+            harness.state().preview_content.as_ref(),
+            Some(PreviewContent::Image(_))
+        )
+    });
 
     // Check if the preview content is an image
     match &harness.state().preview_content {
@@ -203,32 +199,39 @@ fn test_zip_preview() {
     harness.step();
 
     // Try multiple steps to allow async loading to complete
-    for _ in 0..100 {
+    wait_for_condition(|| {
+        harness.step();
         if let Some(PreviewContent::Zip(entries)) = &harness.state().preview_content {
             // Verify zip entries
-            assert!(!entries.is_empty(), "Zip entries should not be empty");
+            if !entries.is_empty() {
+                // Check for expected files
+                let file1 = entries.iter().find(|e| e.name == "file1.txt");
+                let file2 = entries.iter().find(|e| e.name == "file2.txt");
+                let subdir = entries.iter().find(|e| e.name == "subdir/" && e.is_dir);
 
-            // Check for expected files
-            let file1 = entries.iter().find(|e| e.name == "file1.txt");
-            let file2 = entries.iter().find(|e| e.name == "file2.txt");
-            let subdir = entries.iter().find(|e| e.name == "subdir/" && e.is_dir);
-
-            assert!(file1.is_some(), "file1.txt should be in the zip entries");
-            assert!(file2.is_some(), "file2.txt should be in the zip entries");
-            assert!(subdir.is_some(), "subdir/ should be in the zip entries");
-
-            return;
-        } else {
-            // Still loading, try another step
-            std::thread::sleep(std::time::Duration::from_millis(10));
-            harness.step();
+                return file1.is_some() && file2.is_some() && subdir.is_some();
+            }
         }
-    }
+        false
+    });
 
-    panic!(
-        "Preview content should eventually be Zip variant, got {:?}",
-        harness.state().preview_content
-    );
+    // Final verification
+    if let Some(PreviewContent::Zip(entries)) = &harness.state().preview_content {
+        assert!(!entries.is_empty(), "Zip entries should not be empty");
+
+        let file1 = entries.iter().find(|e| e.name == "file1.txt");
+        let file2 = entries.iter().find(|e| e.name == "file2.txt");
+        let subdir = entries.iter().find(|e| e.name == "subdir/" && e.is_dir);
+
+        assert!(file1.is_some(), "file1.txt should be in the zip entries");
+        assert!(file2.is_some(), "file2.txt should be in the zip entries");
+        assert!(subdir.is_some(), "subdir/ should be in the zip entries");
+    } else {
+        panic!(
+            "Preview content should eventually be Zip variant, got {:?}",
+            harness.state().preview_content
+        );
+    }
 }
 
 /// Test for tar preview
@@ -250,32 +253,39 @@ fn test_tar_preview() {
     harness.step();
 
     // Try multiple steps to allow async loading to complete
-    for _ in 0..100 {
+    wait_for_condition(|| {
+        harness.step();
         if let Some(PreviewContent::Tar(entries)) = &harness.state().preview_content {
             // Verify tar entries
-            assert!(!entries.is_empty(), "Tar entries should not be empty");
+            if !entries.is_empty() {
+                // Check for expected files
+                let file1 = entries.iter().find(|e| e.name == "file1.txt");
+                let file2 = entries.iter().find(|e| e.name == "file2.txt");
+                let subdir = entries.iter().find(|e| e.name == "subdir/" && e.is_dir);
 
-            // Check for expected files
-            let file1 = entries.iter().find(|e| e.name == "file1.txt");
-            let file2 = entries.iter().find(|e| e.name == "file2.txt");
-            let subdir = entries.iter().find(|e| e.name == "subdir/" && e.is_dir);
-
-            assert!(file1.is_some(), "file1.txt should be in the tar entries");
-            assert!(file2.is_some(), "file2.txt should be in the tar entries");
-            assert!(subdir.is_some(), "subdir/ should be in the tar entries");
-
-            return;
-        } else {
-            // Still loading, try another step
-            std::thread::sleep(std::time::Duration::from_millis(10));
-            harness.step();
+                return file1.is_some() && file2.is_some() && subdir.is_some();
+            }
         }
-    }
+        false
+    });
 
-    panic!(
-        "Preview content should eventually be Tar variant, got {:?}",
-        harness.state().preview_content
-    );
+    // Final verification
+    if let Some(PreviewContent::Tar(entries)) = &harness.state().preview_content {
+        assert!(!entries.is_empty(), "Tar entries should not be empty");
+
+        let file1 = entries.iter().find(|e| e.name == "file1.txt");
+        let file2 = entries.iter().find(|e| e.name == "file2.txt");
+        let subdir = entries.iter().find(|e| e.name == "subdir/" && e.is_dir);
+
+        assert!(file1.is_some(), "file1.txt should be in the tar entries");
+        assert!(file2.is_some(), "file2.txt should be in the tar entries");
+        assert!(subdir.is_some(), "subdir/ should be in the tar entries");
+    } else {
+        panic!(
+            "Preview content should eventually be Tar variant, got {:?}",
+            harness.state().preview_content
+        );
+    }
 }
 
 /// Test for no preview when no file is selected

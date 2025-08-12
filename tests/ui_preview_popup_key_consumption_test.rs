@@ -5,7 +5,7 @@ use egui::{Key, Modifiers};
 use kiorg::models::preview_content::PreviewContent;
 use kiorg::ui::popup::PopupType;
 use tempfile::tempdir;
-use ui_test_helpers::{create_harness, create_test_image, tab_num_modifiers};
+use ui_test_helpers::{create_harness, create_test_image, tab_num_modifiers, wait_for_condition};
 
 /// Test that number keys don't trigger tab switches when preview popup is active
 #[test]
@@ -67,14 +67,17 @@ fn test_preview_popup_consumes_number_keys() {
     harness.step();
 
     // Wait for the image preview to load
-    for _ in 0..10 {
-        std::thread::sleep(std::time::Duration::from_millis(10));
-        match harness.state().preview_content.as_ref() {
-            Some(PreviewContent::Image(_)) => break,
-            Some(PreviewContent::Loading(..)) => harness.step(),
-            _ => harness.step(),
+    wait_for_condition(|| match harness.state().preview_content.as_ref() {
+        Some(PreviewContent::Image(_)) => true,
+        Some(PreviewContent::Loading(..)) => {
+            harness.step();
+            false
         }
-    }
+        _ => {
+            harness.step();
+            false
+        }
+    });
 
     // Verify image preview is loaded
     match harness.state().preview_content.as_ref() {
@@ -184,13 +187,17 @@ fn test_preview_popup_consumes_other_keys() {
     harness.step();
 
     // Wait for the image preview to load
-    for _ in 0..10 {
-        match harness.state().preview_content.as_ref() {
-            Some(PreviewContent::Image(_)) => break,
-            Some(PreviewContent::Loading(..)) => harness.step(),
-            _ => harness.step(),
+    wait_for_condition(|| match harness.state().preview_content.as_ref() {
+        Some(PreviewContent::Image(_)) => true,
+        Some(PreviewContent::Loading(..)) => {
+            harness.step();
+            false
         }
-    }
+        _ => {
+            harness.step();
+            false
+        }
+    });
 
     // Open preview popup with Shift+K
     let modifiers = Modifiers {
