@@ -28,7 +28,7 @@ fn test_text_file_preview() {
 
     wait_for_condition(|| {
         match harness.state().preview_content.as_ref() {
-            Some(PreviewContent::Text(_)) => true, // Text preview loaded
+            Some(PreviewContent::Text(_)) | Some(PreviewContent::HighlightedCode { .. }) => true, // Text preview loaded
             _ => {
                 harness.step(); // Continue stepping until the text preview loads
                 false
@@ -44,8 +44,17 @@ fn test_text_file_preview() {
                 "Preview content should contain the text file content"
             );
         }
+        Some(PreviewContent::HighlightedCode {
+            content,
+            language: _,
+        }) => {
+            assert!(
+                content.contains("This is a test text file content"),
+                "Preview content should contain the text file content"
+            );
+        }
         Some(other) => {
-            panic!("Preview content should be Text variant, got {other:?}");
+            panic!("Preview content should be Text or HighlightedCode variant, got {other:?}");
         }
         None => panic!("Preview content should not be None"),
     }

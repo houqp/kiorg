@@ -114,6 +114,12 @@ pub fn draw(app: &mut Kiorg, ctx: &egui::Context, ui: &mut Ui, width: f32, heigh
                         Some(PreviewContent::Text(ref text)) => {
                             preview::text::render(ui, text, colors);
                         }
+                        Some(PreviewContent::HighlightedCode {
+                            ref content,
+                            language,
+                        }) => {
+                            preview::text::render_highlighted(ui, content, language);
+                        }
                         Some(PreviewContent::Image(ref image_meta)) => {
                             preview::image::render(
                                 ui,

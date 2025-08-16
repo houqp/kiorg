@@ -5,6 +5,7 @@ use crate::config::colors::AppColors;
 use crate::models::preview_content::PreviewContent;
 use crate::ui::preview::loading::load_preview_async;
 use egui::RichText;
+use egui_extras::syntax_highlighting::CodeTheme;
 use file_type::FileType;
 use std::io::Read;
 use std::path::PathBuf;
@@ -63,6 +64,12 @@ pub fn render(ui: &mut egui::Ui, text: &str, colors: &AppColors) {
     ui.label(RichText::new(text).color(colors.fg));
 }
 
+/// Render syntax highlighted code content
+pub fn render_highlighted(ui: &mut egui::Ui, text: &str, language: &'static str) {
+    let theme = CodeTheme::from_memory(ui.ctx(), ui.style());
+    egui_extras::syntax_highlighting::code_view_ui(ui, &theme, text, language);
+}
+
 /// Render empty state when no file is selected
 pub fn render_empty(ui: &mut egui::Ui, colors: &AppColors) {
     ui.label(RichText::new("No file selected").color(colors.fg));
@@ -70,7 +77,17 @@ pub fn render_empty(ui: &mut egui::Ui, colors: &AppColors) {
 
 /// Load text content asynchronously
 pub fn load_async(app: &mut Kiorg, path: PathBuf, file_size: u64) {
-    load_preview_async(app, path, move |path| try_load_utf8_str(path, file_size));
+    load_preview_async(app, path, move |path| {
+        // Check if this is a source code file that should be syntax highlighted
+        let ext = super::path_to_ext_info(&path);
+        if let Some(lang) = lang_type_from_ext(&ext) {
+            // For supported languages, load the full file for syntax highlighting
+            load_full_text(&path, Some(lang))
+        } else {
+            // For other files, use the truncated preview
+            try_load_utf8_str(path, file_size)
+        }
+    });
 }
 
 /// Try to load a file as UTF-8 text
@@ -140,15 +157,35 @@ pub fn render_generic_file(path: PathBuf, size: u64) -> Result<PreviewContent, S
 }
 
 /// Load full text content (not limited to first 1000 bytes like the regular preview)
-pub fn load_full_text(path: &PathBuf) -> Result<PreviewContent, String> {
+pub fn load_full_text(
+    path: &PathBuf,
+    lang: Option<&'static str>,
+) -> Result<PreviewContent, String> {
     match std::fs::read_to_string(path) {
-        Ok(content) => Ok(PreviewContent::text(content)),
+        Ok(content) => {
+            // Use provided language or detect from extension
+            let language = lang.or_else(|| {
+                let ext = super::path_to_ext_info(path);
+                lang_type_from_ext(&ext)
+            });
+
+            if let Some(lang) = language {
+                Ok(PreviewContent::HighlightedCode {
+                    content,
+                    language: lang,
+                })
+            } else {
+                Ok(PreviewContent::text(content))
+            }
+        }
         Err(_) => {
             // If UTF-8 reading fails, try to read as bytes and convert with lossy conversion
+            // Don't use syntax highlighting for lossy converted content as it may be corrupted
             match std::fs::read(path) {
-                Ok(bytes) => Ok(PreviewContent::text(
-                    String::from_utf8_lossy(&bytes).to_string(),
-                )),
+                Ok(bytes) => {
+                    let content = String::from_utf8_lossy(&bytes).to_string();
+                    Ok(PreviewContent::text(content))
+                }
                 Err(e) => Err(format!("Failed to read file: {e}")),
             }
         }

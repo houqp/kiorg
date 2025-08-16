@@ -6,7 +6,6 @@ use crate::ui::file_list::truncate_text;
 use crate::ui::popup::PopupType;
 use crate::ui::popup::window_utils::new_center_popup_window;
 use egui::Context;
-use egui_extras::syntax_highlighting::{self, CodeTheme};
 
 pub mod doc;
 pub mod image;
@@ -101,9 +100,10 @@ pub fn handle_show_file_preview(app: &mut Kiorg, _ctx: &egui::Context) {
             let tab = app.tab_manager.current_tab_ref();
             if let Some(entry) = tab.selected_entry() {
                 // Load the full text content for popup display
-                match crate::ui::preview::text::load_full_text(&entry.path) {
-                    Ok(full_content) => {
-                        app.preview_content = Some(full_content);
+                let lang = crate::ui::preview::text::lang_type_from_ext(ext);
+                match crate::ui::preview::text::load_full_text(&entry.path, lang) {
+                    Ok(preview_content) => {
+                        app.preview_content = Some(preview_content);
                         app.show_popup = Some(PopupType::Preview);
                     }
                     Err(_) => {
@@ -158,28 +158,25 @@ pub fn show_preview_popup(ctx: &Context, app: &mut Kiorg) {
                             egui::ScrollArea::both()
                                 .auto_shrink([false; 2])
                                 .show(ui, |ui| {
-                                    // Try to detect if this is source code from the file path
-                                    let language = selected_path.as_ref().and_then(|path| {
-                                        crate::ui::preview::text::lang_type_from_ext(
-                                            &crate::ui::preview::path_to_ext_info(path),
-                                        )
-                                    });
-                                    if let Some(lang) = language {
-                                        // Use syntax highlighting for source code
-                                        let theme = CodeTheme::from_memory(ui.ctx(), ui.style());
-                                        syntax_highlighting::code_view_ui(ui, &theme, text, lang);
-                                    } else {
-                                        // Fallback to plain text editor for non-source files
-                                        let mut text_str = text.as_str();
-                                        ui.add(
-                                            egui::TextEdit::multiline(&mut text_str)
-                                                .desired_width(f32::INFINITY)
-                                                .desired_rows(0)
-                                                .font(egui::TextStyle::Monospace)
-                                                .text_color(app.colors.fg)
-                                                .interactive(false),
-                                        );
-                                    }
+                                    let mut text_str = text.as_str();
+                                    ui.add(
+                                        egui::TextEdit::multiline(&mut text_str)
+                                            .desired_width(f32::INFINITY)
+                                            .desired_rows(0)
+                                            .font(egui::TextStyle::Monospace)
+                                            .text_color(app.colors.fg)
+                                            .interactive(false),
+                                    );
+                                });
+                        }
+                        PreviewContent::HighlightedCode { content, language } => {
+                            // Display syntax highlighted code with both horizontal and vertical scrolling
+                            egui::ScrollArea::both()
+                                .auto_shrink([false; 2])
+                                .show(ui, |ui| {
+                                    crate::ui::preview::text::render_highlighted(
+                                        ui, content, language,
+                                    );
                                 });
                         }
                         PreviewContent::Image(image_meta) => {
