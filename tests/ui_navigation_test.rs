@@ -3,7 +3,8 @@ mod ui_test_helpers;
 
 use egui::Key;
 use kiorg::models::preview_content::PreviewContent;
-use kiorg::open_wrap::{clear_open_calls, get_open_that_calls};
+use kiorg::open_wrap::{clear_open_calls, get_open_that_calls, get_open_with_calls};
+use kiorg::ui::popup::PopupType;
 use std::path::PathBuf;
 use tempfile::tempdir;
 use ui_test_helpers::{
@@ -555,6 +556,145 @@ fn test_ui_navigation_zip_preview() {
     );
 }
 
+#[test]
+fn test_ui_navigation_open_with_functionality() {
+    // Create a temporary directory for testing
+    let temp_dir = tempdir().unwrap();
+
+    // Create test files
+    let test_files = create_test_files(&[
+        temp_dir.path().join("test.txt"),
+        temp_dir.path().join("image.png"),
+    ]);
+
+    // Write some content to the text file
+    std::fs::write(&test_files[0], "Test file content for open_with").unwrap();
+
+    // Start the harness
+    let mut harness = create_harness(&temp_dir);
+    clear_open_calls();
+
+    // Select the text file (should be at index 0)
+    let tab = harness.state().tab_manager.current_tab_ref();
+    // Find the index of test.txt in the entries since file order might vary
+    let txt_index = tab
+        .entries
+        .iter()
+        .position(|entry| entry.path == test_files[0])
+        .expect("test.txt should exist in entries");
+
+    // Select the text file
+    harness.state_mut().set_selection(txt_index);
+    harness.step();
+
+    // Open the popup using keyboard shortcut
+    let modifiers = egui::Modifiers {
+        shift: true,
+        ..Default::default()
+    };
+    harness.key_press_modifiers(modifiers, Key::O);
+    harness.step();
+
+    // Verify the popup is open
+    assert!(matches!(
+        harness.state().show_popup,
+        Some(PopupType::OpenWith(_))
+    ));
+
+    // Now simulate entering a command and confirming it
+    let test_command = "vim";
+
+    // Set the command in the popup
+    if let Some(PopupType::OpenWith(ref mut command)) = harness.state_mut().show_popup {
+        *command = test_command.to_string();
+    }
+
+    // Simulate confirming the open_with command by calling confirm_open_with directly
+    // since Enter key handling is complex in the popup context
+    harness.key_press(Key::Enter);
+    harness.step();
+
+    // Wait for the async file opening to complete
+    wait_for_condition(|| {
+        harness.step();
+        !get_open_with_calls().is_empty()
+    });
+
+    // Verify that the file was opened with the correct command
+    let open_with_calls = get_open_with_calls();
+    assert!(
+        !open_with_calls.is_empty(),
+        "Should have at least one open_with call"
+    );
+
+    let call = &open_with_calls[0];
+    assert_eq!(
+        PathBuf::from(&call.path),
+        test_files[0],
+        "Should have opened the correct file"
+    );
+    assert_eq!(
+        call.app.as_ref().unwrap(),
+        test_command,
+        "Should have used the correct application command"
+    );
+
+    // Verify the popup was closed
+    assert!(
+        harness.state().show_popup.is_none(),
+        "Open with popup should be closed after confirmation"
+    );
+}
+
+#[test]
+fn test_ui_navigation_open_with_empty_command() {
+    // Create a temporary directory for testing
+    let temp_dir = tempdir().unwrap();
+
+    // Create test files
+    let _test_files = create_test_files(&[temp_dir.path().join("test.txt")]);
+
+    // Start the harness
+    let mut harness = create_harness(&temp_dir);
+    clear_open_calls();
+
+    // Select the text file
+    let tab = harness.state().tab_manager.current_tab_ref();
+    assert_eq!(tab.selected_index, 0);
+
+    // Trigger open_with popup with empty command
+    use kiorg::ui::popup::PopupType;
+    harness.state_mut().show_popup = Some(PopupType::OpenWith("".to_string()));
+    harness.step();
+
+    // Simulate confirming with empty command
+    let modifiers = egui::Modifiers {
+        ctrl: true,
+        ..Default::default()
+    };
+    harness.key_press_modifiers(modifiers, Key::D);
+    harness.step();
+
+    harness.key_press_modifiers(modifiers, Key::Enter);
+    harness.step();
+
+    // Verify that no files were opened (due to empty command)
+    let open_with_calls = get_open_with_calls();
+    assert!(
+        open_with_calls.is_empty(),
+        "Should not open file with empty command"
+    );
+
+    // Note: For empty command, confirm_open_with returns early without calling close_popup
+    // So the popup should still be open, which is the expected behavior
+    assert!(
+        matches!(
+            harness.state().show_popup,
+            Some(kiorg::ui::popup::PopupType::OpenWith(_))
+        ),
+        "Open with popup should still be open after empty command (error case)"
+    );
+}
 #[test]
 fn test_ui_navigation_open_directory_vs_open_directory_or_file() {
     // Create a temporary directory for testing

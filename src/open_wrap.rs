@@ -19,6 +19,7 @@ pub mod mock_open {
     #[derive(Debug, Clone, PartialEq)]
     pub struct OpenCall {
         pub path: std::ffi::OsString,
+        pub app: Option<String>,
     }
 
     pub fn get_open_with_calls() -> Vec<OpenCall> {
@@ -42,11 +43,12 @@ pub mod mock_open {
 
     pub fn open_with(
         path: impl AsRef<std::ffi::OsStr>,
-        _app: impl Into<String>,
+        app: impl Into<String>,
     ) -> std::io::Result<()> {
         let mut calls = get_open_with_calls_storage().lock().unwrap();
         calls.push(OpenCall {
             path: path.as_ref().to_owned(),
+            app: Some(app.into()),
         });
 
         Ok(())
@@ -56,6 +58,7 @@ pub mod mock_open {
         let mut calls = get_open_that_calls_storage().lock().unwrap();
         calls.push(OpenCall {
             path: path.as_ref().to_owned(),
+            app: None,
         });
 
         Ok(())
@@ -63,4 +66,6 @@ pub mod mock_open {
 }
 
 #[cfg(any(test, feature = "testing"))]
-pub use mock_open::{clear_open_calls, get_open_that_calls, open_that, open_with};
+pub use mock_open::{
+    clear_open_calls, get_open_that_calls, get_open_with_calls, open_that, open_with,
+};
