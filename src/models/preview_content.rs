@@ -90,6 +90,11 @@ impl std::fmt::Debug for ImageMeta {
 pub enum PreviewContent {
     /// Text content to be displayed
     Text(String),
+    /// Syntax highlighted text content with language specification
+    HighlightedCode {
+        content: String,
+        language: &'static str,
+    },
     /// Image content with metadata
     Image(ImageMeta),
     /// Zip file content with a list of entries

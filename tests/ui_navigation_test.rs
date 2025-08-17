@@ -356,27 +356,36 @@ fn test_ui_navigation_mouse_click_selects_and_previews() {
                 "Preview content should contain 'Content of b.txt'"
             );
         }
+        Some(PreviewContent::HighlightedCode {
+            content,
+            language: _,
+        }) => {
+            assert!(
+                content.contains("Content of b.txt"),
+                "Preview content should contain 'Content of b.txt'"
+            );
+        }
 
         Some(PreviewContent::Image(_)) => {
-            panic!("Preview content should be Text variant, not Image")
+            panic!("Preview content should be Text or HighlightedCode variant, not Image")
         }
         Some(PreviewContent::Zip(_)) => {
-            panic!("Preview content should be Text variant, not Zip")
+            panic!("Preview content should be Text or HighlightedCode variant, not Zip")
         }
         Some(PreviewContent::Tar(_)) => {
-            panic!("Preview content should be Text variant, not Tar")
+            panic!("Preview content should be Text or HighlightedCode variant, not Tar")
         }
         Some(PreviewContent::Pdf(_)) => {
-            panic!("Preview content should be Text variant, not PDF")
+            panic!("Preview content should be Text or HighlightedCode variant, not PDF")
         }
         Some(PreviewContent::Epub(_)) => {
-            panic!("Preview content should be Text variant, not EPUB")
+            panic!("Preview content should be Text or HighlightedCode variant, not EPUB")
         }
         Some(PreviewContent::Directory(_)) => {
-            panic!("Preview content should be Text variant, not Directory")
+            panic!("Preview content should be Text or HighlightedCode variant, not Directory")
         }
         Some(other) => {
-            panic!("Preview content should be Text variant, got {other:?}");
+            panic!("Preview content should be Text or HighlightedCode variant, got {other:?}");
         }
         None => panic!("Preview content should not be None"),
     }
