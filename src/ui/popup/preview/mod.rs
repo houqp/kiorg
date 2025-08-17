@@ -14,11 +14,12 @@ pub mod image;
 /// This function was extracted from input.rs to reduce complexity
 pub fn handle_show_file_preview(app: &mut Kiorg, _ctx: &egui::Context) {
     // Store path and extension information before borrowing app mutably
-    let (is_dir, extension) = {
+    let (is_dir, path, extension) = {
         let tab = app.tab_manager.current_tab_ref();
         if let Some(selected_entry) = tab.selected_entry() {
             (
                 selected_entry.is_dir,
+                &selected_entry.path,
                 crate::ui::preview::path_to_ext_info(&selected_entry.path),
             )
         } else {
@@ -96,12 +97,9 @@ pub fn handle_show_file_preview(app: &mut Kiorg, _ctx: &egui::Context) {
             // Show preview popup for image files
             app.show_popup = Some(PopupType::Preview);
         }
-        ext if crate::ui::preview::text::lang_type_from_ext(ext).is_some() => {
-            let tab = app.tab_manager.current_tab_ref();
-            if let Some(entry) = tab.selected_entry() {
-                // Load the full text content for popup display
-                let lang = crate::ui::preview::text::lang_type_from_ext(ext);
-                match crate::ui::preview::text::load_full_text(&entry.path, lang) {
+        v => {
+            if let Some(syntax) = crate::ui::preview::text::find_syntax_from_path(path) {
+                match crate::ui::preview::text::load_full_text(path, Some(syntax.name.as_str())) {
                     Ok(preview_content) => {
                         app.preview_content = Some(preview_content);
                         app.show_popup = Some(PopupType::Preview);
@@ -110,12 +108,11 @@ pub fn handle_show_file_preview(app: &mut Kiorg, _ctx: &egui::Context) {
                         app.toasts.error("Failed to load text content for preview.");
                     }
                 }
+            } else {
+                // send notification for unsupported file types
+                app.toasts
+                    .error(format!("Preview not implemented for file type: {v}."));
             }
-        }
-        v => {
-            // send notification for unsupported file types
-            app.toasts
-                .error(format!("Preview not implemented for file type: {v}."));
         }
     }
 }
