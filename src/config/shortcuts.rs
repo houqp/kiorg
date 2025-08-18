@@ -42,10 +42,6 @@ impl KeyboardShortcut {
     #[must_use]
     pub const fn with_ctrl(mut self) -> Self {
         self.ctrl = true;
-        #[cfg(not(target_os = "macos"))]
-        {
-            self.command = true;
-        }
         self
     }
 
@@ -59,10 +55,6 @@ impl KeyboardShortcut {
     #[must_use]
     pub const fn with_cmd(mut self) -> Self {
         self.command = true;
-        #[cfg(not(target_os = "macos"))]
-        {
-            self.ctrl = true;
-        }
         self
     }
 
