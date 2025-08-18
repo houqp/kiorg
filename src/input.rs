@@ -15,7 +15,7 @@ fn is_cancel_keys(key: Key) -> bool {
 
 // Helper function to handle a shortcut action
 #[allow(clippy::too_many_lines)]
-fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: ShortcutAction) {
+fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: &ShortcutAction) {
     match action {
         ShortcutAction::ShowFilePreview => popup_preview::handle_show_file_preview(app, ctx),
         ShortcutAction::MoveDown => app.move_selection(1),
@@ -409,8 +409,9 @@ fn process_key(
 
     // Find and handle the action for this key combination
     let shortcuts = app.get_shortcuts();
-    if let Some(action) = shortcuts_helpers::find_action(shortcuts, key, modifiers, namespace) {
-        handle_shortcut_action(app, ctx, action);
+    let action = shortcuts_helpers::find_action(shortcuts, key, modifiers, namespace).copied();
+    if let Some(action) = action {
+        handle_shortcut_action(app, ctx, &action);
     }
 }
 

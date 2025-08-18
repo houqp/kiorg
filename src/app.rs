@@ -343,7 +343,7 @@ impl Kiorg {
         &self,
         ctx: &egui::Context,
         namespace: bool,
-    ) -> Option<crate::config::shortcuts::ShortcutAction> {
+    ) -> Option<&crate::config::shortcuts::ShortcutAction> {
         let shortcuts = self.get_shortcuts();
         ctx.input(|i| {
             for event in &i.events {

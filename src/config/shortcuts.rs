@@ -652,7 +652,7 @@ pub mod shortcuts_helpers {
         key: Key,
         modifiers: Modifiers,
         namespace: bool,
-    ) -> Option<ShortcutAction> {
+    ) -> Option<&ShortcutAction> {
         // Create a key combo for direct lookup
         let key_combo = EguiKeyCombo {
             key,
@@ -661,7 +661,7 @@ pub mod shortcuts_helpers {
         };
 
         // Use the direct key_to_action mapping for O(1) lookup
-        shortcuts.key_to_action.get(&key_combo).copied()
+        shortcuts.key_to_action.get(&key_combo)
     }
 
     // Get a human-readable representation of shortcuts for an action
