@@ -242,16 +242,10 @@ impl Shortcuts {
                     alt: shortcut.alt,
                     ctrl: shortcut.ctrl,
                     shift: shortcut.shift,
-                    mac_cmd: {
-                        #[cfg(not(target_os = "macos"))]
-                        {
-                            false
-                        }
-                        #[cfg(target_os = "macos")]
-                        {
-                            shortcut.command
-                        }
-                    },
+                    #[cfg(not(target_os = "macos"))]
+                    mac_cmd: false,
+                    #[cfg(target_os = "macos")]
+                    mac_cmd: shortcut.command,
                     command: shortcut.command,
                 },
                 namespace: shortcut.namespace,
@@ -753,6 +747,7 @@ pub mod shortcuts_helpers {
                     parts.push("Shift".to_string());
                 }
 
+                #[cfg(target_os = "macos")]
                 if shortcut.command {
                     parts.push("Cmd".to_string());
                 }
