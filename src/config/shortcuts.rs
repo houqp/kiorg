@@ -40,6 +40,10 @@ impl KeyboardShortcut {
     #[must_use]
     pub const fn with_ctrl(mut self) -> Self {
         self.ctrl = true;
+        #[cfg(not(target_os = "macos"))]
+        {
+            self.command = true;
+        }
         self
     }
 
@@ -52,6 +56,10 @@ impl KeyboardShortcut {
     #[must_use]
     pub const fn with_cmd(mut self) -> Self {
         self.command = true;
+        #[cfg(not(target_os = "macos"))]
+        {
+            self.ctrl = true;
+        }
         self
     }
 
@@ -125,22 +133,6 @@ impl KeyboardShortcut {
                 None
             }
         }
-    }
-
-    // Check if this shortcut matches the given key and modifiers
-    #[must_use]
-    pub fn matches(&self, key: Key, modifiers: Modifiers, namespace: bool) -> bool {
-        let key_matches = match self.to_egui_key() {
-            Some(shortcut_key) => shortcut_key == key,
-            None => false,
-        };
-
-        key_matches
-            && self.shift == modifiers.shift
-            && self.ctrl == modifiers.ctrl
-            && self.alt == modifiers.alt
-            && self.command == modifiers.command
-            && self.namespace == namespace
     }
 }
 
@@ -250,7 +242,16 @@ impl Shortcuts {
                     alt: shortcut.alt,
                     ctrl: shortcut.ctrl,
                     shift: shortcut.shift,
-                    mac_cmd: shortcut.command,
+                    mac_cmd: {
+                        #[cfg(not(target_os = "macos"))]
+                        {
+                            false
+                        }
+                        #[cfg(target_os = "macos")]
+                        {
+                            shortcut.command
+                        }
+                    },
                     command: shortcut.command,
                 },
                 namespace: shortcut.namespace,
@@ -638,6 +639,62 @@ mod tests {
 
             panic!("{}", error_msg);
         }
+    }
+
+    #[test]
+    #[cfg(not(target_os = "macos"))]
+    fn test_command_modifier_matching_linux_windows() {
+        use crate::config::shortcuts::shortcuts_helpers::find_action;
+
+        // Create a shortcuts map and add a shortcut for Ctrl+D
+        let mut shortcuts = Shortcuts::new();
+        let ctrl_d_shortcut = KeyboardShortcut::new("d").with_ctrl();
+        shortcuts.add_shortcut(ctrl_d_shortcut, ShortcutAction::PageDown);
+
+        // Simulate Linux/Windows modifiers where command should equal ctrl
+        let linux_windows_modifiers = Modifiers {
+            alt: false,
+            ctrl: true,
+            shift: false,
+            mac_cmd: false,
+            command: true, // On Linux/Windows, command should be set to same value as ctrl
+        };
+
+        // Test that find_action can match the shortcut correctly
+        let found_action = find_action(
+            &shortcuts,
+            Key::D,
+            linux_windows_modifiers,
+            false, // not namespace
+        );
+
+        assert_eq!(found_action, Some(&ShortcutAction::PageDown));
+
+        // Also test that it doesn't match when ctrl/command are not pressed
+        let no_modifiers = Modifiers {
+            alt: false,
+            ctrl: false,
+            shift: false,
+            mac_cmd: false,
+            command: false,
+        };
+
+        let no_match = find_action(&shortcuts, Key::D, no_modifiers, false);
+
+        assert_eq!(no_match, None);
+
+        // Test that it doesn't match when only command is pressed but not ctrl
+        let command_only_modifiers = Modifiers {
+            alt: false,
+            ctrl: false,
+            shift: false,
+            mac_cmd: false,
+            command: true,
+        };
+
+        let no_match_command_only = find_action(&shortcuts, Key::D, command_only_modifiers, false);
+
+        assert_eq!(no_match_command_only, None);
     }
 }
 
