@@ -9,10 +9,10 @@
 #[path = "mod/ui_test_helpers.rs"]
 mod ui_test_helpers;
 
-use egui::{Key, Modifiers};
+use egui::Key;
 use kiorg::ui::popup::PopupType;
 use tempfile::tempdir;
-use ui_test_helpers::{create_harness, create_test_files, wait_for_condition};
+use ui_test_helpers::{create_harness, create_test_files, ctrl_modifiers, wait_for_condition};
 
 #[test]
 fn test_crash_reproduction_filtered_deletion() {
@@ -47,11 +47,7 @@ fn test_crash_reproduction_filtered_deletion() {
     );
 
     // Step 2: Select all filtered entries using Ctrl+A
-    let modifiers = Modifiers {
-        ctrl: true,
-        ..Default::default()
-    };
-    harness.key_press_modifiers(modifiers, Key::A);
+    harness.key_press_modifiers(ctrl_modifiers(), Key::A);
     harness.step();
 
     // Verify entries are selected

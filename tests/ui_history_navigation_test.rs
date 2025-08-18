@@ -3,7 +3,7 @@ mod ui_test_helpers;
 
 use egui::Key;
 use tempfile::tempdir;
-use ui_test_helpers::{create_harness, create_test_files, tab_num_modifiers};
+use ui_test_helpers::{cmd_modifiers, create_harness, create_test_files, ctrl_modifiers};
 
 /// Test for directory history navigation with keyboard shortcuts
 #[test]
@@ -92,7 +92,7 @@ fn test_directory_history_navigation() {
     // Go back in history (Ctrl+O)
     {
         // Press Ctrl+O to go back
-        harness.key_press_modifiers(egui::Modifiers::CTRL, Key::O);
+        harness.key_press_modifiers(ctrl_modifiers(), Key::O);
         harness.step();
 
         // Verify we're back in dir1
@@ -111,7 +111,7 @@ fn test_directory_history_navigation() {
     // Go back again to root
     {
         // Press Ctrl+O to go back
-        harness.key_press_modifiers(egui::Modifiers::CTRL, Key::O);
+        harness.key_press_modifiers(ctrl_modifiers(), Key::O);
         harness.step();
 
         // Verify we're back at the root
@@ -130,7 +130,7 @@ fn test_directory_history_navigation() {
     // Go forward in history (Ctrl+I)
     {
         // Press Ctrl+I to go forward
-        harness.key_press_modifiers(egui::Modifiers::CTRL, Key::I);
+        harness.key_press_modifiers(ctrl_modifiers(), Key::I);
         harness.step();
 
         // Verify we're back in dir1
@@ -149,7 +149,7 @@ fn test_directory_history_navigation() {
     // Go forward again to nested1
     {
         // Press Ctrl+I to go forward
-        harness.key_press_modifiers(egui::Modifiers::CTRL, Key::I);
+        harness.key_press_modifiers(ctrl_modifiers(), Key::I);
         harness.step();
 
         // Verify we're back in nested1
@@ -169,7 +169,7 @@ fn test_directory_history_navigation() {
     // Test history truncation when navigating to a new path after going back
     {
         // First go back to dir1
-        harness.key_press_modifiers(egui::Modifiers::CTRL, Key::O);
+        harness.key_press_modifiers(ctrl_modifiers(), Key::O);
         harness.step();
 
         // Verify we're back in dir1
@@ -224,7 +224,7 @@ fn test_directory_history_navigation() {
         );
 
         // Switch back to first tab
-        harness.key_press_modifiers(tab_num_modifiers(), Key::Num1);
+        harness.key_press_modifiers(cmd_modifiers(), Key::Num1);
         harness.step();
 
         // Verify first tab still has its history

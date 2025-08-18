@@ -3,7 +3,7 @@ use serde_json::Value;
 use std::fs;
 use tempfile::tempdir;
 
-use ui_test_helpers::{create_harness, create_test_files, tab_num_modifiers};
+use ui_test_helpers::{cmd_modifiers, create_harness, create_test_files};
 
 #[path = "mod/ui_test_helpers.rs"]
 mod ui_test_helpers;
@@ -33,8 +33,7 @@ fn test_tab_selection_preserved_at_runtime() {
 
     // In the first tab, select the second file (index 1)
     {
-        let modifiers = tab_num_modifiers();
-        harness.key_press_modifiers(modifiers, Key::Num1); // Switch to first tab
+        harness.key_press_modifiers(cmd_modifiers(), Key::Num1); // Switch to first tab
         harness.step();
         harness.key_press(Key::J); // Move down to select second file
         harness.step();
@@ -47,8 +46,7 @@ fn test_tab_selection_preserved_at_runtime() {
 
     // In the second tab, select the third file (index 2)
     {
-        let modifiers = tab_num_modifiers();
-        harness.key_press_modifiers(modifiers, Key::Num2); // Switch to second tab
+        harness.key_press_modifiers(cmd_modifiers(), Key::Num2); // Switch to second tab
         harness.step();
         harness.key_press(Key::J); // Move down
         harness.step();
@@ -62,8 +60,7 @@ fn test_tab_selection_preserved_at_runtime() {
     }
 
     // Switch back to first tab and verify selection is preserved
-    let modifiers = tab_num_modifiers();
-    harness.key_press_modifiers(modifiers, Key::Num1);
+    harness.key_press_modifiers(cmd_modifiers(), Key::Num1);
     harness.step();
     assert_eq!(
         harness.state().tab_manager.current_tab_ref().selected_index,
@@ -72,7 +69,7 @@ fn test_tab_selection_preserved_at_runtime() {
     );
 
     // Switch to second tab again and verify selection is preserved
-    harness.key_press_modifiers(modifiers, Key::Num2);
+    harness.key_press_modifiers(cmd_modifiers(), Key::Num2);
     harness.step();
     assert_eq!(
         harness.state().tab_manager.current_tab_ref().selected_index,
@@ -127,8 +124,7 @@ fn test_tab_selection_not_persisted() {
         harness.step();
 
         // In the first tab, select the second file (index 1)
-        let modifiers = tab_num_modifiers();
-        harness.key_press_modifiers(modifiers, Key::Num1); // Switch to first tab
+        harness.key_press_modifiers(cmd_modifiers(), Key::Num1); // Switch to first tab
         harness.step();
         harness.key_press(Key::J); // Move down to select second file
         harness.step();
@@ -139,7 +135,7 @@ fn test_tab_selection_not_persisted() {
         );
 
         // In the second tab, select the third file (index 2)
-        harness.key_press_modifiers(modifiers, Key::Num2); // Switch to second tab
+        harness.key_press_modifiers(cmd_modifiers(), Key::Num2); // Switch to second tab
         harness.step();
         harness.key_press(Key::J); // Move down
         harness.step();
@@ -247,8 +243,7 @@ fn test_tab_selection_not_persisted() {
         );
 
         // Verify first tab has selection reset to 0
-        let modifiers = tab_num_modifiers();
-        harness.key_press_modifiers(modifiers, Key::Num1); // Switch to first tab
+        harness.key_press_modifiers(cmd_modifiers(), Key::Num1); // Switch to first tab
         harness.step();
         assert_eq!(
             harness.state().tab_manager.current_tab_ref().selected_index,
@@ -257,7 +252,7 @@ fn test_tab_selection_not_persisted() {
         );
 
         // Verify second tab has selection reset to 0
-        harness.key_press_modifiers(modifiers, Key::Num2); // Switch to second tab
+        harness.key_press_modifiers(cmd_modifiers(), Key::Num2); // Switch to second tab
         harness.step();
         assert_eq!(
             harness.state().tab_manager.current_tab_ref().selected_index,
