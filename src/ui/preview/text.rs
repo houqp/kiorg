@@ -1,62 +1,35 @@
 //! Text preview module
 
+use std::io::BufRead;
+use std::io::Read;
+use std::path::PathBuf;
+use std::sync::OnceLock;
+
+use egui::RichText;
+use egui_extras::syntax_highlighting::{CodeTheme, SyntectSettings};
+use file_type::FileType;
+use syntect::{
+    dumps,
+    parsing::{SyntaxReference, SyntaxSet},
+};
+
 use crate::app::Kiorg;
 use crate::config::colors::AppColors;
 use crate::models::preview_content::PreviewContent;
 use crate::ui::preview::loading::load_preview_async;
-use egui::RichText;
-use egui_extras::syntax_highlighting::CodeTheme;
-use file_type::FileType;
-use std::io::Read;
-use std::path::PathBuf;
 
-/// Get language type from file extension or filename
-pub fn lang_type_from_ext(ext: &str) -> Option<&'static str> {
-    match ext {
-        "rs" => Some("rs"),
-        "js" | "mjs" | "cjs" => Some("js"),
-        "ts" | "tsx" => Some("ts"),
-        "py" | "pyw" | "pyi" => Some("py"),
-        "java" => Some("java"),
-        "c" | "h" => Some("c"),
-        "cpp" | "cc" | "cxx" | "hpp" | "hxx" => Some("cpp"),
-        "cs" => Some("cs"),
-        "go" => Some("go"),
-        "rb" => Some("ruby"),
-        "php" => Some("php"),
-        "swift" => Some("swift"),
-        "kt" | "kts" => Some("kotlin"),
-        "scala" => Some("scala"),
-        "clj" | "cljs" | "cljc" => Some("clojure"),
-        "hs" => Some("haskell"),
-        "elm" => Some("elm"),
-        "dart" => Some("dart"),
-        "lua" => Some("lua"),
-        "r" => Some("r"),
-        "m" => Some("objc"),
-        "sh" | "bash" | "zsh" | "fish" => Some("bash"),
-        "txt" | "text" | "log" => Some("txt"),
-        "ps1" => Some("powershell"),
-        "sql" => Some("sql"),
-        "html" | "htm" => Some("html"),
-        "css" => Some("css"),
-        "scss" | "sass" => Some("scss"),
-        "less" => Some("less"),
-        "xml" => Some("xml"),
-        "json" => Some("json"),
-        "yaml" | "yml" => Some("yaml"),
-        "toml" => Some("toml"),
-        "ini" | "cfg" | "conf" => Some("ini"),
-        "dockerfile" => Some("dockerfile"),
-        "makefile" => Some("makefile"),
-        "cmake" => Some("cmake"),
-        "tex" | "latex" => Some("latex"),
-        "md" => Some("md"),
-        "vim" => Some("vim"),
-        ".gitignore" => Some("gitignore"),
-        ".gitmodules" => Some("gitmodules"),
-        _ => None,
-    }
+static SYNTECT_SETTINGS: OnceLock<SyntectSettings> = OnceLock::new();
+
+fn get_syntect_settings() -> &'static SyntectSettings {
+    SYNTECT_SETTINGS.get_or_init(|| egui_extras::syntax_highlighting::SyntectSettings {
+        ps: dumps::from_uncompressed_data(yazi_prebuilt::syntaxes())
+            .expect("Failed to load syntect syntax"),
+        ..Default::default()
+    })
+}
+
+fn get_syntax_set() -> &'static SyntaxSet {
+    &get_syntect_settings().ps
 }
 
 /// Render text content
@@ -64,10 +37,60 @@ pub fn render(ui: &mut egui::Ui, text: &str, colors: &AppColors) {
     ui.label(RichText::new(text).color(colors.fg));
 }
 
+pub fn find_syntax_from_path(path: &std::path::Path) -> Option<&'static SyntaxReference> {
+    let syntaxes = get_syntax_set();
+    let name = path
+        .file_name()
+        .map(|n| n.to_string_lossy())
+        .unwrap_or_default();
+    if let Some(s) = syntaxes.find_syntax_by_extension(&name) {
+        return Some(s);
+    }
+
+    let ext = path
+        .extension()
+        .map(|e| e.to_string_lossy())
+        .unwrap_or_default();
+    if let Some(s) = syntaxes.find_syntax_by_extension(&ext) {
+        return Some(s);
+    }
+
+    // detect syntax by feeding first line of the file from path
+    let reader = match std::fs::File::open(path) {
+        Ok(file) => std::io::BufReader::new(file),
+        Err(_) => return None,
+    };
+    if let Some(Ok(line)) = reader.lines().next() {
+        // Use the first line to detect syntax
+        return syntaxes.find_syntax_by_first_line(&line);
+    }
+    None
+}
+
 /// Render syntax highlighted code content
 pub fn render_highlighted(ui: &mut egui::Ui, text: &str, language: &'static str) {
     let theme = CodeTheme::from_memory(ui.ctx(), ui.style());
-    egui_extras::syntax_highlighting::code_view_ui(ui, &theme, text, language);
+    let syntect_settings = get_syntect_settings();
+    let layout_job = egui_extras::syntax_highlighting::highlight_with(
+        ui.ctx(),
+        ui.style(),
+        &theme,
+        text,
+        language,
+        syntect_settings,
+    );
+
+    let available_size = ui.available_size();
+    let spacing = ui.spacing().item_spacing;
+    // Wrap the label in a container with dark background for consistency across all themes
+    egui::Frame::new()
+        .fill(egui::Color32::from_rgb(40, 44, 52)) // Dark background color
+        .inner_margin(egui::Margin::same(8))
+        .show(ui, |ui| {
+            // Make the frame take up all available width
+            ui.set_min_width(available_size.x - 2.0 * spacing.x);
+            ui.add(egui::Label::new(layout_job).selectable(true));
+        });
 }
 
 /// Render empty state when no file is selected
@@ -79,10 +102,9 @@ pub fn render_empty(ui: &mut egui::Ui, colors: &AppColors) {
 pub fn load_async(app: &mut Kiorg, path: PathBuf, file_size: u64) {
     load_preview_async(app, path, move |path| {
         // Check if this is a source code file that should be syntax highlighted
-        let ext = super::path_to_ext_info(&path);
-        if let Some(lang) = lang_type_from_ext(&ext) {
+        if let Some(syntax) = find_syntax_from_path(&path) {
             // For supported languages, load the full file for syntax highlighting
-            load_full_text(&path, Some(lang))
+            load_full_text(&path, Some(syntax.name.as_str()))
         } else {
             // For other files, use the truncated preview
             try_load_utf8_str(path, file_size)
@@ -95,11 +117,11 @@ pub fn try_load_utf8_str(path: PathBuf, file_size: u64) -> Result<PreviewContent
     // TODO: reuse the buffer between file reads
     let mut bytes: Vec<u8> = vec![0; std::cmp::min(1000, file_size as usize)];
 
-    let mut file = match std::fs::File::open(&path) {
+    let file = match std::fs::File::open(&path) {
         Ok(file) => file,
         Err(e) => return Ok(PreviewContent::text(format!("Error opening file: {e}"))),
     };
-    let bytes_read = match file.read(&mut bytes) {
+    let bytes_read = match std::io::BufReader::new(file).read(&mut bytes) {
         Ok(bytes_read) => bytes_read,
         Err(e) => return Ok(PreviewContent::text(format!("Error reading file: {e}"))),
     };
@@ -164,16 +186,9 @@ pub fn load_full_text(
     match std::fs::read_to_string(path) {
         Ok(content) => {
             // Use provided language or detect from extension
-            let language = lang.or_else(|| {
-                let ext = super::path_to_ext_info(path);
-                lang_type_from_ext(&ext)
-            });
-
-            if let Some(lang) = language {
-                Ok(PreviewContent::HighlightedCode {
-                    content,
-                    language: lang,
-                })
+            let lang_name = lang.or_else(|| find_syntax_from_path(path).map(|s| s.name.as_str()));
+            if let Some(language) = lang_name {
+                Ok(PreviewContent::HighlightedCode { content, language })
             } else {
                 Ok(PreviewContent::text(content))
             }
@@ -195,102 +210,265 @@ pub fn load_full_text(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::Path;
 
     #[test]
-    fn test_lang_type_from_ext_rust() {
-        assert_eq!(lang_type_from_ext("rs"), Some("rs"));
+    fn test_find_syntax_from_path_rust() {
+        assert_eq!(
+            find_syntax_from_path(Path::new("test.rs")).unwrap().name,
+            "Rust"
+        );
     }
 
     #[test]
-    fn test_lang_type_from_ext_javascript() {
-        assert_eq!(lang_type_from_ext("js"), Some("js"));
-        assert_eq!(lang_type_from_ext("mjs"), Some("js"));
-        assert_eq!(lang_type_from_ext("cjs"), Some("js"));
+    fn test_find_syntax_from_path_javascript() {
+        assert_eq!(
+            find_syntax_from_path(Path::new("test.js")).unwrap().name,
+            "JavaScript (Babel)"
+        );
+        assert_eq!(
+            find_syntax_from_path(Path::new("test.mjs")).unwrap().name,
+            "JavaScript (Babel)"
+        );
+        assert_eq!(
+            find_syntax_from_path(Path::new("test.cjs")).unwrap().name,
+            "JavaScript (Babel)"
+        );
     }
 
     #[test]
-    fn test_lang_type_from_ext_typescript() {
-        assert_eq!(lang_type_from_ext("ts"), Some("ts"));
-        assert_eq!(lang_type_from_ext("tsx"), Some("ts"));
+    fn test_find_syntax_from_path_typescript() {
+        assert_eq!(
+            find_syntax_from_path(Path::new("test.ts")).unwrap().name,
+            "TypeScript"
+        );
+        assert_eq!(
+            find_syntax_from_path(Path::new("test.tsx")).unwrap().name,
+            "TypeScriptReact"
+        );
     }
 
     #[test]
-    fn test_lang_type_from_ext_python() {
-        assert_eq!(lang_type_from_ext("py"), Some("py"));
-        assert_eq!(lang_type_from_ext("pyw"), Some("py"));
-        assert_eq!(lang_type_from_ext("pyi"), Some("py"));
+    fn test_find_syntax_from_path_python() {
+        assert_eq!(
+            find_syntax_from_path(Path::new("test.py")).unwrap().name,
+            "Python"
+        );
+        assert_eq!(
+            find_syntax_from_path(Path::new("test.pyw")).unwrap().name,
+            "Python"
+        );
+        assert_eq!(
+            find_syntax_from_path(Path::new("test.pyi")).unwrap().name,
+            "Python"
+        );
     }
 
     #[test]
-    fn test_lang_type_from_ext_c_cpp() {
-        assert_eq!(lang_type_from_ext("c"), Some("c"));
-        assert_eq!(lang_type_from_ext("h"), Some("c"));
-        assert_eq!(lang_type_from_ext("cpp"), Some("cpp"));
-        assert_eq!(lang_type_from_ext("cc"), Some("cpp"));
-        assert_eq!(lang_type_from_ext("cxx"), Some("cpp"));
-        assert_eq!(lang_type_from_ext("hpp"), Some("cpp"));
-        assert_eq!(lang_type_from_ext("hxx"), Some("cpp"));
+    fn test_find_syntax_from_path_c_cpp() {
+        assert_eq!(
+            find_syntax_from_path(Path::new("test.c")).unwrap().name,
+            "C"
+        );
+        assert_eq!(
+            find_syntax_from_path(Path::new("test.h")).unwrap().name,
+            "Objective-C"
+        );
+        assert_eq!(
+            find_syntax_from_path(Path::new("test.cpp")).unwrap().name,
+            "C++"
+        );
+        assert_eq!(
+            find_syntax_from_path(Path::new("test.cc")).unwrap().name,
+            "C++"
+        );
+        assert_eq!(
+            find_syntax_from_path(Path::new("test.cxx")).unwrap().name,
+            "C++"
+        );
+        assert_eq!(
+            find_syntax_from_path(Path::new("test.hpp")).unwrap().name,
+            "C++"
+        );
+        assert_eq!(
+            find_syntax_from_path(Path::new("test.hxx")).unwrap().name,
+            "C++"
+        );
     }
 
     #[test]
-    fn test_lang_type_from_ext_shell_scripts() {
-        assert_eq!(lang_type_from_ext("sh"), Some("bash"));
-        assert_eq!(lang_type_from_ext("bash"), Some("bash"));
-        assert_eq!(lang_type_from_ext("zsh"), Some("bash"));
-        assert_eq!(lang_type_from_ext("fish"), Some("bash"));
+    fn test_find_syntax_from_path_shell_scripts() {
+        assert_eq!(
+            find_syntax_from_path(Path::new("test.sh")).unwrap().name,
+            "Bourne Again Shell (bash)"
+        );
+        assert_eq!(
+            find_syntax_from_path(Path::new("test.bash")).unwrap().name,
+            "Bourne Again Shell (bash)"
+        );
+        assert_eq!(
+            find_syntax_from_path(Path::new("test.zsh")).unwrap().name,
+            "Bourne Again Shell (bash)"
+        );
+        assert_eq!(
+            find_syntax_from_path(Path::new("test.fish")).unwrap().name,
+            "Fish"
+        );
     }
 
     #[test]
-    fn test_lang_type_from_ext_markup_languages() {
-        assert_eq!(lang_type_from_ext("html"), Some("html"));
-        assert_eq!(lang_type_from_ext("htm"), Some("html"));
-        assert_eq!(lang_type_from_ext("xml"), Some("xml"));
-        assert_eq!(lang_type_from_ext("css"), Some("css"));
-        assert_eq!(lang_type_from_ext("scss"), Some("scss"));
-        assert_eq!(lang_type_from_ext("sass"), Some("scss"));
-        assert_eq!(lang_type_from_ext("md"), Some("md"));
+    fn test_find_syntax_from_path_markup_languages() {
+        assert_eq!(
+            find_syntax_from_path(Path::new("test.html")).unwrap().name,
+            "HTML"
+        );
+        assert_eq!(
+            find_syntax_from_path(Path::new("test.htm")).unwrap().name,
+            "HTML"
+        );
+        assert_eq!(
+            find_syntax_from_path(Path::new("test.xml")).unwrap().name,
+            "XML"
+        );
+        assert_eq!(
+            find_syntax_from_path(Path::new("test.css")).unwrap().name,
+            "CSS"
+        );
+        assert_eq!(
+            find_syntax_from_path(Path::new("test.scss")).unwrap().name,
+            "SCSS"
+        );
+        assert_eq!(
+            find_syntax_from_path(Path::new("test.sass")).unwrap().name,
+            "Sass"
+        );
+        assert_eq!(
+            find_syntax_from_path(Path::new("test.md")).unwrap().name,
+            "Markdown"
+        );
     }
 
     #[test]
-    fn test_lang_type_from_ext_config_files() {
-        assert_eq!(lang_type_from_ext("json"), Some("json"));
-        assert_eq!(lang_type_from_ext("yaml"), Some("yaml"));
-        assert_eq!(lang_type_from_ext("yml"), Some("yaml"));
-        assert_eq!(lang_type_from_ext("toml"), Some("toml"));
-        assert_eq!(lang_type_from_ext("ini"), Some("ini"));
-        assert_eq!(lang_type_from_ext("cfg"), Some("ini"));
-        assert_eq!(lang_type_from_ext("conf"), Some("ini"));
+    fn test_find_syntax_from_path_config_files() {
+        assert_eq!(
+            find_syntax_from_path(Path::new("test.json")).unwrap().name,
+            "JSON"
+        );
+        assert_eq!(
+            find_syntax_from_path(Path::new("test.yaml")).unwrap().name,
+            "YAML"
+        );
+        assert_eq!(
+            find_syntax_from_path(Path::new("test.yml")).unwrap().name,
+            "YAML"
+        );
+        assert_eq!(
+            find_syntax_from_path(Path::new("test.toml")).unwrap().name,
+            "TOML"
+        );
+        assert_eq!(
+            find_syntax_from_path(Path::new("test.ini")).unwrap().name,
+            "INI"
+        );
+        assert_eq!(
+            find_syntax_from_path(Path::new("test.cfg")).unwrap().name,
+            "INI"
+        );
+        assert_eq!(
+            find_syntax_from_path(Path::new("test.conf")).unwrap().name,
+            "nginx"
+        );
     }
 
     #[test]
-    fn test_lang_type_from_ext_special_filenames() {
-        // Test full filenames without extensions
-        assert_eq!(lang_type_from_ext("makefile"), Some("makefile"));
-        assert_eq!(lang_type_from_ext("dockerfile"), Some("dockerfile"));
-        assert_eq!(lang_type_from_ext(".gitignore"), Some("gitignore"));
-        assert_eq!(lang_type_from_ext(".gitmodules"), Some("gitmodules"));
+    fn test_find_syntax_from_path_special_filenames() {
+        assert_eq!(
+            find_syntax_from_path(Path::new("Makefile")).unwrap().name,
+            "Makefile"
+        );
+        assert_eq!(
+            find_syntax_from_path(Path::new("Dockerfile")).unwrap().name,
+            "Dockerfile"
+        );
+        assert_eq!(
+            find_syntax_from_path(Path::new(".gitignore")).unwrap().name,
+            "Git Ignore"
+        );
+        assert_eq!(
+            find_syntax_from_path(Path::new(".gitmodules"))
+                .unwrap()
+                .name,
+            "Git Config"
+        );
     }
 
     #[test]
-    fn test_lang_type_from_ext_text_files() {
-        assert_eq!(lang_type_from_ext("txt"), Some("txt"));
-        assert_eq!(lang_type_from_ext("text"), Some("txt"));
-        assert_eq!(lang_type_from_ext("log"), Some("txt"));
+    fn test_find_syntax_from_path_text_files() {
+        assert_eq!(
+            find_syntax_from_path(Path::new("test.txt")).unwrap().name,
+            "Plain Text"
+        );
+
+        // .text files are not recognized by syntect
+        assert!(find_syntax_from_path(Path::new("test.text")).is_none());
+
+        // .log files are recognized with syntax name "log"
+        assert_eq!(
+            find_syntax_from_path(Path::new("test.log")).unwrap().name,
+            "log"
+        );
     }
 
     #[test]
-    fn test_lang_type_from_ext_unknown() {
-        assert_eq!(lang_type_from_ext("unknown"), None);
-        assert_eq!(lang_type_from_ext("xyz"), None);
-        assert_eq!(lang_type_from_ext(""), None);
+    fn test_find_syntax_from_path_unknown() {
+        assert!(find_syntax_from_path(Path::new("test.unknown")).is_none());
+        assert!(find_syntax_from_path(Path::new("test.xyz")).is_none());
+        assert!(find_syntax_from_path(Path::new("test")).is_none());
     }
 
     #[test]
-    fn test_lang_type_from_ext_case_sensitivity() {
-        // The function should work with lowercase extensions
-        assert_eq!(lang_type_from_ext("rs"), Some("rs"));
-        // Test that uppercase doesn't match (function expects lowercase)
-        assert_eq!(lang_type_from_ext("RS"), None);
-        assert_eq!(lang_type_from_ext("Makefile"), None);
+    fn test_find_syntax_from_first_line() {
+        use std::io::Write;
+        use tempfile::NamedTempFile;
+
+        // Test Python shebang detection
+        let mut python_file = NamedTempFile::new().unwrap();
+        writeln!(python_file, "#!/usr/bin/env python3").unwrap();
+        writeln!(python_file, "print('Hello, World!')").unwrap();
+        python_file.flush().unwrap();
+
+        let syntax = find_syntax_from_path(python_file.path());
+        assert!(syntax.is_some());
+        assert_eq!(syntax.unwrap().name, "Python");
+
+        // Test shell script shebang detection
+        let mut shell_file = NamedTempFile::new().unwrap();
+        writeln!(shell_file, "#!/bin/bash").unwrap();
+        writeln!(shell_file, "echo 'Hello, World!'").unwrap();
+        shell_file.flush().unwrap();
+
+        let syntax = find_syntax_from_path(shell_file.path());
+        assert!(syntax.is_some());
+        assert_eq!(syntax.unwrap().name, "Bourne Again Shell (bash)");
+
+        // Test file that can't be opened (non-existent file)
+        let non_existent_path = Path::new("/non/existent/file.unknown");
+        assert!(find_syntax_from_path(non_existent_path).is_none());
+
+        // Test empty file (no first line)
+        let mut empty_file = NamedTempFile::new().unwrap();
+        empty_file.flush().unwrap();
+
+        let syntax = find_syntax_from_path(empty_file.path());
+        assert!(syntax.is_none());
+
+        // Test file with first line that doesn't match any syntax
+        let mut unknown_file = NamedTempFile::new().unwrap();
+        writeln!(unknown_file, "This is just some random text").unwrap();
+        writeln!(unknown_file, "With no recognizable syntax").unwrap();
+        unknown_file.flush().unwrap();
+
+        let syntax = find_syntax_from_path(unknown_file.path());
+        assert!(syntax.is_none());
     }
 }
