@@ -1,10 +1,10 @@
 #[path = "mod/ui_test_helpers.rs"]
 mod ui_test_helpers;
 
-use egui::{Key, Modifiers};
+use egui::Key;
 use kiorg::ui::popup::PopupType;
 use tempfile::tempdir;
-use ui_test_helpers::{create_harness, create_test_files, wait_for_condition};
+use ui_test_helpers::{create_harness, create_test_files, ctrl_modifiers, wait_for_condition};
 
 /// Integration test that uses Ctrl+A to select all current files and then deletes them
 #[test]
@@ -31,11 +31,7 @@ fn test_ctrl_a_select_all_and_delete() {
     }
 
     // Press Ctrl+A to select all entries
-    let modifiers = Modifiers {
-        ctrl: true,
-        ..Default::default()
-    };
-    harness.key_press_modifiers(modifiers, Key::A);
+    harness.key_press_modifiers(ctrl_modifiers(), Key::A);
     harness.step();
 
     // Verify all entries are now selected

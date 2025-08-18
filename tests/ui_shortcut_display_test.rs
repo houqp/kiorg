@@ -142,6 +142,7 @@ fn test_shortcut_with_modifiers() {
         shift: true,
         ctrl: true,
         alt: false,
+        #[cfg(target_os = "macos")]
         command: false,
         namespace: false,
     }];

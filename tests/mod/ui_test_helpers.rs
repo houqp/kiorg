@@ -434,14 +434,42 @@ impl std::ops::DerefMut for TestHarness<'_> {
 }
 
 #[inline]
-pub fn tab_num_modifiers() -> egui::Modifiers {
+pub fn cmd_modifiers() -> egui::Modifiers {
     egui::Modifiers {
         #[cfg(target_os = "macos")]
         mac_cmd: true,
         #[cfg(target_os = "macos")]
         command: true,
+        #[cfg(target_os = "macos")]
+        ctrl: false,
         #[cfg(not(target_os = "macos"))]
         ctrl: true,
+        #[cfg(not(target_os = "macos"))]
+        command: true,
+        #[cfg(not(target_os = "macos"))]
+        mac_cmd: false,
+        ..Default::default()
+    }
+}
+
+/// Create cross-platform Ctrl modifiers that work on all platforms
+/// On macOS: Sets ctrl but NOT command (for pure ctrl shortcuts)
+/// On Linux/Windows: Sets ctrl and command
+#[inline]
+pub fn ctrl_modifiers() -> egui::Modifiers {
+    egui::Modifiers {
+        #[cfg(target_os = "macos")]
+        mac_cmd: false,
+        #[cfg(target_os = "macos")]
+        command: false,
+        #[cfg(target_os = "macos")]
+        ctrl: true,
+        #[cfg(not(target_os = "macos"))]
+        ctrl: true,
+        #[cfg(not(target_os = "macos"))]
+        command: true,
+        #[cfg(not(target_os = "macos"))]
+        mac_cmd: false,
         ..Default::default()
     }
 }

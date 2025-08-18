@@ -1,8 +1,8 @@
-use egui::{Key, Modifiers};
+use egui::Key;
 use std::fs;
 use std::path::PathBuf;
 use tempfile::tempdir;
-use ui_test_helpers::create_harness_with_config_dir;
+use ui_test_helpers::{create_harness_with_config_dir, ctrl_modifiers};
 
 #[path = "mod/ui_test_helpers.rs"]
 mod ui_test_helpers;
@@ -269,11 +269,7 @@ key = "m"
     );
 
     // Press Ctrl+z - should move down
-    let modifiers = Modifiers {
-        ctrl: true,
-        ..Default::default()
-    };
-    harness.key_press_modifiers(modifiers, Key::Z);
+    harness.key_press_modifiers(ctrl_modifiers(), Key::Z);
     harness.step();
 
     // Verify selection moved down to index 1

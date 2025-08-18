@@ -8,7 +8,8 @@ use kiorg::ui::popup::PopupType;
 use std::path::PathBuf;
 use tempfile::tempdir;
 use ui_test_helpers::{
-    create_harness, create_test_files, create_test_image, create_test_zip, wait_for_condition,
+    create_harness, create_test_files, create_test_image, create_test_zip, ctrl_modifiers,
+    wait_for_condition,
 };
 
 #[test]
@@ -677,14 +678,10 @@ fn test_ui_navigation_open_with_empty_command() {
     harness.step();
 
     // Simulate confirming with empty command
-    let modifiers = egui::Modifiers {
-        ctrl: true,
-        ..Default::default()
-    };
-    harness.key_press_modifiers(modifiers, Key::D);
+    harness.key_press_modifiers(ctrl_modifiers(), Key::D);
     harness.step();
 
-    harness.key_press_modifiers(modifiers, Key::Enter);
+    harness.key_press_modifiers(ctrl_modifiers(), Key::Enter);
     harness.step();
 
     // Verify that no files were opened (due to empty command)
@@ -857,11 +854,7 @@ fn test_ui_navigation_page_navigation() {
     );
 
     // Test Ctrl+D (alternative page down shortcut)
-    let modifiers = egui::Modifiers {
-        ctrl: true,
-        ..Default::default()
-    };
-    harness.key_press_modifiers(modifiers, Key::D);
+    harness.key_press_modifiers(ctrl_modifiers(), Key::D);
     harness.step();
 
     let tab = harness.state().tab_manager.current_tab_ref();
@@ -876,11 +869,7 @@ fn test_ui_navigation_page_navigation() {
     );
 
     // Test Ctrl+U (alternative page up shortcut)
-    let modifiers = egui::Modifiers {
-        ctrl: true,
-        ..Default::default()
-    };
-    harness.key_press_modifiers(modifiers, Key::U);
+    harness.key_press_modifiers(ctrl_modifiers(), Key::U);
     harness.step();
 
     let tab = harness.state().tab_manager.current_tab_ref();
