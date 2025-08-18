@@ -12,6 +12,7 @@ pub struct KeyboardShortcut {
     pub ctrl: bool,
     #[serde(default)]
     pub alt: bool,
+    #[cfg(target_os = "macos")]
     #[serde(default)]
     pub command: bool,
     #[serde(default)]
@@ -26,6 +27,7 @@ impl KeyboardShortcut {
             shift: false,
             ctrl: false,
             alt: false,
+            #[cfg(target_os = "macos")]
             command: false,
             namespace: false,
         }
@@ -53,6 +55,7 @@ impl KeyboardShortcut {
         self
     }
 
+    #[cfg(target_os = "macos")]
     #[must_use]
     pub const fn with_cmd(mut self) -> Self {
         self.command = true;
@@ -133,6 +136,27 @@ impl KeyboardShortcut {
                 None
             }
         }
+    }
+
+    // Convert to EguiKeyCombo for efficient lookups
+    pub fn to_egui_key_combo(&self) -> Option<EguiKeyCombo> {
+        self.to_egui_key().map(|key| EguiKeyCombo {
+            key,
+            modifiers: Modifiers {
+                alt: self.alt,
+                ctrl: self.ctrl,
+                shift: self.shift,
+                #[cfg(not(target_os = "macos"))]
+                mac_cmd: false,
+                #[cfg(target_os = "macos")]
+                mac_cmd: self.command,
+                #[cfg(not(target_os = "macos"))]
+                command: self.ctrl,
+                #[cfg(target_os = "macos")]
+                command: self.command,
+            },
+            namespace: self.namespace,
+        })
     }
 }
 
@@ -235,21 +259,7 @@ impl Shortcuts {
             .push(shortcut.clone());
 
         // Add to key_to_action map if possible
-        if let Some(egui_key) = shortcut.to_egui_key() {
-            let key_combo = EguiKeyCombo {
-                key: egui_key,
-                modifiers: Modifiers {
-                    alt: shortcut.alt,
-                    ctrl: shortcut.ctrl,
-                    shift: shortcut.shift,
-                    #[cfg(not(target_os = "macos"))]
-                    mac_cmd: false,
-                    #[cfg(target_os = "macos")]
-                    mac_cmd: shortcut.command,
-                    command: shortcut.command,
-                },
-                namespace: shortcut.namespace,
-            };
+        if let Some(key_combo) = shortcut.to_egui_key_combo() {
             self.key_to_action.insert(key_combo, action);
         }
     }
@@ -259,18 +269,7 @@ impl Shortcuts {
         // First, remove any existing shortcuts for this action from key_to_action
         if let Some(existing_shortcuts) = self.action_to_shortcuts.get(&action) {
             for shortcut in existing_shortcuts {
-                if let Some(egui_key) = shortcut.to_egui_key() {
-                    let key_combo = EguiKeyCombo {
-                        key: egui_key,
-                        modifiers: Modifiers {
-                            alt: shortcut.alt,
-                            ctrl: shortcut.ctrl,
-                            shift: shortcut.shift,
-                            mac_cmd: shortcut.command,
-                            command: shortcut.command,
-                        },
-                        namespace: shortcut.namespace,
-                    };
+                if let Some(key_combo) = shortcut.to_egui_key_combo() {
                     self.key_to_action.remove(&key_combo);
                 }
             }
@@ -281,18 +280,7 @@ impl Shortcuts {
 
         // Update key_to_action map
         for shortcut in &shortcuts {
-            if let Some(egui_key) = shortcut.to_egui_key() {
-                let key_combo = EguiKeyCombo {
-                    key: egui_key,
-                    modifiers: Modifiers {
-                        alt: shortcut.alt,
-                        ctrl: shortcut.ctrl,
-                        shift: shortcut.shift,
-                        mac_cmd: shortcut.command,
-                        command: shortcut.command,
-                    },
-                    namespace: shortcut.namespace,
-                };
+            if let Some(key_combo) = shortcut.to_egui_key_combo() {
                 self.key_to_action.insert(key_combo, action);
             }
         }
@@ -618,6 +606,7 @@ mod tests {
                 if shortcut.alt {
                     shortcut_str.push_str(", Alt");
                 }
+                #[cfg(target_os = "macos")]
                 if shortcut.command {
                     shortcut_str.push_str(", Cmd");
                 }
