@@ -9,6 +9,7 @@ use egui::Context;
 
 pub mod doc;
 pub mod image;
+pub mod video;
 
 /// Handle the `ShowFilePreview` shortcut action
 /// This function was extracted from input.rs to reduce complexity
@@ -97,6 +98,10 @@ pub fn handle_show_file_preview(app: &mut Kiorg, _ctx: &egui::Context) {
             // Show preview popup for image files
             app.show_popup = Some(PopupType::Preview);
         }
+        crate::ui::preview::video_extensions!() => {
+            // Show preview popup for video files
+            app.show_popup = Some(PopupType::Preview);
+        }
         v => {
             if let Some(syntax) = crate::ui::preview::text::find_syntax_from_path(path) {
                 match crate::ui::preview::text::load_full_text(path, Some(syntax.name.as_str())) {
@@ -181,6 +186,16 @@ pub fn show_preview_popup(ctx: &Context, app: &mut Kiorg) {
                             image::render_popup(
                                 ui,
                                 image_meta,
+                                &app.colors,
+                                available_width,
+                                available_height,
+                            );
+                        }
+                        PreviewContent::Video(video_meta) => {
+                            // Use specialized popup video renderer
+                            video::render_popup(
+                                ui,
+                                video_meta,
                                 &app.colors,
                                 available_width,
                                 available_height,

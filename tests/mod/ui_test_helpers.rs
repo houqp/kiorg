@@ -473,3 +473,27 @@ pub fn ctrl_modifiers() -> egui::Modifiers {
         ..Default::default()
     }
 }
+
+/// Create a test video file with minimal valid MP4 content
+pub fn create_test_video(path: &PathBuf) -> PathBuf {
+    // Create a minimal valid MP4 file header
+    // This is a very basic MP4 file structure that should be recognized as a video file
+    let mp4_data: &[u8] = &[
+        // ftyp box (file type box)
+        0x00, 0x00, 0x00, 0x20, // box size (32 bytes)
+        0x66, 0x74, 0x79, 0x70, // 'ftyp'
+        0x69, 0x73, 0x6F, 0x6D, // major brand 'isom'
+        0x00, 0x00, 0x02, 0x00, // minor version
+        0x69, 0x73, 0x6F, 0x6D, // compatible brand 'isom'
+        0x69, 0x73, 0x6F, 0x32, // compatible brand 'iso2'
+        0x61, 0x76, 0x63, 0x31, // compatible brand 'avc1'
+        0x6D, 0x70, 0x34, 0x31, // compatible brand 'mp41'
+        // mdat box (media data box) - minimal empty media data
+        0x00, 0x00, 0x00, 0x08, // box size (8 bytes)
+        0x6D, 0x64, 0x61, 0x74, // 'mdat'
+    ];
+
+    std::fs::write(path, mp4_data).unwrap();
+    assert!(path.exists());
+    path.clone()
+}

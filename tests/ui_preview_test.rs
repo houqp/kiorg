@@ -5,7 +5,9 @@ use egui::Key;
 use kiorg::models::preview_content::PreviewContent;
 use tempfile::tempdir;
 use ui_test_helpers::{
-    create_harness, create_test_image, create_test_tar, create_test_zip, wait_for_condition,
+    
+    create_harness, create_test_image, create_test_tar, create_test_video, create_test_zip, wait_for_condition,
+,
 };
 
 /// Test for text preview of regular text files
@@ -184,6 +186,68 @@ fn test_image_preview() {
         }
         Some(other) => {
             panic!("Preview content should be Image variant, got {other:?}");
+        }
+        None => panic!("Preview content should not be None"),
+    }
+}
+
+/// Test for video preview with metadata extraction
+#[test]
+fn test_video_file_preview() {
+    // Create a temporary directory for testing
+    let temp_dir = tempdir().unwrap();
+
+    // Create test video file
+    let video_path = temp_dir.path().join("test_video.mp4");
+    create_test_video(&video_path);
+
+    // Start the harness
+    let mut harness = create_harness(&temp_dir);
+
+    // Navigate to the video file
+    harness.key_press(Key::J);
+    harness.step();
+
+    // Wait for video preview to load
+    for _ in 0..100 {
+        match harness.state().preview_content.as_ref() {
+            Some(PreviewContent::Video(_)) => break, // Video preview loaded
+            _ => {
+                std::thread::sleep(std::time::Duration::from_millis(10));
+                harness.step(); // Continue stepping until the video preview loads
+            }
+        }
+    }
+
+    // Check if the preview content is video
+    match &harness.state().preview_content {
+        Some(PreviewContent::Video(video_meta)) => {
+            // Check that basic metadata is present
+            assert!(
+                !video_meta.title.is_empty(),
+                "Video title should not be empty"
+            );
+            assert!(
+                video_meta.title.contains("test_video.mp4"),
+                "Video title should contain filename"
+            );
+
+            // Check for expected metadata fields
+            assert!(
+                video_meta.metadata.contains_key("File Size"),
+                "Should have file size metadata"
+            );
+            assert!(
+                video_meta.metadata.contains_key("File Type"),
+                "Should have file type metadata"
+            );
+
+            // Verify file type is correct
+            let file_type = video_meta.metadata.get("File Type").unwrap();
+            assert_eq!(file_type, "MP4", "File type should be MP4");
+        }
+        Some(other) => {
+            panic!("Preview content should be Video variant, got {other:?}");
         }
         None => panic!("Preview content should not be None"),
     }

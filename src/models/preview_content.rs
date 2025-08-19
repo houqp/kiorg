@@ -85,6 +85,34 @@ impl std::fmt::Debug for ImageMeta {
     }
 }
 
+/// Metadata for video files
+#[derive(Clone)]
+pub struct VideoMeta {
+    /// Video title (usually filename)
+    pub title: String,
+    /// Video metadata (key-value pairs)
+    pub metadata: HashMap<String, String>,
+    /// Video thumbnail image
+    pub thumbnail: egui::widgets::ImageSource<'static>,
+    /// Keep the texture handle alive to prevent GPU texture from being freed
+    pub _texture_handle: Option<egui::TextureHandle>,
+}
+
+// Manual implementation of Debug for VideoMeta since TextureHandle doesn't implement Debug
+impl std::fmt::Debug for VideoMeta {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("VideoMeta")
+            .field("title", &self.title)
+            .field("metadata", &self.metadata)
+            .field("thumbnail", &"ImageSource")
+            .field(
+                "_texture_handle",
+                &self._texture_handle.as_ref().map(|_| "TextureHandle"),
+            )
+            .finish()
+    }
+}
+
 /// Represents different types of preview content that can be displayed in the right panel
 #[derive(Clone, Debug)]
 pub enum PreviewContent {
@@ -97,6 +125,8 @@ pub enum PreviewContent {
     },
     /// Image content with metadata
     Image(ImageMeta),
+    /// Video content with metadata and thumbnail
+    Video(VideoMeta),
     /// Zip file content with a list of entries
     Zip(Vec<ZipEntry>),
     /// Tar file content with a list of entries (supports both compressed and uncompressed)
@@ -179,6 +209,20 @@ impl PreviewContent {
             exif_data,
             image_source: egui::widgets::ImageSource::Uri(uri.into()),
             _texture_handle: None, // No texture handle for URI-based images//
+        })
+    }
+
+    /// Creates a new video preview content with a texture handle for thumbnail
+    pub fn video(
+        title: impl Into<String>,
+        metadata: HashMap<String, String>,
+        texture: egui::TextureHandle,
+    ) -> Self {
+        Self::Video(VideoMeta {
+            title: title.into(),
+            metadata,
+            thumbnail: egui::widgets::ImageSource::from(&texture),
+            _texture_handle: Some(texture),
         })
     }
 
