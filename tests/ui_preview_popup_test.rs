@@ -1,11 +1,13 @@
 #[path = "mod/ui_test_helpers.rs"]
 mod ui_test_helpers;
 
-use egui::{Key, Modifiers};
+use egui::Key;
 use kiorg::models::preview_content::PreviewContent;
 use kiorg::ui::popup::PopupType;
 use tempfile::tempdir;
-use ui_test_helpers::{create_harness, create_test_epub, create_test_image, wait_for_condition};
+use ui_test_helpers::{
+    create_harness, create_test_epub, create_test_image, shift_modifiers, wait_for_condition,
+};
 
 /// Test that the image preview popup can be opened with the Shift+K shortcut
 #[test]
@@ -38,11 +40,7 @@ fn test_image_preview_popup_shortcut() {
     }
 
     // Open preview popup with Shift+K
-    let modifiers = Modifiers {
-        shift: true,
-        ..Default::default()
-    };
-    harness.key_press_modifiers(modifiers, Key::K);
+    harness.key_press_modifiers(shift_modifiers(), Key::K);
     harness.step();
 
     // Verify the preview popup is shown
@@ -82,11 +80,7 @@ fn test_pdf_preview_popup_error_handling() {
     harness.step();
 
     // Open preview popup with Shift+K
-    let modifiers = Modifiers {
-        shift: true,
-        ..Default::default()
-    };
-    harness.key_press_modifiers(modifiers, Key::K);
+    harness.key_press_modifiers(shift_modifiers(), Key::K);
     harness.step();
 
     // Verify the preview popup is NOT shown (it should have closed due to the error)
@@ -133,11 +127,7 @@ fn test_preview_popup_unsupported_file() {
     let mut harness = create_harness(&temp_dir);
 
     // Open preview popup with Shift+K
-    let modifiers = Modifiers {
-        shift: true,
-        ..Default::default()
-    };
-    harness.key_press_modifiers(modifiers, Key::K);
+    harness.key_press_modifiers(shift_modifiers(), Key::K);
     harness.step();
 
     // Verify the preview popup is NOT shown for unsupported file types
@@ -178,11 +168,7 @@ fn test_doc_preview_popup_page_count_metadata() {
     }
 
     // Open preview popup with Shift+K
-    let modifiers = Modifiers {
-        shift: true,
-        ..Default::default()
-    };
-    harness.key_press_modifiers(modifiers, Key::K);
+    harness.key_press_modifiers(shift_modifiers(), Key::K);
     harness.step();
 
     // Verify the preview popup is shown with correct page count metadata

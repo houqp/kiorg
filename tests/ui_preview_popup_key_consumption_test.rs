@@ -1,11 +1,13 @@
 #[path = "mod/ui_test_helpers.rs"]
 mod ui_test_helpers;
 
-use egui::{Key, Modifiers};
+use egui::Key;
 use kiorg::models::preview_content::PreviewContent;
 use kiorg::ui::popup::PopupType;
 use tempfile::tempdir;
-use ui_test_helpers::{cmd_modifiers, create_harness, create_test_image, wait_for_condition};
+use ui_test_helpers::{
+    cmd_modifiers, create_harness, create_test_image, shift_modifiers, wait_for_condition,
+};
 
 /// Test that number keys don't trigger tab switches when preview popup is active
 #[test]
@@ -85,11 +87,7 @@ fn test_preview_popup_consumes_number_keys() {
     }
 
     // Open preview popup with Shift+K
-    let modifiers = Modifiers {
-        shift: true,
-        ..Default::default()
-    };
-    harness.key_press_modifiers(modifiers, Key::K);
+    harness.key_press_modifiers(shift_modifiers(), Key::K);
     harness.step();
 
     // Verify the preview popup is shown
@@ -198,11 +196,7 @@ fn test_preview_popup_consumes_other_keys() {
     });
 
     // Open preview popup with Shift+K
-    let modifiers = Modifiers {
-        shift: true,
-        ..Default::default()
-    };
-    harness.key_press_modifiers(modifiers, Key::K);
+    harness.key_press_modifiers(shift_modifiers(), Key::K);
     harness.step();
 
     // Verify the preview popup is shown

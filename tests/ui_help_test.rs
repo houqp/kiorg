@@ -4,7 +4,7 @@ mod ui_test_helpers;
 use egui::Key;
 use kiorg::ui::popup::PopupType;
 use tempfile::tempdir;
-use ui_test_helpers::TestHarnessBuilder;
+use ui_test_helpers::{TestHarnessBuilder, shift_modifiers};
 
 #[test]
 fn test_help_menu_close_behavior() {
@@ -18,11 +18,7 @@ fn test_help_menu_close_behavior() {
 
     // Open help menu with shift+?
     {
-        let modifiers = egui::Modifiers {
-            shift: true,
-            ..Default::default()
-        };
-        harness.key_press_modifiers(modifiers, Key::Questionmark);
+        harness.key_press_modifiers(shift_modifiers(), Key::Questionmark);
         harness.step();
     }
     assert_eq!(
@@ -49,11 +45,7 @@ fn test_help_menu_close_behavior() {
 
     // Reopen help menu
     {
-        let modifiers = egui::Modifiers {
-            shift: true,
-            ..Default::default()
-        };
-        harness.key_press_modifiers(modifiers, Key::Questionmark);
+        harness.key_press_modifiers(shift_modifiers(), Key::Questionmark);
         harness.step();
     }
 
@@ -68,11 +60,7 @@ fn test_help_menu_close_behavior() {
 
     // Reopen help menu
     {
-        let modifiers = egui::Modifiers {
-            shift: true,
-            ..Default::default()
-        };
-        harness.key_press_modifiers(modifiers, Key::Questionmark);
+        harness.key_press_modifiers(shift_modifiers(), Key::Questionmark);
         harness.step();
     }
 
@@ -87,11 +75,7 @@ fn test_help_menu_close_behavior() {
 
     // Reopen help menu
     {
-        let modifiers = egui::Modifiers {
-            shift: true,
-            ..Default::default()
-        };
-        harness.key_press_modifiers(modifiers, Key::Questionmark);
+        harness.key_press_modifiers(shift_modifiers(), Key::Questionmark);
         harness.step();
     }
 

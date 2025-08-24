@@ -1,9 +1,9 @@
 #[path = "mod/ui_test_helpers.rs"]
 mod ui_test_helpers;
 
-use egui::{Key, Modifiers};
+use egui::Key;
 use tempfile::tempdir;
-use ui_test_helpers::create_harness;
+use ui_test_helpers::{create_harness, shift_modifiers};
 
 #[test]
 fn test_open_terminal_shortcut() {
@@ -19,11 +19,7 @@ fn test_open_terminal_shortcut() {
     );
 
     // Press Shift+T to open terminal
-    let modifiers = Modifiers {
-        shift: true,
-        ..Default::default()
-    };
-    harness.key_press_modifiers(modifiers, Key::T);
+    harness.key_press_modifiers(shift_modifiers(), Key::T);
     harness.step();
 
     // On Windows, we should show a popup message instead of opening terminal

@@ -12,6 +12,7 @@ pub mod generic_message;
 pub mod open_with;
 pub mod preview;
 pub mod rename;
+pub mod sort_toggle;
 pub mod teleport;
 pub mod theme;
 pub mod utils;
@@ -37,4 +38,5 @@ pub enum PopupType {
     UpdateConfirm(Release), // Show update confirmation with version info
     UpdateProgress(crate::ui::update::UpdateProgressData), // Show update progress during download
     UpdateRestart,          // Show restart confirmation with version info
+    SortToggle,             // Show sort toggle popup for column sorting
 }

@@ -473,3 +473,12 @@ pub fn ctrl_modifiers() -> egui::Modifiers {
         ..Default::default()
     }
 }
+
+/// Create shift modifiers for cross-platform compatibility
+#[inline]
+pub fn shift_modifiers() -> egui::Modifiers {
+    egui::Modifiers {
+        shift: true,
+        ..Default::default()
+    }
+}

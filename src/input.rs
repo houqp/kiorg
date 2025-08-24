@@ -1,6 +1,6 @@
 use crate::config::shortcuts::{ShortcutAction, shortcuts_helpers};
 use crate::ui::center_panel;
-use crate::ui::popup::{add_entry, bookmark, file_drop, preview as popup_preview};
+use crate::ui::popup::{add_entry, bookmark, file_drop, preview as popup_preview, sort_toggle};
 use crate::ui::terminal;
 use egui::{Key, Modifiers};
 use tracing::error;
@@ -210,6 +210,9 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: &Shortcu
                 crate::ui::popup::teleport::TeleportState::default(),
             ));
         }
+        ShortcutAction::ShowSortToggle => {
+            app.show_popup = Some(PopupType::SortToggle);
+        }
         ShortcutAction::GoBackInHistory => app.navigate_history_back(),
         ShortcutAction::GoForwardInHistory => app.navigate_history_forward(),
         ShortcutAction::SwitchToNextTab => {
@@ -360,6 +363,14 @@ fn process_key(
         }
         Some(PopupType::Teleport(_)) => {
             // Teleport popup handles its own input - just return
+            return;
+        }
+        Some(PopupType::SortToggle) => {
+            if is_cancel_keys(key) {
+                app.show_popup = None;
+            } else {
+                sort_toggle::handle_sort_toggle_key(app, key);
+            }
             return;
         }
         Some(PopupType::UpdateConfirm(_)) => {
