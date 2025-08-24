@@ -3,7 +3,9 @@ mod ui_test_helpers;
 
 use egui::Key;
 use kiorg::models::preview_content::PreviewContent;
-use kiorg::open_wrap::{clear_open_calls, get_open_that_calls, get_open_with_calls};
+use kiorg::open_wrap::{
+    acquire_open_test_lock, clear_open_calls, get_open_that_calls, get_open_with_calls,
+};
 use kiorg::ui::popup::PopupType;
 use std::path::PathBuf;
 use tempfile::tempdir;
@@ -574,7 +576,6 @@ fn test_ui_navigation_open_with_functionality() {
 
     // Start the harness
     let mut harness = create_harness(&temp_dir);
-    clear_open_calls();
 
     // Select the text file (should be at index 0)
     let tab = harness.state().tab_manager.current_tab_ref();
@@ -610,16 +611,22 @@ fn test_ui_navigation_open_with_functionality() {
     // Simulate confirming the open_with command by calling confirm_open_with directly
     // since Enter key handling is complex in the popup context
     harness.key_press(Key::Enter);
-    harness.step();
+    let open_with_calls = {
+        // Acquire test serialization lock to prevent interference from other tests
+        let _lock = acquire_open_test_lock();
+        clear_open_calls();
 
-    // Wait for the async file opening to complete
-    wait_for_condition(|| {
         harness.step();
-        !get_open_with_calls().is_empty()
-    });
 
-    // Verify that the file was opened with the correct command
-    let open_with_calls = get_open_with_calls();
+        // Wait for the async file opening to complete
+        wait_for_condition(|| {
+            harness.step();
+            !get_open_with_calls().is_empty()
+        });
+
+        // Verify that the file was opened with the correct command
+        get_open_with_calls()
+    };
     assert!(
         !open_with_calls.is_empty(),
         "Should have at least one open_with call"
@@ -654,7 +661,6 @@ fn test_ui_navigation_open_with_empty_command() {
 
     // Start the harness
     let mut harness = create_harness(&temp_dir);
-    clear_open_calls();
 
     // Select the text file
     let tab = harness.state().tab_manager.current_tab_ref();
@@ -665,7 +671,21 @@ fn test_ui_navigation_open_with_empty_command() {
     harness.step();
 
     harness.key_press_modifiers(ctrl_modifiers(), Key::Enter);
-    harness.step();
+
+    let open_with_calls = {
+        // Acquire test serialization lock to prevent interference from other tests
+        let _lock = acquire_open_test_lock();
+
+        clear_open_calls();
+        harness.step();
+
+        // Verify that no files were opened (due to empty command)
+        get_open_with_calls()
+    };
+    assert!(
+        open_with_calls.is_empty(),
+        "Should not open file with empty command"
+    );
 
     // Note: For empty command, confirm_open_with returns early without calling close_popup
     // So the popup should still be open, which is the expected behavior
@@ -675,13 +695,6 @@ fn test_ui_navigation_open_with_empty_command() {
             Some(kiorg::ui::popup::PopupType::OpenWith(_))
         ),
         "Open with popup should still be open after empty command (error case)"
-    );
-
-    // Verify that no files were opened (due to empty command)
-    let open_with_calls = get_open_with_calls();
-    assert!(
-        open_with_calls.is_empty(),
-        "Should not open file with empty command"
     );
 }
 
@@ -702,6 +715,9 @@ fn test_ui_navigation_open_directory_vs_open_directory_or_file() {
     // Start the harness
     let mut harness = create_harness(&temp_dir);
     clear_open_calls();
+
+    // Acquire test serialization lock to prevent interference from other tests
+    let test_lock = acquire_open_test_lock();
 
     // Test 1: OpenDirectory should not open a file
     {
@@ -751,6 +767,8 @@ fn test_ui_navigation_open_directory_vs_open_directory_or_file() {
         let file_path = &test_files[1];
         assert_eq!(&PathBuf::from(&get_open_that_calls()[0].path), file_path);
     }
+
+    drop(test_lock);
 
     // Test 3: OpenDirectoryOrFile should also open a directory
     {
