@@ -8,6 +8,7 @@ use std::sync::OnceLock;
 use egui::RichText;
 use egui_extras::syntax_highlighting::{CodeTheme, SyntectSettings};
 use file_type::FileType;
+use humansize::{BINARY, format_size};
 use syntect::{
     dumps,
     parsing::{SyntaxReference, SyntaxSet},
@@ -101,6 +102,16 @@ pub fn render_empty(ui: &mut egui::Ui, colors: &AppColors) {
 /// Load text content asynchronously
 pub fn load_async(app: &mut Kiorg, path: PathBuf, file_size: u64) {
     load_preview_async(app, path, move |path| {
+        // Check if file size is larger than 1MB (1,048,576 bytes)
+        const MAX_PREVIEW_SIZE: u64 = 1_048_576;
+        if file_size > MAX_PREVIEW_SIZE {
+            return Ok(PreviewContent::text(format!(
+                "Preview disabled for files larger than {}\n\nFile size: {}",
+                format_size(MAX_PREVIEW_SIZE, BINARY),
+                format_size(file_size, BINARY),
+            )));
+        }
+
         // Check if this is a source code file that should be syntax highlighted
         if let Some(syntax) = find_syntax_from_path(&path) {
             // For supported languages, load the full file for syntax highlighting
