@@ -45,7 +45,6 @@
 
 ### What's left to build
 
-* Shortcut to toggle sort
 * render PDF preview using pdfium_render or pathfinder_rasterize
   * see <https://github.com/servo/pathfinder/issues/157>
 * Support drag and drop

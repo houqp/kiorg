@@ -4,7 +4,7 @@ mod ui_test_helpers;
 use egui::Key;
 use kiorg::ui::popup::PopupType;
 use tempfile::tempdir;
-use ui_test_helpers::{create_harness, create_test_files};
+use ui_test_helpers::{create_harness, create_test_files, shift_modifiers};
 
 #[test]
 fn test_bookmark_feature() {
@@ -38,11 +38,7 @@ fn test_bookmark_feature() {
 
     // Open bookmark popup with 'B' (shift+b)
     {
-        let modifiers = egui::Modifiers {
-            shift: true,
-            ..Default::default()
-        };
-        harness.key_press_modifiers(modifiers, Key::B);
+        harness.key_press_modifiers(shift_modifiers(), Key::B);
         harness.step();
     }
 
@@ -97,11 +93,7 @@ fn test_bookmark_feature() {
 
     // Open bookmark popup again
     {
-        let modifiers = egui::Modifiers {
-            shift: true,
-            ..Default::default()
-        };
-        harness.key_press_modifiers(modifiers, Key::B);
+        harness.key_press_modifiers(shift_modifiers(), Key::B);
         harness.step();
     }
 
@@ -147,11 +139,7 @@ fn test_bookmark_popup_close_with_q_and_esc() {
 
     // Test 1: Open bookmark popup and close with 'q'
     {
-        let modifiers = egui::Modifiers {
-            shift: true,
-            ..Default::default()
-        };
-        harness.key_press_modifiers(modifiers, Key::B);
+        harness.key_press_modifiers(shift_modifiers(), Key::B);
         harness.step();
     }
 
@@ -174,11 +162,7 @@ fn test_bookmark_popup_close_with_q_and_esc() {
 
     // Test 2: Open bookmark popup and close with 'Esc'
     {
-        let modifiers = egui::Modifiers {
-            shift: true,
-            ..Default::default()
-        };
-        harness.key_press_modifiers(modifiers, Key::B);
+        harness.key_press_modifiers(shift_modifiers(), Key::B);
         harness.step();
     }
 

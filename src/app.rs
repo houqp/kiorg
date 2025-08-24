@@ -18,7 +18,7 @@ use crate::ui::egui_notify::Toasts;
 use crate::ui::popup::delete::DeleteConfirmResult;
 use crate::ui::popup::{
     PopupType, about, add_entry, bookmark, delete, exit, file_drop, generic_message,
-    open_with as open_with_popup, preview as popup_preview, rename, teleport, theme,
+    open_with as open_with_popup, preview as popup_preview, rename, sort_toggle, teleport, theme,
 };
 use crate::ui::search_bar::{self, SearchBar};
 use crate::ui::separator;
@@ -893,6 +893,9 @@ impl eframe::App for Kiorg {
             }
             Some(PopupType::Teleport(_)) => {
                 teleport::draw(ctx, self);
+            }
+            Some(PopupType::SortToggle) => {
+                sort_toggle::show_sort_toggle_popup(self, ctx);
             }
             Some(PopupType::UpdateConfirm(_)) => {
                 update::show_update_confirm_popup(ctx, self);

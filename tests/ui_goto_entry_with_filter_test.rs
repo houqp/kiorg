@@ -1,10 +1,10 @@
 #[path = "mod/ui_test_helpers.rs"]
 mod ui_test_helpers;
 
-use egui::{Key, Modifiers};
+use egui::Key;
 use kiorg::models::dir_entry::DirEntry;
 use tempfile::tempdir;
-use ui_test_helpers::{create_harness, create_test_files};
+use ui_test_helpers::{create_harness, create_test_files, shift_modifiers};
 
 #[test]
 fn test_goto_first_entry_with_filter() {
@@ -115,11 +115,7 @@ fn test_goto_last_entry_with_filter() {
     );
 
     // Press Shift+G to go to last entry
-    let modifiers = Modifiers {
-        shift: true,
-        ..Default::default()
-    };
-    harness.key_press_modifiers(modifiers, Key::G);
+    harness.key_press_modifiers(shift_modifiers(), Key::G);
     harness.step();
 
     // Verify selection is at the last filtered entry

@@ -123,6 +123,7 @@ impl KeyboardShortcut {
             "[" => Some(Key::OpenBracket),
             "]" => Some(Key::CloseBracket),
             "-" => Some(Key::Minus),
+            "," => Some(Key::Comma),
             key => {
                 tracing::warn!("Unsupported key: {}", key);
                 None
@@ -204,6 +205,7 @@ pub enum ShortcutAction {
     OpenTerminal,
     ShowFilePreview,
     ShowTeleport,
+    ShowSortToggle,
     Exit,
     ToggleRangeSelection,
 }
@@ -541,6 +543,7 @@ pub fn default_shortcuts() -> Shortcuts {
         KeyboardShortcut::new("v"),
         ShortcutAction::ToggleRangeSelection,
     );
+    add_shortcut(KeyboardShortcut::new(","), ShortcutAction::ShowSortToggle);
     shortcuts
 }
 

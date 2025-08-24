@@ -9,7 +9,7 @@ use std::path::PathBuf;
 use tempfile::tempdir;
 use ui_test_helpers::{
     create_harness, create_test_files, create_test_image, create_test_zip, ctrl_modifiers,
-    wait_for_condition,
+    shift_modifiers, wait_for_condition,
 };
 
 #[test]
@@ -29,11 +29,7 @@ fn test_ui_navigation_g_shortcuts() {
 
     // Test G shortcut (go to last entry)
     {
-        let modifiers = egui::Modifiers {
-            shift: true,
-            ..Default::default()
-        };
-        harness.key_press_modifiers(modifiers, Key::G);
+        harness.key_press_modifiers(shift_modifiers(), Key::G);
         harness.step();
         let tab = harness.state().tab_manager.current_tab_ref();
         assert_eq!(tab.selected_index, tab.entries.len() - 1);
@@ -74,11 +70,7 @@ fn test_ui_navigation_g_shortcuts_empty_list() {
 
     // Test G shortcut with empty list
     {
-        let modifiers = egui::Modifiers {
-            shift: true,
-            ..Default::default()
-        };
-        harness.key_press_modifiers(modifiers, Key::G);
+        harness.key_press_modifiers(shift_modifiers(), Key::G);
         harness.step();
         let tab = harness.state().tab_manager.current_tab_ref();
         assert_eq!(tab.selected_index, 0); // Should stay at 0
@@ -598,11 +590,7 @@ fn test_ui_navigation_open_with_functionality() {
     harness.step();
 
     // Open the popup using keyboard shortcut
-    let modifiers = egui::Modifiers {
-        shift: true,
-        ..Default::default()
-    };
-    harness.key_press_modifiers(modifiers, Key::O);
+    harness.key_press_modifiers(shift_modifiers(), Key::O);
     harness.step();
 
     // Verify the popup is open
@@ -673,23 +661,11 @@ fn test_ui_navigation_open_with_empty_command() {
     assert_eq!(tab.selected_index, 0);
 
     // Trigger open_with popup with empty command
-    use kiorg::ui::popup::PopupType;
-    harness.state_mut().show_popup = Some(PopupType::OpenWith("".to_string()));
-    harness.step();
-
-    // Simulate confirming with empty command
-    harness.key_press_modifiers(ctrl_modifiers(), Key::D);
+    harness.key_press_modifiers(shift_modifiers(), Key::O);
     harness.step();
 
     harness.key_press_modifiers(ctrl_modifiers(), Key::Enter);
     harness.step();
-
-    // Verify that no files were opened (due to empty command)
-    let open_with_calls = get_open_with_calls();
-    assert!(
-        open_with_calls.is_empty(),
-        "Should not open file with empty command"
-    );
 
     // Note: For empty command, confirm_open_with returns early without calling close_popup
     // So the popup should still be open, which is the expected behavior
@@ -700,7 +676,15 @@ fn test_ui_navigation_open_with_empty_command() {
         ),
         "Open with popup should still be open after empty command (error case)"
     );
+
+    // Verify that no files were opened (due to empty command)
+    let open_with_calls = get_open_with_calls();
+    assert!(
+        open_with_calls.is_empty(),
+        "Should not open file with empty command"
+    );
 }
+
 #[test]
 fn test_ui_navigation_open_directory_vs_open_directory_or_file() {
     // Create a temporary directory for testing
