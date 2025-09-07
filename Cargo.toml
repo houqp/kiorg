@@ -1,6 +1,6 @@
 [package]
 name = "kiorg"
-version = "1.0.6"
+version = "1.1.0"
 edition = "2024"
 authors = ["houqp"]
 repository = "https://github.com/houqp/kiorg"
