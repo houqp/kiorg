@@ -402,7 +402,7 @@ pub fn truncate_text(text: &str, available_width: f32) -> String {
     let chars_cnt = text.chars().count();
 
     if chars_cnt <= max_chars {
-        return text.to_string();
+        return text.replace('\n', "?");
     }
 
     let half_chars = max_chars / 2;
@@ -412,6 +412,7 @@ pub fn truncate_text(text: &str, available_width: f32) -> String {
         .chars()
         .skip(chars_cnt - half_chars)
         .take(half_chars)
+        .map(|c| if c == '\n' { '?' } else { c })
         .collect::<String>();
 
     format!("{start}...{end}")
@@ -436,6 +437,15 @@ mod tests {
             // set to 136.0 so it tries to subindex at the Narrow No-Break Space char
             truncate_text("Screenshot 2025-04-21 at 2.45.13 AM.png", 136.0),
             "Screensh...3\u{202f}AM.png"
+        );
+    }
+
+    #[test]
+    fn test_truncate_with_newline() {
+        assert_eq!(truncate_text("file\nname", 100.0), "file?name");
+        assert_eq!(
+            truncate_text("a_very_long_file\nname_that_will_be_truncated.txt", 80.0),
+            "a_ver...d.txt"
         );
     }
 }
