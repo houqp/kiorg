@@ -20,6 +20,13 @@ mod implementation {
             let system_shell = std::env::var("SHELL")
                 .map_err(|e| format!("SHELL variable is not defined: {e}"))?;
 
+            // Sometimes, TERM is not set properly on app start, e.g. launching from MacOS Dock
+            if std::env::var("TERM").is_err() {
+                unsafe {
+                    std::env::set_var("TERM", "xterm-256color");
+                }
+            }
+
             let (pty_proxy_sender, pty_proxy_receiver) = std::sync::mpsc::channel();
 
             let terminal_backend = egui_term::TerminalBackend::new(
