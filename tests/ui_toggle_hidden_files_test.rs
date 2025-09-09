@@ -8,9 +8,7 @@ use ui_test_helpers::{create_harness, create_test_files, ctrl_modifiers};
 #[cfg(windows)]
 fn set_hidden_attribute_on_paths(paths: &[std::path::PathBuf]) {
     use std::os::windows::ffi::OsStrExt;
-    use windows_sys::Win32::Storage::FileSystem::{
-        SetFileAttributesW, FILE_ATTRIBUTE_HIDDEN,
-    };
+    use windows_sys::Win32::Storage::FileSystem::{FILE_ATTRIBUTE_HIDDEN, SetFileAttributesW};
 
     for path in paths {
         let wide_path: Vec<u16> = path

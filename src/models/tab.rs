@@ -612,7 +612,7 @@ impl TabManager {
         // Store sort settings before borrowing self mutably
         let sort_column = self.sort_column;
         let sort_order = self.sort_order;
-        let show_hidden = self.show_hidden; 
+        let show_hidden = self.show_hidden;
 
         let tab = self.current_tab_mut();
         let current_path = tab.current_path.clone(); // Get current path from the tab

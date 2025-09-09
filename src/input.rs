@@ -253,7 +253,7 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: &Shortcu
             if !was_active && tab.is_range_selection_active() {
                 app.clipboard = None;
             }
-        },
+        }
         ShortcutAction::ToggleHiddenFiles => {
             app.tab_manager.toggle_show_hidden();
             app.refresh_entries();
