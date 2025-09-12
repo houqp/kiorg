@@ -356,7 +356,7 @@ impl Tab {
     }
 }
 
-fn read_dir_entries(path: &PathBuf) -> Vec<DirEntry> {
+fn read_dir_entries(path: &PathBuf, show_hidden: bool) -> Vec<DirEntry> {
     if let Ok(read_dir) = std::fs::read_dir(path) {
         read_dir
             .filter_map(|entry| {
@@ -366,6 +366,29 @@ fn read_dir_entries(path: &PathBuf) -> Vec<DirEntry> {
 
                 let file_type = entry.file_type().ok()?;
                 let is_symlink = file_type.is_symlink();
+
+                // Filter out hidden files if not requested
+                if !show_hidden {
+                    // For Windows, check the "hidden" file attribute.
+                    #[cfg(windows)]
+                    {
+                        use std::os::windows::fs::MetadataExt;
+                        if let Ok(metadata) = entry.metadata() {
+                            const HIDDEN_ATTRIBUTE: u32 = 0x2;
+                            if (metadata.file_attributes() & HIDDEN_ATTRIBUTE) != 0 {
+                                return None;
+                            }
+                        }
+                    }
+
+                    // For Unix-like systems, check for a leading dot.
+                    #[cfg(not(windows))]
+                    {
+                        if name.starts_with('.') {
+                            return None;
+                        }
+                    }
+                }
 
                 // For non-symlinks, we can determine is_dir without additional syscalls
                 let is_dir = if is_symlink {
@@ -420,6 +443,8 @@ pub struct TabManagerState {
     current_tab_index: usize,
     pub sort_column: SortColumn,
     pub sort_order: SortOrder,
+    #[serde(default)]
+    pub show_hidden: bool,
 }
 
 #[derive(Clone)]
@@ -428,6 +453,7 @@ pub struct TabManager {
     current_tab_index: usize,
     pub sort_column: SortColumn,
     pub sort_order: SortOrder,
+    pub show_hidden: bool,
 }
 
 impl TabManager {
@@ -452,6 +478,7 @@ impl TabManager {
             current_tab_index: 0,
             sort_column,
             sort_order,
+            show_hidden: false,
         }
     }
 
@@ -463,6 +490,7 @@ impl TabManager {
             current_tab_index: self.current_tab_index,
             sort_column: self.sort_column,
             sort_order: self.sort_order,
+            show_hidden: self.show_hidden,
         }
     }
 
@@ -473,6 +501,7 @@ impl TabManager {
             current_tab_index: state.current_tab_index,
             sort_column: state.sort_column,
             sort_order: state.sort_order,
+            show_hidden: state.show_hidden,
         }
     }
 
@@ -575,10 +604,15 @@ impl TabManager {
         tab.update_filtered_cache(&None, false, false);
     }
 
+    pub fn toggle_show_hidden(&mut self) {
+        self.show_hidden = !self.show_hidden;
+    }
+
     pub fn refresh_entries(&mut self) {
         // Store sort settings before borrowing self mutably
         let sort_column = self.sort_column;
         let sort_order = self.sort_order;
+        let show_hidden = self.show_hidden;
 
         let tab = self.current_tab_mut();
         let current_path = tab.current_path.clone(); // Get current path from the tab
@@ -589,7 +623,7 @@ impl TabManager {
         tab.parent_selected_index = 0; // Default selection
 
         if let Some(parent) = current_path.parent() {
-            tab.parent_entries = read_dir_entries(&parent.to_path_buf());
+            tab.parent_entries = read_dir_entries(&parent.to_path_buf(), show_hidden);
             // Sort parent entries using the global sort settings
             sort_entries_by(&mut tab.parent_entries, sort_column, sort_order);
 
@@ -605,7 +639,7 @@ impl TabManager {
         // --- End: Parent Directory Logic ---
 
         // --- Start: Current Directory Logic ---
-        tab.entries = read_dir_entries(&current_path); // Read entries for the current path
+        tab.entries = read_dir_entries(&current_path, show_hidden); // Read entries for the current path
         // Sort entries using the global sort settings
         sort_entries_by(&mut tab.entries, sort_column, sort_order);
         refresh_path_to_index(tab);

@@ -146,6 +146,7 @@ pub fn show_help_window(
                             (ShortcutAction::CutEntry, "Cut selected entry"),
                             (ShortcutAction::PasteEntry, "Paste copied/cut entries"),
                             (ShortcutAction::ShowSortToggle, "Show sort toggle popup"),
+                            (ShortcutAction::ToggleHiddenFiles, "Toggle hidden files"),
                         ];
                         for (action, description) in file_actions {
                             let shortcut_display =

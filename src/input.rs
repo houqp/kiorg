@@ -254,6 +254,10 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: &Shortcu
                 app.clipboard = None;
             }
         }
+        ShortcutAction::ToggleHiddenFiles => {
+            app.tab_manager.toggle_show_hidden();
+            app.refresh_entries();
+        }
     }
 }
 

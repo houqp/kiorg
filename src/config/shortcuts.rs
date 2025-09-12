@@ -208,6 +208,7 @@ pub enum ShortcutAction {
     ShowSortToggle,
     Exit,
     ToggleRangeSelection,
+    ToggleHiddenFiles,
 }
 
 // Define a struct to represent an egui key combination for efficient lookups
@@ -544,6 +545,11 @@ pub fn default_shortcuts() -> Shortcuts {
         ShortcutAction::ToggleRangeSelection,
     );
     add_shortcut(KeyboardShortcut::new(","), ShortcutAction::ShowSortToggle);
+    // Add the new shortcut for toggling hidden files
+    add_shortcut(
+        KeyboardShortcut::new("h").with_ctrl(),
+        ShortcutAction::ToggleHiddenFiles,
+    );
     shortcuts
 }
 

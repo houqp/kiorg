@@ -108,6 +108,10 @@ harness = false
 criterion = "0.5"
 egui_kittest = { version = "0.32.0", features = ["eframe"] }
 kiorg = { path = ".", features = ["testing"] }
+windows-sys = { version ="0.61.0", features = [
+    "Win32_Foundation",
+    "Win32_Storage_FileSystem",
+] }
 
 [package.metadata.bundle]
 name = "Kiorg"
