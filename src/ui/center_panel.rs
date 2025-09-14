@@ -269,17 +269,18 @@ fn show_context_menu(
 pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
     handle_file_drop(ui.ctx(), app);
 
-    // Get cached filtered entries or compute them if cache is empty
-    // Get the current tab reference for reading
-    let tab_ref = app.tab_manager.current_tab_ref();
-    let filtered_entries = tab_ref.get_cached_filtered_entries();
-
     // --- State variables to capture changes from UI closures ---
     let mut new_selected_index = None; // For selection changes captured from the row click
     let mut sort_requested = None; // For sort changes captured from the header click
     let mut file_list_response = None; // To store the response for the background context menu
     let mut context_menu_action = ContextMenuAction::None; // To store the action from any context menu
     let mut double_clicked_path: Option<PathBuf> = None; // To store the path of a double-clicked entry
+    let mut drag_started_source: Option<PathBuf> = None; // To store an item (file or directory) that started being dragged
+    let mut drop_target_folder: Option<PathBuf> = None; // To store the folder where a file was dropped
+
+    // prepare drag and drop state
+    let is_drag_active = app.is_dragging();
+    let primary_pointer_released = ui.ctx().input(|i| i.pointer.primary_released());
 
     ui.vertical(|ui| {
         ui.set_min_width(width);
@@ -304,6 +305,11 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
         // Use a containing layout for the scroll area to capture interactions
         let inner_response = ui
             .vertical(|ui| {
+                // Get cached filtered entries or compute them if cache is empty
+                // Get the current tab reference for reading
+                let tab_ref = app.tab_manager.current_tab_ref();
+                let filtered_entries = tab_ref.get_cached_filtered_entries();
+
                 ui.set_min_height(available_height);
                 ui.set_max_height(available_height); // Constrain the inner vertical area
 
@@ -336,6 +342,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                     app.ensure_selected_visible = false;
                 }
 
+                let current_dragged_file = app.get_dragged_file().cloned();
                 // Draw the rows within the scroll area
                 scroll_area.show_rows(ui, ROW_HEIGHT, total_rows, |scroll_ui, row_range| {
                     // Calculate width considering potential scrollbar
@@ -397,8 +404,14 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                             None => (false, false),
                         };
 
-                        // Draw the row and get its response and potential new name
-                        // Destructure the tuple returned by draw_entry_row
+                        // Check if this entry is being dragged or is a drag target
+                        let is_drag_source = is_drag_active
+                            && current_dragged_file
+                                .as_ref()
+                                .map(|dragged| dragged == &entry.path)
+                                .unwrap_or(false);
+
+                        // Draw the row and get its response
                         let row_response = file_list::draw_entry_row(
                             scroll_ui,
                             file_list::EntryRowParams {
@@ -410,6 +423,8 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                                 is_being_opened: being_opened,
                                 is_in_cut_clipboard,
                                 is_in_copy_clipboard,
+                                is_drag_source,
+                                is_drag_active,
                             },
                         );
 
@@ -417,10 +432,21 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                         if row_response.clicked() {
                             new_selected_index = Some(*original_index);
                         }
-
-                        // Check for double-clicks to navigate or open files
+                        // double_clicked() and clicked() return true at the same time
                         if row_response.double_clicked() {
+                            // Check for double-clicks to navigate or open files
                             double_clicked_path = Some(entry.path.clone());
+                        } else if row_response.drag_started() {
+                            // Start dragging files or directories
+                            drag_started_source = Some(entry.path.clone());
+                        } else if is_drag_active
+                            && !is_drag_source
+                            && entry.is_dir
+                            && primary_pointer_released
+                            // Handle drop onto folders - check if mouse was released over this entry
+                            && row_response.hovered()
+                        {
+                            drop_target_folder = Some(entry.path.clone());
                         }
 
                         // --- Add Context Menu for Rows ---
@@ -477,6 +503,22 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
         } else if path.is_file() {
             app.open_file(path);
         }
+    }
+
+    if let Some(item_path) = drag_started_source {
+        app.start_drag(item_path);
+    }
+
+    if primary_pointer_released {
+        if let Some(target_folder) = drop_target_folder {
+            app.move_dragged_item_to_folder(target_folder);
+        }
+        app.end_drag();
+        ui.ctx().set_cursor_icon(egui::CursorIcon::Default);
+    }
+
+    if app.is_dragging() {
+        ui.ctx().set_cursor_icon(egui::CursorIcon::Grabbing);
     }
 
     // Handle context menu action captured from closures
