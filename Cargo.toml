@@ -1,6 +1,6 @@
 [package]
 name = "kiorg"
-version = "1.1.0"
+version = "1.1.1"
 edition = "2024"
 authors = ["houqp"]
 repository = "https://github.com/houqp/kiorg"
@@ -108,7 +108,7 @@ harness = false
 criterion = "0.5"
 egui_kittest = { version = "0.32.0", features = ["eframe"] }
 kiorg = { path = ".", features = ["testing"] }
-windows-sys = { version ="0.61.0", features = [
+windows-sys = { version = "0.61.0", features = [
     "Win32_Foundation",
     "Win32_Storage_FileSystem",
 ] }
