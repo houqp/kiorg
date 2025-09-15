@@ -47,5 +47,4 @@
 
 * render PDF preview using pdfium_render or pathfinder_rasterize
   * see <https://github.com/servo/pathfinder/issues/157>
-* Support drag and drop
 * Moving up jumps when reached the first page

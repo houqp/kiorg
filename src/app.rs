@@ -182,6 +182,8 @@ pub struct Kiorg {
     pub visit_history: HashMap<PathBuf, VisitHistoryEntry>,
     // Async history saver for non-blocking save operations
     pub history_saver: visit_history::HistorySaver,
+    // Drag and drop state - currently dragged file
+    pub dragged_file: Option<PathBuf>,
 }
 
 impl Kiorg {
@@ -303,6 +305,7 @@ impl Kiorg {
             fs_watcher,
             visit_history,
             history_saver,
+            dragged_file: None,
         };
 
         app.refresh_entries();
@@ -496,6 +499,52 @@ impl Kiorg {
         let filtered_entries = tab.get_cached_filtered_entries().clone();
         for (entry, _original_index) in filtered_entries {
             tab.marked_entries.insert(entry.path);
+        }
+    }
+
+    pub fn start_drag(&mut self, file_path: PathBuf) {
+        self.dragged_file = Some(file_path);
+    }
+
+    pub fn end_drag(&mut self) -> Option<PathBuf> {
+        self.dragged_file.take()
+    }
+
+    pub fn is_dragging(&self) -> bool {
+        self.dragged_file.is_some()
+    }
+
+    pub fn get_dragged_file(&self) -> Option<&PathBuf> {
+        self.dragged_file.as_ref()
+    }
+
+    /// Move dragged item (file or directory) to target folder
+    pub fn move_dragged_item_to_folder(&mut self, target_folder: PathBuf) {
+        let dragged_item = if let Some(dragged_item) = self.end_drag() {
+            dragged_item
+        } else {
+            return;
+        };
+
+        if dragged_item == target_folder {
+            self.toasts.error("Cannot move an entry into itself");
+            return;
+        }
+
+        if dragged_item.parent() == Some(&target_folder) {
+            self.toasts
+                .error("Entry is already in the target directory");
+            return;
+        }
+
+        // Use the existing cut/move functionality
+        self.clipboard = Some(Clipboard::Cut(vec![dragged_item]));
+        if crate::ui::center_panel::handle_clipboard_operations(
+            &mut self.clipboard,
+            &target_folder,
+            &mut self.toasts,
+        ) {
+            self.refresh_entries();
         }
     }
 

@@ -131,6 +131,8 @@ pub struct EntryRowParams<'a> {
     pub is_being_opened: bool,
     pub is_in_cut_clipboard: bool,
     pub is_in_copy_clipboard: bool,
+    pub is_drag_active: bool,
+    pub is_drag_source: bool,
 }
 
 fn draw_icon(
@@ -194,11 +196,13 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
         is_being_opened,
         is_in_cut_clipboard,
         is_in_copy_clipboard,
+        is_drag_active,
+        is_drag_source,
     } = params;
 
     let (rect, response) = ui.allocate_exact_size(
         egui::vec2(ui.available_width(), ROW_HEIGHT),
-        egui::Sense::click_and_drag(), // Use click_and_drag to detect double clicks
+        egui::Sense::click_and_drag(), // Use click_and_drag to detect double clicks and drag
     );
 
     // Provide detailed accessibility information
@@ -212,6 +216,9 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
         }
         if is_in_copy_clipboard {
             state_info.push("copied to clipboard");
+        }
+        if is_drag_source {
+            state_info.push("being dragged");
         }
         let accessibility_text = if !state_info.is_empty() {
             format!("{} {}", state_info.join(", "), entry.accessibility_text())
@@ -232,6 +239,17 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
         let pulse_color = colors.success.gamma_multiply(pulse.mul_add(0.5, 0.3));
         // Draw a pulsing background
         ui.painter().rect_filled(rect, 0.0, pulse_color);
+    } else if is_drag_source {
+        // Show visual feedback for the file being dragged
+        ui.painter()
+            .rect_filled(rect, 2.0, colors.highlight.gamma_multiply(0.2));
+    } else if is_drag_active && entry.is_dir && response.contains_pointer() {
+        // Check hover state directly on the response to highlight folders as valid drop targets
+        //
+        // NOTE: we need to use response.contains_pointer here because
+        // response.hover is always false when dragging is active
+        ui.painter()
+            .rect_filled(rect, 2.0, colors.success.gamma_multiply(0.2));
     } else if is_marked {
         ui.painter().rect_filled(rect, 0.0, colors.bg_light);
     } else if is_selected {
@@ -339,7 +357,8 @@ pub fn draw_parent_entry_row(
 ) -> egui::Response {
     let (rect, response) = ui.allocate_exact_size(
         egui::vec2(ui.available_width(), ROW_HEIGHT),
-        egui::Sense::click_and_drag(), // Use click_and_drag to detect double clicks
+        // Use click_and_drag to detect double clicks
+        egui::Sense::click_and_drag(),
     );
 
     // Provide detailed accessibility information
