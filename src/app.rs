@@ -17,8 +17,9 @@ use crate::open_wrap::{open_that, open_with};
 use crate::ui::egui_notify::Toasts;
 use crate::ui::popup::delete::DeleteConfirmResult;
 use crate::ui::popup::{
-    PopupType, about, add_entry, bookmark, delete, exit, file_drop, generic_message,
-    open_with as open_with_popup, preview as popup_preview, rename, sort_toggle, teleport, theme,
+    PopupType, about, action_history, add_entry, bookmark, delete, exit, file_drop,
+    generic_message, open_with as open_with_popup, preview as popup_preview, rename, sort_toggle,
+    teleport, theme,
 };
 use crate::ui::search_bar::{self, SearchBar};
 use crate::ui::separator;
@@ -539,9 +540,11 @@ impl Kiorg {
 
         // Use the existing cut/move functionality
         self.clipboard = Some(Clipboard::Cut(vec![dragged_item]));
+        let tab = self.tab_manager.current_tab_mut();
         if crate::ui::center_panel::handle_clipboard_operations(
             &mut self.clipboard,
             &target_folder,
+            &mut tab.action_history,
             &mut self.toasts,
         ) {
             self.refresh_entries();
@@ -954,6 +957,9 @@ impl eframe::App for Kiorg {
             }
             Some(PopupType::UpdateRestart) => {
                 update::show_update_restart_popup(ctx, self);
+            }
+            Some(PopupType::ActionHistory) => {
+                action_history::draw(ctx, self);
             }
             None => {}
         }

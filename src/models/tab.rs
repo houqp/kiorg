@@ -1,4 +1,5 @@
 use crate::config::Config as AppConfig;
+use crate::models::action_history::TabActionHistory;
 use crate::models::dir_entry::DirEntry;
 use chrono::{DateTime, Local};
 use humansize::{BINARY, format_size};
@@ -39,6 +40,8 @@ pub struct Tab {
     // History of visited directories
     pub history: Vec<PathBuf>,
     pub history_position: usize,
+    // Action history for tracking mutations and rollback
+    pub action_history: TabActionHistory,
     // Reverse index mapping DirEntry path to index in entries (private)
     path_to_index: std::collections::HashMap<PathBuf, usize>,
     // Cached filtered entries to avoid re-filtering on every draw
@@ -99,6 +102,9 @@ impl TabState {
 impl Tab {
     #[must_use]
     pub fn new(path: PathBuf) -> Self {
+        // Create new in-memory action history
+        let action_history = TabActionHistory::new();
+
         let mut tab = Self {
             current_path: path.clone(),
             entries: Vec::new(),
@@ -109,6 +115,7 @@ impl Tab {
             range_selection_start: None,
             history: Vec::new(),
             history_position: 0,
+            action_history,
             path_to_index: std::collections::HashMap::new(),
             cached_filtered_entries: Vec::new(),
         };
@@ -129,6 +136,10 @@ impl Tab {
     #[must_use]
     pub fn from_state(state: TabState) -> Self {
         let path = state.current_path.clone();
+
+        // Create new in-memory action history
+        let action_history = TabActionHistory::new();
+
         let mut tab = Self {
             current_path: state.current_path,
             entries: Vec::new(),
@@ -139,6 +150,7 @@ impl Tab {
             range_selection_start: None,
             history: Vec::new(),
             history_position: 0,
+            action_history,
             path_to_index: std::collections::HashMap::new(),
             cached_filtered_entries: Vec::new(),
         };

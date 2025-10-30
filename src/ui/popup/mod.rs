@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use crate::ui::update::Release;
 
 pub mod about;
+pub mod action_history;
 pub mod add_entry;
 pub mod bookmark;
 pub mod delete;
@@ -39,4 +40,5 @@ pub enum PopupType {
     UpdateProgress(crate::ui::update::UpdateProgressData), // Show update progress during download
     UpdateRestart,          // Show restart confirmation with version info
     SortToggle,             // Show sort toggle popup for column sorting
+    ActionHistory,          // Show action history with rollback options
 }

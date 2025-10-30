@@ -7,35 +7,10 @@ use crate::config;
 use crate::config::SortPreference;
 use crate::ui::file_list::{self, ROW_HEIGHT, TableHeaderParams};
 use crate::ui::popup::PopupType;
+use crate::utils::file_operations;
 
 // TODO: make this configurable
 const PADDING_ROWS: usize = 3;
-
-/// Recursively copy a directory from src to dst
-fn copy_dir_recursively(src: &std::path::Path, dst: &std::path::Path) -> std::io::Result<()> {
-    // Create the destination directory if it doesn't exist
-    if !dst.exists() {
-        std::fs::create_dir_all(dst)?;
-    }
-
-    // Iterate through the source directory entries
-    for entry in std::fs::read_dir(src)? {
-        let entry = entry?;
-        let entry_path = entry.path();
-        let file_name = entry.file_name();
-        let dst_path = dst.join(file_name);
-
-        if entry_path.is_dir() {
-            // Recursively copy subdirectories
-            copy_dir_recursively(&entry_path, &dst_path)?;
-        } else {
-            // Copy files
-            std::fs::copy(&entry_path, &dst_path)?;
-        }
-    }
-
-    Ok(())
-}
 
 fn new_unique_path_name_for_paste(
     path: &std::path::Path,
@@ -71,31 +46,58 @@ fn new_unique_path_name_for_paste(
 pub fn handle_clipboard_operations(
     clipboard: &mut Option<Clipboard>,
     current_path: &std::path::Path,
+    action_history: &mut crate::models::action_history::TabActionHistory,
     toasts: &mut crate::ui::egui_notify::Toasts,
 ) -> bool {
     match clipboard.take() {
         Some(Clipboard::Copy(paths)) => {
+            let mut copy_operations = Vec::new();
+
             paths.iter().for_each(|path| {
                 let new_path = new_unique_path_name_for_paste(path, current_path);
                 // Handle copying differently based on whether it's a file or directory
                 if path.is_dir() {
-                    if let Err(e) = copy_dir_recursively(path, &new_path) {
+                    if let Err(e) = file_operations::copy_dir_recursively(path, &new_path) {
                         toasts.error(format!(
                             "Failed to copy directory {} to {}: {e}",
                             path.to_string_lossy(),
                             new_path.to_string_lossy()
                         ));
+                    } else {
+                        // Record successful copy operation
+                        copy_operations.push(crate::models::action_history::CopyOperation {
+                            source_path: path.clone(),
+                            target_path: new_path,
+                        });
                     }
-                } else if let Err(e) = std::fs::copy(path, &new_path) {
+                    return;
+                }
+
+                if let Err(e) = std::fs::copy(path, &new_path) {
                     toasts.error(format!(
                         "Failed to copy file {} to {}: {e}",
                         path.to_string_lossy(),
                         new_path.to_string_lossy()
                     ));
+                } else {
+                    // Record successful copy operation
+                    copy_operations.push(crate::models::action_history::CopyOperation {
+                        source_path: path.clone(),
+                        target_path: new_path,
+                    });
                 }
             });
+
+            // Record operations if any operations succeeded
+            if !copy_operations.is_empty() {
+                action_history.add_action(crate::models::action_history::ActionType::Copy {
+                    operations: copy_operations,
+                });
+            }
         }
         Some(Clipboard::Cut(paths)) => {
+            let mut move_operations = Vec::new();
+
             paths.iter().for_each(|path| {
                 let new_path = new_unique_path_name_for_paste(path, current_path);
                 if let Err(e) = std::fs::rename(path, &new_path) {
@@ -104,8 +106,21 @@ pub fn handle_clipboard_operations(
                         path.to_string_lossy(),
                         new_path.to_string_lossy()
                     ));
+                } else {
+                    // Record successful move operation
+                    move_operations.push(crate::models::action_history::MoveOperation {
+                        source_path: path.clone(),
+                        target_path: new_path,
+                    });
                 }
             });
+
+            // Record operations if any operations succeeded
+            if !move_operations.is_empty() {
+                action_history.add_action(crate::models::action_history::ActionType::Move {
+                    operations: move_operations,
+                });
+            }
         }
         _ => return false, // No clipboard operation to perform
     }
@@ -527,8 +542,13 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
             app.show_popup = Some(PopupType::AddEntry(String::new()));
         }
         ContextMenuAction::Paste => {
-            let current_path = &app.tab_manager.current_tab_ref().current_path;
-            if handle_clipboard_operations(&mut app.clipboard, current_path, &mut app.toasts) {
+            let current_tab = app.tab_manager.current_tab_mut();
+            if handle_clipboard_operations(
+                &mut app.clipboard,
+                &current_tab.current_path,
+                &mut current_tab.action_history,
+                &mut app.toasts,
+            ) {
                 // Clear marked entries after successful paste operation
                 app.tab_manager.current_tab_mut().marked_entries.clear();
                 app.refresh_entries();

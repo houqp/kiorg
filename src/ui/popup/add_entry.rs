@@ -1,4 +1,5 @@
 use crate::app::Kiorg;
+use crate::models::action_history::{ActionType, CreateOperation};
 use crate::ui::popup::PopupType;
 use egui::{Context, Frame, Key, TextEdit};
 use std::fs;
@@ -76,11 +77,14 @@ pub(crate) fn handle_key_press(ctx: &Context, app: &mut Kiorg) -> bool {
                 return true; // Input handled
             }
 
-            let result = if entry_name.ends_with('/') {
+            let (result, is_dir) = if entry_name.ends_with('/') {
                 // Create directory
                 // Ensure parent directories exist before creating the final one
                 let parent = new_path.parent().unwrap_or(&current_path);
-                fs::create_dir_all(parent).and_then(|_| fs::create_dir(&new_path))
+                (
+                    fs::create_dir_all(parent).and_then(|_| fs::create_dir(&new_path)),
+                    true,
+                )
             } else {
                 // Create file
                 // Ensure parent directories exist before creating the file
@@ -95,7 +99,7 @@ pub(crate) fn handle_key_press(ctx: &Context, app: &mut Kiorg) -> bool {
                     // Decide how to handle this error, maybe return early?
                     // For now, we'll proceed and let File::create handle the final error.
                 }
-                fs::File::create(&new_path).map(|_| ()) // Discard the File handle
+                (fs::File::create(&new_path).map(|_| ()), false) // Discard the File handle
             };
 
             match result {
@@ -115,6 +119,15 @@ pub(crate) fn handle_key_press(ctx: &Context, app: &mut Kiorg) -> bool {
                     app.prev_path = Some(created_path); // Use prev_path to select the new entry
                     // --- End: Preserve Selection After Creation ---
                     app.refresh_entries();
+
+                    // Record creation action in history
+                    let tab = app.tab_manager.current_tab_mut();
+                    tab.action_history.add_action(ActionType::Create {
+                        operations: vec![CreateOperation {
+                            path: new_path.clone(),
+                            is_dir,
+                        }],
+                    });
                 }
             }
         }

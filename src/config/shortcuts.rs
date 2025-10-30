@@ -206,6 +206,9 @@ pub enum ShortcutAction {
     ShowFilePreview,
     ShowTeleport,
     ShowSortToggle,
+    ShowActionHistory,
+    Undo,
+    Redo,
     Exit,
     ToggleRangeSelection,
     ToggleHiddenFiles,
@@ -517,6 +520,14 @@ pub fn default_shortcuts() -> Shortcuts {
         ShortcutAction::ShowTeleport,
     );
 
+    // Action history shortcuts
+    add_shortcut(
+        KeyboardShortcut::new("h").with_ctrl().with_shift(),
+        ShortcutAction::ShowActionHistory,
+    );
+    add_shortcut(KeyboardShortcut::new("u"), ShortcutAction::Undo);
+    add_shortcut(KeyboardShortcut::new("r").with_ctrl(), ShortcutAction::Redo);
+
     // Add new shortcuts for switching to preview tab and next/previous tab
     add_shortcut(KeyboardShortcut::new("]"), ShortcutAction::SwitchToNextTab);
     add_shortcut(
@@ -546,6 +557,7 @@ pub fn default_shortcuts() -> Shortcuts {
     );
     add_shortcut(KeyboardShortcut::new(","), ShortcutAction::ShowSortToggle);
     // Add the new shortcut for toggling hidden files
+    // TODO: add a test to detect conflicting default shortcuts
     add_shortcut(
         KeyboardShortcut::new("h").with_ctrl(),
         ShortcutAction::ToggleHiddenFiles,
