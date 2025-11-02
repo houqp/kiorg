@@ -84,7 +84,12 @@ fn test_undo_redo_create_file() {
 
     // Test Redo - press Ctrl+r to redo the creation
     harness.key_press_modifiers(ctrl_modifiers(), Key::R);
-    harness.step();
+
+    wait_for_condition(|| {
+        harness.step();
+        let tab = harness.state().tab_manager.current_tab_ref();
+        tab.entries.iter().any(|e| e.path == test_file)
+    });
 
     // Verify file was recreated
     assert!(test_file.exists(), "File should be recreated after redo");
@@ -177,7 +182,12 @@ fn test_undo_redo_create_directory() {
 
     // Test Redo
     harness.key_press_modifiers(ctrl_modifiers(), Key::R);
-    harness.step();
+
+    wait_for_condition(|| {
+        harness.step();
+        let tab = harness.state().tab_manager.current_tab_ref();
+        tab.entries.iter().any(|e| e.path == test_dir)
+    });
 
     // Verify directory was recreated
     assert!(
@@ -292,7 +302,12 @@ fn test_undo_redo_rename_file() {
 
     // Test Redo
     harness.key_press_modifiers(ctrl_modifiers(), Key::R);
-    harness.step();
+
+    wait_for_condition(|| {
+        harness.step();
+        let tab = harness.state().tab_manager.current_tab_ref();
+        tab.entries.iter().any(|e| e.path == renamed_file)
+    });
 
     // Verify rename was redone
     assert!(
@@ -401,7 +416,12 @@ fn test_undo_redo_copy_file() {
 
     // Test Redo
     harness.key_press_modifiers(ctrl_modifiers(), Key::R);
-    harness.step();
+
+    wait_for_condition(|| {
+        harness.step();
+        let tab = harness.state().tab_manager.current_tab_ref();
+        tab.entries.iter().any(|e| e.path == copied_file)
+    });
 
     // Verify copy was redone
     assert!(

@@ -557,7 +557,6 @@ pub fn default_shortcuts() -> Shortcuts {
     );
     add_shortcut(KeyboardShortcut::new(","), ShortcutAction::ShowSortToggle);
     // Add the new shortcut for toggling hidden files
-    // TODO: add a test to detect conflicting default shortcuts
     add_shortcut(
         KeyboardShortcut::new("h").with_ctrl(),
         ShortcutAction::ToggleHiddenFiles,
