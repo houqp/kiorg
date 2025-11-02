@@ -110,7 +110,7 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         cd /opt
-        find . -maxdepth 1 -mindepth 1 '!' -path ./containerd '!' -path ./actionarchivecache '!' -path ./runner '!' -path ./runner-cache -exec rm -rf '{}' ';'
+        find . -maxdepth 1 -mindepth 1 '!' -path ./containerd '!' -path ./actionarchivecache '!' -path ./runner '!' -path ./runner-cache -print0 | xargs -0 -r -P 64 -n 1 rm -rf
 
     - name: Run tests
       run: cargo test

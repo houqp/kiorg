@@ -211,6 +211,19 @@ impl Kiorg {
             }
         }
 
+        // Perform conflict detection on the merged shortcuts
+        if let Err(conflict_error) =
+            crate::config::shortcuts::shortcuts_helpers::check_conflicts(&merged_shortcuts)
+        {
+            return Err(KiorgError::ConfigError(
+                crate::config::ConfigError::ShortcutConflict(
+                    conflict_error,
+                    // Use a generic path since this is for merged shortcuts
+                    std::path::PathBuf::from("__merged_shortcuts__"),
+                ),
+            ));
+        }
+
         // Load colors based on theme name from config
         let colors = crate::theme::Theme::load_colors_from_config(&config);
         cc.egui_ctx.set_visuals(colors.to_visuals());
