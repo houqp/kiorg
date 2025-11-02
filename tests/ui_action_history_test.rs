@@ -202,7 +202,7 @@ fn test_undo_redo_rename_file() {
     let renamed_file = temp_dir.path().join("original_renamed.txt");
 
     // Create initial test file
-    create_test_files(&[original_file.clone()]);
+    create_test_files(std::slice::from_ref(&original_file));
 
     let mut harness = create_harness(&temp_dir);
 
@@ -325,7 +325,7 @@ fn test_undo_redo_copy_file() {
     let copied_file = temp_dir.path().join("source_1.txt");
 
     // Create initial test file
-    create_test_files(&[source_file.clone()]);
+    create_test_files(std::slice::from_ref(&source_file));
     std::fs::write(&source_file, "test content").unwrap();
 
     let mut harness = create_harness(&temp_dir);
@@ -440,7 +440,7 @@ fn test_undo_redo_move_file() {
 
     // Create initial test files and directory
     std::fs::create_dir(&subdir).unwrap();
-    create_test_files(&[source_file.clone()]);
+    create_test_files(std::slice::from_ref(&source_file));
     std::fs::write(&source_file, "move test content").unwrap();
 
     let mut harness = create_harness(&temp_dir);
