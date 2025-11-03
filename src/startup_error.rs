@@ -25,23 +25,6 @@ impl StartupErrorApp {
         }
     }
 
-    /// Convenience method to show a configuration error dialog
-    pub fn show_config_error(error_message: String) -> Result<(), eframe::Error> {
-        Self::show_error_dialog(error_message, "Configuration Error".to_string(), None)
-    }
-
-    /// Convenience method to show a configuration error dialog with config path
-    pub fn show_config_error_with_path(
-        error_message: String,
-        config_path: &str,
-    ) -> Result<(), eframe::Error> {
-        Self::show_error_dialog(
-            error_message,
-            "Configuration Error".to_string(),
-            Some(format!("Config file: {config_path}")),
-        )
-    }
-
     /// Show a startup error dialog using eframe
     pub fn show_error_dialog(
         error_message: String,
@@ -64,15 +47,35 @@ impl StartupErrorApp {
         eframe::run_native(
             &window_title,
             options,
-            Box::new(move |_cc| {
-                let app = if let Some(info) = additional_info {
-                    StartupErrorApp::with_info(error_message, title, info)
-                } else {
-                    StartupErrorApp::new(error_message, title)
-                };
-                Ok(Box::new(app))
+            Box::new(move |cc| {
+                Ok(Self::create_error_app(
+                    cc,
+                    error_message,
+                    title,
+                    additional_info,
+                ))
             }),
         )
+    }
+
+    /// Create a startup error app that can be returned directly to eframe
+    pub fn create_error_app(
+        cc: &eframe::CreationContext<'_>,
+        error_message: String,
+        title: String,
+        additional_info: Option<String>,
+    ) -> Box<dyn eframe::App> {
+        // Set default theme for error dialog
+        let default_theme = crate::theme::get_default_theme();
+        cc.egui_ctx
+            .set_visuals(default_theme.get_colors().to_visuals());
+
+        let app = if let Some(info) = additional_info {
+            StartupErrorApp::with_info(error_message, title, info)
+        } else {
+            StartupErrorApp::new(error_message, title)
+        };
+        Box::new(app)
     }
 }
 

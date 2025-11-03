@@ -575,64 +575,18 @@ pub fn get_default_shortcuts() -> &'static Shortcuts {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::HashMap;
-    use std::fmt::Write;
 
     #[test]
     fn test_default_shortcuts_no_conflicts() {
         // Get the default shortcuts
         let shortcuts = default_shortcuts();
 
-        // Create a map to track which shortcut is assigned to which action
-        let mut shortcut_map: HashMap<KeyboardShortcut, Vec<ShortcutAction>> = HashMap::new();
-
-        // Populate the map
-        for (action, shortcuts_list) in &shortcuts {
-            for shortcut in shortcuts_list {
-                shortcut_map
-                    .entry(shortcut.clone())
-                    .or_default()
-                    .push(*action);
-            }
-        }
-
-        // Check for conflicts (shortcuts assigned to multiple actions)
-        let mut conflicts = Vec::new();
-        for (shortcut, actions) in &shortcut_map {
-            if actions.len() > 1 {
-                conflicts.push((shortcut.clone(), actions.clone()));
-            }
-        }
-
-        // Format error message if conflicts are found
-        if !conflicts.is_empty() {
-            let mut error_msg = String::from("Conflicts found in default shortcuts:\n");
-            for (shortcut, actions) in conflicts {
-                let mut shortcut_str = format!("Key: {}", shortcut.key);
-                if shortcut.shift {
-                    shortcut_str.push_str(", Shift");
-                }
-                if shortcut.ctrl {
-                    shortcut_str.push_str(", Ctrl");
-                }
-                if shortcut.alt {
-                    shortcut_str.push_str(", Alt");
-                }
-                #[cfg(target_os = "macos")]
-                if shortcut.command {
-                    shortcut_str.push_str(", Cmd");
-                }
-                if shortcut.namespace {
-                    shortcut_str.push_str(", Namespace");
-                }
-
-                writeln!(error_msg, "\n{shortcut_str} is assigned to: ").unwrap();
-                for action in actions {
-                    write!(error_msg, "{action:?}, ").unwrap();
-                }
-            }
-
-            panic!("{}", error_msg);
+        // Use the centralized conflict checking function
+        if let Err(conflict_error) = super::shortcuts_helpers::check_conflicts(&shortcuts) {
+            panic!(
+                "Conflicts found in default shortcuts: {} conflicts with {:?} and {:?}",
+                conflict_error.shortcut.key, conflict_error.action1, conflict_error.action2
+            );
         }
     }
 
@@ -695,7 +649,8 @@ mod tests {
 
 // Helper functions for the Shortcuts type
 pub mod shortcuts_helpers {
-    use super::{EguiKeyCombo, Key, Modifiers, ShortcutAction, Shortcuts};
+    use super::{EguiKeyCombo, Key, KeyboardShortcut, Modifiers, ShortcutAction, Shortcuts};
+    use std::collections::HashMap;
 
     // Find the action for a given key and modifiers
     #[must_use]
@@ -771,5 +726,37 @@ pub mod shortcuts_helpers {
             })
             .collect::<Vec<_>>()
             .join(" or ")
+    }
+
+    // Check for conflicts in shortcuts
+    pub fn check_conflicts(
+        shortcuts: &Shortcuts,
+    ) -> Result<(), crate::config::ShortcutConflictError> {
+        // Create a map to track which shortcut is assigned to which action
+        let mut shortcut_map: HashMap<KeyboardShortcut, Vec<ShortcutAction>> = HashMap::new();
+
+        // Populate the map
+        for (action, shortcuts_list) in shortcuts {
+            for shortcut in shortcuts_list {
+                shortcut_map
+                    .entry(shortcut.clone())
+                    .or_default()
+                    .push(*action);
+            }
+        }
+
+        // Check for conflicts (shortcuts assigned to multiple actions)
+        for (shortcut, actions) in &shortcut_map {
+            if actions.len() > 1 {
+                // Found a conflict - return error with the first two conflicting actions
+                return Err(crate::config::ShortcutConflictError {
+                    shortcut: shortcut.clone(),
+                    action1: actions[0],
+                    action2: actions[1],
+                });
+            }
+        }
+
+        Ok(())
     }
 }

@@ -69,15 +69,6 @@ fn main() -> Result<(), eframe::Error> {
         None
     };
 
-    // Check configuration first before creating the GUI
-    if let Err(config_error) = kiorg::config::load_config_with_override(None) {
-        // Configuration error detected - show error dialog with config path from error
-        return kiorg::startup_error::StartupErrorApp::show_config_error_with_path(
-            config_error.to_string(),
-            &config_error.config_path().display().to_string(),
-        );
-    }
-
     // Load the app icon from embedded data
     let icon_data = kiorg::utils::icon::load_app_icon();
 
@@ -101,10 +92,32 @@ fn main() -> Result<(), eframe::Error> {
             match Kiorg::new(cc, initial_dir) {
                 Ok(app) => Ok(Box::new(app)),
                 Err(e) => {
-                    // For other errors during app initialization, we can't show a GUI dialog
-                    // since we're already in the eframe context, so we still exit
-                    eprintln!("Error initializing Kiorg: {e}");
-                    std::process::exit(1);
+                    // Show the error in a startup error dialog instead of exiting
+                    // Reset viewport size for error dialog
+                    cc.egui_ctx
+                        .send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::Vec2::new(
+                            600.0, 400.0,
+                        )));
+                    cc.egui_ctx
+                        .send_viewport_cmd(egui::ViewportCommand::MinInnerSize(egui::Vec2::new(
+                            300.0, 250.0,
+                        )));
+
+                    // Check if it's a config error to include config path in additional info
+                    let additional_info = match &e {
+                        kiorg::app::KiorgError::ConfigError(config_error) => Some(format!(
+                            "Config file: {}",
+                            config_error.config_path().display()
+                        )),
+                        _ => None,
+                    };
+
+                    Ok(kiorg::startup_error::StartupErrorApp::create_error_app(
+                        cc,
+                        e.to_string(),
+                        "Application Initialization Error".to_string(),
+                        additional_info,
+                    ))
                 }
             }
         }),
