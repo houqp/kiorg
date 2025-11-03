@@ -947,6 +947,18 @@ impl eframe::App for Kiorg {
                     bookmark::BookmarkAction::None => {}
                 };
             }
+            #[cfg(target_os = "macos")]
+            Some(PopupType::Volumes(_)) => {
+                use crate::ui::popup::volumes;
+
+                // Handle volumes popup
+                let volume_action = volumes::show_volumes_popup(ctx, self);
+                // Process the volume action
+                match volume_action {
+                    volumes::VolumeAction::Navigate(path) => self.navigate_to_dir(path),
+                    volumes::VolumeAction::None => {}
+                };
+            }
             Some(PopupType::Preview) => {
                 popup_preview::show_preview_popup(ctx, self);
             }
