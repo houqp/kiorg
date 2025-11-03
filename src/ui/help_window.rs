@@ -43,6 +43,7 @@ pub fn show_help_window(
                                 ShortcutAction::ShowTeleport,
                                 "Teleport with history fuzzy search",
                             ),
+                            (ShortcutAction::ToggleHiddenFiles, "Toggle hidden files"),
                         ];
 
                         for (action, description) in navigation_actions {
@@ -146,7 +147,9 @@ pub fn show_help_window(
                             (ShortcutAction::CutEntry, "Cut selected entry"),
                             (ShortcutAction::PasteEntry, "Paste copied/cut entries"),
                             (ShortcutAction::ShowSortToggle, "Show sort toggle popup"),
-                            (ShortcutAction::ToggleHiddenFiles, "Toggle hidden files"),
+                            (ShortcutAction::ShowActionHistory, "Show action history"),
+                            (ShortcutAction::Undo, "Undo last action"),
+                            (ShortcutAction::Redo, "Redo last action"),
                         ];
                         for (action, description) in file_actions {
                             let shortcut_display =

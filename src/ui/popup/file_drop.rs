@@ -88,10 +88,15 @@ pub fn draw(ctx: &Context, app: &mut Kiorg) {
         // Handle the action
         match action {
             FileDropAction::Copy => {
-                let current_path = app.tab_manager.current_tab_ref().current_path.clone();
                 app.clipboard = Some(Clipboard::Copy(dropped_files));
 
-                if handle_clipboard_operations(&mut app.clipboard, &current_path, &mut app.toasts) {
+                let current_tab = app.tab_manager.current_tab_mut();
+                if handle_clipboard_operations(
+                    &mut app.clipboard,
+                    &current_tab.current_path,
+                    &mut current_tab.action_history,
+                    &mut app.toasts,
+                ) {
                     app.refresh_entries();
                     app.toasts.success("Files copied successfully!");
                 }
@@ -99,10 +104,15 @@ pub fn draw(ctx: &Context, app: &mut Kiorg) {
                 app.show_popup = None;
             }
             FileDropAction::Move => {
-                let current_path = app.tab_manager.current_tab_ref().current_path.clone();
                 app.clipboard = Some(Clipboard::Cut(dropped_files));
 
-                if handle_clipboard_operations(&mut app.clipboard, &current_path, &mut app.toasts) {
+                let current_tab = app.tab_manager.current_tab_mut();
+                if handle_clipboard_operations(
+                    &mut app.clipboard,
+                    &current_tab.current_path,
+                    &mut current_tab.action_history,
+                    &mut app.toasts,
+                ) {
                     app.refresh_entries();
                     app.toasts.success("Files moved successfully!");
                 }
@@ -135,10 +145,15 @@ pub(crate) fn handle_key_press(
                 return true; // Input handled
             }
             ShortcutAction::CopyEntry => {
-                let current_path = app.tab_manager.current_tab_ref().current_path.clone();
                 app.clipboard = Some(Clipboard::Copy(dropped_files));
 
-                if handle_clipboard_operations(&mut app.clipboard, &current_path, &mut app.toasts) {
+                let current_tab = app.tab_manager.current_tab_mut();
+                if handle_clipboard_operations(
+                    &mut app.clipboard,
+                    &current_tab.current_path,
+                    &mut current_tab.action_history,
+                    &mut app.toasts,
+                ) {
                     app.refresh_entries();
                     app.toasts.success("Files copied successfully!");
                 }
@@ -147,10 +162,15 @@ pub(crate) fn handle_key_press(
                 return true; // Input handled
             }
             ShortcutAction::CutEntry => {
-                let current_path = app.tab_manager.current_tab_ref().current_path.clone();
                 app.clipboard = Some(Clipboard::Cut(dropped_files));
 
-                if handle_clipboard_operations(&mut app.clipboard, &current_path, &mut app.toasts) {
+                let current_tab = app.tab_manager.current_tab_mut();
+                if handle_clipboard_operations(
+                    &mut app.clipboard,
+                    &current_tab.current_path,
+                    &mut current_tab.action_history,
+                    &mut app.toasts,
+                ) {
                     app.refresh_entries();
                     app.toasts.success("Files moved successfully!");
                 }

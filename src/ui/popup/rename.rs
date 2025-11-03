@@ -1,4 +1,5 @@
 use crate::app::Kiorg;
+use crate::models::action_history::{ActionType, RenameOperation};
 use crate::ui::popup::PopupType;
 use egui::{Context, Frame, TextEdit};
 
@@ -33,6 +34,12 @@ pub fn handle_rename_confirmation(app: &mut Kiorg, ctx: &Context) {
             if let Err(e) = std::fs::rename(&entry.path, &new_path) {
                 app.notify_error(format!("Failed to rename: {e}"));
             } else {
+                // Record rename action in history
+                let old_path = entry.path.clone();
+                tab.action_history.add_action(ActionType::Rename {
+                    operations: vec![RenameOperation { old_path, new_path }],
+                });
+
                 app.refresh_entries();
             }
         }

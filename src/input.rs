@@ -129,6 +129,7 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: &Shortcu
             if center_panel::handle_clipboard_operations(
                 &mut app.clipboard,
                 &tab.current_path,
+                &mut tab.action_history,
                 &mut app.toasts,
             ) {
                 app.refresh_entries();
@@ -212,6 +213,15 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: &Shortcu
         }
         ShortcutAction::ShowSortToggle => {
             app.show_popup = Some(PopupType::SortToggle);
+        }
+        ShortcutAction::ShowActionHistory => {
+            app.show_popup = Some(PopupType::ActionHistory);
+        }
+        ShortcutAction::Undo => {
+            crate::ui::popup::action_history::undo_last_action(app);
+        }
+        ShortcutAction::Redo => {
+            crate::ui::popup::action_history::redo_last_action(app);
         }
         ShortcutAction::GoBackInHistory => app.navigate_history_back(),
         ShortcutAction::GoForwardInHistory => app.navigate_history_forward(),
@@ -374,6 +384,14 @@ fn process_key(
                 app.show_popup = None;
             } else {
                 sort_toggle::handle_sort_toggle_key(app, key);
+            }
+            return;
+        }
+        Some(PopupType::ActionHistory) => {
+            // Action history popup handles its own input (scrolling, clicking)
+            // Just allow escape to close
+            if is_cancel_keys(key) {
+                app.show_popup = None;
             }
             return;
         }
