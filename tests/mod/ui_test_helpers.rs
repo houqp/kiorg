@@ -482,3 +482,26 @@ pub fn shift_modifiers() -> egui::Modifiers {
         ..Default::default()
     }
 }
+
+/// Create ctrl+shift modifiers for cross-platform compatibility
+/// On macOS: Sets ctrl and shift but NOT command
+/// On Linux/Windows: Sets ctrl, command, and shift
+#[inline]
+pub fn ctrl_shift_modifiers() -> egui::Modifiers {
+    egui::Modifiers {
+        #[cfg(target_os = "macos")]
+        mac_cmd: false,
+        #[cfg(target_os = "macos")]
+        command: false,
+        #[cfg(target_os = "macos")]
+        ctrl: true,
+        #[cfg(not(target_os = "macos"))]
+        ctrl: true,
+        #[cfg(not(target_os = "macos"))]
+        command: true,
+        #[cfg(not(target_os = "macos"))]
+        mac_cmd: false,
+        shift: true,
+        ..Default::default()
+    }
+}

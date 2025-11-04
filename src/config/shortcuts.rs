@@ -199,6 +199,9 @@ pub enum ShortcutAction {
     ToggleBookmark,
     ShowBookmarks,
 
+    #[cfg(target_os = "windows")]
+    ShowWindowsDrives,
+
     #[cfg(target_os = "macos")]
     ShowVolumes,
 
@@ -501,8 +504,15 @@ pub fn default_shortcuts() -> Shortcuts {
     // Volumes
     #[cfg(target_os = "macos")]
     add_shortcut(
-        KeyboardShortcut::new("v").with_shift(),
+        KeyboardShortcut::new("v").with_ctrl().with_shift(),
         ShortcutAction::ShowVolumes,
+    );
+
+    // Drives (Windows equivalent of volumes)
+    #[cfg(target_os = "windows")]
+    add_shortcut(
+        KeyboardShortcut::new("v").with_ctrl().with_shift(),
+        ShortcutAction::ShowWindowsDrives,
     );
 
     // Utils

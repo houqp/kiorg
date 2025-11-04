@@ -62,6 +62,8 @@ pub fn show_help_window(
                                 "Teleport with history fuzzy search",
                             ),
                             (ShortcutAction::ShowBookmarks, "Show bookmark popup"),
+                            #[cfg(target_os = "windows")]
+                            (ShortcutAction::ShowWindowsDrives, "Show drives popup"),
                             #[cfg(target_os = "macos")]
                             (ShortcutAction::ShowVolumes, "Show volumes popup"),
                             (

@@ -35,6 +35,12 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui) {
                         ui.close();
                     }
 
+                    #[cfg(target_os = "windows")]
+                    if ui.button("Drives").clicked() {
+                        app.show_popup = Some(PopupType::WindowsDrives(0));
+                        ui.close();
+                    }
+
                     #[cfg(target_os = "macos")]
                     if ui.button("Volumes").clicked() {
                         app.show_popup = Some(PopupType::Volumes(0));
