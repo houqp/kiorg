@@ -184,6 +184,8 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: &Shortcu
         }
         ShortcutAction::ToggleBookmark => bookmark::toggle_bookmark(app),
         ShortcutAction::ShowBookmarks => app.show_popup = Some(PopupType::Bookmarks(0)),
+        #[cfg(target_os = "macos")]
+        ShortcutAction::ShowVolumes => app.show_popup = Some(PopupType::Volumes(0)),
         ShortcutAction::OpenTerminal => {
             let path = app.tab_manager.current_tab_mut().current_path.clone();
             match terminal::TerminalContext::new(ctx, path) {
@@ -369,6 +371,11 @@ fn process_key(
         Some(PopupType::Themes(_) | PopupType::Bookmarks(_)) => {
             // Theme popup input is handled in the popup itself
             // Bookmark popup input is handled in show_bookmark_popup
+            return;
+        }
+        #[cfg(target_os = "macos")]
+        Some(PopupType::Volumes(_)) => {
+            // Volumes popup input is handled in show_volumes_popup
             return;
         }
         Some(PopupType::DeleteProgress(_)) => {

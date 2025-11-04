@@ -20,7 +20,7 @@ pub fn show_help_window(
             ui.horizontal(|ui| {
                 let hpadding = 20.0;
                 ui.add_space(hpadding);
-                // Column 1: Navigation
+                // Column 1: Navigation and Popups
                 ui.vertical(|ui| {
                     ui.heading(RichText::new("Navigation").color(colors.fg_light));
                     let table = egui::Grid::new("help_grid");
@@ -39,10 +39,6 @@ pub fn show_help_window(
                             (ShortcutAction::GoToLastEntry, "Jump to the last entry"),
                             (ShortcutAction::GoBackInHistory, "Go back in history"),
                             (ShortcutAction::GoForwardInHistory, "Go forward in history"),
-                            (
-                                ShortcutAction::ShowTeleport,
-                                "Teleport with history fuzzy search",
-                            ),
                             (ShortcutAction::ToggleHiddenFiles, "Toggle hidden files"),
                         ];
 
@@ -57,18 +53,29 @@ pub fn show_help_window(
 
                     ui.add_space(10.0); // Space between sections
 
-                    ui.heading(RichText::new("Bookmarks").color(colors.fg_light));
-                    let table = egui::Grid::new("bookmark_help_grid");
+                    ui.heading(RichText::new("Popups").color(colors.fg_light));
+                    let table = egui::Grid::new("popup_help_grid");
                     table.show(ui, |ui| {
-                        let bookmark_actions = [
+                        let popup_actions = [
                             (
-                                ShortcutAction::ToggleBookmark,
-                                "Add/remove bookmark for current directory",
+                                ShortcutAction::ShowTeleport,
+                                "Teleport with history fuzzy search",
                             ),
                             (ShortcutAction::ShowBookmarks, "Show bookmark popup"),
+                            #[cfg(target_os = "macos")]
+                            (ShortcutAction::ShowVolumes, "Show volumes popup"),
+                            (
+                                ShortcutAction::ShowFilePreview,
+                                "Preview file in a popup window",
+                            ),
+                            (ShortcutAction::ShowSortToggle, "Show sort toggle popup"),
+                            (
+                                ShortcutAction::ShowActionHistory,
+                                "Show action history popup",
+                            ),
                         ];
 
-                        for (action, description) in bookmark_actions {
+                        for (action, description) in popup_actions {
                             let shortcut_display =
                                 shortcuts_helpers::get_shortcut_display(shortcuts, action);
                             ui.label(RichText::new(shortcut_display).color(colors.highlight));
@@ -125,10 +132,6 @@ pub fn show_help_window(
                                 "Open file with custom command",
                             ),
                             (
-                                ShortcutAction::ShowFilePreview,
-                                "Preview file in a popup window",
-                            ),
-                            (
                                 ShortcutAction::DeleteEntry,
                                 "Delete selected file/directory",
                             ),
@@ -146,8 +149,10 @@ pub fn show_help_window(
                             (ShortcutAction::CopyEntry, "Copy selected entry"),
                             (ShortcutAction::CutEntry, "Cut selected entry"),
                             (ShortcutAction::PasteEntry, "Paste copied/cut entries"),
-                            (ShortcutAction::ShowSortToggle, "Show sort toggle popup"),
-                            (ShortcutAction::ShowActionHistory, "Show action history"),
+                            (
+                                ShortcutAction::ToggleBookmark,
+                                "Add/remove bookmark for current directory",
+                            ),
                             (ShortcutAction::Undo, "Undo last action"),
                             (ShortcutAction::Redo, "Redo last action"),
                         ];

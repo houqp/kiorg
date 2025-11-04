@@ -199,6 +199,9 @@ pub enum ShortcutAction {
     ToggleBookmark,
     ShowBookmarks,
 
+    #[cfg(target_os = "macos")]
+    ShowVolumes,
+
     // UI interaction
     ActivateSearch,
     ShowHelp,
@@ -493,6 +496,13 @@ pub fn default_shortcuts() -> Shortcuts {
     add_shortcut(
         KeyboardShortcut::new("b").with_shift(),
         ShortcutAction::ShowBookmarks,
+    );
+
+    // Volumes
+    #[cfg(target_os = "macos")]
+    add_shortcut(
+        KeyboardShortcut::new("v").with_shift(),
+        ShortcutAction::ShowVolumes,
     );
 
     // Utils

@@ -35,6 +35,12 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui) {
                         ui.close();
                     }
 
+                    #[cfg(target_os = "macos")]
+                    if ui.button("Volumes").clicked() {
+                        app.show_popup = Some(PopupType::Volumes(0));
+                        ui.close();
+                    }
+
                     if ui.button("Themes").clicked() {
                         // Use current theme key or default to dark_kiorg
                         let current_theme_key = app
