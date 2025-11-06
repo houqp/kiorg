@@ -137,7 +137,7 @@ pub fn show_volumes_popup(ctx: &Context, app: &mut Kiorg) -> VolumeAction {
     let mut window_open = true;
 
     if let Some(response) = new_center_popup_window("Mounted Volumes")
-        .default_pos(ctx.screen_rect().center()) // Position at screen center
+            .default_pos(ctx.content_rect().center()) // Position at screen center
         .open(&mut window_open)
         .show(ctx, |ui| {
             if volumes.is_empty() {

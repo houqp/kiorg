@@ -128,7 +128,7 @@ pub fn show_preview_popup(ctx: &Context, app: &mut Kiorg) {
         };
 
         let mut keep_open = true;
-        let screen_size = ctx.screen_rect().size();
+        let screen_size = ctx.content_rect().size();
         let popup_size = egui::vec2(screen_size.x * 0.9, screen_size.y * 0.9);
         let popup_content_width = popup_size.x * 0.9; // Calculate once
 
