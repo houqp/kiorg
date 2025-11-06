@@ -20,6 +20,8 @@ pub mod utils;
 #[cfg(target_os = "macos")]
 pub mod volumes;
 pub mod window_utils;
+#[cfg(target_os = "windows")]
+pub mod windows_drives;
 
 /// Popup types that can be shown in the application
 #[derive(Debug, PartialEq, Eq)]
@@ -34,6 +36,8 @@ pub enum PopupType {
     OpenWith(String), // Command to use when opening a file with a custom command
     AddEntry(String), // Name for the new file/directory being added
     Bookmarks(usize), // Selected index in the bookmarks list
+    #[cfg(target_os = "windows")]
+    WindowsDrives(usize), // Selected index in the drives list (Windows only)
     #[cfg(target_os = "macos")]
     Volumes(usize), // Selected index in the volumes list (macOS only)
     Preview,          // Show file preview in a popup window

@@ -96,6 +96,12 @@ pathfinder_export = { git = "https://github.com/houqp/pathfinder", rev = "c82663
 [target.'cfg(not(target_os = "windows"))'.dependencies]
 egui_term = { git = "https://github.com/houqp/egui_term.git", rev = "51041055115dd7af3a8cd344ad0e34578b9c3295" }
 
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-sys = { version = "0.61.2", features = [
+    "Win32_Foundation",
+    "Win32_Storage_FileSystem",
+] }
+
 [[bench]]
 name = "center_panel_bench"
 harness = false

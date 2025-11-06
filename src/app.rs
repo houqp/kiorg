@@ -947,6 +947,18 @@ impl eframe::App for Kiorg {
                     bookmark::BookmarkAction::None => {}
                 };
             }
+            #[cfg(target_os = "windows")]
+            Some(PopupType::WindowsDrives(_)) => {
+                use crate::ui::popup::windows_drives;
+
+                // Handle drives popup
+                let drive_action = windows_drives::show_drives_popup(ctx, self);
+                // Process the drive action
+                match drive_action {
+                    windows_drives::DriveAction::Navigate(path) => self.navigate_to_dir(path),
+                    windows_drives::DriveAction::None => {}
+                };
+            }
             #[cfg(target_os = "macos")]
             Some(PopupType::Volumes(_)) => {
                 use crate::ui::popup::volumes;

@@ -1,10 +1,10 @@
-#[cfg(target_os = "macos")]
+#[cfg(target_os = "windows")]
 #[path = "mod/ui_test_helpers.rs"]
 mod ui_test_helpers;
 
-#[cfg(target_os = "macos")]
+#[cfg(target_os = "windows")]
 #[test]
-fn test_show_volumes_popup() {
+fn test_show_windows_drives_popup() {
     use egui::Key;
     use kiorg::ui::popup::PopupType;
     use tempfile::tempdir;
@@ -16,7 +16,7 @@ fn test_show_volumes_popup() {
     // Initially no popup should be shown
     assert!(harness.state().show_popup.is_none());
 
-    // Simulate Ctrl+Shift+V to open volumes popup
+    // Simulate Ctrl+Shift+V to open drives popup
     harness.key_press_modifiers(ctrl_shift_modifiers(), Key::V);
 
     wait_for_condition(|| {
@@ -24,9 +24,10 @@ fn test_show_volumes_popup() {
         harness.state().show_popup.is_some()
     });
 
-    if let Some(PopupType::Volumes(_)) = harness.state().show_popup {
+    // Check that drives popup is now showing
+    if let Some(PopupType::WindowsDrives(_)) = harness.state().show_popup {
         // Popup is showing correctly
     } else {
-        panic!("Expected Volumes popup to be showing");
+        panic!("Expected WindowsDrives popup to be showing");
     }
 }
