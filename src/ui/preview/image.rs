@@ -218,7 +218,6 @@ pub fn read_image_with_metadata(
             ImageFormat::Farbfeld => "Farbfeld".to_string(),
             ImageFormat::Avif => "AVIF".to_string(),
             ImageFormat::Qoi => "QOI".to_string(),
-            ImageFormat::Pcx => "PCX".to_string(),
             _ => format!("{format:?}"),
         };
         metadata.insert("Format".to_string(), format_name);

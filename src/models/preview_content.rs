@@ -240,51 +240,32 @@ impl PreviewContent {
     /// Creates a new EPUB preview content with metadata and optional cover image
     #[must_use]
     pub fn epub(
-        mut metadata: HashMap<String, Vec<String>>,
+        mut metadata: HashMap<String, String>,
         cover_image: egui::widgets::ImageSource<'static>,
         page_count: usize,
     ) -> Self {
-        // Extract title from metadata
         let title = Self::extract_epub_book_title(&metadata);
-
         // Remove title keys from metadata since we've extracted the title
         metadata.remove("title");
-        metadata.remove("dc:title");
-
-        // Convert multi-value metadata to single-value by joining with commas
-        let single_metadata = metadata
-            .into_iter()
-            .filter(|(key, _)| key != "cover") // Filter out cover as it's handled separately
-            .map(|(key, values)| {
-                let value = if values.len() > 1 {
-                    values.join(", ")
-                } else if !values.is_empty() {
-                    values[0].clone()
-                } else {
-                    "N/A".to_string()
-                };
-                (key, value)
-            })
-            .collect();
 
         Self::Epub(EpubMeta {
             title,
-            metadata: single_metadata,
+            metadata,
             cover: cover_image,
             page_count,
         })
     }
 
     /// Helper function to extract book title from EPUB metadata
-    fn extract_epub_book_title(metadata: &HashMap<String, Vec<String>>) -> String {
+    fn extract_epub_book_title(metadata: &HashMap<String, String>) -> String {
         // Check for title in various possible metadata keys
         let title_keys = ["title", "dc:title"];
 
         for key in &title_keys {
-            if let Some(values) = metadata.get(*key)
-                && !values.is_empty()
+            if let Some(value) = metadata.get(*key)
+                && !value.is_empty()
             {
-                return values[0].clone();
+                return value.clone();
             }
         }
         // If no title found, return a default
