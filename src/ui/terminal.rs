@@ -58,7 +58,7 @@ mod implementation {
             let mut close_terminal = false;
 
             // Create a panel at the bottom of the screen
-            let screen_height = ctx.screen_rect().height();
+            let screen_height = ctx.content_rect().height();
             egui::TopBottomPanel::bottom("terminal_panel")
                 .resizable(true)
                 .default_height(screen_height * 0.6)

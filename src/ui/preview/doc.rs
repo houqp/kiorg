@@ -360,23 +360,79 @@ pub fn extract_pdf_metadata(path: &Path, _: u32) -> Result<PreviewContent, Strin
 
 /// Extract metadata and cover image from an EPUB file and return as `PreviewContent`
 pub fn extract_epub_metadata(path: &Path) -> Result<PreviewContent, String> {
-    use epub::doc::EpubDoc;
+    use rbook::Epub;
+    use rbook::prelude::*;
 
-    // Open the EPUB file
-    let mut doc = EpubDoc::new(path).map_err(|e| format!("Failed to open EPUB file: {e}"))?;
+    let epub = Epub::open_with(path, rbook::epub::EpubSettings::builder().strict(false))
+        .map_err(|e| format!("Failed to open EPUB file: {e}"))?;
 
-    // Get metadata
-    let metadata = doc.metadata.clone();
+    let epub_metadata = epub.metadata();
+    let mut metadata = std::collections::HashMap::new();
 
-    // Get page count using get_num_pages method
-    let page_count = doc.get_num_pages();
+    if let Some(title) = epub_metadata.title() {
+        metadata.insert("title".to_string(), title.value().to_string());
+    }
+
+    let creators: Vec<String> = epub_metadata
+        .creators()
+        .map(|c| c.value().to_string())
+        .collect();
+    if !creators.is_empty() {
+        metadata.insert("creator".to_string(), creators.join(", "));
+    }
+
+    let contributors: Vec<String> = epub_metadata
+        .contributors()
+        .map(|c| c.value().to_string())
+        .collect();
+    if !contributors.is_empty() {
+        metadata.insert("contributor".to_string(), contributors.join(", "));
+    }
+
+    if let Some(publisher) = epub_metadata.publishers().next() {
+        metadata.insert("publisher".to_string(), publisher.value().to_string());
+    }
+
+    if let Some(description) = epub_metadata.descriptions().next() {
+        metadata.insert("description".to_string(), description.value().to_string());
+    }
+
+    let languages: Vec<String> = epub_metadata
+        .languages()
+        .map(|l| l.scheme().code().to_string())
+        .collect();
+    if !languages.is_empty() {
+        metadata.insert("language".to_string(), languages.join(", "));
+    }
+
+    let identifiers: Vec<String> = epub_metadata
+        .identifiers()
+        .map(|i| {
+            if let Some(scheme) = i.scheme() {
+                format!("{:?}: {}", scheme, i.value())
+            } else {
+                i.value().to_string()
+            }
+        })
+        .collect();
+    if !identifiers.is_empty() {
+        metadata.insert("identifier".to_string(), identifiers.join(", "));
+    }
+
+    let tags: Vec<String> = epub_metadata
+        .tags()
+        .map(|s| s.value().to_string())
+        .collect();
+    if !tags.is_empty() {
+        metadata.insert("tags".to_string(), tags.join(", "));
+    }
+
+    // Get page count - count readable content items in spine
+    let page_count = epub.spine().len();
 
     // Try to extract cover image
-    let cover_image = try_extract_epub_cover(&mut doc).unwrap_or_else(|| {
+    let cover_image = try_extract_rbook_cover(&epub).unwrap_or_else(|| {
         // Create a default "no cover" image if extraction fails
-        // This is a placeholder and won't actually render anything meaningful
-        // without a proper texture upload to the egui context.
-        // For a real solution, a default image should be loaded as a texture.
         let sized_texture = SizedTexture::new(TextureId::Managed(0), Vec2::ZERO);
         ImageSource::Texture(sized_texture)
     });
@@ -385,24 +441,36 @@ pub fn extract_epub_metadata(path: &Path) -> Result<PreviewContent, String> {
     Ok(PreviewContent::epub(metadata, cover_image, page_count))
 }
 
-/// Try to extract cover image from an EPUB document
-fn try_extract_epub_cover<R: std::io::Read + std::io::Seek>(
-    doc: &mut epub::doc::EpubDoc<R>,
-) -> Option<egui::widgets::ImageSource<'static>> {
-    // Try to get the cover image
-    let cover_result = doc.get_cover()?;
-    let (cover_data, mime_type) = cover_result;
-    let texture_id = format!(
-        "bytes://epub_cover_{}.{}",
-        doc.metadata
-            .get("identifier")
-            .map(|v| v[0].clone())
-            .unwrap_or_else(|| {
-                let now = std::time::SystemTime::now();
-                let datetime: chrono::DateTime<chrono::Utc> = now.into();
-                datetime.format("%Y-%m-%d_%H:%M:%S").to_string()
-            }),
-        mime_type,
-    );
-    Some(egui::widgets::ImageSource::from((texture_id, cover_data)))
+/// Helper function to create cover image source from image data and href
+fn create_cover_image_source(
+    cover_data: Vec<u8>,
+    href: &str,
+    identifier: &str,
+) -> egui::widgets::ImageSource<'static> {
+    let extension = href.split('.').next_back().unwrap_or("jpg");
+    let texture_id = format!("bytes://epub_cover_{}.{}", identifier, extension);
+    egui::widgets::ImageSource::from((texture_id, cover_data))
+}
+
+/// Try to extract cover image from an EPUB document using rbook
+fn try_extract_rbook_cover(epub: &rbook::Epub) -> Option<egui::widgets::ImageSource<'static>> {
+    use rbook::prelude::*;
+
+    let identifier = epub
+        .metadata()
+        .identifiers()
+        .next()
+        .map(|id| id.value().to_string())
+        .unwrap_or_else(|| {
+            let now = std::time::SystemTime::now();
+            let datetime: chrono::DateTime<chrono::Utc> = now.into();
+            datetime.format("%Y-%m-%d_%H:%M:%S").to_string()
+        });
+
+    epub.cover_image().and_then(|cover_image| {
+        cover_image.read_bytes().ok().map(|cover_data| {
+            let href = cover_image.href().name().decode();
+            create_cover_image_source(cover_data, &href, &identifier)
+        })
+    })
 }

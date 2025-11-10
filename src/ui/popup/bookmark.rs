@@ -192,7 +192,7 @@ pub fn show_bookmark_popup(ctx: &Context, app: &mut Kiorg) -> BookmarkAction {
     let mut window_open = true;
 
     if let Some(response) = new_center_popup_window("Bookmarks")
-        .default_pos(ctx.screen_rect().center()) // Position at screen center
+        .default_pos(ctx.content_rect().center()) // Position at screen center
         .open(&mut window_open)
         .show(ctx, |ui| {
             if app.bookmarks.is_empty() {
