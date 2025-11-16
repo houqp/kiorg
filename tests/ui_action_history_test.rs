@@ -209,7 +209,7 @@ fn test_undo_redo_create_directory() {
 fn test_undo_redo_rename_file() {
     let temp_dir = tempdir().unwrap();
     let original_file = temp_dir.path().join("original.txt");
-    let renamed_file = temp_dir.path().join("original_renamed.txt");
+    let renamed_file = temp_dir.path().join("renamed.txt");
 
     // Create initial test file
     create_test_files(std::slice::from_ref(&original_file));
@@ -238,7 +238,7 @@ fn test_undo_redo_rename_file() {
     harness
         .input_mut()
         .events
-        .push(egui::Event::Text("_renamed".to_string()));
+        .push(egui::Event::Text("renamed".to_string()));
     harness.step();
 
     // Press Enter to confirm rename
