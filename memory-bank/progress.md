@@ -42,6 +42,9 @@
 * Directory history navigation with Ctrl+O (back) and Ctrl+I (forward) within each tab
 * Async delete operations with progress dialog to prevent UI blocking
 * Benchmarking infrastructure for performance monitoring
+* Image zoom functionality in preview popups with mouse wheel and keyboard controls
+* Volume viewer for macOS to browse mounted volumes and drives
+* Windows drives viewer to access different drive letters on Windows systems
 
 ### What's left to build
 

@@ -26,6 +26,8 @@ The configuration system has been expanded to include user preferences such as c
 *   The `utils` module provides utility functions.
 *   The `Tab` model now interacts with the `Config` module to initialize with persisted sort preferences.
 *   The center panel UI interacts with the `Config` module to save sort preferences when they change.
+*   Platform-specific popup modules (`volumes.rs`, `windows_drives.rs`) handle OS-specific file system browsing.
+*   The preview system includes dedicated handlers for different content types, including zoomable image previews.
 
 ### Critical implementation paths
 *   File navigation: `src/ui/center_panel.rs` handles the display of files and folders, and responds to keyboard input for navigation.

@@ -3,7 +3,6 @@
 ### Technologies used
 *   Rust
 *   egui
-*   TOML
 
 ### Development setup
 *   Rust toolchain
@@ -17,4 +16,5 @@
 
 ### Dependencies
 
-See `Cargo.toml`.
+See `Cargo.toml`. Key platform-specific dependencies:
+*   windows-sys: Windows system API bindings for drive enumeration and file system operations
