@@ -116,7 +116,7 @@ windows-sys = { version = "0.61.0", features = [
 
 [package.metadata.bundle]
 name = "Kiorg"
-icon = ["assets/icon.png"]
+icon = ["assets/icons/1024x1024@2x.png"]
 osx_url_schemes = ["com.kiorg.kiorg"]
 
 [patch.'https://github.com/servo/pathfinder']
