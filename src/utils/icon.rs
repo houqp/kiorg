@@ -3,7 +3,7 @@ use image::RgbaImage;
 use std::sync::OnceLock;
 
 /// The icon bytes embedded directly in the binary
-pub static ICON_BYTES: &[u8] = include_bytes!("../../assets/icon.png");
+pub static ICON_BYTES: &[u8] = include_bytes!("../../assets/icons/1024x1024@2x.png");
 
 /// Lazily loaded app icon image
 static APP_ICON_IMAGE: OnceLock<RgbaImage> = OnceLock::new();
