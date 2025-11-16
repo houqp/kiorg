@@ -79,8 +79,6 @@ pub fn draw(ctx: &egui::Context, app: &mut Kiorg) {
                                     .unwrap_or(false)
                             });
 
-                            // Find the position before the file extension
-                            let cursor_pos = find_extension_position(new_name);
                             // Create a TextEdit widget with custom cursor position
                             let text_edit = TextEdit::singleline(new_name)
                                 .hint_text("Enter new name...")
@@ -95,9 +93,12 @@ pub fn draw(ctx: &egui::Context, app: &mut Kiorg) {
                             if is_first_frame {
                                 if let Some(mut state) = TextEdit::load_state(ui.ctx(), response.id)
                                 {
-                                    let cursor = egui::text::CCursor::new(cursor_pos);
-                                    let cursor_range = egui::text::CCursorRange::one(cursor);
-                                    state.cursor.set_char_range(Some(cursor_range));
+                                    // Find the position before the file extension
+                                    let cursor_selection_range = egui::text::CCursorRange::two(
+                                        egui::text::CCursor::new(0),
+                                        egui::text::CCursor::new(find_extension_position(new_name)),
+                                    );
+                                    state.cursor.set_char_range(Some(cursor_selection_range));
                                     state.store(ui.ctx(), response.id);
                                 }
                                 // Mark that we've initialized the popup

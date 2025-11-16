@@ -39,7 +39,7 @@ fn test_rename_preserves_selected_index() {
     harness
         .input_mut()
         .events
-        .push(egui::Event::Text("_renamed".to_string()));
+        .push(egui::Event::Text("file2_renamed".to_string()));
     harness.step();
 
     // Press Enter to confirm rename

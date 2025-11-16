@@ -137,7 +137,7 @@ fn test_rename_shortcut() {
     harness
         .input_mut()
         .events
-        .push(egui::Event::Text("_renamed".to_string()));
+        .push(egui::Event::Text("test2_renamed".to_string()));
     harness.step();
 
     // Press Enter to confirm rename
