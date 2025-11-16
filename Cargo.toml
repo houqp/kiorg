@@ -89,7 +89,7 @@ pathfinder_export = { git = "https://github.com/houqp/pathfinder", rev = "c82663
 # pathfinder_rasterize = { git = "https://github.com/s3bk/pathfinder_rasterizer" }
 
 [target.'cfg(not(target_os = "windows"))'.dependencies]
-egui_term = { git = "https://github.com/houqp/egui_term.git", rev = "5f24b7d71070dada01c38fa7e1293bcb59115396" }
+egui_term = { git = "https://github.com/houqp/egui_term.git", rev = "18b9fa7524b98c6330885b65040ec5b4fd43d13f" }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows-sys = { version = "0.61.2", features = [
