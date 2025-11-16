@@ -511,7 +511,7 @@ pub fn default_shortcuts() -> Shortcuts {
     // Drives (Windows equivalent of volumes)
     #[cfg(target_os = "windows")]
     add_shortcut(
-        KeyboardShortcut::new("v").with_ctrl().with_shift(),
+        KeyboardShortcut::new("d").with_ctrl().with_shift(),
         ShortcutAction::ShowWindowsDrives,
     );
 
