@@ -17,7 +17,7 @@ fn test_show_windows_drives_popup() {
     assert!(harness.state().show_popup.is_none());
 
     // Simulate Ctrl+Shift+V to open drives popup
-    harness.key_press_modifiers(ctrl_shift_modifiers(), Key::V);
+    harness.key_press_modifiers(ctrl_shift_modifiers(), Key::D);
 
     wait_for_condition(|| {
         harness.step();
