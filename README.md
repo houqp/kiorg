@@ -3,7 +3,7 @@
 [![discord](https://dcbadge.limes.pink/api/server/https://discord.gg/TdTb2CHfpr?style=flat&compact=true)](https://discord.gg/TdTb2CHfpr)
 
 <p align="center">
-  <img src="assets/icon.png" alt="Kiorg Logo" width="200px">
+  <img src="assets/icons/1024x1024@2x.png" alt="Kiorg Logo" width="200px">
 </p>
 
 Kiorg is a performance focused cross-platform file manager with Vim-inspired key
