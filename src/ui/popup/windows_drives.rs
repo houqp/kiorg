@@ -3,7 +3,7 @@ use std::io;
 use std::path::PathBuf;
 
 use super::PopupType;
-use super::window_utils::new_center_popup_window;
+use super::window_utils::show_center_popup_window;
 use crate::app::Kiorg;
 use crate::config::shortcuts::ShortcutAction;
 
@@ -120,10 +120,8 @@ pub fn show_drives_popup(ctx: &Context, app: &mut Kiorg) -> DriveAction {
     // Create a temporary boolean for the window's open state
     let mut window_open = true;
 
-    if let Some(response) = new_center_popup_window("Available Drives")
-        .default_pos(ctx.screen_rect().center()) // Position at screen center
-        .open(&mut window_open)
-        .show(ctx, |ui| {
+    if let Some(response) =
+        show_center_popup_window("Available Drives", ctx, &mut window_open, |ui| {
             if drives.is_empty() {
                 ui.label("No drives found");
                 return;

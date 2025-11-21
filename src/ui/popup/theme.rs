@@ -4,7 +4,7 @@ use crate::config::shortcuts::ShortcutAction;
 use crate::theme::Theme;
 
 use super::PopupType;
-use super::window_utils::new_center_popup_window;
+use super::window_utils::show_center_popup_window;
 
 /// Helper function to apply a theme and save it to the configuration
 fn apply_and_save_theme(app: &mut Kiorg, theme: &Theme, ctx: &egui::Context) {
@@ -179,21 +179,19 @@ pub fn draw(app: &mut Kiorg, ctx: &egui::Context) {
 
     let mut selected_theme = None;
 
-    new_center_popup_window("Themes")
-        .open(&mut keep_open)
-        .show(ctx, |ui| {
-            egui::ScrollArea::vertical().show(ui, |ui| {
-                if let Some(theme) = display_themes_grid(
-                    ui,
-                    &themes,
-                    &new_selected_theme_key,
-                    &current_theme_key,
-                    &app.colors,
-                ) {
-                    selected_theme = Some(theme);
-                }
-            });
+    show_center_popup_window("Themes", ctx, &mut keep_open, |ui| {
+        egui::ScrollArea::vertical().show(ui, |ui| {
+            if let Some(theme) = display_themes_grid(
+                ui,
+                &themes,
+                &new_selected_theme_key,
+                &current_theme_key,
+                &app.colors,
+            ) {
+                selected_theme = Some(theme);
+            }
         });
+    });
 
     // Handle theme selection from mouse clicks
     if let Some(theme) = selected_theme {

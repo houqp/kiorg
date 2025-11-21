@@ -5,7 +5,7 @@ use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf; // Removed unused Path
 
 use super::PopupType;
-use super::window_utils::new_center_popup_window;
+use super::window_utils::show_center_popup_window;
 use crate::app::Kiorg;
 use crate::config::get_kiorg_config_dir;
 use crate::config::shortcuts::ShortcutAction;
@@ -191,49 +191,45 @@ pub fn show_bookmark_popup(ctx: &Context, app: &mut Kiorg) -> BookmarkAction {
     // Create a temporary boolean for the window's open state
     let mut window_open = true;
 
-    if let Some(response) = new_center_popup_window("Bookmarks")
-        .default_pos(ctx.content_rect().center()) // Position at screen center
-        .open(&mut window_open)
-        .show(ctx, |ui| {
-            if app.bookmarks.is_empty() {
-                ui.label("No bookmarks yet. Use 'b' to bookmark folders.");
-                return;
-            }
+    if let Some(response) = show_center_popup_window("Bookmarks", ctx, &mut window_open, |ui| {
+        if app.bookmarks.is_empty() {
+            ui.label("No bookmarks yet. Use 'b' to bookmark folders.");
+            return;
+        }
 
-            // Handle keyboard navigation
-            let action = app.get_shortcut_action_from_input(ctx, false);
-            if let Some(action) = action {
-                match action {
-                    ShortcutAction::MoveDown => {
-                        if !app.bookmarks.is_empty() {
-                            current_index = (current_index + 1).min(app.bookmarks.len() - 1);
-                        }
+        // Handle keyboard navigation
+        let action = app.get_shortcut_action_from_input(ctx, false);
+        if let Some(action) = action {
+            match action {
+                ShortcutAction::MoveDown => {
+                    if !app.bookmarks.is_empty() {
+                        current_index = (current_index + 1).min(app.bookmarks.len() - 1);
                     }
-                    ShortcutAction::MoveUp => {
-                        current_index = current_index.saturating_sub(1);
-                    }
-                    ShortcutAction::OpenDirectoryOrFile | ShortcutAction::OpenDirectory => {
-                        if !app.bookmarks.is_empty() {
-                            navigate_to_path = Some(app.bookmarks[current_index].clone());
-                        }
-                    }
-                    _ => {} // Other actions already handled above
                 }
+                ShortcutAction::MoveUp => {
+                    current_index = current_index.saturating_sub(1);
+                }
+                ShortcutAction::OpenDirectoryOrFile | ShortcutAction::OpenDirectory => {
+                    if !app.bookmarks.is_empty() {
+                        navigate_to_path = Some(app.bookmarks[current_index].clone());
+                    }
+                }
+                _ => {} // Other actions already handled above
             }
+        }
 
-            // Display bookmarks in a scrollable area
-            egui::ScrollArea::vertical().show(ui, |ui| {
-                let (click_navigate, context_menu_remove) =
-                    display_bookmarks_grid(ui, &app.bookmarks, current_index, &app.colors);
-                if let Some(path) = click_navigate {
-                    navigate_to_path = Some(path);
-                }
-                if let Some(path) = context_menu_remove {
-                    remove_bookmark_path = Some(path);
-                }
-            });
-        })
-    {
+        // Display bookmarks in a scrollable area
+        egui::ScrollArea::vertical().show(ui, |ui| {
+            let (click_navigate, context_menu_remove) =
+                display_bookmarks_grid(ui, &app.bookmarks, current_index, &app.colors);
+            if let Some(path) = click_navigate {
+                navigate_to_path = Some(path);
+            }
+            if let Some(path) = context_menu_remove {
+                remove_bookmark_path = Some(path);
+            }
+        });
+    }) {
         // Return appropriate action based on what happened
         let mut action = BookmarkAction::None;
 

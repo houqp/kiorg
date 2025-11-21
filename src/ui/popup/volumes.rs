@@ -4,7 +4,7 @@ use std::io;
 use std::path::PathBuf;
 
 use super::PopupType;
-use super::window_utils::new_center_popup_window;
+use super::window_utils::show_center_popup_window;
 use crate::app::Kiorg;
 use crate::config::shortcuts::ShortcutAction;
 
@@ -136,10 +136,8 @@ pub fn show_volumes_popup(ctx: &Context, app: &mut Kiorg) -> VolumeAction {
     // Create a temporary boolean for the window's open state
     let mut window_open = true;
 
-    if let Some(response) = new_center_popup_window("Mounted Volumes")
-        .default_pos(ctx.content_rect().center()) // Position at screen center
-        .open(&mut window_open)
-        .show(ctx, |ui| {
+    if let Some(response) =
+        show_center_popup_window("Mounted Volumes", ctx, &mut window_open, |ui| {
             if volumes.is_empty() {
                 ui.label("No mounted volumes found in /Volumes directory");
                 return;
