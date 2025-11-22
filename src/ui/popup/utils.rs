@@ -1,6 +1,6 @@
 use egui::{Context, RichText, Ui};
 
-use super::window_utils::new_center_popup_window;
+use super::window_utils::{POPUP_MARGIN, new_center_popup_window};
 
 /// Result of a confirmation popup
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -47,29 +47,38 @@ where
         .open(show_popup)
         .max_width(450.0) // Restrict maximum width
         .show(ctx, |ui| {
-            egui::Frame::new().inner_margin(10.0).show(ui, |ui| {
-                ui.vertical(|ui| {
-                    content_fn(ui);
+            egui::Frame::new()
+                .inner_margin(POPUP_MARGIN)
+                .show(ui, |ui| {
+                    ui.vertical(|ui| {
+                        content_fn(ui);
 
-                    ui.add_space(20.0); // Space before buttons
+                        ui.add_space(20.0); // Space before buttons
 
-                    ui.horizontal(|ui| {
-                        ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
-                            let confirm_rich_text = RichText::new(confirm_text);
-                            let confirm_clicked = ui.button(confirm_rich_text).clicked();
-                            if confirm_clicked {
-                                result = ConfirmResult::Confirm;
-                            }
-                        });
-                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                            let cancel_clicked = ui.button(RichText::new(cancel_text)).clicked();
-                            if cancel_clicked {
-                                result = ConfirmResult::Cancel;
-                            }
+                        ui.horizontal(|ui| {
+                            ui.with_layout(
+                                egui::Layout::left_to_right(egui::Align::Center),
+                                |ui| {
+                                    let confirm_rich_text = RichText::new(confirm_text);
+                                    let confirm_clicked = ui.button(confirm_rich_text).clicked();
+                                    if confirm_clicked {
+                                        result = ConfirmResult::Confirm;
+                                    }
+                                },
+                            );
+                            ui.with_layout(
+                                egui::Layout::right_to_left(egui::Align::Center),
+                                |ui| {
+                                    let cancel_clicked =
+                                        ui.button(RichText::new(cancel_text)).clicked();
+                                    if cancel_clicked {
+                                        result = ConfirmResult::Cancel;
+                                    }
+                                },
+                            );
                         });
                     });
                 });
-            });
         });
     if let Some(response) = popup_response {
         if (
