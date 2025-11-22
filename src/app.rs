@@ -600,6 +600,13 @@ impl Kiorg {
     }
 
     pub fn move_selection_by_page(&mut self, direction: isize) {
+        let tab = self.tab_manager.current_tab_ref();
+        let entries = tab.get_cached_filtered_entries();
+
+        if entries.is_empty() {
+            return;
+        }
+
         // Calculate page size from scroll_range if available
         let page_size = if let Some(ref range) = self.scroll_range {
             // Use the visible range size as page size, with a minimum of 1
@@ -609,8 +616,29 @@ impl Kiorg {
             10
         };
 
-        // Move by the effective page size in the specified direction
-        self.move_selection(direction * page_size);
+        // Find current position in filtered list
+        let current_filtered_index = entries
+            .iter()
+            .position(|(_, original_index)| *original_index == tab.selected_index);
+
+        if let Some(current_idx) = current_filtered_index {
+            let new_filtered_index = if direction > 0 {
+                // Page down: ensure we don't go past the last entry
+                (current_idx as isize + page_size).min(entries.len() as isize - 1)
+            } else {
+                // Page up: ensure we don't go before the first entry
+                (current_idx as isize - page_size).max(0)
+            };
+            // Only calculate movement if the new index is different from current
+            if new_filtered_index != current_idx as isize {
+                let movement = new_filtered_index - current_idx as isize;
+                self.move_selection(movement);
+            }
+        } else {
+            // current selected entry not in view, move and reset focus
+            let movement = direction * page_size;
+            self.move_selection(movement);
+        }
     }
 
     fn navigate_to_dir_without_history(&mut self, mut path: PathBuf) {
