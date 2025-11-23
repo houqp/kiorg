@@ -86,7 +86,20 @@ fn main() -> Result<(), eframe::Error> {
         Box::new(|cc| {
             egui_extras::install_image_loaders(&cc.egui_ctx);
 
-            let fonts = kiorg::font::load_system_fonts(egui::FontDefinitions::default());
+            let mut fonts = kiorg::font::load_system_fonts(egui::FontDefinitions::default());
+
+            // Add Nerd Fonts to both Monospace and Proportional families
+            fonts.font_data.insert(
+                "nerdfonts".into(),
+                egui_nerdfonts::Variant::Regular.font_data().into(),
+            );
+            if let Some(font_keys) = fonts.families.get_mut(&egui::FontFamily::Monospace) {
+                font_keys.push("nerdfonts".into());
+            }
+            if let Some(font_keys) = fonts.families.get_mut(&egui::FontFamily::Proportional) {
+                font_keys.push("nerdfonts".into());
+            }
+
             cc.egui_ctx.set_fonts(fonts);
 
             match Kiorg::new(cc, initial_dir) {

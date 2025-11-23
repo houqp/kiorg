@@ -1747,6 +1747,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "egui_nerdfonts"
+version = "0.1.3"
+source = "git+https://github.com/houqp/egui_nerdfonts?rev=6f540170520692ccf1a7d89aee94aea61c89da07#6f540170520692ccf1a7d89aee94aea61c89da07"
+dependencies = [
+ "egui",
+]
+
+[[package]]
 name = "egui_term"
 version = "0.1.0"
 source = "git+https://github.com/houqp/egui_term.git?rev=18b9fa7524b98c6330885b65040ec5b4fd43d13f#18b9fa7524b98c6330885b65040ec5b4fd43d13f"
@@ -3255,6 +3263,7 @@ dependencies = [
  "egui",
  "egui_extras",
  "egui_kittest",
+ "egui_nerdfonts",
  "egui_term",
  "file_type",
  "flate2",
