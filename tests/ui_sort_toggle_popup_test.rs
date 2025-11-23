@@ -78,25 +78,23 @@ fn test_sort_toggle_popup_name_sorting() {
     harness.key_press(Key::N);
     harness.step();
 
-    // Verify sort changed to None and popup closed immediately
+    // Verify sort changed to None
     {
         let state = harness.state();
         assert_eq!(state.tab_manager.sort_column, SortColumn::None);
-        assert_eq!(state.show_popup, None); // Popup should close immediately after sorting
+        // Popup should still be open after sorting
+        assert_eq!(state.show_popup, Some(PopupType::SortToggle));
     }
 
-    // Open popup again and press 'n' to toggle back to Name sorting (should be Descending)
-    harness.key_press(Key::Comma);
-    harness.step();
+    // Press 'n' again to toggle back to Name sorting (should be Descending)
     harness.key_press(Key::N);
     harness.step();
 
-    // Verify sort changed to Name/Descending and popup closed
+    // Verify sort changed to Name/Descending
     {
         let state = harness.state();
         assert_eq!(state.tab_manager.sort_column, SortColumn::Name);
         assert_eq!(state.tab_manager.sort_order, SortOrder::Descending);
-        assert_eq!(state.show_popup, None); // Popup should close immediately
 
         let tab = state.tab_manager.current_tab_ref();
         assert_eq!(tab.entries[0].name, "zebra.txt");
@@ -104,24 +102,27 @@ fn test_sort_toggle_popup_name_sorting() {
         assert_eq!(tab.entries[2].name, "alpha.txt");
     }
 
-    // Open popup again and press 'n' once more to toggle to Name/Ascending
-    harness.key_press(Key::Comma);
-    harness.step();
+    // Press 'n' once more to toggle to Name/Ascending
     harness.key_press(Key::N);
     harness.step();
 
-    // Verify sort changed back to Name/Ascending and popup closed
+    // Verify sort changed back to Name/Ascending
     {
         let state = harness.state();
         assert_eq!(state.tab_manager.sort_column, SortColumn::Name);
         assert_eq!(state.tab_manager.sort_order, SortOrder::Ascending);
-        assert_eq!(state.show_popup, None); // Popup should close immediately
 
         let tab = state.tab_manager.current_tab_ref();
         assert_eq!(tab.entries[0].name, "alpha.txt");
         assert_eq!(tab.entries[1].name, "beta.txt");
         assert_eq!(tab.entries[2].name, "zebra.txt");
     }
+
+    // Close the popup
+    harness.key_press(Key::Escape);
+    harness.step();
+
+    assert_eq!(harness.state().show_popup, None);
 }
 
 #[test]
@@ -147,12 +148,11 @@ fn test_sort_toggle_popup_size_sorting() {
     harness.key_press(Key::S);
     harness.step();
 
-    // Verify sort changed to Size/Descending and popup closed immediately
+    // Verify sort changed to Size/Descending (first toggle from Name should be Descending)
     {
         let state = harness.state();
         assert_eq!(state.tab_manager.sort_column, SortColumn::Size);
         assert_eq!(state.tab_manager.sort_order, SortOrder::Descending);
-        assert_eq!(state.show_popup, None); // Popup should close immediately
 
         let tab = state.tab_manager.current_tab_ref();
         assert_eq!(tab.entries[0].name, "large.txt");
@@ -160,24 +160,25 @@ fn test_sort_toggle_popup_size_sorting() {
         assert_eq!(tab.entries[2].name, "small.txt");
     }
 
-    // Open popup again and press 's' to toggle to Size/Ascending
-    harness.key_press(Key::Comma);
-    harness.step();
+    // Press 's' again to toggle to Size/Ascending
     harness.key_press(Key::S);
     harness.step();
 
-    // Verify sort changed to Size/Ascending and popup closed
+    // Verify sort changed to Size/Ascending
     {
         let state = harness.state();
         assert_eq!(state.tab_manager.sort_column, SortColumn::Size);
         assert_eq!(state.tab_manager.sort_order, SortOrder::Ascending);
-        assert_eq!(state.show_popup, None); // Popup should close immediately
 
         let tab = state.tab_manager.current_tab_ref();
         assert_eq!(tab.entries[0].name, "small.txt");
         assert_eq!(tab.entries[1].name, "medium.txt");
         assert_eq!(tab.entries[2].name, "large.txt");
     }
+
+    // Close the popup
+    harness.key_press(Key::Escape);
+    harness.step();
 }
 
 #[test]
@@ -202,35 +203,35 @@ fn test_sort_toggle_popup_modified_sorting() {
     harness.key_press(Key::M);
     harness.step();
 
-    // Verify sort changed to Modified and popup closed immediately
+    // Verify sort changed to Modified
     {
         let state = harness.state();
         assert_eq!(state.tab_manager.sort_column, SortColumn::Modified);
         assert_eq!(state.tab_manager.sort_order, SortOrder::Descending);
-        assert_eq!(state.show_popup, None); // Popup should close immediately
 
         let tab = state.tab_manager.current_tab_ref();
-        // Most recently modified should be first (second.txt was created last)
+        // Most recently modified should be first (third.txt was created last)
         assert_eq!(tab.entries[0].name, "second.txt");
     }
 
-    // Open popup again and press 'm' to toggle to Modified/Ascending
-    harness.key_press(Key::Comma);
-    harness.step();
+    // Press 'm' again to toggle to Modified/Ascending
     harness.key_press(Key::M);
     harness.step();
 
-    // Verify sort changed to Modified/Ascending and popup closed
+    // Verify sort changed to Modified/Ascending
     {
         let state = harness.state();
         assert_eq!(state.tab_manager.sort_column, SortColumn::Modified);
         assert_eq!(state.tab_manager.sort_order, SortOrder::Ascending);
-        assert_eq!(state.show_popup, None); // Popup should close immediately
 
         let tab = state.tab_manager.current_tab_ref();
         // Oldest modified should be first (first.txt was created first)
         assert_eq!(tab.entries[0].name, "first.txt");
     }
+
+    // Close the popup
+    harness.key_press(Key::Escape);
+    harness.step();
 }
 
 #[test]
@@ -249,39 +250,35 @@ fn test_sort_toggle_popup_multiple_column_switching() {
     harness.key_press(Key::Comma);
     harness.step();
 
-    // Start with name sorting (default), switch to size - popup should close immediately
+    // Start with name sorting (default), switch to size
     harness.key_press(Key::S);
     harness.step();
 
-    {
-        let state = harness.state();
-        assert_eq!(state.tab_manager.sort_column, SortColumn::Size);
-        assert_eq!(state.show_popup, None); // Popup closes immediately
-    }
+    assert_eq!(harness.state().tab_manager.sort_column, SortColumn::Size);
 
-    // Open popup again and switch to modified
-    harness.key_press(Key::Comma);
-    harness.step();
+    // Switch to modified
     harness.key_press(Key::M);
     harness.step();
 
-    {
-        let state = harness.state();
-        assert_eq!(state.tab_manager.sort_column, SortColumn::Modified);
-        assert_eq!(state.show_popup, None); // Popup closes immediately
-    }
+    assert_eq!(
+        harness.state().tab_manager.sort_column,
+        SortColumn::Modified
+    );
 
-    // Open popup again and switch back to name
-    harness.key_press(Key::Comma);
-    harness.step();
+    // Switch back to name
     harness.key_press(Key::N);
     harness.step();
 
-    {
-        let state = harness.state();
-        assert_eq!(state.tab_manager.sort_column, SortColumn::Name);
-        assert_eq!(state.show_popup, None); // Popup closes immediately
-    }
+    assert_eq!(harness.state().tab_manager.sort_column, SortColumn::Name);
+
+    // All these operations should keep the popup open
+    assert_eq!(harness.state().show_popup, Some(PopupType::SortToggle));
+
+    // Close the popup
+    harness.key_press(Key::Escape);
+    harness.step();
+
+    assert_eq!(harness.state().show_popup, None);
 }
 
 #[test]

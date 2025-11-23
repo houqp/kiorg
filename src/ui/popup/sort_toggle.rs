@@ -57,15 +57,12 @@ pub fn handle_sort_toggle_key(app: &mut Kiorg, key: Key) {
     match key {
         Key::N => {
             app.tab_manager.toggle_sort(SortColumn::Name);
-            app.show_popup = None; // Close popup immediately after selection
         }
         Key::S => {
             app.tab_manager.toggle_sort(SortColumn::Size);
-            app.show_popup = None; // Close popup immediately after selection
         }
         Key::M => {
             app.tab_manager.toggle_sort(SortColumn::Modified);
-            app.show_popup = None; // Close popup immediately after selection
         }
         _ => {}
     }
