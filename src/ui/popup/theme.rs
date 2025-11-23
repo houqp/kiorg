@@ -120,7 +120,7 @@ pub fn draw(app: &mut Kiorg, ctx: &egui::Context) {
     let mut new_selected_theme_key = selected_theme_key.to_string();
 
     // Check for shortcut actions based on input
-    let action = app.get_shortcut_action_from_input(ctx, false);
+    let action = app.get_shortcut_action_from_input(ctx);
 
     if let Some(action) = action {
         match action {

@@ -107,7 +107,7 @@ pub fn show_drives_popup(ctx: &Context, app: &mut Kiorg) -> DriveAction {
         current_index.min(drives.len() - 1)
     };
 
-    let action = app.get_shortcut_action_from_input(ctx, false);
+    let action = app.get_shortcut_action_from_input(ctx);
     // Handle keyboard navigation using shortcuts
     // Check for shortcut actions based on input
     if let Some(ShortcutAction::Exit) = action {

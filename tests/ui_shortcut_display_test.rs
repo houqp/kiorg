@@ -9,29 +9,30 @@ fn test_arrow_key_display() {
     let mut shortcuts = Shortcuts::new();
 
     // Add arrow key shortcuts
-    let up_shortcuts = vec![
-        KeyboardShortcut::new("up"),
-        KeyboardShortcut::new("arrow_up"),
-    ];
-    shortcuts.set_shortcuts(ShortcutAction::MoveUp, up_shortcuts);
+    shortcuts
+        .set_shortcuts(ShortcutAction::MoveUp, vec![KeyboardShortcut::new("up")])
+        .unwrap();
 
-    let down_shortcuts = vec![
-        KeyboardShortcut::new("down"),
-        KeyboardShortcut::new("arrow_down"),
-    ];
-    shortcuts.set_shortcuts(ShortcutAction::MoveDown, down_shortcuts);
+    shortcuts
+        .set_shortcuts(
+            ShortcutAction::MoveDown,
+            vec![KeyboardShortcut::new("down")],
+        )
+        .unwrap();
 
-    let left_shortcuts = vec![
-        KeyboardShortcut::new("left"),
-        KeyboardShortcut::new("arrow_left"),
-    ];
-    shortcuts.set_shortcuts(ShortcutAction::GoToParentDirectory, left_shortcuts);
+    shortcuts
+        .set_shortcuts(
+            ShortcutAction::GoToParentDirectory,
+            vec![KeyboardShortcut::new("left")],
+        )
+        .unwrap();
 
-    let right_shortcuts = vec![
-        KeyboardShortcut::new("right"),
-        KeyboardShortcut::new("arrow_right"),
-    ];
-    shortcuts.set_shortcuts(ShortcutAction::OpenDirectory, right_shortcuts);
+    shortcuts
+        .set_shortcuts(
+            ShortcutAction::OpenDirectory,
+            vec![KeyboardShortcut::new("right")],
+        )
+        .unwrap();
 
     // Test up arrow display
     let up_display = shortcuts_helpers::get_shortcut_display(&shortcuts, ShortcutAction::MoveUp);
@@ -72,10 +73,14 @@ fn test_special_key_display() {
 
     // Add special key shortcuts
     let enter_shortcuts = vec![KeyboardShortcut::new("enter")];
-    shortcuts.set_shortcuts(ShortcutAction::OpenDirectoryOrFile, enter_shortcuts);
+    shortcuts
+        .set_shortcuts(ShortcutAction::OpenDirectoryOrFile, enter_shortcuts)
+        .unwrap();
 
     let space_shortcuts = vec![KeyboardShortcut::new("space")];
-    shortcuts.set_shortcuts(ShortcutAction::SelectEntry, space_shortcuts);
+    shortcuts
+        .set_shortcuts(ShortcutAction::SelectEntry, space_shortcuts)
+        .unwrap();
 
     // Test enter key display
     let enter_display =
@@ -101,10 +106,14 @@ fn test_regular_key_display() {
 
     // Add regular key shortcuts
     let a_shortcuts = vec![KeyboardShortcut::new("a")];
-    shortcuts.set_shortcuts(ShortcutAction::AddEntry, a_shortcuts);
+    shortcuts
+        .set_shortcuts(ShortcutAction::AddEntry, a_shortcuts)
+        .unwrap();
 
     let d_shortcuts = vec![KeyboardShortcut::new("d")];
-    shortcuts.set_shortcuts(ShortcutAction::DeleteEntry, d_shortcuts);
+    shortcuts
+        .set_shortcuts(ShortcutAction::DeleteEntry, d_shortcuts)
+        .unwrap();
 
     // Test regular key display
     let a_display = shortcuts_helpers::get_shortcut_display(&shortcuts, ShortcutAction::AddEntry);
@@ -128,13 +137,19 @@ fn test_shortcut_with_modifiers() {
 
     // Add shortcuts with modifiers
     let ctrl_c_shortcuts = vec![KeyboardShortcut::new("c").with_ctrl()];
-    shortcuts.set_shortcuts(ShortcutAction::CloseCurrentTab, ctrl_c_shortcuts);
+    shortcuts
+        .set_shortcuts(ShortcutAction::CloseCurrentTab, ctrl_c_shortcuts)
+        .unwrap();
 
     let shift_question_shortcuts = vec![KeyboardShortcut::new("?").with_shift()];
-    shortcuts.set_shortcuts(ShortcutAction::ShowHelp, shift_question_shortcuts);
+    shortcuts
+        .set_shortcuts(ShortcutAction::ShowHelp, shift_question_shortcuts)
+        .unwrap();
 
     let shift_t_shortcuts = vec![KeyboardShortcut::new("t").with_shift()];
-    shortcuts.set_shortcuts(ShortcutAction::OpenTerminal, shift_t_shortcuts);
+    shortcuts
+        .set_shortcuts(ShortcutAction::OpenTerminal, shift_t_shortcuts)
+        .unwrap();
 
     // Add a shortcut with multiple modifiers
     let ctrl_shift_q_shortcuts = vec![KeyboardShortcut {
@@ -144,9 +159,10 @@ fn test_shortcut_with_modifiers() {
         alt: false,
         #[cfg(target_os = "macos")]
         command: false,
-        namespace: false,
     }];
-    shortcuts.set_shortcuts(ShortcutAction::Exit, ctrl_shift_q_shortcuts);
+    shortcuts
+        .set_shortcuts(ShortcutAction::Exit, ctrl_shift_q_shortcuts)
+        .unwrap();
 
     // Test Ctrl+C display
     let ctrl_c_display =
@@ -188,7 +204,9 @@ fn test_multiple_shortcuts_display() {
 
     // Add multiple shortcuts for the same action
     let move_down_shortcuts = vec![KeyboardShortcut::new("j"), KeyboardShortcut::new("down")];
-    shortcuts.set_shortcuts(ShortcutAction::MoveDown, move_down_shortcuts);
+    shortcuts
+        .set_shortcuts(ShortcutAction::MoveDown, move_down_shortcuts)
+        .unwrap();
 
     // Test multiple shortcuts display
     let move_down_display =

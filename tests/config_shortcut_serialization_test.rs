@@ -186,10 +186,12 @@ fn test_runtime_shortcut_modification_serialization() {
 
     // Simulate adding a user shortcut override
     let mut user_shortcuts = kiorg::config::shortcuts::Shortcuts::new();
-    user_shortcuts.add_shortcut(
-        kiorg::config::shortcuts::KeyboardShortcut::new("m"),
-        kiorg::config::shortcuts::ShortcutAction::MoveDown,
-    );
+    user_shortcuts
+        .add_shortcut(
+            kiorg::config::shortcuts::KeyboardShortcut::new("m"),
+            kiorg::config::shortcuts::ShortcutAction::MoveDown,
+        )
+        .unwrap();
     loaded_config.shortcuts = Some(user_shortcuts);
 
     // Save the modified config
@@ -220,5 +222,187 @@ fn test_runtime_shortcut_modification_serialization() {
     assert!(
         !saved_content.contains("AddEntry"),
         "Should not save unmodified default shortcuts"
+    );
+}
+
+/// Test serialization of complex shortcuts with multiple keys and modifiers
+#[test]
+fn test_complex_shortcut_serialization_with_modifiers() {
+    // Create a temporary directory for the config
+    let config_temp_dir = tempdir().unwrap();
+    let config_dir = config_temp_dir.path().to_path_buf();
+
+    // Create a TOML config file with complex shortcuts containing modifiers and multiple keys
+    let input_toml_content = r#"
+# Complex shortcuts with modifiers
+[[shortcuts.AddEntry]]
+key = "n"
+ctrl = true
+
+[[shortcuts.AddEntry]]
+key = "insert"
+
+[[shortcuts.DeleteEntry]]
+key = "d"
+shift = true
+ctrl = true
+
+[[shortcuts.CopyEntry]]
+key = "c"
+ctrl = true
+
+[[shortcuts.CopyEntry]]
+key = "y"
+
+[[shortcuts.PasteEntry]]
+key = "v"
+ctrl = true
+
+#[cfg(target_os = "macos")]
+[[shortcuts.PasteEntry]]
+key = "v"
+command = true
+
+[[shortcuts.MoveDown]]
+key = "j"
+alt = true
+"#;
+
+    // Write the initial config file
+    fs::create_dir_all(&config_dir).unwrap();
+    fs::write(config_dir.join("config.toml"), input_toml_content).unwrap();
+
+    // Load the config
+    let loaded_config = config::load_config_with_override(Some(&config_dir))
+        .expect("Should load config successfully");
+
+    // Verify the complex shortcuts were loaded correctly
+    let shortcuts = loaded_config
+        .shortcuts
+        .as_ref()
+        .expect("Should have shortcuts");
+
+    // Test AddEntry shortcuts (Ctrl+n and Insert)
+    let add_entry_shortcuts = shortcuts
+        .get(&kiorg::config::shortcuts::ShortcutAction::AddEntry)
+        .expect("Should have AddEntry shortcuts");
+    assert_eq!(add_entry_shortcuts.len(), 2);
+
+    // Find the Ctrl+n shortcut
+    let ctrl_n = add_entry_shortcuts
+        .iter()
+        .find(|s| s.key == "n" && s.ctrl)
+        .expect("Should have Ctrl+n shortcut");
+    assert!(ctrl_n.ctrl);
+    assert!(!ctrl_n.shift);
+    assert!(!ctrl_n.alt);
+
+    // Find the Insert shortcut
+    let insert = add_entry_shortcuts
+        .iter()
+        .find(|s| s.key == "insert")
+        .expect("Should have Insert shortcut");
+    assert!(!insert.ctrl);
+    assert!(!insert.shift);
+    assert!(!insert.alt);
+
+    // Test DeleteEntry shortcut (Ctrl+Shift+d)
+    let delete_shortcuts = shortcuts
+        .get(&kiorg::config::shortcuts::ShortcutAction::DeleteEntry)
+        .expect("Should have DeleteEntry shortcut");
+    assert_eq!(delete_shortcuts.len(), 1);
+    let ctrl_shift_d = &delete_shortcuts[0];
+    assert_eq!(ctrl_shift_d.key, "d");
+    assert!(ctrl_shift_d.ctrl);
+    assert!(ctrl_shift_d.shift);
+    assert!(!ctrl_shift_d.alt);
+
+    // Test CopyEntry shortcuts (Ctrl+c and y)
+    let copy_shortcuts = shortcuts
+        .get(&kiorg::config::shortcuts::ShortcutAction::CopyEntry)
+        .expect("Should have CopyEntry shortcuts");
+    assert_eq!(copy_shortcuts.len(), 2);
+
+    // Test MoveDown with Alt+j
+    let move_down_shortcuts = shortcuts
+        .get(&kiorg::config::shortcuts::ShortcutAction::MoveDown)
+        .expect("Should have MoveDown shortcut");
+    assert_eq!(move_down_shortcuts.len(), 1);
+    let alt_j = &move_down_shortcuts[0];
+    assert_eq!(alt_j.key, "j");
+    assert!(!alt_j.ctrl);
+    assert!(!alt_j.shift);
+    assert!(alt_j.alt);
+
+    // Save the config back to file
+    config::save_config_with_override(&loaded_config, Some(&config_dir))
+        .expect("Should save config successfully");
+
+    // Read the saved config file content for debugging
+    let saved_content =
+        fs::read_to_string(config_dir.join("config.toml")).expect("Should read saved config file");
+
+    println!("Saved complex shortcuts config:\n{saved_content}");
+
+    // Test round-trip: reload the saved config
+    let reloaded_config = config::load_config_with_override(Some(&config_dir))
+        .expect("Should reload config successfully");
+
+    let reloaded_shortcuts = reloaded_config
+        .shortcuts
+        .as_ref()
+        .expect("Should have shortcuts after reload");
+
+    // Verify the reloaded shortcuts match the original
+    let reloaded_add_entry = reloaded_shortcuts
+        .get(&kiorg::config::shortcuts::ShortcutAction::AddEntry)
+        .expect("Should have AddEntry shortcuts after reload");
+    assert_eq!(
+        reloaded_add_entry.len(),
+        2,
+        "Should maintain multiple AddEntry shortcuts"
+    );
+
+    // Verify Ctrl+n shortcut is preserved
+    let reloaded_ctrl_n = reloaded_add_entry
+        .iter()
+        .find(|s| s.key == "n" && s.ctrl)
+        .expect("Should have Ctrl+n shortcut after reload");
+    assert!(reloaded_ctrl_n.ctrl && !reloaded_ctrl_n.shift && !reloaded_ctrl_n.alt);
+
+    // Verify Insert shortcut is preserved
+    let reloaded_insert = reloaded_add_entry
+        .iter()
+        .find(|s| s.key == "insert")
+        .expect("Should have Insert shortcut after reload");
+    assert!(!reloaded_insert.ctrl && !reloaded_insert.shift && !reloaded_insert.alt);
+
+    let reloaded_delete = reloaded_shortcuts
+        .get(&kiorg::config::shortcuts::ShortcutAction::DeleteEntry)
+        .expect("Should have DeleteEntry shortcut after reload");
+    assert_eq!(reloaded_delete.len(), 1);
+    assert!(
+        reloaded_delete[0].ctrl && reloaded_delete[0].shift,
+        "Should maintain Ctrl+Shift modifiers"
+    );
+
+    let reloaded_copy = reloaded_shortcuts
+        .get(&kiorg::config::shortcuts::ShortcutAction::CopyEntry)
+        .expect("Should have CopyEntry shortcuts after reload");
+    assert_eq!(
+        reloaded_copy.len(),
+        2,
+        "Should maintain multiple CopyEntry shortcuts"
+    );
+
+    let reloaded_move_down = reloaded_shortcuts
+        .get(&kiorg::config::shortcuts::ShortcutAction::MoveDown)
+        .expect("Should have MoveDown shortcut after reload");
+    assert_eq!(reloaded_move_down.len(), 1);
+    let reloaded_alt_j = &reloaded_move_down[0];
+    assert_eq!(reloaded_alt_j.key, "j");
+    assert!(
+        !reloaded_alt_j.ctrl && !reloaded_alt_j.shift && reloaded_alt_j.alt,
+        "Should maintain Alt modifier"
     );
 }

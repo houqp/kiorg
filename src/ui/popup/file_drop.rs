@@ -137,7 +137,7 @@ pub(crate) fn handle_key_press(
     app: &mut Kiorg,
     dropped_files: Vec<PathBuf>,
 ) -> bool {
-    let action = app.get_shortcut_action_from_input(ctx, false);
+    let action = app.get_shortcut_action_from_input(ctx);
     if let Some(action) = action {
         match action {
             ShortcutAction::Exit => {

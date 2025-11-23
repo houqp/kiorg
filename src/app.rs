@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
+use crate::config::shortcuts::TraverseResult;
 use crate::config::{self, LEFT_PANEL_RATIO, PREVIEW_PANEL_RATIO, colors::AppColors};
 use crate::input;
 use crate::models::preview_content::PreviewContent;
@@ -175,7 +176,7 @@ pub struct Kiorg {
     // Async notification system for background operations
     pub notification_system: notification::AsyncNotification,
     // Key buffer for tracking unprocessed key presses
-    pub key_buffer: Vec<egui::Key>,
+    pub key_buffer: Vec<crate::config::shortcuts::ShortcutKey>,
     pub shutdown_requested: bool,
     // Signal whether to scroll to display current directory in the left panel
     pub scroll_left_panel: bool,
@@ -205,20 +206,26 @@ impl Kiorg {
         // Create merged shortcuts: start with defaults and apply user overrides
         let mut merged_shortcuts = config::shortcuts::default_shortcuts();
         if let Some(user_shortcuts) = &config.shortcuts {
-            // Apply user shortcuts over defaults
+            // Apply user shortcuts over defaults - replace existing shortcuts for these actions
             for (action, shortcuts_list) in user_shortcuts {
-                merged_shortcuts.set_shortcuts(*action, shortcuts_list.clone());
+                if let Err(shortcut_error) =
+                    merged_shortcuts.set_shortcuts(*action, shortcuts_list.clone())
+                {
+                    return Err(KiorgError::ConfigError(
+                        crate::config::ConfigError::ValueError(
+                            shortcut_error,
+                            std::path::PathBuf::from("__merged_shortcuts__"),
+                        ),
+                    ));
+                }
             }
         }
 
-        // Perform conflict detection on the merged shortcuts
-        if let Err(conflict_error) =
-            crate::config::shortcuts::shortcuts_helpers::check_conflicts(&merged_shortcuts)
-        {
+        // Ensure the shortcut tree is built after merging
+        if let Err(tree_error) = merged_shortcuts.ensure_tree_built() {
             return Err(KiorgError::ConfigError(
-                crate::config::ConfigError::ShortcutConflict(
-                    conflict_error,
-                    // Use a generic path since this is for merged shortcuts
+                crate::config::ConfigError::ValueError(
+                    tree_error,
                     std::path::PathBuf::from("__merged_shortcuts__"),
                 ),
             ));
@@ -359,8 +366,7 @@ impl Kiorg {
     pub fn get_shortcut_action_from_input(
         &self,
         ctx: &egui::Context,
-        namespace: bool,
-    ) -> Option<&crate::config::shortcuts::ShortcutAction> {
+    ) -> Option<crate::config::shortcuts::ShortcutAction> {
         let shortcuts = self.get_shortcuts();
         ctx.input(|i| {
             for event in &i.events {
@@ -370,11 +376,15 @@ impl Kiorg {
                     pressed: true,
                     ..
                 } = event
-                    && let Some(action) = crate::config::shortcuts::shortcuts_helpers::find_action(
-                        shortcuts, *key, *modifiers, namespace,
-                    )
                 {
-                    return Some(action);
+                    let shortcut_key = crate::config::shortcuts::ShortcutKey {
+                        key: *key,
+                        modifiers: *modifiers,
+                    };
+                    if let TraverseResult::Action(action) = shortcuts.traverse_tree(&[shortcut_key])
+                    {
+                        return Some(action);
+                    }
                 }
             }
             None
