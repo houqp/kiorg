@@ -88,6 +88,7 @@ pathfinder_geometry = { git = "https://github.com/houqp/pathfinder", rev = "c826
 pathfinder_export = { git = "https://github.com/houqp/pathfinder", rev = "c82663778404c74c0d2cceb42a99b41f6e48e1e4" }
 # pathfinder_rasterize = { git = "https://github.com/s3bk/pathfinder_rasterizer" }
 
+egui_nerdfonts = { git = "https://github.com/houqp/egui_nerdfonts", rev = "6f540170520692ccf1a7d89aee94aea61c89da07" }
 [target.'cfg(not(target_os = "windows"))'.dependencies]
 egui_term = { git = "https://github.com/houqp/egui_term.git", rev = "18b9fa7524b98c6330885b65040ec5b4fd43d13f" }
 
