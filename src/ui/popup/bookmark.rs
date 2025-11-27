@@ -169,7 +169,7 @@ pub fn show_bookmark_popup(ctx: &Context, app: &mut Kiorg) -> BookmarkAction {
     let mut remove_bookmark_path = None;
 
     // Check for shortcut actions based on input
-    let action = app.get_shortcut_action_from_input(ctx, false);
+    let action = app.get_shortcut_action_from_input(ctx);
 
     if let Some(action) = action {
         match action {
@@ -198,7 +198,7 @@ pub fn show_bookmark_popup(ctx: &Context, app: &mut Kiorg) -> BookmarkAction {
         }
 
         // Handle keyboard navigation
-        let action = app.get_shortcut_action_from_input(ctx, false);
+        let action = app.get_shortcut_action_from_input(ctx);
         if let Some(action) = action {
             match action {
                 ShortcutAction::MoveDown => {

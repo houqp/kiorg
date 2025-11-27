@@ -1,9 +1,9 @@
-use crate::config::shortcuts::{ShortcutAction, shortcuts_helpers};
+use crate::config::shortcuts::ShortcutKey;
+use crate::config::shortcuts::{ShortcutAction, TraverseResult};
 use crate::ui::center_panel;
 use crate::ui::popup::{add_entry, bookmark, file_drop, preview as popup_preview, sort_toggle};
 use crate::ui::terminal;
 use egui::{Key, Modifiers};
-use tracing::error;
 
 use super::app::Kiorg;
 use super::ui::popup::PopupType;
@@ -433,32 +433,21 @@ fn process_key(
         return;
     }
 
-    // Special case for g key to handle key buffer approach
-    let mut namespace = false;
-    match app.key_buffer.first() {
-        Some(k) => {
-            if k == &Key::G {
-                namespace = true;
-            } else {
-                // this should never hapen
-                error!("Unexpected key in key buffer: {:?}", k);
-            }
+    // Add current key with modifiers to buffer for sequence matching
+    app.key_buffer.push(ShortcutKey { key, modifiers });
+
+    match app.get_shortcuts().traverse_tree(&app.key_buffer) {
+        TraverseResult::Action(action) => {
+            app.key_buffer.clear();
+            handle_shortcut_action(app, ctx, &action);
+        }
+        TraverseResult::Partial => {
+            // Keep buffer as is, wait for more keys
+        }
+        TraverseResult::NoMatch => {
+            // No match found, clear the buffer
             app.key_buffer.clear();
         }
-        None => {
-            // First 'g' press, add to buffer and consume the key
-            if key == Key::G && !modifiers.shift {
-                app.key_buffer.push(Key::G);
-                return;
-            }
-        }
-    }
-
-    // Find and handle the action for this key combination
-    let shortcuts = app.get_shortcuts();
-    let action = shortcuts_helpers::find_action(shortcuts, key, modifiers, namespace).copied();
-    if let Some(action) = action {
-        handle_shortcut_action(app, ctx, &action);
     }
 }
 

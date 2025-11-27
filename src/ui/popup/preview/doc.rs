@@ -242,13 +242,14 @@ pub fn handle_preview_popup_input_pdf(
     modifiers: Modifiers,
     ctx: &egui::Context,
 ) {
-    use crate::config::shortcuts::{self, ShortcutAction, shortcuts_helpers};
+    use crate::config::shortcuts::{self, ShortcutAction, ShortcutKey, TraverseResult};
 
     // Get shortcuts from config or use defaults
     let shortcuts = shortcuts::get_default_shortcuts();
 
     // Try to find a matching action for the key combination
-    if let Some(action) = shortcuts_helpers::find_action(shortcuts, key, modifiers, false) {
+    let shortcut_key = ShortcutKey { key, modifiers };
+    if let TraverseResult::Action(action) = shortcuts.traverse_tree(&[shortcut_key]) {
         match action {
             ShortcutAction::PageUp => {
                 handle_page_up(pdf_meta, ctx);
