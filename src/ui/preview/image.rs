@@ -218,7 +218,20 @@ pub fn read_image_with_metadata(
             ImageFormat::Farbfeld => "Farbfeld".to_string(),
             ImageFormat::Avif => "AVIF".to_string(),
             ImageFormat::Qoi => "QOI".to_string(),
-            _ => format!("{format:?}"),
+            _ => {
+                // Handle additional formats from image_extras
+                let format_str = format!("{format:?}");
+                match format_str.as_str() {
+                    "Ora" => "OpenRaster".to_string(),
+                    "Otb" => "OTA Bitmap".to_string(),
+                    "Pcx" => "PCX".to_string(),
+                    "Sgi" => "SGI".to_string(),
+                    "Wbmp" => "Wireless Bitmap".to_string(),
+                    "Xbm" => "X BitMap".to_string(),
+                    "Xpm" => "X PixMap".to_string(),
+                    _ => format_str,
+                }
+            }
         };
         metadata.insert("Format".to_string(), format_name);
 

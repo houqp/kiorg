@@ -77,6 +77,7 @@ bzip2 = "0.6"
 
 # image handling
 image = { version = "0" }
+image-extras = { git = "https://github.com/image-rs/image-extras.git", rev = "fbf3e82f9646cd63e5e6e9dc0555bb781fc5dcd4" }
 kamadak-exif = "0"
 
 # for pdf rendering

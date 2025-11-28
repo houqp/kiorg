@@ -29,6 +29,7 @@ fn init_tracing() {
 
 fn main() -> Result<(), eframe::Error> {
     init_tracing();
+    image_extras::register();
 
     let args = Args::parse();
 

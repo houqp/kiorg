@@ -104,13 +104,9 @@ jobs:
 
     # enable this job for other platforms when we start to run out of disk space
     # on mac or window
-    # NOTE: consider using flink's free disk space script if we need to free up more:
-    # https://github.com/apache/flink/blob/master/tools/azure-pipelines/free_disk_space.sh
     - name: Clean disk space (Linux only)
       if: runner.os == 'Linux'
-      run: |
-        cd /opt
-        find . -maxdepth 1 -mindepth 1 '!' -path ./containerd '!' -path ./actionarchivecache '!' -path ./runner '!' -path ./runner-cache -print0 | xargs -0 -r -P 64 -n 1 rm -rf
+      run: bash .github/workflows/clean_disk_space.sh
 
     - name: Run tests
       run: cargo test
