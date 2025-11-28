@@ -1,8 +1,26 @@
 use crate::config::colors::AppColors;
 use crate::config::shortcuts::{ShortcutAction, Shortcuts, shortcuts_helpers};
-use egui::{self, RichText};
+use egui::{self, RichText, Ui};
 
 use super::popup::window_utils::show_center_popup_window;
+
+// Helper function to render shortcut displays with proper coloring
+fn render_shortcut_display(
+    ui: &mut Ui,
+    action: ShortcutAction,
+    shortcuts: &Shortcuts,
+    colors: &AppColors,
+) {
+    let shortcut_displays = shortcuts_helpers::get_shortcut_display(shortcuts, action);
+    ui.horizontal(|ui| {
+        for (i, shortcut) in shortcut_displays.iter().enumerate() {
+            if i > 0 {
+                ui.label(RichText::new("or").color(colors.fg_light));
+            }
+            ui.label(RichText::new(shortcut).color(colors.highlight));
+        }
+    });
+}
 
 pub fn show_help_window(
     ctx: &egui::Context,
@@ -37,9 +55,7 @@ pub fn show_help_window(
                     ];
 
                     for (action, description) in navigation_actions {
-                        let shortcut_display =
-                            shortcuts_helpers::get_shortcut_display(shortcuts, action);
-                        ui.label(RichText::new(shortcut_display).color(colors.highlight));
+                        render_shortcut_display(ui, action, shortcuts, colors);
                         ui.label(description);
                         ui.end_row();
                     }
@@ -72,9 +88,7 @@ pub fn show_help_window(
                     ];
 
                     for (action, description) in popup_actions {
-                        let shortcut_display =
-                            shortcuts_helpers::get_shortcut_display(shortcuts, action);
-                        ui.label(RichText::new(shortcut_display).color(colors.highlight));
+                        render_shortcut_display(ui, action, shortcuts, colors);
                         ui.label(description);
                         ui.end_row();
                     }
@@ -96,9 +110,7 @@ pub fn show_help_window(
                     ];
 
                     for (action, description) in tab_actions {
-                        let shortcut_display =
-                            shortcuts_helpers::get_shortcut_display(shortcuts, action);
-                        ui.label(RichText::new(shortcut_display).color(colors.highlight));
+                        render_shortcut_display(ui, action, shortcuts, colors);
                         ui.label(description);
                         ui.end_row();
                     }
@@ -155,9 +167,7 @@ pub fn show_help_window(
                         (ShortcutAction::Redo, "Redo last action"),
                     ];
                     for (action, description) in file_actions {
-                        let shortcut_display =
-                            shortcuts_helpers::get_shortcut_display(shortcuts, action);
-                        ui.label(RichText::new(shortcut_display).color(colors.highlight));
+                        render_shortcut_display(ui, action, shortcuts, colors);
                         ui.label(description);
                         ui.end_row();
                     }
@@ -171,9 +181,7 @@ pub fn show_help_window(
                     let search_actions =
                         [(ShortcutAction::ActivateSearch, "Activate search filter")];
                     for (action, description) in search_actions {
-                        let shortcut_display =
-                            shortcuts_helpers::get_shortcut_display(shortcuts, action);
-                        ui.label(RichText::new(shortcut_display).color(colors.highlight));
+                        render_shortcut_display(ui, action, shortcuts, colors);
                         ui.label(description);
                         ui.end_row();
                     }
@@ -203,9 +211,7 @@ pub fn show_help_window(
                         (ShortcutAction::ShowHelp, "Toggle this help window"),
                     ];
                     for (action, description) in util_actions {
-                        let shortcut_display =
-                            shortcuts_helpers::get_shortcut_display(shortcuts, action);
-                        ui.label(RichText::new(shortcut_display).color(colors.highlight));
+                        render_shortcut_display(ui, action, shortcuts, colors);
                         ui.label(description);
                         ui.end_row();
                     }
