@@ -36,7 +36,7 @@ fn load_font_family(family_names: &[&str]) -> Option<Vec<u8>> {
     None
 }
 
-pub fn load_system_fonts(mut fonts: FontDefinitions) -> FontDefinitions {
+fn load_system_fonts(mut fonts: FontDefinitions) -> FontDefinitions {
     debug!("Attempting to load system fonts");
     let mut fontdb = HashMap::new();
 
@@ -114,4 +114,24 @@ pub fn load_system_fonts(mut fonts: FontDefinitions) -> FontDefinitions {
     }
 
     fonts
+}
+
+/// Configure egui context with proper fonts for emoji and system font rendering
+/// This function should be used consistently across the application and tests
+pub fn configure_egui_fonts(ctx: &egui::Context) {
+    let mut fonts = load_system_fonts(egui::FontDefinitions::default());
+
+    // Add Nerd Fonts to both Monospace and Proportional families
+    fonts.font_data.insert(
+        "nerdfonts".into(),
+        egui_nerdfonts::Variant::Regular.font_data().into(),
+    );
+    if let Some(font_keys) = fonts.families.get_mut(&egui::FontFamily::Monospace) {
+        font_keys.push("nerdfonts".into());
+    }
+    if let Some(font_keys) = fonts.families.get_mut(&egui::FontFamily::Proportional) {
+        font_keys.push("nerdfonts".into());
+    }
+
+    ctx.set_fonts(fonts);
 }
