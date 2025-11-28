@@ -357,8 +357,11 @@ impl TestHarnessBuilder {
         let mut harness = Harness::builder()
             .with_size(self.window_size)
             .with_max_steps(20)
-            .build_eframe(|_cc| app);
-        // Run one step to initialize the app
+            .build_eframe(|cc| {
+                // Ensure fonts are configured in the actual test context
+                kiorg::font::configure_egui_fonts(&cc.egui_ctx);
+                app
+            });
         harness.step();
 
         let mut harness = TestHarness {
