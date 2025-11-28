@@ -149,6 +149,8 @@ pub fn show_help_window(
                             ShortcutAction::ToggleBookmark,
                             "Add/remove bookmark for current directory",
                         ),
+                        (ShortcutAction::CopyPath, "Copy full path"),
+                        (ShortcutAction::CopyName, "Copy name"),
                         (ShortcutAction::Undo, "Undo last action"),
                         (ShortcutAction::Redo, "Redo last action"),
                     ];

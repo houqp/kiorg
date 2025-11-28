@@ -272,6 +272,22 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: &Shortcu
             app.tab_manager.toggle_show_hidden();
             app.refresh_entries();
         }
+        ShortcutAction::CopyPath => {
+            let tab = app.tab_manager.current_tab_ref();
+            if let Some(selected_entry) = tab.entries.get(tab.selected_index) {
+                let path_str = selected_entry.path.to_string_lossy().to_string();
+                ctx.output_mut(|o| o.commands.push(egui::OutputCommand::CopyText(path_str)));
+                app.toasts.info("Path copied to system clipboard");
+            }
+        }
+        ShortcutAction::CopyName => {
+            let tab = app.tab_manager.current_tab_ref();
+            if let Some(selected_entry) = tab.entries.get(tab.selected_index) {
+                let name = selected_entry.name.clone();
+                ctx.output_mut(|o| o.commands.push(egui::OutputCommand::CopyText(name)));
+                app.toasts.info("Name copied to system clipboard");
+            }
+        }
     }
 }
 

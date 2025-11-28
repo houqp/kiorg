@@ -286,6 +286,8 @@ pub enum ShortcutAction {
     Exit,
     ToggleRangeSelection,
     ToggleHiddenFiles,
+    CopyPath,
+    CopyName,
 }
 
 // Define a struct for the shortcuts map using a prefix tree
@@ -792,6 +794,11 @@ pub fn default_shortcuts() -> Shortcuts {
         KeyboardShortcut::new("h").with_ctrl(),
         ShortcutAction::ToggleHiddenFiles,
     );
+
+    // Copy operations to system clipboard
+    add_shortcut(KeyboardShortcut::new("cp"), ShortcutAction::CopyPath);
+    add_shortcut(KeyboardShortcut::new("cn"), ShortcutAction::CopyName);
+
     shortcuts
 }
 
