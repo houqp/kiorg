@@ -966,12 +966,12 @@ pub mod shortcuts_helpers {
 
     // Get a human-readable representation of shortcuts for an action
     #[must_use]
-    pub fn get_shortcut_display(shortcuts: &Shortcuts, action: ShortcutAction) -> String {
+    pub fn get_shortcut_display(shortcuts: &Shortcuts, action: ShortcutAction) -> Vec<String> {
         let action_shortcuts = shortcuts
             .get(&action)
             .map_or_else(|| &[], std::vec::Vec::as_slice);
         if action_shortcuts.is_empty() {
-            return String::from("Not assigned");
+            return vec![String::from("Not assigned")];
         }
 
         action_shortcuts
@@ -980,20 +980,26 @@ pub mod shortcuts_helpers {
                 let mut parts = Vec::new();
 
                 if shortcut.ctrl {
+                    #[cfg(target_os = "macos")]
+                    parts.push("⌃".to_string()); // Control symbol
+                    #[cfg(not(target_os = "macos"))]
                     parts.push("Ctrl".to_string());
                 }
 
                 if shortcut.alt {
+                    #[cfg(target_os = "macos")]
+                    parts.push("⌥".to_string()); // Option/Alt symbol
+                    #[cfg(not(target_os = "macos"))]
                     parts.push("Alt".to_string());
                 }
 
                 if shortcut.shift {
-                    parts.push("Shift".to_string());
+                    parts.push("⇧".to_string()); // Shift symbol on all platforms
                 }
 
                 #[cfg(target_os = "macos")]
                 if shortcut.command {
-                    parts.push("Cmd".to_string());
+                    parts.push("⌘".to_string()); // Command symbol
                 }
 
                 // Handle the key display - could be multi-character like "gg" or special keys
@@ -1024,7 +1030,6 @@ pub mod shortcuts_helpers {
 
                 parts.join("+")
             })
-            .collect::<Vec<_>>()
-            .join(" or ")
+            .collect()
     }
 }

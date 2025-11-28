@@ -37,32 +37,36 @@ fn test_arrow_key_display() {
     // Test up arrow display
     let up_display = shortcuts_helpers::get_shortcut_display(&shortcuts, ShortcutAction::MoveUp);
     assert!(
-        up_display.contains("⬆"),
-        "Up arrow should be displayed as ⬆ symbol, got: {up_display}"
+        up_display[0].contains("⬆"),
+        "Up arrow should be displayed as ⬆ symbol, got: {:?}",
+        up_display
     );
 
     // Test down arrow display
     let down_display =
         shortcuts_helpers::get_shortcut_display(&shortcuts, ShortcutAction::MoveDown);
     assert!(
-        down_display.contains("⬇"),
-        "Down arrow should be displayed as ⬇ symbol, got: {down_display}"
+        down_display[0].contains("⬇"),
+        "Down arrow should be displayed as ⬇ symbol, got: {:?}",
+        down_display
     );
 
     // Test left arrow display
     let left_display =
         shortcuts_helpers::get_shortcut_display(&shortcuts, ShortcutAction::GoToParentDirectory);
     assert!(
-        left_display.contains("⬅"),
-        "Left arrow should be displayed as ⬅ symbol, got: {left_display}"
+        left_display[0].contains("⬅"),
+        "Left arrow should be displayed as ⬅ symbol, got: {:?}",
+        left_display
     );
 
     // Test right arrow display
     let right_display =
         shortcuts_helpers::get_shortcut_display(&shortcuts, ShortcutAction::OpenDirectory);
     assert!(
-        right_display.contains("➡"),
-        "Right arrow should be displayed as ➡ symbol, got: {right_display}"
+        right_display[0].contains("➡"),
+        "Right arrow should be displayed as ➡ symbol, got: {:?}",
+        right_display
     );
 }
 
@@ -86,16 +90,18 @@ fn test_special_key_display() {
     let enter_display =
         shortcuts_helpers::get_shortcut_display(&shortcuts, ShortcutAction::OpenDirectoryOrFile);
     assert!(
-        enter_display.contains("Enter"),
-        "Enter key should be displayed as 'Enter', got: {enter_display}"
+        enter_display[0].contains("Enter"),
+        "Enter key should be displayed as 'Enter', got: {:?}",
+        enter_display
     );
 
     // Test space key display
     let space_display =
         shortcuts_helpers::get_shortcut_display(&shortcuts, ShortcutAction::SelectEntry);
     assert!(
-        space_display.contains("Space"),
-        "Space key should be displayed as 'Space', got: {space_display}"
+        space_display[0].contains("Space"),
+        "Space key should be displayed as 'Space', got: {:?}",
+        space_display
     );
 }
 
@@ -118,15 +124,17 @@ fn test_regular_key_display() {
     // Test regular key display
     let a_display = shortcuts_helpers::get_shortcut_display(&shortcuts, ShortcutAction::AddEntry);
     assert_eq!(
-        a_display, "a",
-        "Regular key 'a' should be displayed as 'a', got: {a_display}"
+        a_display[0], "a",
+        "Regular key 'a' should be displayed as 'a', got: {:?}",
+        a_display
     );
 
     let d_display =
         shortcuts_helpers::get_shortcut_display(&shortcuts, ShortcutAction::DeleteEntry);
     assert_eq!(
-        d_display, "d",
-        "Regular key 'd' should be displayed as 'd', got: {d_display}"
+        d_display[0], "d",
+        "Regular key 'd' should be displayed as 'd', got: {:?}",
+        d_display
     );
 }
 
@@ -168,32 +176,55 @@ fn test_shortcut_with_modifiers() {
     let ctrl_c_display =
         shortcuts_helpers::get_shortcut_display(&shortcuts, ShortcutAction::CloseCurrentTab);
     assert_eq!(
-        ctrl_c_display, "Ctrl+c",
-        "Ctrl+C should be displayed as 'Ctrl+c', got: {ctrl_c_display}"
+        ctrl_c_display.len(),
+        1,
+        "Ctrl+C should have exactly one shortcut"
+    );
+    #[cfg(target_os = "macos")]
+    assert_eq!(
+        ctrl_c_display[0], "⌃+c",
+        "Ctrl+C should be displayed as '⌃+c' on macOS, got: {:?}",
+        ctrl_c_display
+    );
+    #[cfg(not(target_os = "macos"))]
+    assert_eq!(
+        ctrl_c_display[0], "Ctrl+c",
+        "Ctrl+C should be displayed as 'Ctrl+c' on non-macOS, got: {:?}",
+        ctrl_c_display
     );
 
     // Test Shift+? display
     let shift_question_display =
         shortcuts_helpers::get_shortcut_display(&shortcuts, ShortcutAction::ShowHelp);
     assert_eq!(
-        shift_question_display, "Shift+?",
-        "Shift+? should be displayed as 'Shift+?', got: {shift_question_display}"
+        shift_question_display[0], "⇧+?",
+        "Shift+? should be displayed as '⇧+?', got: {:?}",
+        shift_question_display
     );
 
     // Test Shift+T display
     let shift_t_display =
         shortcuts_helpers::get_shortcut_display(&shortcuts, ShortcutAction::OpenTerminal);
     assert_eq!(
-        shift_t_display, "Shift+t",
-        "Shift+T should be displayed as 'Shift+t', got: {shift_t_display}"
+        shift_t_display[0], "⇧+t",
+        "Shift+T should be displayed as '⇧+t', got: {:?}",
+        shift_t_display
     );
 
     // Test Ctrl+Shift+Q display
     let ctrl_shift_q_display =
         shortcuts_helpers::get_shortcut_display(&shortcuts, ShortcutAction::Exit);
+    #[cfg(target_os = "macos")]
     assert_eq!(
-        ctrl_shift_q_display, "Ctrl+Shift+q",
-        "Ctrl+Shift+Q should be displayed as 'Ctrl+Shift+q', got: {ctrl_shift_q_display}"
+        ctrl_shift_q_display[0], "⌃+⇧+q",
+        "Ctrl+Shift+Q should be displayed as '⌃+⇧+q' on macOS, got: {:?}",
+        ctrl_shift_q_display
+    );
+    #[cfg(not(target_os = "macos"))]
+    assert_eq!(
+        ctrl_shift_q_display[0], "Ctrl+⇧+q",
+        "Ctrl+Shift+Q should be displayed as 'Ctrl+⇧+q' on non-macOS, got: {:?}",
+        ctrl_shift_q_display
     );
 }
 
@@ -211,15 +242,15 @@ fn test_multiple_shortcuts_display() {
     // Test multiple shortcuts display
     let move_down_display =
         shortcuts_helpers::get_shortcut_display(&shortcuts, ShortcutAction::MoveDown);
-    assert!(
-        move_down_display.contains('j') && move_down_display.contains("⬇"),
-        "Multiple shortcuts should be displayed with separator, got: {move_down_display}"
-    );
 
-    // Check for separator
+    // Check that we have both shortcuts (order might vary)
+    let has_j = move_down_display.iter().any(|s| s == "j");
+    let has_down_arrow = move_down_display.iter().any(|s| s.contains("⬇"));
+
     assert!(
-        move_down_display.contains(" or "),
-        "Multiple shortcuts should be separated by ' or ', got: {move_down_display}"
+        has_j && has_down_arrow,
+        "Multiple shortcuts should include both 'j' and down arrow, got: {:?}",
+        move_down_display
     );
 }
 
@@ -232,7 +263,8 @@ fn test_no_shortcuts_display() {
     let no_shortcut_display =
         shortcuts_helpers::get_shortcut_display(&shortcuts, ShortcutAction::AddEntry);
     assert_eq!(
-        no_shortcut_display, "Not assigned",
-        "Action with no shortcuts should display 'Not assigned', got: {no_shortcut_display}"
+        no_shortcut_display[0], "Not assigned",
+        "Action with no shortcuts should display 'Not assigned', got: {:?}",
+        no_shortcut_display
     );
 }
