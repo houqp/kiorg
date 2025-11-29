@@ -57,7 +57,20 @@ pub fn path_to_ext_info(path: &std::path::Path) -> String {
 #[macro_export]
 macro_rules! image_extensions {
     () => {
-        "jpg" | "jpeg" | "png" | "gif" | "bmp" | "webp" | "svg"
+        "jpg"
+            | "jpeg"
+            | "png"
+            | "gif"
+            | "bmp"
+            | "webp"
+            | "svg"
+            | "ora"
+            | "otb"
+            | "pcx"
+            | "sgi"
+            | "wbmp"
+            | "xbm"
+            | "xpm"
     };
 }
 
