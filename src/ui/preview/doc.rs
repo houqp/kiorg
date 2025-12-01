@@ -3,6 +3,7 @@
 use crate::config::colors::AppColors;
 use crate::models::preview_content::{EpubMeta, PdfMeta, PreviewContent};
 use egui::{RichText, TextureId, Vec2, load::SizedTexture, widgets::ImageSource}; // Corrected import for SizedTexture and ImageSource
+use pathfinder_export::{Export, FileFormat};
 use pathfinder_geometry::transform2d::Transform2F;
 use pdf::file::{NoCache, NoLog};
 use pdf_render::{Cache, SceneBackend, render_page};
@@ -10,6 +11,14 @@ use std::path::Path;
 // Removed unused import: use std::sync::Arc;
 
 const METADATA_KEY_COLUMN_WIDTH: f32 = 100.0;
+
+/// Format PDF date to human-readable string
+fn format_pdf_date(date: &pdf::primitive::Date) -> String {
+    format!(
+        "{}-{}-{} {}:{}:{}",
+        date.year, date.month, date.day, date.hour, date.minute, date.second
+    )
+}
 
 /// Render document content
 pub fn render(
@@ -228,7 +237,10 @@ fn render_pdf_page_with_dpi(
 
     // Get the page for rendering
     let page = file
-        .get_page(page_number as u32)
+        .get_page(
+            u32::try_from(page_number)
+                .map_err(|_| format!("Page number {page_number} is too large"))?,
+        )
         .map_err(|e| format!("Failed to get page {page_number}: {e}"))?;
 
     // Set up rendering with configurable DPI
@@ -246,9 +258,6 @@ fn render_pdf_page_with_dpi(
     let scene = backend.finish();
 
     // Export as SVG for resolution-independent rendering
-    use pathfinder_export::Export;
-    use pathfinder_export::FileFormat;
-
     let mut svg_data = Vec::new();
     scene.export(&mut svg_data, FileFormat::SVG).unwrap();
     let svg_bytes: egui::load::Bytes = svg_data.into();
@@ -256,20 +265,14 @@ fn render_pdf_page_with_dpi(
     // Create a unique texture ID that includes the file identifier, page number, and DPI
     // This ensures that different documents and different DPI levels don't share texture cache entries
     let texture_id = if let Some(id) = file_id {
-        format!(
-            "bytes://pdf_doc_{}_page_{}_dpi_{}.svg",
-            id, page_number, dpi as u32
-        )
+        format!("bytes://pdf_doc_{id}_page_{page_number}_dpi_{dpi}.svg")
     } else {
         // Generate a timestamp-based ID if no file_id is provided
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
             .as_millis();
-        format!(
-            "bytes://pdf_doc_{}_page_{}_dpi_{}.svg",
-            now, page_number, dpi as u32
-        )
+        format!("bytes://pdf_doc_{now}_page_{page_number}_dpi_{dpi}.svg")
     };
 
     let img_source = ImageSource::from((texture_id, svg_bytes));
@@ -296,13 +299,6 @@ pub fn extract_pdf_metadata(path: &Path, _: u32) -> Result<PreviewContent, Strin
     if let Ok(version) = file.version() {
         let version_str = format!("{version:?}").trim_matches('"').to_string();
         metadata.insert("PDF Version".to_string(), version_str);
-    }
-
-    fn format_pdf_date(date: &pdf::primitive::Date) -> String {
-        format!(
-            "{}-{}-{} {}:{}:{}",
-            date.year, date.month, date.day, date.hour, date.minute, date.second
-        )
     }
 
     // Get document info if available
@@ -360,10 +356,11 @@ pub fn extract_pdf_metadata(path: &Path, _: u32) -> Result<PreviewContent, Strin
 
 /// Extract metadata and cover image from an EPUB file and return as `PreviewContent`
 pub fn extract_epub_metadata(path: &Path) -> Result<PreviewContent, String> {
-    use rbook::Epub;
     use rbook::prelude::*;
 
-    let epub = Epub::open_with(path, rbook::epub::EpubSettings::builder().strict(false))
+    let epub = rbook::Epub::options()
+        .strict(false)
+        .open(path)
         .map_err(|e| format!("Failed to open EPUB file: {e}"))?;
 
     let epub_metadata = epub.metadata();
@@ -448,7 +445,7 @@ fn create_cover_image_source(
     identifier: &str,
 ) -> egui::widgets::ImageSource<'static> {
     let extension = href.split('.').next_back().unwrap_or("jpg");
-    let texture_id = format!("bytes://epub_cover_{}.{}", identifier, extension);
+    let texture_id = format!("bytes://epub_cover_{identifier}.{extension}");
     egui::widgets::ImageSource::from((texture_id, cover_data))
 }
 
@@ -456,18 +453,16 @@ fn create_cover_image_source(
 fn try_extract_rbook_cover(epub: &rbook::Epub) -> Option<egui::widgets::ImageSource<'static>> {
     use rbook::prelude::*;
 
-    let identifier = epub
-        .metadata()
-        .identifiers()
-        .next()
-        .map(|id| id.value().to_string())
-        .unwrap_or_else(|| {
+    let identifier = epub.metadata().identifiers().next().map_or_else(
+        || {
             let now = std::time::SystemTime::now();
             let datetime: chrono::DateTime<chrono::Utc> = now.into();
             datetime.format("%Y-%m-%d_%H:%M:%S").to_string()
-        });
+        },
+        |id| id.value().to_string(),
+    );
 
-    epub.cover_image().and_then(|cover_image| {
+    epub.manifest().cover_image().and_then(|cover_image| {
         cover_image.read_bytes().ok().map(|cover_data| {
             let href = cover_image.href().name().decode();
             create_cover_image_source(cover_data, &href, &identifier)

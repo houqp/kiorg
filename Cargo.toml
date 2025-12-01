@@ -37,7 +37,7 @@ clap = { version = "4.5.1", features = ["derive"] }
 notify = "8"
 egui_extras = { version = "0.33", features = ["all_loaders", "syntect"] }
 
-rbook = { git = "https://github.com/houqp/rbook", rev = "56b9afbb93476eaab42f11aa2ef7af4fc405c5ea" }
+rbook = { git = "https://github.com/houqp/rbook", rev = "d5b7e92c86f98cb130ff7d146cd36f15a3f4a459" }
 file_type = "0"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
