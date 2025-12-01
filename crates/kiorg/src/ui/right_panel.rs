@@ -120,6 +120,9 @@ pub fn draw(app: &mut Kiorg, ctx: &egui::Context, ui: &mut Ui, width: f32, heigh
                         }) => {
                             preview::text::render_highlighted(ui, content, language);
                         }
+                        Some(PreviewContent::PluginPreview { ref components }) => {
+                            preview::plugin::render(ui, components, colors, available_width);
+                        }
                         Some(PreviewContent::Image(ref image_meta)) => {
                             preview::image::render(
                                 ui,

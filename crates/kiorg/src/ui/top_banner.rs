@@ -58,6 +58,11 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui) {
                         ui.close();
                     }
 
+                    if ui.button("Plugins").clicked() {
+                        app.show_popup = Some(PopupType::Plugins);
+                        ui.close();
+                    }
+
                     if ui.button("Check for update").clicked() {
                         update::check_for_updates(app);
                         ui.close();
