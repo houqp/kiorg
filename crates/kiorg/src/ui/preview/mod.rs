@@ -155,30 +155,20 @@ pub fn update_cache(app: &mut Kiorg, ctx: &egui::Context) {
 
     // First check if any plugins can handle this file
     let plugin_result = if let Some(file_name) = entry.path.file_name().and_then(|n| n.to_str()) {
-        if let Some(plugin) = app
-            .plugin_manager
-            .get_preview_plugin_for_file_mut(file_name)
-        {
-            // Found a plugin that can handle this file - call it directly
-            Some(plugin.preview_file(&entry.path.to_string_lossy()))
-        } else {
-            None
-        }
+        app.plugin_manager.get_preview_plugin_for_file(file_name)
     } else {
         None
     };
 
-    if let Some(result) = plugin_result {
-        match result {
-            Ok(plugin_content) => {
-                app.preview_content = Some(PreviewContent::plugin_preview(plugin_content));
-                return;
+    if let Some(plugin) = plugin_result {
+        loading::load_preview_async(app, entry.path, move |path| {
+            let result = plugin.preview_file(&path.to_string_lossy());
+            match result {
+                Ok(plugin_content) => Ok(PreviewContent::plugin_preview(plugin_content)),
+                Err(e) => Ok(PreviewContent::text(format!("Plugin error: {}", e))),
             }
-            Err(e) => {
-                app.preview_content = Some(PreviewContent::text(format!("Plugin error: {}", e)));
-                return;
-            }
-        }
+        });
+        return;
     }
 
     let ext = path_to_ext_info(&entry.path);

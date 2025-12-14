@@ -2,7 +2,8 @@
 members = [
     "crates/kiorg",
     "crates/kiorg_plugin",
-    "examples/demo_plugin",
+    "crates/kiorg_plugin/examples/demo_plugin",
+    "plugins/heif",
 ]
 default-members = ["crates/kiorg"]
 resolver = "2"

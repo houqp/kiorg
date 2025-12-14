@@ -2,13 +2,14 @@ use crate::app::Kiorg;
 use crate::config::shortcuts::ShortcutAction;
 use crate::plugins::manager::{FailedPlugin, LoadedPlugin};
 use egui_extras::{Column, TableBuilder};
+use std::sync::Arc;
 
 use super::window_utils::show_center_popup_window;
 
 /// Helper function to display plugins in a table layout
 fn display_plugins_table<'a>(
     ui: &mut egui::Ui,
-    plugins: impl Iterator<Item = (&'a String, &'a LoadedPlugin)>,
+    plugins: impl Iterator<Item = (&'a String, &'a Arc<LoadedPlugin>)>,
     colors: &crate::config::colors::AppColors,
 ) {
     TableBuilder::new(ui)
@@ -37,7 +38,7 @@ fn display_plugins_table<'a>(
             for (plugin_name, plugin) in plugins {
                 body.row(18.0, |mut row| {
                     let (display_name, description, desc_color) =
-                        if let Some(error_msg) = &plugin.error {
+                        if let Some(error_msg) = &plugin.state.lock().unwrap().error {
                             if error_msg.contains("Incompatible protocol version") {
                                 (
                                     format!("🚨 {}", plugin_name),
