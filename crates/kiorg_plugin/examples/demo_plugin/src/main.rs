@@ -7,7 +7,7 @@ use kiorg_plugin::{
     PluginCapabilities, PluginHandler, PluginMetadata, PluginResponse, PreviewCapability,
 };
 
-const ICON_BYTES: &[u8] = include_bytes!("../../../assets/icons/1024x1024@2x.png");
+const ICON_BYTES: &[u8] = include_bytes!("../../../../../assets/icons/1024x1024@2x.png");
 
 struct DemoPlugin {
     metadata: PluginMetadata,
@@ -31,7 +31,7 @@ impl PluginHandler for DemoPlugin {
                     },
                 }),
                 kiorg_plugin::Component::Table(kiorg_plugin::TableComponent {
-                    headers: vec!["Property".to_string(), "Value".to_string()],
+                    headers: Some(vec!["Property".to_string(), "Value".to_string()]),
                     rows: vec![
                         vec![
                             "Plugin Name".to_string(),
@@ -60,7 +60,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             homepage: None,
             capabilities: PluginCapabilities {
                 preview: Some(PreviewCapability {
-                    file_pattern: r"\.txt$".to_string(), // Match files ending with .txt
+                    file_pattern: r"^kiorg$".to_string(), // Match files named "kiorg"
                 }),
             },
         },

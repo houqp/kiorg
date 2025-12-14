@@ -8,4 +8,4 @@ name = "kiorg_plugin_demo"
 path = "src/main.rs"
 
 [dependencies]
-kiorg_plugin = { path = "../../crates/kiorg_plugin" }
+kiorg_plugin = { path = "../.." }

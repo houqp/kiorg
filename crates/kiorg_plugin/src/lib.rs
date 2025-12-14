@@ -154,7 +154,7 @@ pub enum ImageSource {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TableComponent {
-    pub headers: Vec<String>,
+    pub headers: Option<Vec<String>>,
     pub rows: Vec<Vec<String>>,
 }
 

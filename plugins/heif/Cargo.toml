@@ -1,0 +1,14 @@
+[package]
+name = "kiorg_plugin_heif"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "kiorg_plugin_heif"
+path = "src/main.rs"
+
+[dependencies]
+kiorg_plugin = { path = "../../crates/kiorg_plugin" }
+libheif-rs = "2.1"
+image = { version = "0.25", default-features = false, features = ["png"] }
+exif = { package = "kamadak-exif", version = "0.6.1" }
