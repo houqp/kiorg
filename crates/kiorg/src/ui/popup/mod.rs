@@ -11,6 +11,7 @@ pub mod exit;
 pub mod file_drop;
 pub mod generic_message;
 pub mod open_with;
+pub mod plugin;
 pub mod preview;
 pub mod rename;
 pub mod sort_toggle;
@@ -42,6 +43,7 @@ pub enum PopupType {
     Volumes(usize), // Selected index in the volumes list (macOS only)
     Preview,          // Show file preview in a popup window
     Themes(String),   // Selected theme key in the themes list
+    Plugins,          // Show plugins list
     FileDrop(Vec<PathBuf>), // List of dropped files
     Teleport(crate::ui::popup::teleport::TeleportState), // Teleport through visit history
     UpdateConfirm(Release), // Show update confirmation with version info

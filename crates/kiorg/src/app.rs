@@ -19,8 +19,8 @@ use crate::ui::egui_notify::Toasts;
 use crate::ui::popup::delete::DeleteConfirmResult;
 use crate::ui::popup::{
     PopupType, about, action_history, add_entry, bookmark, delete, exit, file_drop,
-    generic_message, open_with as open_with_popup, preview as popup_preview, rename, sort_toggle,
-    teleport, theme,
+    generic_message, open_with as open_with_popup, plugin, preview as popup_preview, rename,
+    sort_toggle, teleport, theme,
 };
 use crate::ui::search_bar::{self, SearchBar};
 use crate::ui::separator;
@@ -186,6 +186,8 @@ pub struct Kiorg {
     pub history_saver: visit_history::HistorySaver,
     // Drag and drop state - currently dragged file
     pub dragged_file: Option<PathBuf>,
+    // Plugin manager for external functionality
+    pub plugin_manager: crate::plugins::PluginManager,
 }
 
 impl Kiorg {
@@ -299,6 +301,19 @@ impl Kiorg {
         // Create async history saver
         let history_saver = visit_history::HistorySaver::new();
 
+        // Initialize plugin system
+        let mut plugin_manager = crate::plugins::PluginManager::new(config_dir_override.as_ref());
+        match plugin_manager.load_plugins() {
+            Ok(()) => {
+                let loaded_plugins = plugin_manager.list_loaded();
+                tracing::info!("Loaded {} plugins", loaded_plugins.len());
+                tracing::debug!("Loaded plugin: {:?}", loaded_plugins.keys());
+            }
+            Err(e) => {
+                tracing::error!("Failed to load plugins: {}", e);
+            }
+        }
+
         let mut app = Self {
             tab_manager,
             bookmarks,
@@ -327,6 +342,7 @@ impl Kiorg {
             visit_history,
             history_saver,
             dragged_file: None,
+            plugin_manager,
         };
 
         app.refresh_entries();
@@ -829,6 +845,12 @@ impl Kiorg {
 
     pub fn persist_app_state(&mut self) {
         self.history_saver.shutdown();
+
+        // Shutdown plugins
+        if let Err(e) = self.plugin_manager.shutdown() {
+            tracing::warn!("Error shutting down plugins: {}", e);
+        }
+
         // Save application state before shutting down
         if let Err(e) = self.save_app_state() {
             self.toasts
@@ -1015,6 +1037,9 @@ impl eframe::App for Kiorg {
             Some(PopupType::Themes(_)) => {
                 theme::draw(self, ctx);
             }
+            Some(PopupType::Plugins) => {
+                plugin::draw(self, ctx);
+            }
             Some(PopupType::FileDrop(_)) => {
                 file_drop::draw(ctx, self);
             }
@@ -1079,6 +1104,7 @@ impl eframe::App for Kiorg {
         if self.shutdown_requested {
             self.persist_app_state();
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+            self.shutdown_requested = false;
         }
 
         // Draw toast notifications

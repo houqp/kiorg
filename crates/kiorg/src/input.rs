@@ -386,9 +386,10 @@ fn process_key(
                 return;
             }
         }
-        Some(PopupType::Themes(_) | PopupType::Bookmarks(_)) => {
+        Some(PopupType::Themes(_) | PopupType::Bookmarks(_) | PopupType::Plugins) => {
             // Theme popup input is handled in the popup itself
             // Bookmark popup input is handled in show_bookmark_popup
+            // Plugins popup input is handled in the popup itself
             return;
         }
         #[cfg(target_os = "windows")]

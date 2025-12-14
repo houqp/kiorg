@@ -1,125 +1,14 @@
-[package]
-name = "kiorg"
-version = "1.2.4"
-edition = "2024"
-authors = ["houqp"]
-repository = "https://github.com/houqp/kiorg"
-description = "A hacker's file manager with VIM inspired keybind"
-license = "MIT"
-keywords = ["file-manager", "gui", "productivity", "rust", "egui"]
-categories = ["filesystem", "gui", "command-line-utilities"]
+[workspace]
+members = [
+    "crates/kiorg",
+    "crates/kiorg_plugin",
+    "examples/demo_plugin",
+]
+default-members = ["crates/kiorg"]
+resolver = "2"
 
-[features]
-debug = []
-testing = []
-snapshot = ["egui_kittest/snapshot", "egui_kittest/wgpu"]
-
-[lib]
-name = "kiorg"
-path = "src/lib.rs"
-
-[[bin]]
-name = "kiorg"
-path = "src/main.rs"
-
-[dependencies]
-eframe = "0.33"
-egui = { version = "0.33", features = ["accesskit", "rayon", "color-hex"] }
-font-kit = "0"
-chrono = "0"
-humansize = "2.1.3"
-toml = "0"
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-dirs = "6"
-open = "5"
-clap = { version = "4.5.1", features = ["derive"] }
-notify = "8"
-egui_extras = { version = "0.33", features = ["all_loaders", "syntect"] }
-
-rbook = { git = "https://github.com/houqp/rbook", rev = "d5b7e92c86f98cb130ff7d146cd36f15a3f4a459" }
-file_type = "0"
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-nucleo = "0.5.0"
-zip = { version = "6", default-features = false, features = [
-    "aes-crypto",
-    "bzip2",
-    "deflate64",
-    "deflate",
-    "ppmd",
-    "time",
-    "zstd",
-    # disable lzma and xz to avoid dynamic linking to system liblzma
-    # "lzma",
-    # "xz",
-] }
-
-self_update = { version = "0.42", features = ["rustls"] }
-self-replace = "1"
-tempfile = "3"
-ureq = "2"
-semver = "1.0"
-
-# code highlight
-yazi-prebuilt = { version = "0.1.0" }
-syntect = { version = "5", default-features = false, features = [
-    "parsing",
-    "plist-load",
-    "regex-onig",
-] }
-
-# tar handling
-tar = "0.4"
-# maximum performance while still benefiting from a Rust implementation at the cost of some unsafe
-flate2 = { version = "1", features = ["zlib-rs"], default-features = false }
-bzip2 = "0.6"
-
-# image handling
-image = { version = "0" }
-image-extras = { git = "https://github.com/image-rs/image-extras.git", rev = "fbf3e82f9646cd63e5e6e9dc0555bb781fc5dcd4" }
-kamadak-exif = "0"
-
-# for pdf rendering
-pdf_render = { git = "https://github.com/houqp/pdf_render.git", rev = "00b907936e45d904f958197fa6039320d0ac098d", features = [
-    "embed",
-] }
-pdf = { git = "https://github.com/pdf-rs/pdf" }
-pathfinder_geometry = { git = "https://github.com/houqp/pathfinder", rev = "c82663778404c74c0d2cceb42a99b41f6e48e1e4" }
-pathfinder_export = { git = "https://github.com/houqp/pathfinder", rev = "c82663778404c74c0d2cceb42a99b41f6e48e1e4" }
-# pathfinder_rasterize = { git = "https://github.com/s3bk/pathfinder_rasterizer" }
-
-egui_nerdfonts = { git = "https://github.com/houqp/egui_nerdfonts", rev = "6f540170520692ccf1a7d89aee94aea61c89da07" }
-[target.'cfg(not(target_os = "windows"))'.dependencies]
-egui_term = { git = "https://github.com/houqp/egui_term.git", rev = "18b9fa7524b98c6330885b65040ec5b4fd43d13f" }
-
-[target.'cfg(target_os = "windows")'.dependencies]
-windows-sys = { version = "0.61.2", features = [
-    "Win32_Foundation",
-    "Win32_Storage_FileSystem",
-] }
-
-[[bench]]
-name = "center_panel_bench"
-harness = false
-
-[[bench]]
-name = "top_banner_bench"
-harness = false
-
-[dev-dependencies]
-criterion = "0.5"
-egui_kittest = { version = "0.33", features = ["eframe"] }
-kiorg = { path = ".", features = ["testing"] }
-windows-sys = { version = "0.61.0", features = [
-    "Win32_Foundation",
-    "Win32_Storage_FileSystem",
-] }
-
-[package.metadata.bundle]
-name = "Kiorg"
-icon = ["assets/icons/1024x1024@2x.png"]
-osx_url_schemes = ["com.kiorg.kiorg"]
+[workspace.dependencies]
+kiorg_plugin = { path = "crates/kiorg_plugin" }
 
 [patch.'https://github.com/servo/pathfinder']
 pathfinder_geometry = { git = "https://github.com/houqp/pathfinder", rev = "c82663778404c74c0d2cceb42a99b41f6e48e1e4" }

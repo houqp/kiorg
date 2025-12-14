@@ -95,6 +95,10 @@ pub enum PreviewContent {
         content: String,
         language: &'static str,
     },
+    /// Plugin-generated preview content
+    PluginPreview {
+        components: Vec<kiorg_plugin::Component>,
+    },
     /// Image content with metadata
     Image(ImageMeta),
     /// Zip file content with a list of entries
@@ -148,6 +152,11 @@ impl PreviewContent {
     /// Creates a new text preview content
     pub fn text(content: impl Into<String>) -> Self {
         Self::Text(content.into())
+    }
+
+    /// Creates a new plugin preview content
+    pub fn plugin_preview(components: Vec<kiorg_plugin::Component>) -> Self {
+        Self::PluginPreview { components }
     }
 
     /// Creates a new image preview content with a texture handle
