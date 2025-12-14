@@ -22,6 +22,7 @@ bindings. It is built using the [egui](https://www.egui.rs/#demo) framework.
 * Single self-contained binary with battery included
 * Builtin terminal emulator
 * App state persistence
+* Language agnostic plugin system
 
 ## Screenshots
 
