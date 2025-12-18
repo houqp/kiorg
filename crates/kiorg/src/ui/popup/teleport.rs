@@ -1,9 +1,20 @@
 use crate::app::Kiorg;
 use crate::ui::popup::PopupType;
+use crate::ui::popup::fuzzy_search_popup::{
+    FuzzyMatchResult, FuzzySearchAction, FuzzySearchItem, FuzzySearchPopupConfig, FuzzySearchState,
+};
 use crate::visit_history::VisitHistoryEntry;
-use egui::{self, Align, Color32, Key, Layout, Shadow, TextEdit, Vec2};
 use nucleo::{Config as NucleoConfig, Matcher, Utf32Str};
+use std::borrow::Cow;
 use std::path::PathBuf;
+
+static POPUP_CONFIG: FuzzySearchPopupConfig = FuzzySearchPopupConfig {
+    title: "Teleport",
+    search_hint: "Teleport to directory...",
+    empty_message: "No visit history available",
+    no_match_message: "No matching directories found",
+    max_visible_results: Some(10),
+};
 
 /// State for the teleport popup
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -23,22 +34,35 @@ impl Default for TeleportState {
     }
 }
 
-/// Represents a search result with fuzzy matching score
+/// Represents a search result with visit history data
 #[derive(Debug, Clone)]
-pub struct SearchResult {
-    pub path: PathBuf,
-    pub score: u16,
+pub struct TeleportSearchResult {
     pub entry: VisitHistoryEntry,
 }
 
-/// Filter and sort visit history based on fuzzy search query
-pub fn get_search_results(
+impl FuzzySearchItem for TeleportSearchResult {
+    fn display_text(&self) -> Cow<'_, str> {
+        self.entry.path.to_string_lossy()
+    }
+
+    fn secondary_text(&self) -> Option<Cow<'_, str>> {
+        None
+    }
+
+    fn search_text(&self) -> Cow<'_, str> {
+        self.entry.path.to_string_lossy()
+    }
+}
+
+/// Filter and sort visit history based on fuzzy search query.
+/// This uses custom sorting logic based on access count and timestamp.
+fn get_search_results(
     query: &str,
     visit_history: &std::collections::HashMap<PathBuf, VisitHistoryEntry>,
-) -> Vec<SearchResult> {
+) -> Vec<FuzzyMatchResult<TeleportSearchResult>> {
     // If query is empty, just return all directories sorted by access count
     if query.is_empty() {
-        let mut results: Vec<SearchResult> = visit_history
+        let mut results: Vec<FuzzyMatchResult<TeleportSearchResult>> = visit_history
             .iter()
             .filter_map(|(path, entry)| {
                 // Only include directories that still exist
@@ -46,20 +70,22 @@ pub fn get_search_results(
                     return None;
                 }
 
-                Some(SearchResult {
-                    path: path.clone(),
+                Some(FuzzyMatchResult {
+                    item: TeleportSearchResult {
+                        entry: entry.clone(),
+                    },
                     score: 0, // Score not relevant for empty query
-                    entry: entry.clone(),
                 })
             })
             .collect();
 
         // Sort by access count (descending), then by recent access (descending)
         results.sort_by(|a, b| {
-            b.entry
+            b.item
+                .entry
                 .count
-                .cmp(&a.entry.count)
-                .then_with(|| b.entry.accessed_ts.cmp(&a.entry.accessed_ts))
+                .cmp(&a.item.entry.count)
+                .then_with(|| b.item.entry.accessed_ts.cmp(&a.item.entry.accessed_ts))
         });
 
         return results;
@@ -75,7 +101,7 @@ pub fn get_search_results(
     let needle = query.to_lowercase();
     let needle_utf32 = Utf32Str::new(&needle, &mut needle_buf);
 
-    let mut results: Vec<SearchResult> = visit_history
+    let mut results: Vec<FuzzyMatchResult<TeleportSearchResult>> = visit_history
         .iter()
         .filter_map(|(path, entry)| {
             // Only include directories that still exist
@@ -89,10 +115,11 @@ pub fn get_search_results(
 
             matcher
                 .fuzzy_match(haystack_utf32, needle_utf32)
-                .map(|score| SearchResult {
-                    path: path.clone(),
+                .map(|score| FuzzyMatchResult {
+                    item: TeleportSearchResult {
+                        entry: entry.clone(),
+                    },
                     score,
-                    entry: entry.clone(),
                 })
         })
         .collect();
@@ -101,8 +128,8 @@ pub fn get_search_results(
     results.sort_by(|a, b| {
         b.score
             .cmp(&a.score)
-            .then_with(|| b.entry.count.cmp(&a.entry.count))
-            .then_with(|| b.entry.accessed_ts.cmp(&a.entry.accessed_ts))
+            .then_with(|| b.item.entry.count.cmp(&a.item.entry.count))
+            .then_with(|| b.item.entry.accessed_ts.cmp(&a.item.entry.accessed_ts))
     });
 
     results
@@ -116,177 +143,36 @@ pub fn draw(ctx: &egui::Context, app: &mut Kiorg) {
         return;
     };
 
-    let mut keep_open = true;
-    let mut navigate_to: Option<PathBuf> = None;
-    let mut new_state = state.clone();
+    let mut fuzzy_state = FuzzySearchState::new(state.query.clone());
+    fuzzy_state.selected_index = state.selected_index;
 
-    // Create shadow similar to search bar
-    let shadow = Shadow {
-        offset: [0, 4],                       // 4px downward shadow
-        blur: 12,                             // 12px blur
-        spread: 0,                            // No spread
-        color: Color32::from_black_alpha(60), // Semi-transparent black shadow
-    };
+    // Get search results with custom sorting
+    let results = get_search_results(&fuzzy_state.query, &app.visit_history);
 
-    egui::Window::new("Teleport")
-        .title_bar(false)
-        .resizable(false)
-        .anchor(egui::Align2::CENTER_CENTER, Vec2::ZERO)
-        .frame(
-            egui::Frame::default()
-                .fill(app.colors.bg_extreme)
-                .inner_margin(8.0)
-                .shadow(shadow),
-        )
-        .show(ctx, |ui| {
-            let popup_height = ui.available_height() - 60.0;
-            ui.set_min_width(600.0);
-            ui.set_max_width(ui.available_width() - 100.0);
-            ui.set_min_height(popup_height); // Set a fixed minimum height
-            ui.set_max_height(popup_height); // Set a fixed minimum height
+    let action = crate::ui::popup::fuzzy_search_popup::draw(
+        ctx,
+        &POPUP_CONFIG,
+        &app.colors,
+        &mut fuzzy_state,
+        &results,
+    );
 
-            // Limit the number of visible results
-            let max_visible_results = 10;
-
-            // Search results
-            let results = get_search_results(&new_state.query, &app.visit_history);
-
-            // Handle keyboard input
-            ctx.input(|i| {
-                for event in &i.events {
-                    if let egui::Event::Key {
-                        key, pressed: true, ..
-                    } = event
-                    {
-                        match *key {
-                            Key::Escape => {
-                                keep_open = false;
-                            }
-                            Key::Enter => {
-                                // Navigate to selected result
-                                let visible_count = results.len().min(max_visible_results);
-                                if !results.is_empty() && new_state.selected_index < visible_count {
-                                    navigate_to =
-                                        Some(results[new_state.selected_index].path.clone());
-                                    keep_open = false;
-                                }
-                            }
-                            Key::ArrowDown => {
-                                if !results.is_empty() {
-                                    let max_index = (results.len().min(max_visible_results)) - 1;
-                                    new_state.selected_index =
-                                        (new_state.selected_index + 1).min(max_index);
-                                }
-                            }
-                            Key::ArrowUp => {
-                                if new_state.selected_index > 0 {
-                                    new_state.selected_index -= 1;
-                                }
-                            }
-                            _ => {}
-                        }
-                    }
-                }
-            });
-
-            // Search input
-            ui.horizontal(|ui| {
-                let response = ui.add(
-                    TextEdit::singleline(&mut new_state.query)
-                        .hint_text("Teleport to directory...")
-                        .desired_width(f32::INFINITY)
-                        .frame(false),
-                );
-
-                if new_state.focus_input {
-                    response.request_focus();
-                    new_state.focus_input = false;
-                }
-
-                // Reset selection when query changes
-                if new_state.query != state.query {
-                    new_state.selected_index = 0;
-                }
-
-                // Close button
-                if ui.button("×").clicked() {
-                    keep_open = false;
-                }
-            });
-
-            ui.separator();
-
-            if results.is_empty() {
-                ui.centered_and_justified(|ui| {
-                    if app.visit_history.is_empty() {
-                        ui.label("No visit history available");
-                    } else {
-                        ui.label("No matching directories found");
-                    }
-                });
-                return;
-            }
-
-            egui::ScrollArea::vertical()
-                .max_height(popup_height) // Fixed height to keep popup size constant
-                .show(ui, |ui| {
-                    for (index, result) in results.iter().take(max_visible_results).enumerate() {
-                        let is_selected = index == new_state.selected_index;
-
-                        let (bg_color, text_color) = if is_selected {
-                            (app.colors.bg_selected, app.colors.fg_selected)
-                        } else {
-                            (Color32::TRANSPARENT, app.colors.fg)
-                        };
-
-                        let response = ui.allocate_response(
-                            Vec2::new(ui.available_width(), 30.0),
-                            egui::Sense::click(),
-                        );
-
-                        if response.clicked() {
-                            navigate_to = Some(result.path.clone());
-                            keep_open = false;
-                        }
-
-                        // Handle mouse hover
-                        if response.hovered() {
-                            new_state.selected_index = index;
-                        }
-
-                        // Draw background
-                        if is_selected || response.hovered() {
-                            ui.painter().rect_filled(response.rect, 0.0, bg_color);
-                        }
-
-                        // Draw content
-                        let mut content_ui = ui.new_child(
-                            egui::UiBuilder::new()
-                                .max_rect(response.rect)
-                                .layout(Layout::left_to_right(Align::Center)),
-                        );
-                        content_ui.horizontal(|ui| {
-                            ui.add_space(8.0);
-                            // Path
-                            ui.label(
-                                egui::RichText::new(result.path.to_string_lossy())
-                                    .color(text_color)
-                                    .size(14.0),
-                            );
-                        });
-                    }
-                });
-        });
-
-    // Update the popup state
-    if keep_open {
-        app.show_popup = Some(PopupType::Teleport(new_state));
-    } else {
-        app.show_popup = None;
-    }
-
-    // Navigate if a path was selected
-    if let Some(path) = navigate_to {
-        app.navigate_to_dir(path);
+    match action {
+        FuzzySearchAction::KeepOpen => {
+            // Update the popup state
+            let new_state = TeleportState {
+                query: fuzzy_state.query,
+                selected_index: fuzzy_state.selected_index,
+                focus_input: false,
+            };
+            app.show_popup = Some(PopupType::Teleport(new_state));
+        }
+        FuzzySearchAction::Close => {
+            app.show_popup = None;
+        }
+        FuzzySearchAction::Selected(result) => {
+            app.show_popup = None;
+            app.navigate_to_dir(result.entry.path);
+        }
     }
 }

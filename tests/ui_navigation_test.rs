@@ -597,20 +597,22 @@ fn test_ui_navigation_open_with_functionality() {
     // Verify the popup is open
     assert!(matches!(
         harness.state().show_popup,
-        Some(PopupType::OpenWith(_))
+        Some(PopupType::OpenWith)
     ));
 
     // Now simulate entering a command and confirming it
     let test_command = "vim";
 
-    // Set the command in the popup
-    if let Some(PopupType::OpenWith(ref mut command)) = harness.state_mut().show_popup {
-        *command = test_command.to_string();
+    // Type the command by sending text input events
+    for ch in test_command.chars() {
+        harness.input_mut().events.push(egui::Event::Text(ch.to_string()));
     }
+    harness.step();
 
-    // Simulate confirming the open_with command by calling confirm_open_with directly
-    // since Enter key handling is complex in the popup context
+    // Press Enter to confirm
     harness.key_press(Key::Enter);
+    harness.step();
+    
     let open_with_calls = {
         // Acquire test serialization lock to prevent interference from other tests
         let _lock = acquire_open_test_lock();
@@ -692,7 +694,7 @@ fn test_ui_navigation_open_with_empty_command() {
     assert!(
         matches!(
             harness.state().show_popup,
-            Some(kiorg::ui::popup::PopupType::OpenWith(_))
+            Some(kiorg::ui::popup::PopupType::OpenWith)
         ),
         "Open with popup should still be open after empty command (error case)"
     );

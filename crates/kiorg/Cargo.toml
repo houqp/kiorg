@@ -24,6 +24,7 @@ path = "src/main.rs"
 
 [dependencies]
 kiorg_plugin = { path = "../kiorg_plugin" }
+mimeapps = { path = "../mimeapps" }
 
 eframe = "0.33"
 egui = { version = "0.33", features = ["accesskit", "rayon", "color-hex"] }
@@ -99,6 +100,12 @@ egui_nerdfonts = { git = "https://github.com/houqp/egui_nerdfonts", rev = "6f540
 
 [target.'cfg(not(target_os = "windows"))'.dependencies]
 egui_term = { git = "https://github.com/houqp/egui_term.git", rev = "18b9fa7524b98c6330885b65040ec5b4fd43d13f" }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.5.2"
+objc2-app-kit = { version = "0.2.2", features = ["NSWorkspace", "NSRunningApplication"] }
+objc2-foundation = { version = "0.2.2", features = ["NSURL", "NSString", "NSArray", "NSFileManager"] }
+objc2-uniform-type-identifiers = { version = "0.2.2", features = ["UTType"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows-sys = { version = "0.61.2", features = [

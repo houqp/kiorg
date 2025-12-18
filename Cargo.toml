@@ -2,6 +2,7 @@
 members = [
     "crates/kiorg",
     "crates/kiorg_plugin",
+    "crates/mimeapps",
     "crates/kiorg_plugin/examples/demo_plugin",
     "plugins/heif",
 ]
@@ -10,6 +11,7 @@ resolver = "2"
 
 [workspace.dependencies]
 kiorg_plugin = { path = "crates/kiorg_plugin" }
+mimeapps = { path = "crates/mimeapps" }
 
 [patch.'https://github.com/servo/pathfinder']
 pathfinder_geometry = { git = "https://github.com/houqp/pathfinder", rev = "c82663778404c74c0d2cceb42a99b41f6e48e1e4" }

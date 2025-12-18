@@ -9,6 +9,7 @@ pub mod bookmark;
 pub mod delete;
 pub mod exit;
 pub mod file_drop;
+pub mod fuzzy_search_popup;
 pub mod generic_message;
 pub mod open_with;
 pub mod plugin;
@@ -16,6 +17,7 @@ pub mod preview;
 pub mod rename;
 pub mod sort_toggle;
 pub mod teleport;
+pub mod text_input_popup;
 pub mod theme;
 pub mod utils;
 #[cfg(target_os = "macos")]
@@ -34,7 +36,7 @@ pub enum PopupType {
     Delete(crate::ui::popup::delete::DeleteConfirmState, Vec<PathBuf>),
     DeleteProgress(crate::ui::popup::delete::DeleteProgressData),
     Rename(String),   // New name for the file/directory being renamed
-    OpenWith(String), // Command to use when opening a file with a custom command
+    OpenWith,         // Open file with custom command popup
     AddEntry(String), // Name for the new file/directory being added
     Bookmarks(usize), // Selected index in the bookmarks list
     #[cfg(target_os = "windows")]
