@@ -983,7 +983,7 @@ impl eframe::App for Kiorg {
             Some(PopupType::Rename(_)) => {
                 rename::draw(ctx, self);
             }
-            Some(PopupType::OpenWith(_)) => {
+            Some(PopupType::OpenWith) => {
                 open_with_popup::draw(ctx, self);
             }
             Some(PopupType::AddEntry(_)) => {

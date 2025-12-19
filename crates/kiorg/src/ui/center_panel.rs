@@ -575,7 +575,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
             let tab = app.tab_manager.current_tab_ref();
             if let Some(_selected_entry) = tab.selected_entry() {
                 // Now works for both files and directories
-                app.show_popup = Some(PopupType::OpenWith(String::new()));
+                app.show_popup = Some(PopupType::OpenWith);
             }
         }
         ContextMenuAction::None => {} // Do nothing

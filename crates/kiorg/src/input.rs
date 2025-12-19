@@ -252,7 +252,7 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: &Shortcu
             if let Some(_selected_entry) = tab.selected_entry() {
                 // Show the open with popup with an empty command string
                 // Now works for both files and directories
-                app.show_popup = Some(PopupType::OpenWith(String::new()));
+                app.show_popup = Some(PopupType::OpenWith);
             }
         }
         ShortcutAction::PageUp => app.move_selection_by_page(-1),
@@ -350,12 +350,8 @@ fn process_key(
             }
             return;
         }
-        Some(PopupType::OpenWith(cmd)) => {
-            if key == Key::Enter {
-                crate::ui::popup::open_with::confirm_open_with(app, cmd.clone());
-            } else if key == Key::Escape {
-                crate::ui::popup::open_with::close_popup(app);
-            }
+        Some(PopupType::OpenWith) => {
+            // OpenWith popup handles its own input - just return
             return;
         }
         Some(PopupType::Help) => {
