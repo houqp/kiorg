@@ -1,0 +1,25 @@
+[package]
+name = "pdfium-bind"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85"
+
+[dependencies]
+link-cplusplus = "1"
+libloading = "0"
+tempfile = { version = "3", optional = true }
+
+[build-dependencies]
+bindgen = "0.72"
+ureq = "2"
+flate2 = "1"
+tar = "0"
+sha2 = "0.10"
+
+[dev-dependencies]
+tempfile = "3"
+
+[features]
+default = ["dynamic"]
+static = []
+dynamic = ["tempfile"]

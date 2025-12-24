@@ -5,6 +5,7 @@ members = [
     "crates/mimeapps",
     "crates/kiorg_plugin/examples/demo_plugin",
     "plugins/heif",
+    "crates/pdfium-bind",
 ]
 default-members = ["crates/kiorg"]
 resolver = "2"
@@ -12,12 +13,3 @@ resolver = "2"
 [workspace.dependencies]
 kiorg_plugin = { path = "crates/kiorg_plugin" }
 mimeapps = { path = "crates/mimeapps" }
-
-[patch.'https://github.com/servo/pathfinder']
-pathfinder_geometry = { git = "https://github.com/houqp/pathfinder", rev = "c82663778404c74c0d2cceb42a99b41f6e48e1e4" }
-pathfinder_gpu = { git = "https://github.com/houqp/pathfinder", rev = "c82663778404c74c0d2cceb42a99b41f6e48e1e4" }
-pathfinder_content = { git = "https://github.com/houqp/pathfinder", rev = "c82663778404c74c0d2cceb42a99b41f6e48e1e4" }
-pathfinder_color = { git = "https://github.com/houqp/pathfinder", rev = "c82663778404c74c0d2cceb42a99b41f6e48e1e4" }
-pathfinder_renderer = { git = "https://github.com/houqp/pathfinder", rev = "c82663778404c74c0d2cceb42a99b41f6e48e1e4" }
-pathfinder_resources = { git = "https://github.com/houqp/pathfinder", rev = "c82663778404c74c0d2cceb42a99b41f6e48e1e4" }
-pathfinder_simd = { git = "https://github.com/houqp/pathfinder", rev = "c82663778404c74c0d2cceb42a99b41f6e48e1e4" }

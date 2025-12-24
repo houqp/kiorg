@@ -1,3 +1,4 @@
+use pdfium_bind::PdfDocument;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::mpsc::Receiver;
@@ -18,13 +19,14 @@ pub struct PdfMeta {
     pub metadata: HashMap<String, String>,
     /// Cover image or first page
     pub cover: egui::widgets::ImageSource<'static>,
+    /// Keep the texture handle alive to prevent GPU texture from being freed
+    pub _texture_handle: Option<egui::TextureHandle>,
     /// Current page number (0-indexed)
-    pub current_page: usize,
+    pub current_page: isize,
     /// Total number of pages in the PDF
-    pub page_count: usize,
+    pub page_count: isize,
     /// Cached PDF file object to avoid reopening and parsing on every page navigation
-    pub pdf_file:
-        Arc<pdf::file::File<Vec<u8>, pdf::file::NoCache, pdf::file::NoCache, pdf::file::NoLog>>,
+    pub pdf_file: Arc<Mutex<PdfDocument>>,
 }
 
 impl std::fmt::Debug for PdfMeta {
@@ -34,10 +36,42 @@ impl std::fmt::Debug for PdfMeta {
             .field("title", &self.title)
             .field("metadata", &self.metadata)
             .field("cover", &"<ImageSource>")
+            .field(
+                "_texture_handle",
+                &self._texture_handle.as_ref().map(|_| "TextureHandle"),
+            )
             .field("current_page", &self.current_page)
             .field("page_count", &self.page_count)
             .field("pdf_file", &"<PDF File>")
             .finish()
+    }
+}
+
+impl PdfMeta {
+    pub fn render_page(&mut self, ctx: &egui::Context) -> Result<(), String> {
+        // Render the new page using cached file
+        let (img_source, texture_handle) = crate::ui::preview::doc::render_pdf_page_high_dpi(
+            &self.pdf_file.lock().expect("failed to lock pdf_file"),
+            self.current_page,
+            Some(&self.file_id),
+            ctx,
+        )?;
+
+        self.cover = img_source;
+        self._texture_handle = Some(texture_handle);
+        Ok(())
+    }
+
+    #[inline]
+    pub fn page_input_id(&self) -> egui::Id {
+        egui::Id::new(format!("pdf_page_input_{}", &self.file_id))
+    }
+
+    pub fn update_page_num_text(&self, ctx: &egui::Context) {
+        let input_id = self.page_input_id();
+        // in the UI, we display the first page as 1 instead of 0
+        let new_text = (self.current_page + 1).to_string();
+        ctx.data_mut(|d| d.insert_temp(input_id, new_text));
     }
 }
 
@@ -51,7 +85,7 @@ pub struct EpubMeta {
     /// Cover image or first page
     pub cover: egui::widgets::ImageSource<'static>,
     /// Total number of pages in the EPUB
-    pub page_count: usize,
+    pub page_count: isize,
 }
 
 /// Metadata for image files
@@ -222,12 +256,11 @@ impl PreviewContent {
     #[must_use]
     pub fn pdf_with_file(
         image: egui::widgets::ImageSource<'static>,
+        texture_handle: Option<egui::TextureHandle>,
         metadata: HashMap<String, String>,
         title: Option<String>,
-        page_count: usize,
-        pdf_file: Arc<
-            pdf::file::File<Vec<u8>, pdf::file::NoCache, pdf::file::NoCache, pdf::file::NoLog>,
-        >,
+        page_count: isize,
+        pdf_file: Arc<Mutex<PdfDocument>>,
         file_path: &std::path::Path,
     ) -> Self {
         // Use provided title or default
@@ -240,6 +273,7 @@ impl PreviewContent {
             title,
             metadata,
             cover: image,
+            _texture_handle: texture_handle,
             current_page: 0,
             page_count,
             pdf_file,
@@ -251,7 +285,7 @@ impl PreviewContent {
     pub fn epub(
         mut metadata: HashMap<String, String>,
         cover_image: egui::widgets::ImageSource<'static>,
-        page_count: usize,
+        page_count: isize,
     ) -> Self {
         let title = Self::extract_epub_book_title(&metadata);
         // Remove title keys from metadata since we've extracted the title

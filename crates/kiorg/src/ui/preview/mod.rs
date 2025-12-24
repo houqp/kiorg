@@ -195,8 +195,9 @@ pub fn update_cache(app: &mut Kiorg, ctx: &egui::Context) {
             loading::load_preview_async(app, entry.path, |path| doc::extract_epub_metadata(&path));
         }
         pdf_extensions!() => {
-            loading::load_preview_async(app, entry.path, |path| {
-                doc::extract_pdf_metadata(&path, 0)
+            let ctx_clone = ctx.clone();
+            loading::load_preview_async(app, entry.path, move |path| {
+                doc::extract_pdf_metadata(&path, &ctx_clone)
             });
         }
         // All other files
