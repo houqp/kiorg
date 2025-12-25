@@ -843,7 +843,7 @@ impl Kiorg {
         }
     }
 
-    pub fn persist_app_state(&mut self) {
+    pub fn graceful_shutdown(&mut self) {
         self.history_saver.shutdown();
 
         // Shutdown plugins
@@ -856,6 +856,8 @@ impl Kiorg {
             self.toasts
                 .error(format!("Failed to save application state: {e}"));
         }
+
+        pdfium_bind::cleanup_cache();
     }
 
     fn save_app_state(&self) -> Result<(), Box<dyn std::error::Error>> {
@@ -1102,7 +1104,7 @@ impl eframe::App for Kiorg {
         search_bar::draw(ctx, self);
 
         if self.shutdown_requested {
-            self.persist_app_state();
+            self.graceful_shutdown();
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
             self.shutdown_requested = false;
         }

@@ -351,7 +351,11 @@ fn process_key(
             return;
         }
         Some(PopupType::OpenWith) => {
-            // OpenWith popup handles its own input - just return
+            if key == Key::Enter {
+                crate::ui::popup::open_with::handle_confirm(app, ctx);
+            } else if is_cancel_keys(key) {
+                crate::ui::popup::open_with::handle_cancel(app, ctx);
+            }
             return;
         }
         Some(PopupType::Help) => {

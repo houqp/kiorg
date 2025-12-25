@@ -56,7 +56,7 @@ impl FuzzySearchItem for TeleportSearchResult {
 
 /// Filter and sort visit history based on fuzzy search query.
 /// This uses custom sorting logic based on access count and timestamp.
-fn get_search_results(
+pub fn get_search_results(
     query: &str,
     visit_history: &std::collections::HashMap<PathBuf, VisitHistoryEntry>,
 ) -> Vec<FuzzyMatchResult<TeleportSearchResult>> {

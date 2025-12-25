@@ -291,14 +291,15 @@ fn main() {
             (include_dir, dynamic_lib_path)
         } else {
             let (include_dir, lib_dir) = download_dynlib();
-            let lib_name = if cfg!(target_os = "macos") {
-                "libpdfium.dylib"
+            let lib_path = if cfg!(target_os = "macos") {
+                lib_dir.join("libpdfium.dylib")
             } else if cfg!(target_os = "windows") {
-                "pdfium.dll.lib"
+                // For Windows, the DLL is in the bin directory, not lib
+                lib_dir.parent().unwrap().join("bin").join("pdfium.dll")
             } else {
-                "libpdfium.so"
+                lib_dir.join("libpdfium.so")
             };
-            (include_dir, lib_dir.join(lib_name))
+            (include_dir, lib_path)
         };
 
         println!(

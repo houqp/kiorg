@@ -277,6 +277,15 @@ fn create_minimal_pdf_content(page_count: usize) -> Vec<u8> {
         content.extend_from_slice(content_stream.as_bytes());
     }
 
+    // Add Info dictionary object
+    let info_obj_num = offsets.len();
+    offsets.push(content.len());
+    let info = format!(
+        "{} 0 obj\n<<\n/Title (Test PDF Title)\n/Author (Test PDF Author)\n/CreationDate (D:20230101120000)\n>>\nendobj\n",
+        info_obj_num
+    );
+    content.extend_from_slice(info.as_bytes());
+
     // Cross-reference table
     let xref_offset = content.len();
     let mut xref = format!("xref\n0 {}\n", offsets.len());
@@ -293,8 +302,9 @@ fn create_minimal_pdf_content(page_count: usize) -> Vec<u8> {
 
     // Trailer
     let trailer = format!(
-        "trailer\n<<\n/Size {}\n/Root 1 0 R\n>>\nstartxref\n{}\n%%EOF\n",
+        "trailer\n<<\n/Size {}\n/Root 1 0 R\n/Info {} 0 R\n>>\nstartxref\n{}\n%%EOF\n",
         offsets.len(),
+        info_obj_num,
         xref_offset
     );
     content.extend_from_slice(trailer.as_bytes());

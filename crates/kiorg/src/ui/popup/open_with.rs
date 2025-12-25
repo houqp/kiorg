@@ -31,21 +31,21 @@ impl FuzzySearchItem for AppInfo {
     }
 }
 
-#[cfg(not(test))]
+#[cfg(not(any(test, feature = "testing")))]
 fn get_apps_for_file(path: &std::path::Path) -> Vec<AppInfo> {
     mimeapps::get_apps_for_file(path)
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "testing"))]
 fn get_apps_for_file(_path: &std::path::Path) -> Vec<AppInfo> {
     Vec::new()
 }
 
 #[derive(Default, Clone)]
-struct OpenWithUiState {
-    apps: Vec<AppInfo>,
-    fuzzy_state: FuzzySearchState,
-    apps_loaded: bool,
+pub struct OpenWithUiState {
+    pub apps: Vec<AppInfo>,
+    pub fuzzy_state: FuzzySearchState,
+    pub apps_loaded: bool,
 }
 
 impl OpenWithUiState {
@@ -100,14 +100,39 @@ fn draw_custom_command_popup(ctx: &egui::Context, app: &mut Kiorg, ui_state: &mu
     );
 
     if !keep_open {
-        clear_state(ctx);
-        close_popup(app);
+        handle_cancel(app, ctx);
     } else {
         // Save state back
         ctx.data_mut(|d| {
             d.insert_temp(egui::Id::new("open_with_ui_state"), ui_state.clone());
         });
     }
+}
+
+pub fn handle_confirm(app: &mut Kiorg, ctx: &egui::Context) {
+    let ui_state = ctx.data_mut(|d| {
+        d.get_temp_mut_or_insert_with(egui::Id::new("open_with_ui_state"), || {
+            OpenWithUiState::default()
+        })
+        .clone()
+    });
+
+    let filtered_apps = fuzzy_filter(&ui_state.fuzzy_state.query, &ui_state.apps);
+    if filtered_apps.is_empty() {
+        let command = ui_state.fuzzy_state.query.clone();
+        clear_state(ctx);
+        confirm_open_with(app, command);
+    } else if ui_state.fuzzy_state.selected_index < filtered_apps.len() {
+        let app_info = &filtered_apps[ui_state.fuzzy_state.selected_index].item;
+        let path = app_info.path.clone();
+        clear_state(ctx);
+        confirm_open_with(app, path);
+    }
+}
+
+pub fn handle_cancel(app: &mut Kiorg, ctx: &egui::Context) {
+    clear_state(ctx);
+    close_popup(app);
 }
 
 fn draw_app_selection_popup(ctx: &egui::Context, app: &mut Kiorg, ui_state: &mut OpenWithUiState) {
@@ -129,8 +154,7 @@ fn draw_app_selection_popup(ctx: &egui::Context, app: &mut Kiorg, ui_state: &mut
     match action {
         FuzzySearchAction::KeepOpen => {}
         FuzzySearchAction::Close => {
-            clear_state(ctx);
-            close_popup(app);
+            handle_cancel(app, ctx);
         }
         FuzzySearchAction::Selected(app_info) => {
             clear_state(ctx);

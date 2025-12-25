@@ -102,7 +102,7 @@ fn test_pdf_preview_popup_error_handling() {
     // Final verification
     if let Some(PreviewContent::Text(text)) = harness.state().preview_content.as_ref() {
         assert!(
-            text.contains("Error loading file: Failed to open PDF file: file header is missing"),
+            text.contains("File not in PDF format or corrupted"),
             "Expected error message not found in preview content: {text}"
         );
     } else {
