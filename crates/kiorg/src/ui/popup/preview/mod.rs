@@ -47,32 +47,25 @@ pub fn handle_show_file_preview(app: &mut Kiorg, _ctx: &egui::Context) {
                 // We can assume preview_content will always be Pdf due to right panel loading
                 if let Some(PreviewContent::Pdf(ref mut pdf_meta)) = app.preview_content {
                     // We already have pdf meta with correct metadata, just update the cover with high DPI
-                    match pdf::file::FileOptions::uncached().open(&path) {
-                        Ok(pdf_file) => {
-                            // Generate a unique file ID based on the path
-                            let file_id = path.to_string_lossy().to_string();
+                    // Generate a unique file ID based on the path
+                    let file_id = path.to_string_lossy().to_string();
 
-                            match crate::ui::preview::doc::render_pdf_page_high_dpi(
-                                &pdf_file,
-                                pdf_meta.current_page, // Use current page from existing meta
-                                Some(&file_id),
-                            ) {
-                                Ok(img_source) => {
-                                    // Update the cover with high DPI version
-                                    pdf_meta.cover = img_source;
+                    match crate::ui::preview::doc::render_pdf_page_high_dpi(
+                        &pdf_meta.pdf_file.lock().unwrap(),
+                        pdf_meta.current_page, // Use current page from existing meta
+                        Some(&file_id),
+                        _ctx,
+                    ) {
+                        Ok((img_source, texture_handle)) => {
+                            // Update the cover with high DPI version
+                            pdf_meta.cover = img_source;
+                            pdf_meta._texture_handle = Some(texture_handle);
 
-                                    // Show preview popup after successful rendering
-                                    app.show_popup = Some(PopupType::Preview);
-                                }
-                                Err(_) => {
-                                    // If error rendering, don't show popup
-                                }
-                            }
+                            // Show preview popup after successful rendering
+                            app.show_popup = Some(PopupType::Preview);
                         }
-                        Err(e) => {
-                            // If error opening file, don't show popup and notify error using toast
-                            app.toasts.error(format!("Failed to open PDF file: {e}"));
-                            app.show_popup = None;
+                        Err(_) => {
+                            // If error rendering, don't show popup
                         }
                     }
                 } else {
@@ -121,12 +114,6 @@ pub fn handle_show_file_preview(app: &mut Kiorg, _ctx: &egui::Context) {
 pub fn show_preview_popup(ctx: &Context, app: &mut Kiorg) {
     // Check if preview popup should be shown
     if app.show_popup == Some(PopupType::Preview) {
-        // Get selected file path for rendering the popup
-        let selected_path = {
-            let tab = app.tab_manager.current_tab_ref();
-            tab.selected_entry().map(|entry| entry.path.clone())
-        };
-
         let mut keep_open = true;
         let screen_size = ctx.content_rect().size();
         let popup_size = egui::vec2(screen_size.x * 0.9, screen_size.y * 0.9);
@@ -177,7 +164,6 @@ pub fn show_preview_popup(ctx: &Context, app: &mut Kiorg) {
                                 });
                         }
                         PreviewContent::Image(image_meta) => {
-                            // Use our specialized popup image renderer
                             image::render_popup(
                                 ui,
                                 image_meta,
@@ -187,20 +173,15 @@ pub fn show_preview_popup(ctx: &Context, app: &mut Kiorg) {
                             );
                         }
                         PreviewContent::Pdf(pdf_meta) => {
-                            // Use specialized PDF popup renderer with navigation
-                            if let Some(path) = &selected_path {
-                                doc::render_pdf_popup(
-                                    ui,
-                                    pdf_meta,
-                                    &app.colors,
-                                    available_width,
-                                    available_height,
-                                    path,
-                                );
-                            }
+                            doc::render_pdf_popup(
+                                ui,
+                                pdf_meta,
+                                &app.colors,
+                                available_width,
+                                available_height,
+                            );
                         }
                         PreviewContent::Epub(epub_meta) => {
-                            // Use specialized EPUB popup renderer without navigation
                             doc::render_epub_popup(
                                 ui,
                                 epub_meta,
@@ -210,7 +191,6 @@ pub fn show_preview_popup(ctx: &Context, app: &mut Kiorg) {
                             );
                         }
                         PreviewContent::Zip(zip_entries) => {
-                            // Use zip rendering for popup
                             egui::ScrollArea::vertical()
                                 .id_salt("zip_popup_scroll")
                                 .show(ui, |ui| {
@@ -218,7 +198,6 @@ pub fn show_preview_popup(ctx: &Context, app: &mut Kiorg) {
                                 });
                         }
                         PreviewContent::Tar(tar_entries) => {
-                            // Use tar rendering for popup
                             egui::ScrollArea::vertical()
                                 .id_salt("tar_popup_scroll")
                                 .show(ui, |ui| {

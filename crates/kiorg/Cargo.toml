@@ -2,6 +2,7 @@
 name = "kiorg"
 version = "1.3.0"
 edition = "2024"
+rust-version = "1.87"
 authors = ["houqp"]
 repository = "https://github.com/houqp/kiorg"
 description = "A hacker's file manager with VIM inspired keybind"
@@ -87,14 +88,6 @@ image = { version = "0" }
 image-extras = { git = "https://github.com/image-rs/image-extras.git", rev = "fbf3e82f9646cd63e5e6e9dc0555bb781fc5dcd4" }
 kamadak-exif = "0"
 
-# for pdf rendering
-pdf_render = { git = "https://github.com/houqp/pdf_render.git", rev = "00b907936e45d904f958197fa6039320d0ac098d", features = [
-    "embed",
-] }
-pdf = { git = "https://github.com/pdf-rs/pdf" }
-pathfinder_geometry = { git = "https://github.com/houqp/pathfinder", rev = "c82663778404c74c0d2cceb42a99b41f6e48e1e4" }
-pathfinder_export = { git = "https://github.com/houqp/pathfinder", rev = "c82663778404c74c0d2cceb42a99b41f6e48e1e4" }
-# pathfinder_rasterize = { git = "https://github.com/s3bk/pathfinder_rasterizer" }
 
 egui_nerdfonts = { git = "https://github.com/houqp/egui_nerdfonts", rev = "6f540170520692ccf1a7d89aee94aea61c89da07" }
 
@@ -106,6 +99,11 @@ objc2 = "0.5.2"
 objc2-app-kit = { version = "0.2.2", features = ["NSWorkspace", "NSRunningApplication"] }
 objc2-foundation = { version = "0.2.2", features = ["NSURL", "NSString", "NSArray", "NSFileManager"] }
 objc2-uniform-type-identifiers = { version = "0.2.2", features = ["UTType"] }
+pdfium-bind = { path = "../pdfium-bind", default-features = false, features = ["static"] }
+
+[target.'cfg(not(target_os = "macos"))'.dependencies]
+# we don't have static pdfium build for windows and linux yet, embed dynamic lib to workaround
+pdfium-bind = { path = "../pdfium-bind", features = ["dynamic"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows-sys = { version = "0.61.2", features = [
@@ -136,3 +134,4 @@ windows-sys = { version = "0.61.0", features = [
 name = "Kiorg"
 icon = ["../../assets/icons/1024x1024@2x.png"]
 osx_url_schemes = ["com.kiorg.kiorg"]
+

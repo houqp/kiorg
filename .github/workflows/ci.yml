@@ -31,8 +31,6 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -55,8 +53,6 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-      with:
-        submodules: recursive
 
     - name: compare git tag with cargo metadata (Unix)
       if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && runner.os != 'Windows'
@@ -117,8 +113,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-      with:
-        submodules: recursive
 
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@stable
@@ -158,8 +152,6 @@ jobs:
     runs-on: macos-15
     steps:
     - uses: actions/checkout@v4
-      with:
-        submodules: recursive
 
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@stable
@@ -253,8 +245,6 @@ jobs:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v4
-      with:
-        submodules: recursive
 
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@stable

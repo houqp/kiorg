@@ -2,22 +2,35 @@
 
 use crate::config::colors::AppColors;
 use crate::models::preview_content::{EpubMeta, PdfMeta, PreviewContent};
-use egui::{RichText, TextureId, Vec2, load::SizedTexture, widgets::ImageSource}; // Corrected import for SizedTexture and ImageSource
-use pathfinder_export::{Export, FileFormat};
-use pathfinder_geometry::transform2d::Transform2F;
-use pdf::file::{NoCache, NoLog};
-use pdf_render::{Cache, SceneBackend, render_page};
+use egui::{
+    ColorImage, RichText, TextureId, TextureOptions, Vec2, load::SizedTexture, widgets::ImageSource,
+};
+use pdfium_bind::PdfDocument;
 use std::path::Path;
-// Removed unused import: use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 const METADATA_KEY_COLUMN_WIDTH: f32 = 100.0;
 
-/// Format PDF date to human-readable string
-fn format_pdf_date(date: &pdf::primitive::Date) -> String {
-    format!(
-        "{}-{}-{} {}:{}:{}",
-        date.year, date.month, date.day, date.hour, date.minute, date.second
-    )
+fn format_pdf_date(pdf_date: &str) -> String {
+    // PDF date format: D:YYYYMMDDHHmmSSOHH'mm'
+    // Example: D:20240904003000Z or D:20240904003000+08'00'
+
+    if !pdf_date.starts_with("D:") || pdf_date.len() < 16 {
+        return pdf_date.to_string();
+    }
+
+    let date_part = &pdf_date[2..]; // Remove "D:" prefix
+
+    // Extract components
+    let year = &date_part[0..4];
+    let month = &date_part[4..6];
+    let day = &date_part[6..8];
+    let hour = &date_part[8..10];
+    let minute = &date_part[10..12];
+    let second = date_part.get(12..14).unwrap_or("00");
+
+    // Format as YYYY-MM-DD HH:mm:ss
+    format!("{}-{}-{} {}:{}:{}", year, month, day, hour, minute, second)
 }
 
 /// Render document content
@@ -209,147 +222,92 @@ fn format_metadata_key(key: &str) -> String {
 }
 
 /// Render a specific PDF page as an egui `ImageSource`
-pub fn render_pdf_page(
-    file: &pdf::file::File<Vec<u8>, NoCache, NoCache, NoLog>,
-    page_number: usize,
+#[inline]
+pub fn render_pdf_page_low_dpi(
+    doc: &PdfDocument,
+    page_number: isize,
     file_id: Option<&str>,
-) -> Result<egui::widgets::ImageSource<'static>, String> {
-    render_pdf_page_with_dpi(file, page_number, file_id, 150.0) // Use 150 DPI for regular preview
+    ctx: &egui::Context,
+) -> Result<(egui::widgets::ImageSource<'static>, egui::TextureHandle), String> {
+    render_pdf_page_with_dpi(doc, page_number, file_id, 150.0, ctx) // Use 150 DPI for regular preview
 }
 
 /// Render a specific PDF page as an egui `ImageSource` with high DPI for popup view
+#[inline]
 pub fn render_pdf_page_high_dpi(
-    file: &pdf::file::File<Vec<u8>, NoCache, NoCache, NoLog>,
-    page_number: usize,
+    doc: &PdfDocument,
+    page_number: isize,
     file_id: Option<&str>,
-) -> Result<egui::widgets::ImageSource<'static>, String> {
-    render_pdf_page_with_dpi(file, page_number, file_id, 300.0) // Use 300 DPI for popup
+    ctx: &egui::Context,
+) -> Result<(egui::widgets::ImageSource<'static>, egui::TextureHandle), String> {
+    render_pdf_page_with_dpi(doc, page_number, file_id, 300.0, ctx) // Use 300 DPI for popup
 }
 
 /// Render a specific PDF page as an egui `ImageSource` with configurable DPI
 fn render_pdf_page_with_dpi(
-    file: &pdf::file::File<Vec<u8>, NoCache, NoCache, NoLog>,
-    page_number: usize,
+    doc: &PdfDocument,
+    page_number: isize,
     file_id: Option<&str>,
     dpi: f32,
-) -> Result<egui::widgets::ImageSource<'static>, String> {
-    let resolver = file.resolver();
+    ctx: &egui::Context,
+) -> Result<(egui::widgets::ImageSource<'static>, egui::TextureHandle), String> {
+    let (pixel_data, width, height) = doc.render_page(page_number, dpi)?;
 
-    // Get the page for rendering
-    let page = file
-        .get_page(
-            u32::try_from(page_number)
-                .map_err(|_| format!("Page number {page_number} is too large"))?,
-        )
-        .map_err(|e| format!("Failed to get page {page_number}: {e}"))?;
+    let color_image =
+        ColorImage::from_rgba_unmultiplied([width as usize, height as usize], &pixel_data);
 
-    // Set up rendering with configurable DPI
-    let mut cache = Cache::new();
-    let mut backend = SceneBackend::new(&mut cache);
-
-    render_page(
-        &mut backend,
-        &resolver,
-        &page,
-        Transform2F::from_scale(dpi / 25.4),
-    )
-    .map_err(|e| format!("Failed to render page: {e}"))?;
-
-    let scene = backend.finish();
-
-    // Export as SVG for resolution-independent rendering
-    let mut svg_data = Vec::new();
-    scene.export(&mut svg_data, FileFormat::SVG).unwrap();
-    let svg_bytes: egui::load::Bytes = svg_data.into();
-
-    // Create a unique texture ID that includes the file identifier, page number, and DPI
-    // This ensures that different documents and different DPI levels don't share texture cache entries
-    let texture_id = if let Some(id) = file_id {
-        format!("bytes://pdf_doc_{id}_page_{page_number}_dpi_{dpi}.svg")
+    let texture_id_str = if let Some(id) = file_id {
+        format!("pdf_doc_{id}_page_{page_number}_dpi_{dpi}")
     } else {
-        // Generate a timestamp-based ID if no file_id is provided
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
             .as_millis();
-        format!("bytes://pdf_doc_{now}_page_{page_number}_dpi_{dpi}.svg")
+        format!("pdf_doc_{now}_page_{page_number}_dpi_{dpi}")
     };
 
-    let img_source = ImageSource::from((texture_id, svg_bytes));
+    let texture_handle = ctx.load_texture(texture_id_str, color_image, TextureOptions::LINEAR);
+    let img_source = ImageSource::from(&texture_handle);
 
-    Ok(img_source)
+    Ok((img_source, texture_handle))
 }
 
 /// Render a PDF page and extract metadata
-pub fn extract_pdf_metadata(path: &Path, _: u32) -> Result<PreviewContent, String> {
-    let file = pdf::file::FileOptions::uncached()
-        .open(path)
-        .map_err(|e| format!("Failed to open PDF file: {e}"))?;
-
-    // Generate a unique file ID based on the path
+pub fn extract_pdf_metadata(path: &Path, ctx: &egui::Context) -> Result<PreviewContent, String> {
+    let doc = PdfDocument::open(path)?;
     let file_id = path.to_string_lossy().to_string();
-
-    // Render the first page as the cover
-    let cover_image = render_pdf_page(&file, 0, Some(&file_id))?;
+    let (cover_image, texture_handle) = render_pdf_page_low_dpi(&doc, 0, Some(&file_id), ctx)?;
 
     // Extract metadata
     let mut metadata = std::collections::HashMap::new();
-
-    // Get PDF version
-    if let Ok(version) = file.version() {
-        let version_str = format!("{version:?}").trim_matches('"').to_string();
-        metadata.insert("PDF Version".to_string(), version_str);
-    }
-
-    // Get document info if available
-    let mut title = None;
-    if let Some(ref info) = file.trailer.info_dict {
-        // Extract common metadata fields
-        if let Some(v) = &info.title {
-            title = Some(v.to_string_lossy());
-        }
-        if let Some(author) = &info.author {
-            metadata.insert("Author".to_string(), author.to_string_lossy());
-        }
-        if let Some(subject) = &info.subject {
-            metadata.insert("Subject".to_string(), subject.to_string_lossy());
-        }
-        if let Some(keywords) = &info.keywords {
-            metadata.insert("Keywords".to_string(), keywords.to_string_lossy());
-        }
-        if let Some(creator) = &info.creator {
-            metadata.insert("Creator".to_string(), creator.to_string_lossy());
-        }
-        if let Some(producer) = &info.producer {
-            metadata.insert("Producer".to_string(), producer.to_string_lossy());
-        }
-        if let Some(creation_date) = &info.creation_date {
-            metadata.insert("Creation Date".to_string(), format_pdf_date(creation_date));
-        }
-        if let Some(mod_date) = &info.mod_date {
-            metadata.insert("Modification Date".to_string(), format_pdf_date(mod_date));
+    for &field in &[
+        "Title", "Author", "Subject", "Keywords", "Creator", "Producer", "Trapped",
+    ] {
+        if let Some(value) = doc.get_metadata_value(field) {
+            metadata.insert(field.to_string(), value);
         }
     }
 
-    // Get catalog information
-    let catalog = file.get_root();
-    if let Some(ref version) = catalog.version {
-        metadata.insert("PDF Catalog Version".to_string(), version.to_string());
+    for &field in &["CreationDate", "ModDate"] {
+        if let Some(value) = doc.get_metadata_value(field) {
+            metadata.insert(field.to_string(), format_pdf_date(&value));
+        }
     }
 
-    // Get page count
-    let page_count = file.num_pages() as usize;
+    let version = doc.get_pdf_version();
+    metadata.insert("PDF Version".to_string(), format!("{}", version));
 
-    // Store the PDF file in an Arc for sharing across page navigation
-    let pdf_file = std::sync::Arc::new(file);
+    let title = metadata.get("Title").cloned();
+    let page_count = doc.page_count();
 
     // Return PreviewContent with metadata, title, and the rendered first page as cover
     Ok(PreviewContent::pdf_with_file(
         cover_image,
+        Some(texture_handle),
         metadata,
         title,
         page_count,
-        pdf_file,
+        Arc::new(Mutex::new(doc)),
         path,
     ))
 }
@@ -425,7 +383,7 @@ pub fn extract_epub_metadata(path: &Path) -> Result<PreviewContent, String> {
     }
 
     // Get page count - count readable content items in spine
-    let page_count = epub.spine().len();
+    let page_count = epub.spine().len() as isize;
 
     // Try to extract cover image
     let cover_image = try_extract_rbook_cover(&epub).unwrap_or_else(|| {

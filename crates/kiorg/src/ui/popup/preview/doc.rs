@@ -3,11 +3,7 @@
 use crate::config::colors::AppColors;
 use crate::models::preview_content::{EpubMeta, PdfMeta};
 use egui::{Button, Image, Key, Modifiers, RichText};
-
-/// Generate a consistent input ID for page navigation based on file ID
-fn get_page_input_id(file_id: &str) -> egui::Id {
-    egui::Id::new(format!("page_input_{file_id}"))
-}
+use tracing::error;
 
 /// Render PDF document in popup with page navigation
 pub fn render_pdf_popup(
@@ -16,7 +12,6 @@ pub fn render_pdf_popup(
     colors: &AppColors,
     available_width: f32,
     available_height: f32,
-    file_path: &std::path::Path,
 ) {
     // Get current page and total pages
     let current_page = pdf_meta.current_page;
@@ -44,7 +39,7 @@ pub fn render_pdf_popup(
                 // Editable page input
                 ui.horizontal(|ui| {
                     // Use egui's memory to store the page input text per document
-                    let input_id = get_page_input_id(&pdf_meta.file_id);
+                    let input_id = pdf_meta.page_input_id();
 
                     // Get or initialize the input text
                     let mut page_input_text = ui.ctx().data(|d| {
@@ -74,10 +69,12 @@ pub fn render_pdf_popup(
 
                     // Handle Enter key to jump to page
                     if response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
-                        if let Ok(new_page) = page_input_text.parse::<usize>() {
+                        if let Ok(new_page) = page_input_text.parse::<isize>() {
                             if new_page >= 1 && new_page <= total_pages {
                                 pdf_meta.current_page = new_page - 1; // Convert to 0-based
-                                render_pdf_page_for_popup(ui, pdf_meta, file_path);
+                                if let Err(e) = render_pdf_page_for_popup(ui, pdf_meta) {
+                                    error!("Error rendering PDF page: {}", e);
+                                }
                             } else {
                                 // Invalid page number, reset to current page
                                 let reset_text = (current_page + 1).to_string();
@@ -126,7 +123,9 @@ pub fn render_pdf_popup(
     // Add the document preview with maximum possible size
     ui.add_sized(
         egui::vec2(max_width, max_height),
-        Image::new(pdf_meta.cover.clone()).maintain_aspect_ratio(true),
+        Image::new(pdf_meta.cover.clone())
+            .max_size(egui::vec2(max_width, max_height))
+            .maintain_aspect_ratio(true),
     );
 }
 
@@ -156,82 +155,42 @@ pub fn render_epub_popup(
 }
 
 /// Helper function to navigate to the next page in PDF
-pub fn navigate_to_next_page(pdf_meta: &mut PdfMeta, ctx: &egui::Context) -> bool {
+pub fn navigate_to_next_page(pdf_meta: &mut PdfMeta, ctx: &egui::Context) {
     let current_page = pdf_meta.current_page;
     let total_pages = pdf_meta.page_count;
-
-    if current_page < total_pages - 1 {
-        pdf_meta.current_page += 1;
-
-        // Update the input text in memory
-        let input_id = get_page_input_id(&pdf_meta.file_id);
-        let new_text = (pdf_meta.current_page + 1).to_string();
-        ctx.data_mut(|d| d.insert_temp(input_id, new_text));
-
-        // Re-render the PDF page using cached file
-        if let Ok(img_source) = crate::ui::preview::doc::render_pdf_page_high_dpi(
-            &pdf_meta.pdf_file,
-            pdf_meta.current_page,
-            Some(&pdf_meta.file_id),
-        ) {
-            pdf_meta.cover = img_source;
-        }
-
-        ctx.request_repaint();
-        true
-    } else {
-        false
+    if current_page >= total_pages - 1 {
+        return;
     }
+    pdf_meta.current_page += 1;
+    pdf_meta.update_page_num_text(ctx);
+    if let Err(e) = pdf_meta.render_page(ctx) {
+        error!("Error rendering PDF page: {}", e);
+        return;
+    }
+    ctx.request_repaint();
 }
 
 /// Helper function to navigate to the previous page in PDF
-pub fn navigate_to_previous_page(pdf_meta: &mut PdfMeta, ctx: &egui::Context) -> bool {
+pub fn navigate_to_previous_page(pdf_meta: &mut PdfMeta, ctx: &egui::Context) {
     let current_page = pdf_meta.current_page;
-
-    if current_page > 0 {
-        pdf_meta.current_page = current_page.saturating_sub(1);
-
-        // Update the input text in memory
-        let input_id = get_page_input_id(&pdf_meta.file_id);
-        let new_text = (pdf_meta.current_page + 1).to_string();
-        ctx.data_mut(|d| d.insert_temp(input_id, new_text));
-
-        // Re-render the PDF page using cached file
-        if let Ok(img_source) = crate::ui::preview::doc::render_pdf_page_high_dpi(
-            &pdf_meta.pdf_file,
-            pdf_meta.current_page,
-            Some(&pdf_meta.file_id),
-        ) {
-            pdf_meta.cover = img_source;
-        }
-
-        ctx.request_repaint();
-        true
-    } else {
-        false
+    if current_page <= 0 {
+        return;
     }
+    pdf_meta.current_page = (current_page - 1).max(0);
+    pdf_meta.update_page_num_text(ctx);
+    if let Err(e) = pdf_meta.render_page(ctx) {
+        error!("Error rendering PDF page: {}", e);
+        return;
+    }
+    ctx.request_repaint();
 }
 
 /// Helper function to render PDF page when navigation buttons are clicked
-fn render_pdf_page_for_popup(
-    ui: &mut egui::Ui,
-    pdf_meta: &mut PdfMeta,
-    file_path: &std::path::Path,
-) {
-    // Generate a unique file ID based on the path
-    let file_id = file_path.to_string_lossy().to_string();
-
-    // Render the new page using cached file
-    if let Ok(img_source) = crate::ui::preview::doc::render_pdf_page_high_dpi(
-        &pdf_meta.pdf_file,
-        pdf_meta.current_page,
-        Some(&file_id),
-    ) {
-        // Update the cover with the new page image
-        pdf_meta.cover = img_source;
-    }
-    // Request repaint to show the updated image
-    ui.ctx().request_repaint();
+fn render_pdf_page_for_popup(ui: &mut egui::Ui, pdf_meta: &mut PdfMeta) -> Result<(), String> {
+    let ctx = ui.ctx();
+    pdf_meta.render_page(ctx)?;
+    ctx.request_repaint();
+    Ok(())
 }
 
 /// Handle key input events for the PDF preview popup
@@ -252,24 +211,14 @@ pub fn handle_preview_popup_input_pdf(
     if let TraverseResult::Action(action) = shortcuts.traverse_tree(&[shortcut_key]) {
         match action {
             ShortcutAction::PageUp => {
-                handle_page_up(pdf_meta, ctx);
+                navigate_to_previous_page(pdf_meta, ctx);
             }
             ShortcutAction::PageDown => {
-                handle_page_down(pdf_meta, ctx);
+                navigate_to_next_page(pdf_meta, ctx);
             }
             _ => {
                 // Other actions are not handled in preview popup
             }
         }
     }
-}
-
-/// Handle page up navigation for PDF documents
-pub fn handle_page_up(pdf_meta: &mut PdfMeta, ctx: &egui::Context) {
-    navigate_to_previous_page(pdf_meta, ctx);
-}
-
-/// Handle page down navigation for PDF documents
-pub fn handle_page_down(pdf_meta: &mut PdfMeta, ctx: &egui::Context) {
-    navigate_to_next_page(pdf_meta, ctx);
 }
