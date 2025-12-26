@@ -3,7 +3,14 @@ name = "pdfium-bind"
 version = "0.1.0"
 edition = "2021"
 rust-version = "1.85"
+authors = ["houqp"]
+description = "Rust bindings for PDFium"
+license = "MIT"
 readme = "README.md"
+repository = "https://github.com/houqp/kiorg"
+homepage = "https://github.com/houqp/kiorg"
+keywords = ["pdf", "pdfium", "bindings", "ffi", "rendering"]
+categories = ["external-ffi-bindings", "rendering"]
 
 [dependencies]
 link-cplusplus = "1"
