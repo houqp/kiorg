@@ -175,7 +175,10 @@ fn download_staticlib() -> (PathBuf, PathBuf) {
 }
 
 fn download_dynlib() -> (PathBuf, PathBuf) {
-    let (os, arch, checksum) = match (env::consts::OS, env::consts::ARCH) {
+    let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap();
+    let target_arch = env::var("CARGO_CFG_TARGET_ARCH").unwrap();
+
+    let (os, arch, checksum) = match (target_os.as_str(), target_arch.as_str()) {
         ("macos", "aarch64") => (
             "mac",
             "arm64",

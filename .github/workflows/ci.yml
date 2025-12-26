@@ -108,9 +108,16 @@ jobs:
       run: cargo test
 
   bundle-linux:
-    name: Bundle Packaging (Linux)
+    name: Bundle Packaging (Linux - ${{ matrix.arch }})
     needs: test
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-latest
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
     steps:
     - uses: actions/checkout@v4
 
@@ -127,13 +134,13 @@ jobs:
       run: |
         cargo build --release
         cd target/release
-        zip -r ../../kiorg-x86_64-linux.zip kiorg
+        zip -r ../../kiorg-${{ matrix.arch }}-linux.zip kiorg
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: kiorg-${{ github.event.pull_request.head.sha || github.sha }}-x86_64-linux.zip
-        path: kiorg-x86_64-linux.zip
+        name: kiorg-${{ github.event.pull_request.head.sha || github.sha }}-${{ matrix.arch }}-linux.zip
+        path: kiorg-${{ matrix.arch }}-linux.zip
         if-no-files-found: error
 
     - name: Upload binary to GitHub Release
@@ -142,8 +149,8 @@ jobs:
       with:
         overwrite: true
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        asset_name: kiorg-${{ github.ref_name }}-x86_64-linux.zip
-        file: kiorg-x86_64-linux.zip
+        asset_name: kiorg-${{ github.ref_name }}-${{ matrix.arch }}-linux.zip
+        file: kiorg-${{ matrix.arch }}-linux.zip
         tag: ${{ github.ref }}
 
   bundle-macos:
