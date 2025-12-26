@@ -3,6 +3,7 @@ name = "pdfium-bind"
 version = "0.1.0"
 edition = "2021"
 rust-version = "1.85"
+readme = "README.md"
 
 [dependencies]
 link-cplusplus = "1"
