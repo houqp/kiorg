@@ -6,18 +6,23 @@ use kiorg::ui::popup::PopupType;
 use tempfile::tempdir;
 use ui_test_helpers::create_harness;
 
+use crate::ui_test_helpers::create_harness_with_config_dir;
+
 /// Test that the exit popup sets `shutdown_requested` to true when confirmed with Enter key
 #[test]
 fn test_exit_popup_enter_key() {
     // Create a temporary directory for testing
     let temp_dir = tempdir().unwrap();
-    let mut harness = create_harness(&temp_dir);
+    let temp_config_dir = tempdir().unwrap();
+    let state_file_path = temp_config_dir.path().join("state.json");
+    let mut harness = create_harness_with_config_dir(&temp_dir, temp_config_dir);
 
     // Initially, the app should not be in shutdown state
     assert!(
         !harness.state().shutdown_requested,
         "App should not be in shutdown state initially"
     );
+    assert!(!state_file_path.exists());
 
     // Press 'q' to request exit (shows exit popup)
     harness.key_press(Key::Q);
@@ -35,10 +40,13 @@ fn test_exit_popup_enter_key() {
     harness.step();
 
     // Verify shutdown was requested
-    assert!(
-        harness.state().shutdown_requested,
-        "App should be in shutdown state after confirming exit"
+    assert_eq!(
+        harness.state().show_popup,
+        None,
+        "Confirming exit should close popup"
     );
+    // Verify config is correctly serialized on exit
+    assert!(state_file_path.exists());
 }
 
 /// Test that the exit popup does not set `shutdown_requested` to true when canceled with Escape key

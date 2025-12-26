@@ -281,10 +281,6 @@ fn test_ui_navigation_mouse_click_selects_and_previews() {
     // step twice for the refresh function to be triggered
     harness.step();
 
-    println!(
-        "cached preview path: {:?}",
-        harness.state().cached_preview_path
-    );
     // Preview cache should be empty or contain preview for a.txt initially
     // (Depending on initial load behavior, let's ensure it doesn't contain b.txt yet)
     assert!(
@@ -605,19 +601,20 @@ fn test_ui_navigation_open_with_functionality() {
 
     // Type the command by sending text input events
     for ch in test_command.chars() {
-        harness.input_mut().events.push(egui::Event::Text(ch.to_string()));
+        harness
+            .input_mut()
+            .events
+            .push(egui::Event::Text(ch.to_string()));
     }
     harness.step();
 
-    // Press Enter to confirm
-    harness.key_press(Key::Enter);
-    harness.step();
-    
     let open_with_calls = {
         // Acquire test serialization lock to prevent interference from other tests
         let _lock = acquire_open_test_lock();
         clear_open_calls();
 
+        // Press Enter to confirm
+        harness.key_press(Key::Enter);
         harness.step();
 
         // Wait for the async file opening to complete
@@ -650,6 +647,73 @@ fn test_ui_navigation_open_with_functionality() {
     assert!(
         harness.state().show_popup.is_none(),
         "Open with popup should be closed after confirmation"
+    );
+}
+
+#[test]
+fn test_ui_navigation_open_with_app_selection() {
+    let temp_dir = tempdir().unwrap();
+    let test_file = temp_dir.path().join("test.txt");
+    std::fs::write(&test_file, "content").unwrap();
+
+    let mut harness = create_harness(&temp_dir);
+
+    // Open the popup
+    harness.key_press_modifiers(shift_modifiers(), Key::O);
+    harness.step();
+
+    // Inject some apps into the state
+    {
+        let ctx = &harness.ctx;
+        use kiorg::ui::popup::open_with::OpenWithUiState;
+        use mimeapps::AppInfo;
+
+        ctx.data_mut(|d| {
+            let state = OpenWithUiState {
+                apps: vec![
+                    AppInfo {
+                        name: "App 1".to_string(),
+                        path: "app1".to_string(),
+                    },
+                    AppInfo {
+                        name: "App 2".to_string(),
+                        path: "app2".to_string(),
+                    },
+                ],
+                apps_loaded: true,
+                ..Default::default()
+            };
+
+            d.insert_temp(egui::Id::new("open_with_ui_state"), state);
+        });
+    }
+    harness.step();
+
+    // Now select the second app (index 1)
+    // fuzzy_search_popup handles arrow keys
+    harness.key_press(Key::ArrowDown);
+    harness.step();
+
+    let open_with_calls = {
+        let _lock = acquire_open_test_lock();
+        clear_open_calls();
+
+        harness.key_press(Key::Enter);
+        harness.step();
+
+        wait_for_condition(|| {
+            harness.step();
+            !get_open_with_calls().is_empty()
+        });
+
+        get_open_with_calls()
+    };
+
+    assert_eq!(open_with_calls.len(), 1);
+    assert_eq!(
+        open_with_calls[0].app.as_ref().unwrap(),
+        "app2",
+        "Should have selected App 2 (app2 path)"
     );
 }
 
@@ -824,17 +888,12 @@ fn test_ui_navigation_page_navigation() {
     let initial_selected = tab.selected_index;
     assert_eq!(initial_selected, 0);
 
-    // Debug: Check if scroll_range is available
-    println!("scroll_range: {:?}", harness.state().scroll_range);
-
     // Test Page Down navigation
     harness.key_press(Key::PageDown);
     harness.step();
 
     let tab = harness.state().tab_manager.current_tab_ref();
     let after_page_down = tab.selected_index;
-
-    println!("Movement: {initial_selected} -> {after_page_down} (page down)");
 
     // Should have moved forward by more than 1 (even with default fallback of 10)
     assert!(
@@ -849,8 +908,6 @@ fn test_ui_navigation_page_navigation() {
     let tab = harness.state().tab_manager.current_tab_ref();
     let after_page_up = tab.selected_index;
 
-    println!("Movement: {after_page_down} -> {after_page_up} (page up)");
-
     // Should have moved back toward the beginning
     assert!(
         after_page_up < after_page_down,
@@ -864,8 +921,6 @@ fn test_ui_navigation_page_navigation() {
     let tab = harness.state().tab_manager.current_tab_ref();
     let after_ctrl_d = tab.selected_index;
 
-    println!("Movement: {after_page_up} -> {after_ctrl_d} (ctrl+d)");
-
     // Should behave like page down
     assert!(
         after_ctrl_d > after_page_up,
@@ -878,8 +933,6 @@ fn test_ui_navigation_page_navigation() {
 
     let tab = harness.state().tab_manager.current_tab_ref();
     let after_ctrl_u = tab.selected_index;
-
-    println!("Movement: {after_ctrl_d} -> {after_ctrl_u} (ctrl+u)");
 
     // Should behave like page up
     assert!(

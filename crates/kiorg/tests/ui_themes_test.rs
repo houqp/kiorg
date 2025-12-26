@@ -898,8 +898,6 @@ fn test_snapshot_all_themes() {
         use image::{Frame, codecs::gif::GifEncoder};
         use std::fs::File;
 
-        // print current working directory for debugging
-        println!("Current working directory: {:?}", std::env::current_dir());
         let gif_output_path = "tests/snapshots/theme_selection_animation.gif";
         let gif_file = File::create(gif_output_path).expect("Failed to create GIF file");
         let mut encoder = GifEncoder::new(gif_file);

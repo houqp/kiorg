@@ -76,7 +76,9 @@ fn test_teleport_nonexistent_directory_shows_error_and_removes_from_history() {
         kiorg::ui::popup::teleport::get_search_results("", &harness.state().visit_history);
 
     // The deleted directory should not appear in search results
-    let contains_deleted_dir = search_results.iter().any(|result| result.path == test_dir);
+    let contains_deleted_dir = search_results
+        .iter()
+        .any(|result| result.item.entry.path == test_dir);
     assert!(
         !contains_deleted_dir,
         "Deleted directory should not appear in teleport search results"

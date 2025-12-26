@@ -11,6 +11,12 @@ mod ffi;
 
 static PDFIUM_INIT: Once = Once::new();
 
+/// Cleanup old cached PDFium library files from the cache directory.
+pub fn cleanup_cache() {
+    #[cfg(feature = "dynamic")]
+    ffi::cleanup_cache();
+}
+
 // Helper function to convert FPDF_WSTR (u8 byte slice representing UTF-16LE) to Rust String
 fn fpdf_wstr_to_string(fpdf_wstr_bytes: *mut u8, len_bytes: usize) -> Option<String> {
     if fpdf_wstr_bytes.is_null() || len_bytes == 0 {
@@ -61,15 +67,24 @@ impl PdfDocument {
         PDFIUM_INIT.call_once(|| unsafe {
             ffi::FPDF_InitLibrary();
         });
-        // PDFium requires an absolute path
+        // PDFium requires an absolute path. canonicalize() provides this but also adds \\?\ prefix on Windows.
         let abs_path = path
             .canonicalize()
             .map_err(|e| format!("Failed to canonicalize path: {e}"))?;
         let path_str = abs_path.to_str().ok_or("Invalid UTF-8 in path")?;
 
-        // PDFium expects paths in a specific format on Windows or as CString on other OS
         #[cfg(target_os = "windows")]
-        let c_path = CString::new(format!("file:///{}", path_str.replace("\\", "/"))).unwrap();
+        let c_path = {
+            let s = if path_str.starts_with(r"\\?\UNC\") {
+                format!(r"\\{}", &path_str[8..])
+            } else {
+                path_str
+                    .strip_prefix(r"\\?\")
+                    .unwrap_or(path_str)
+                    .to_string()
+            };
+            CString::new(s).unwrap()
+        };
         #[cfg(not(target_os = "windows"))]
         let c_path = CString::new(path_str).unwrap();
 

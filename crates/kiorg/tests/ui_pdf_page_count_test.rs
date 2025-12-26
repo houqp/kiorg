@@ -51,14 +51,15 @@ fn test_pdf_page_count_in_preview_content() {
             );
 
             // Verify that the PDF metadata includes expected fields
-            assert!(!pdf_meta.title.is_empty(), "PDF should have a title");
-
-            // Test passes - page count is available in the metadata
-            // The UI rendering code in render_pdf_preview() will display this
-            // as "Page Count: X" in the metadata grid
-            println!(
-                "✓ PDF loaded successfully with {} pages",
-                pdf_meta.page_count
+            assert_eq!(pdf_meta.title, "Test PDF Title", "PDF title should match");
+            assert_eq!(
+                pdf_meta.metadata.get("Author").map(|s| s.as_str()),
+                Some("Test PDF Author"),
+                "PDF author should match"
+            );
+            assert!(
+                pdf_meta.metadata.contains_key("CreationDate"),
+                "PDF should have CreationDate"
             );
         }
         Some(PreviewContent::Epub(_)) => {

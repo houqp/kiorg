@@ -232,8 +232,7 @@ pub fn show_update_restart_popup(ctx: &Context, app: &mut Kiorg) {
     match result {
         utils::ConfirmResult::Confirm => {
             app.show_popup = None;
-            app.shutdown_requested = true;
-            app.persist_app_state();
+            app.graceful_shutdown();
             restart_app();
         }
         utils::ConfirmResult::Cancel => {

@@ -2,26 +2,60 @@
 #![allow(non_upper_case_globals)]
 #![allow(non_camel_case_types)]
 
-use std::{io::Write as _, sync::OnceLock};
-use tempfile::NamedTempFile;
+use std::{fs, io::Write as _, sync::OnceLock};
 
 use libloading::{Library, Symbol};
 
 pub use super::bindgen::*;
 
 const LIBPDFIUM_DYLIB: &[u8] = include_bytes!(env!("PDFIUM_DYNLIB_PATH"));
-static LIBPDFIUM_DYLIB_FILE: OnceLock<NamedTempFile> = OnceLock::new();
 static LIBPDFIUM_LIB: OnceLock<Library> = OnceLock::new();
+
+#[cfg(target_os = "windows")]
+static LIBPDFIUM_DYLIB_PATH: OnceLock<std::path::PathBuf> = OnceLock::new();
+
+pub fn cleanup_cache() {
+    #[cfg(target_os = "windows")]
+    {
+        if let Some(path) = LIBPDFIUM_DYLIB_PATH.get() {
+            let _ = fs::remove_file(path);
+        }
+    }
+}
 
 fn libpdfium() -> &'static Library {
     LIBPDFIUM_LIB.get_or_init(|| unsafe {
-        let libpdfium_dylib_file = LIBPDFIUM_DYLIB_FILE.get_or_init(|| {
-            let mut file = NamedTempFile::new().expect("failed to create temp file");
+        #[cfg(target_os = "windows")]
+        {
+            let path = LIBPDFIUM_DYLIB_PATH
+                .get_or_init(|| std::env::temp_dir().join("kiorg-libpdfium.dll"));
+            // Always try to overwrite the file to ensure we have the latest embedded version.
+            // If it's locked by another process, we ignore the error and try to load whatever is there.
+            let _ = fs::OpenOptions::new()
+                .write(true)
+                .create(true)
+                .truncate(true)
+                .open(&path)
+                .and_then(|mut file| file.write_all(LIBPDFIUM_DYLIB));
+
+            Library::new(path).expect("failed to load dynamic libpdfium")
+        }
+
+        #[cfg(not(target_os = "windows"))]
+        {
+            use tempfile::Builder;
+            let mut file = Builder::new()
+                .prefix("libpdfium")
+                .tempfile()
+                .expect("failed to create temp file");
             file.write_all(LIBPDFIUM_DYLIB)
                 .expect("failed to write to temp file");
-            file
-        });
-        Library::new(libpdfium_dylib_file.path()).expect("failed to load dynamic libpdfium")
+            let path = file.into_temp_path(); // close file
+            let lib = Library::new(&path).expect("failed to load dynamic libpdfium");
+            // On Unix, we can safely delete the file immediately after it's loaded into memory.
+            let _ = fs::remove_file(path);
+            lib
+        }
     })
 }
 

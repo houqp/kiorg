@@ -69,8 +69,6 @@ key = "w"
     let saved_content =
         fs::read_to_string(config_dir.join("config.toml")).expect("Should read saved config file");
 
-    println!("Saved config content:\n{saved_content}");
-
     // The saved content should ONLY contain user overrides, not all the defaults
     // It should contain the user's custom shortcuts
     assert!(
@@ -141,8 +139,6 @@ theme = "dark"
     let saved_content =
         fs::read_to_string(config_dir.join("config.toml")).expect("Should read saved config file");
 
-    println!("Saved config content (no user shortcuts):\n{saved_content}");
-
     // The saved content should not contain any shortcuts section since no user overrides were provided
     assert!(
         !saved_content.contains("[shortcuts."),
@@ -201,8 +197,6 @@ fn test_runtime_shortcut_modification_serialization() {
     // Read the saved config file content
     let saved_content =
         fs::read_to_string(config_dir.join("config.toml")).expect("Should read saved config file");
-
-    println!("Saved config content (with runtime modification):\n{saved_content}");
 
     // The saved content should contain the user's modification
     assert!(
@@ -337,12 +331,6 @@ alt = true
     // Save the config back to file
     config::save_config_with_override(&loaded_config, Some(&config_dir))
         .expect("Should save config successfully");
-
-    // Read the saved config file content for debugging
-    let saved_content =
-        fs::read_to_string(config_dir.join("config.toml")).expect("Should read saved config file");
-
-    println!("Saved complex shortcuts config:\n{saved_content}");
 
     // Test round-trip: reload the saved config
     let reloaded_config = config::load_config_with_override(Some(&config_dir))
