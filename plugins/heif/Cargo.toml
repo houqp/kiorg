@@ -2,6 +2,8 @@
 name = "kiorg_plugin_heif"
 version = "0.1.0"
 edition = "2021"
+description = "HEIF image preview plugin for kiorg"
+license = "MIT"
 
 [[bin]]
 name = "kiorg_plugin_heif"

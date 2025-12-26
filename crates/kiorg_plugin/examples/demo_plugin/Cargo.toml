@@ -2,6 +2,8 @@
 name = "kiorg_plugin_demo"
 version = "0.1.0"
 edition = "2021"
+description = "Demo plugin for kiorg"
+license = "MIT"
 
 [[bin]]
 name = "kiorg_plugin_demo"
