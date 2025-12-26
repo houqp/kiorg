@@ -1,5 +1,7 @@
 # pdfium-bind
 
+[![Crates.io](https://img.shields.io/crates/v/pdfium-bind.svg)](https://crates.io/crates/pdfium-bind) [![docs.rs](https://img.shields.io/docsrs/pdfium-bind)](https://docs.rs/pdfium-bind)
+
 Rust FFI bindings and a high-level wrapper for [PDFium](https://pdfium.googlesource.com/pdfium/).
 
 **Designed for ease of distribution:** This crate eliminates the need for users to manually install PDFium on their systems. It **embeds prebuilt PDFium binaries** directly into your executable.

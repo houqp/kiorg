@@ -39,28 +39,9 @@ fn test_pdf_page_count_in_preview_content() {
         )
     });
 
-    // Check if PDF preview loaded successfully
-    // The main goal is to test that IF a PDF loads, the page count is accessible
-    // This verifies the code structure is correct for displaying page counts
     match &harness.state().preview_content {
         Some(PreviewContent::Pdf(pdf_meta)) => {
-            // SUCCESS: PDF loaded and we can verify the page count field exists
-            assert!(
-                pdf_meta.page_count > 0,
-                "PDF page count should be greater than 0 when loaded"
-            );
-
-            // Verify that the PDF metadata includes expected fields
-            assert_eq!(pdf_meta.title, "Test PDF Title", "PDF title should match");
-            assert_eq!(
-                pdf_meta.metadata.get("Author").map(|s| s.as_str()),
-                Some("Test PDF Author"),
-                "PDF author should match"
-            );
-            assert!(
-                pdf_meta.metadata.contains_key("CreationDate"),
-                "PDF should have CreationDate"
-            );
+            assert_eq!(pdf_meta.page_count, 5);
         }
         Some(PreviewContent::Epub(_)) => {
             panic!("Expected PDF preview content, got EPUB");

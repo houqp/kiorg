@@ -2,6 +2,7 @@
 **/tests/snapshots/*.old.png
 **/tests/snapshots/*.diff.png
 **/tests/snapshots/theme_selection-*.png
+**/tests/snapshots/preview_features-*.png
 node_modules
 package-lock.json
 package.json
