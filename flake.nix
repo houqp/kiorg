@@ -3,27 +3,41 @@
 
   outputs =
     inputs@{ flake-parts, ... }:
-    flake-parts.lib.mkFlake { inherit inputs; } {
-      systems = [
-        "x86_64-linux"
-        # NOTE: None of the systems below were tested!
-        "aarch64-linux"
-        "aarch64-darwin"
-        "x86_64-darwin"
-      ];
+    flake-parts.lib.mkFlake { inherit inputs; } (
+      { withSystem, flake-parts-lib, ... }:
+      let
+        inherit (flake-parts-lib) importApply;
+      in
+      {
+        systems = [
+          "x86_64-linux"
+          # NOTE: None of the systems below were tested!
+          "aarch64-linux"
+          "aarch64-darwin"
+          "x86_64-darwin"
+        ];
 
-      imports = [
-        { _module.args.selfPath = ./.; }
-        ./nix/packages.nix
-        ./nix/shells.nix
-      ];
+        imports = [
+          { _module.args.selfPath = ./.; }
+          ./nix/packages.nix
+          ./nix/shells.nix
+        ];
 
-      perSystem =
-        { pkgs, ... }:
-        {
-          formatter = pkgs.nixfmt-tree;
+        perSystem =
+          { pkgs, ... }:
+          {
+            formatter = pkgs.nixfmt-tree;
+          };
+
+        flake = {
+          nixosModules = {
+            default = importApply ./nix/nixos-module.nix { inherit withSystem; };
+          };
+
+          # TODO: home-module
         };
-    };
+      }
+    );
 
   inputs = {
     flake-parts.url = "github:hercules-ci/flake-parts";
