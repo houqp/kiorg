@@ -18,6 +18,18 @@ pub struct ShortcutKey {
     pub modifiers: Modifiers,
 }
 
+#[inline]
+pub fn check_blacklisted_shortcut(_key: &ShortcutKey) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    if _key.key == Key::V && _key.modifiers.ctrl && _key.modifiers.shift {
+        // see: https://github.com/houqp/kiorg/issues/3#issuecomment-3514588299
+        return Err(
+            "Shortcut Ctrl+Shift+V is reserved on Windows and cannot be registered".to_string(),
+        );
+    }
+    Ok(())
+}
+
 // Result of traversing a key buffer through the shortcut tree
 #[derive(Debug, Clone, PartialEq)]
 pub enum TraverseResult {
@@ -344,6 +356,8 @@ impl Shortcuts {
         let mut current_node = &mut self.shortcut_tree;
 
         for (i, key) in keys.iter().enumerate() {
+            check_blacklisted_shortcut(key)?;
+
             if i == keys.len() - 1 {
                 // Last key in sequence - insert the action
                 match current_node {

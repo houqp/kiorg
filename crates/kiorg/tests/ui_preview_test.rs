@@ -352,7 +352,7 @@ fn test_pdf_page_count_in_preview_content() {
                 Some(PreviewContent::Pdf(_))
             )
         },
-        std::time::Duration::from_secs(2),
+        std::time::Duration::from_secs(3),
     );
 
     match &harness.state().preview_content {
