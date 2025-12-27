@@ -152,11 +152,9 @@ pub fn load_config_with_override(
         Err(e) => return Err(ConfigError::TomlError(e, config_path)),
     };
 
-    // Validate user shortcuts for conflicts
-    if let Some(ref user_shortcuts) = user_config.shortcuts
-        && let Err(conflict_error) = validate_user_shortcuts(user_shortcuts)
-    {
-        return Err(ConfigError::ShortcutConflict(conflict_error, config_path));
+    // Validate user shortcuts
+    if let Some(ref user_shortcuts) = user_config.shortcuts {
+        validate_user_shortcuts(user_shortcuts, &config_path)?;
     }
 
     if let Some(layout) = &user_config.layout
@@ -219,11 +217,13 @@ pub fn get_kiorg_config_dir(override_path: Option<&PathBuf>) -> PathBuf {
     }
 }
 
-/// Validate user shortcuts for conflicts
+/// Validate user shortcuts for conflicts and reserved keys
 /// Returns an error if any shortcut is assigned to multiple different actions
+/// or if a reserved shortcut is used.
 fn validate_user_shortcuts(
     user_shortcuts: &shortcuts::Shortcuts,
-) -> Result<(), ShortcutConflictError> {
+    config_path: &std::path::Path,
+) -> Result<(), ConfigError> {
     use std::collections::HashMap;
 
     // Create a map from shortcut to actions that use it
@@ -234,6 +234,14 @@ fn validate_user_shortcuts(
 
     for (action, shortcuts_list) in user_shortcuts {
         for shortcut in shortcuts_list {
+            if let Ok(keys) = shortcut.to_shortcut_keys() {
+                for skey in keys {
+                    if let Err(e) = shortcuts::check_blacklisted_shortcut(&skey) {
+                        return Err(ConfigError::ValueError(e, config_path.to_path_buf()));
+                    }
+                }
+            }
+
             // Only add unique actions (don't count duplicates of the same action)
             let actions_for_shortcut = shortcut_to_actions.entry(shortcut.clone()).or_default();
 
@@ -247,11 +255,14 @@ fn validate_user_shortcuts(
     for (shortcut, actions) in shortcut_to_actions {
         if actions.len() > 1 {
             // Found a conflict - return error with the first two conflicting actions
-            return Err(ShortcutConflictError {
-                shortcut,
-                action1: actions[0],
-                action2: actions[1],
-            });
+            return Err(ConfigError::ShortcutConflict(
+                ShortcutConflictError {
+                    shortcut,
+                    action1: actions[0],
+                    action2: actions[1],
+                },
+                config_path.to_path_buf(),
+            ));
         }
     }
 

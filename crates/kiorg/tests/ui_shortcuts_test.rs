@@ -404,3 +404,66 @@ key = "d"
         panic!("Expected ShortcutConflictError, got: {result:?}");
     }
 }
+#[test]
+#[cfg(target_os = "windows")]
+fn test_disallow_ctrl_shift_v_config() {
+    // Create a temporary directory for the config
+    let config_temp_dir = tempdir().unwrap();
+    let config_dir = config_temp_dir.path().to_path_buf();
+
+    // Create a TOML config file with Ctrl+Shift+V
+    let toml_content = r#"
+# Config with reserved Windows shortcut
+[[shortcuts.MoveDown]]
+key = "v"
+ctrl = true
+shift = true
+"#;
+
+    // Write the config file
+    create_config_file(&config_dir, toml_content);
+
+    // Try to load the config
+    let result = kiorg::config::load_config_with_override(Some(&config_dir));
+
+    // Verify that we got an error and it's a value error mentioning the reservation
+    assert!(
+        result.is_err(),
+        "Should return an error for reserved Windows shortcut"
+    );
+
+    let error_msg = result.unwrap_err().to_string();
+    assert!(
+        error_msg.contains("reserved on Windows"),
+        "Error message should mention it's reserved on Windows, got: {error_msg}"
+    );
+}
+
+#[test]
+#[cfg(not(target_os = "windows"))]
+fn test_allow_ctrl_shift_v_config_non_windows() {
+    // Create a temporary directory for the config
+    let config_temp_dir = tempdir().unwrap();
+    let config_dir = config_temp_dir.path().to_path_buf();
+
+    // Create a TOML config file with Ctrl+Shift+V
+    let toml_content = r#"
+# Config with Ctrl+Shift+V which is allowed on non-Windows
+[[shortcuts.MoveDown]]
+key = "v"
+ctrl = true
+shift = true
+"#;
+
+    // Write the config file
+    create_config_file(&config_dir, toml_content);
+
+    // Try to load the config
+    let result = kiorg::config::load_config_with_override(Some(&config_dir));
+
+    // Verify that it works on non-Windows
+    assert!(
+        result.is_ok(),
+        "Should NOT return an error for Ctrl+Shift+V on non-Windows platforms"
+    );
+}
