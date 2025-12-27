@@ -263,6 +263,8 @@ impl PluginManager {
 
         let entries =
             std::fs::read_dir(&self.plugin_dir).map_err(|e| PluginError::IoError { source: e })?;
+
+        let mut paths = Vec::new();
         for entry in entries {
             let entry = entry.map_err(|e| PluginError::IoError { source: e })?;
             let path = entry.path();
@@ -274,9 +276,28 @@ impl PluginManager {
             if let Some(filename) = path.file_name().and_then(|n| n.to_str())
                 && filename.starts_with(PLUGIN_PREFIX)
             {
-                info!("Discovered plugin file: {:?}", path);
+                paths.push(path);
+            }
+        }
 
-                match self.load_single_plugin(&path) {
+        if paths.is_empty() {
+            return Ok(());
+        }
+
+        info!("Loading {} plugins in parallel", paths.len());
+
+        let mut handles = Vec::new();
+        for path in paths.into_iter() {
+            let handle = std::thread::spawn(move || {
+                let result = Self::load_single_plugin(&path);
+                (path, result)
+            });
+            handles.push(handle);
+        }
+
+        for handle in handles {
+            match handle.join() {
+                Ok((path, result)) => match result {
                     Ok(plugin) => {
                         let name = plugin.metadata.name.clone();
 
@@ -305,6 +326,9 @@ impl PluginManager {
                             error: e.to_string(),
                         });
                     }
+                },
+                Err(err) => {
+                    error!(err =? err, "Plugin loading thread panicked");
                 }
             }
         }
@@ -313,7 +337,7 @@ impl PluginManager {
     }
 
     /// Load a single plugin from the given path
-    fn load_single_plugin(&self, path: &PathBuf) -> Result<LoadedPlugin, PluginError> {
+    fn load_single_plugin(path: &PathBuf) -> Result<LoadedPlugin, PluginError> {
         // Start the plugin process
         let mut cmd = Command::new(path);
         cmd.stdin(Stdio::piped())
@@ -327,7 +351,7 @@ impl PluginManager {
         })?;
 
         // Perform hello handshake to get plugin metadata
-        let (metadata, error) = match self.perform_hello_handshake(&mut child, path) {
+        let (metadata, error) = match Self::perform_hello_handshake(&mut child, path) {
             Ok(meta) => (meta, None),
             Err(PluginError::Incompatible {
                 protocol_version,
@@ -379,7 +403,6 @@ impl PluginManager {
 
     /// Perform hello handshake with a plugin to get metadata and capabilities
     fn perform_hello_handshake(
-        &self,
         child: &mut Child,
         plugin_path: &std::path::Path,
     ) -> Result<PluginMetadata, PluginError> {
