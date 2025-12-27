@@ -257,7 +257,6 @@ fn test_ui_navigation_prev_path_selection_with_sort() {
 
 #[test]
 fn test_ui_navigation_mouse_click_selects_and_previews() {
-    // Create a temporary directory for testing
     let temp_dir = tempdir().unwrap();
 
     // Create test files
@@ -266,19 +265,11 @@ fn test_ui_navigation_mouse_click_selects_and_previews() {
         temp_dir.path().join("b.txt"), // index 1
         temp_dir.path().join("c.txt"), // index 2
     ]);
-
-    // Create some content for b.txt to ensure preview is generated
     std::fs::write(&test_files[1], "Content of b.txt").unwrap();
 
-    // Start the harness
     let mut harness = create_harness(&temp_dir);
 
     // Initially, index 0 ("a.txt") should be selected
-    harness.key_press(Key::J);
-    harness.step();
-    harness.key_press(Key::K);
-    harness.step();
-    // step twice for the refresh function to be triggered
     harness.step();
 
     // Preview cache should be empty or contain preview for a.txt initially

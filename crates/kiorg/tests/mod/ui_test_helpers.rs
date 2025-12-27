@@ -253,7 +253,7 @@ pub fn create_test_epub(path: &PathBuf) {
 }
 
 /// Create a minimal test PDF file with multiple pages
-pub fn create_test_pdf(path: &PathBuf, page_count: usize) {
+pub fn create_test_pdf(path: &PathBuf, page_count: isize) {
     // Create a minimal multi-page PDF using a simple approach
     // This creates a basic PDF structure with the specified number of pages
     let pdf_content = create_minimal_pdf_content(page_count);
@@ -262,7 +262,7 @@ pub fn create_test_pdf(path: &PathBuf, page_count: usize) {
 }
 
 /// Generate minimal PDF content with the specified number of pages
-fn create_minimal_pdf_content(page_count: usize) -> Vec<u8> {
+fn create_minimal_pdf_content(page_count: isize) -> Vec<u8> {
     // Create a properly structured PDF that PDFium can parse
     let mut content = Vec::new();
     let mut offsets = Vec::new();
@@ -429,11 +429,15 @@ impl TestHarnessBuilder {
         let mut harness = Harness::builder()
             .with_size(self.window_size)
             .with_max_steps(20)
-            .build_eframe(|cc| {
+            .build_eframe(|_cc| {
                 // Ensure fonts are configured in the actual test context
-                kiorg::font::configure_egui_fonts(&cc.egui_ctx);
+                #[cfg(feature = "snapshot")]
+                // TODO: look into why is this only slow during test run, but not from `cargo run``.
+                // only enable it for snapshot for now to keep rest of the test run fast.
+                kiorg::font::configure_egui_fonts(&_cc.egui_ctx);
                 app
             });
+
         harness.step();
 
         let mut harness = TestHarness {
@@ -449,17 +453,33 @@ impl TestHarnessBuilder {
 }
 
 /// Helper function to wait for a condition with sleep intervals
-/// Runs the callback up to 300 times with 10ms sleep between attempts
-pub fn wait_for_condition<F>(mut condition: F)
+pub fn wait_for_condition<F>(mut condition: F) -> bool
 where
     F: FnMut() -> bool,
 {
-    for _ in 0..300 {
+    for _ in 0..250 {
         if condition() {
-            break;
+            return true;
         }
-        std::thread::sleep(std::time::Duration::from_millis(10));
+        std::thread::sleep(std::time::Duration::from_millis(4));
     }
+    false
+}
+
+/// Helper function to wait for a condition with sleep intervals
+pub fn wait_for_condition_with_timeout<F>(mut condition: F, timeout: std::time::Duration) -> bool
+where
+    F: FnMut() -> bool,
+{
+    let sleep = std::time::Duration::from_millis(4);
+    let iterations = timeout.as_millis() / sleep.as_millis();
+    for _ in 0..iterations {
+        if condition() {
+            return true;
+        }
+        std::thread::sleep(sleep);
+    }
+    false
 }
 
 pub fn create_harness<'a>(temp_dir: &tempfile::TempDir) -> TestHarness<'a> {

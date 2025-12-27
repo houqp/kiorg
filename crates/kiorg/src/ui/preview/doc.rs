@@ -275,7 +275,7 @@ fn render_pdf_page_with_dpi(
 /// Render a PDF page and extract metadata
 pub fn extract_pdf_metadata(path: &Path, ctx: &egui::Context) -> Result<PreviewContent, String> {
     let doc = PdfDocument::open(path)?;
-    let file_id = path.to_string_lossy().to_string();
+    let file_id = path.to_string_lossy();
     let (cover_image, texture_handle) = render_pdf_page_low_dpi(&doc, 0, Some(&file_id), ctx)?;
 
     // Extract metadata

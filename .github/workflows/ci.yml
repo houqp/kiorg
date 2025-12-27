@@ -95,6 +95,8 @@ jobs:
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@stable
 
+    - uses: taiki-e/install-action@nextest
+
     - name: Cache dependencies
       uses: Swatinem/rust-cache@v2
 
@@ -105,7 +107,7 @@ jobs:
       run: bash .github/workflows/clean_disk_space.sh
 
     - name: Run tests
-      run: cargo test
+      run: cargo nextest run
 
   bundle-linux:
     name: Bundle Packaging (Linux - ${{ matrix.arch }})

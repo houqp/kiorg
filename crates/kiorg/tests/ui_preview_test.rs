@@ -5,7 +5,8 @@ use egui::Key;
 use kiorg::models::preview_content::PreviewContent;
 use tempfile::tempdir;
 use ui_test_helpers::{
-    create_harness, create_test_image, create_test_tar, create_test_zip, wait_for_condition,
+    create_harness, create_test_image, create_test_pdf, create_test_tar, create_test_zip,
+    wait_for_condition, wait_for_condition_with_timeout,
 };
 
 /// Test for text preview of regular text files
@@ -325,6 +326,53 @@ fn test_none_preview() {
         }
         Some(other) => {
             panic!("Preview content should be None or a 'No file selected' message, got {other:?}");
+        }
+    }
+}
+
+/// Test that PDF page count is displayed in the right side panel preview
+#[test]
+fn test_pdf_page_count_in_preview_content() {
+    let temp_dir = tempdir().unwrap();
+
+    // Create a test PDF with 5 pages
+    let page_count = 5;
+    let pdf_path = temp_dir.path().join("test.pdf");
+    create_test_pdf(&pdf_path, page_count);
+
+    let mut harness = create_harness(&temp_dir);
+
+    // Wait for PDF processing in a loop, checking for preview content
+    wait_for_condition_with_timeout(
+        || {
+            harness.step();
+            // Check if PDF preview content is loaded
+            matches!(
+                &harness.state().preview_content,
+                Some(PreviewContent::Pdf(_))
+            )
+        },
+        std::time::Duration::from_secs(2),
+    );
+
+    match &harness.state().preview_content {
+        Some(PreviewContent::Pdf(pdf_meta)) => {
+            assert_eq!(pdf_meta.page_count, page_count);
+        }
+        Some(PreviewContent::Epub(_)) => {
+            panic!("Expected PDF preview content, got EPUB");
+        }
+        Some(PreviewContent::Text(_)) => {
+            panic!("PDF should not be treated as an text");
+        }
+        Some(PreviewContent::Loading(..)) => {
+            panic!("PDF still loading");
+        }
+        Some(PreviewContent::Image(_)) => {
+            panic!("PDF should not be treated as an image");
+        }
+        _other => {
+            panic!("PDF expected");
         }
     }
 }

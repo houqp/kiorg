@@ -102,6 +102,12 @@ pub fn render(
     }
 }
 
+/// Generate a URI for an image file path
+#[inline]
+fn image_path_to_uri(path: &Path) -> String {
+    format!("file://{}", path.display())
+}
+
 /// Read image file, extract metadata, and create a `PreviewContent`
 ///
 /// This function:
@@ -238,11 +244,9 @@ pub fn read_image_with_metadata(
         // Add format-specific metadata
         if format == ImageFormat::Gif {
             // For GIF files, use URI source to enable animation
+            let uri = image_path_to_uri(path);
             return Ok(PreviewContent::image_from_uri(
-                title,
-                metadata,
-                format!("file://{}", path.display()),
-                exif_data,
+                title, metadata, uri, exif_data,
             ));
         }
     }
@@ -258,10 +262,6 @@ pub fn read_image_with_metadata(
 
     // Create a unique texture ID based on the path
     let texture_id = format!("image_{}", path.display());
-
-    // Create a texture from the color image
     let texture = ctx.load_texture(texture_id, color_image, egui::TextureOptions::default());
-
-    // Create the image preview content with the texture and exif data
     Ok(PreviewContent::image(title, metadata, texture, exif_data))
 }
