@@ -9,3 +9,7 @@ package.json
 assets/raw
 scratch_space
 examples/**/target/
+
+# Nix
+.direnv/
+result
