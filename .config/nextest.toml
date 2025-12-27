@@ -1,0 +1,3 @@
+[profile.default]
+slow-timeout = "8s"
+fail-fast = { max-fail = "all" }

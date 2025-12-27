@@ -58,9 +58,7 @@ fn load_system_fonts(mut fonts: FontDefinitions) -> FontDefinitions {
             "Source Han Sans CN",
         ],
     );
-
     fontdb.insert("traditional_chinese", vec!["Source Han Sans HK"]);
-
     fontdb.insert(
         "japanese",
         vec![
@@ -70,11 +68,8 @@ fn load_system_fonts(mut fonts: FontDefinitions) -> FontDefinitions {
             "MS Gothic",
         ],
     );
-
     fontdb.insert("korean", vec!["Source Han Sans KR"]);
-
     fontdb.insert("taiwanese", vec!["Source Han Sans TW"]);
-
     fontdb.insert(
         "arabic_fonts",
         vec![

@@ -64,7 +64,6 @@ fn test_image_preview_popup_shortcut() {
 /// Test that the PDF preview popup closes when an invalid PDF file is opened
 #[test]
 fn test_pdf_preview_popup_error_handling() {
-    // Create a temporary directory for testing
     let temp_dir = tempdir().unwrap();
 
     // Create an invalid PDF file (e.g., a text file with .pdf extension)
@@ -72,12 +71,7 @@ fn test_pdf_preview_popup_error_handling() {
     let invalid_pdf_path = temp_dir.path().join(invalid_pdf_name);
     std::fs::write(&invalid_pdf_path, "This is not a valid PDF content.").unwrap();
 
-    // Start the harness
     let mut harness = create_harness(&temp_dir);
-
-    // Select the invalid PDF file
-    harness.key_press(Key::ArrowDown);
-    harness.step();
 
     // Open preview popup with Shift+K
     harness.key_press_modifiers(shift_modifiers(), Key::K);
@@ -89,23 +83,16 @@ fn test_pdf_preview_popup_error_handling() {
         "Preview popup should be opened to display the error"
     );
 
-    wait_for_condition(|| {
+    let success = wait_for_condition(|| {
         harness.step();
         // Verify the error message is displayed in the preview content
         if let Some(PreviewContent::Text(text)) = harness.state().preview_content.as_ref() {
-            text.contains("Error loading file: Failed to open PDF file: file header is missing")
+            text.contains("File not in PDF format or corrupted")
         } else {
             false
         }
     });
-
-    // Final verification
-    if let Some(PreviewContent::Text(text)) = harness.state().preview_content.as_ref() {
-        assert!(
-            text.contains("File not in PDF format or corrupted"),
-            "Expected error message not found in preview content: {text}"
-        );
-    } else {
+    if !success {
         panic!(
             "Preview content should be Text with error message, but got: {:?}",
             harness.state().preview_content
