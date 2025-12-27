@@ -115,8 +115,50 @@ pub fn create_test_tar(path: &PathBuf) -> PathBuf {
     path.clone()
 }
 
+/// Create a demo ZIP file for showcase
+pub fn create_demo_zip(path: &PathBuf) {
+    use std::io::Write;
+    use zip::write::FileOptions;
+
+    let file = std::fs::File::create(path).unwrap();
+    let mut zip = zip::ZipWriter::new(file);
+
+    let options = FileOptions::default()
+        .compression_method(zip::CompressionMethod::Stored)
+        .unix_permissions(0o755) as FileOptions<'_, ()>;
+
+    // 1. Text file
+    zip.start_file("README.txt", options).unwrap();
+    zip.write_all(b"This is a test ZIP archive for preview features.")
+        .unwrap();
+
+    // 2. Directory and JSON file
+    zip.add_directory("data", options).unwrap();
+    zip.start_file("data/config.json", options).unwrap();
+    zip.write_all(
+        br#"{
+    "name": "Test Archive",
+    "version": 1.0,
+    "features": ["preview", "zip", "text"]
+}"#,
+    )
+    .unwrap();
+
+    // 3. Image file (using the same 1x1 pixel logic)
+    let img = image::ImageBuffer::from_pixel(1, 1, image::Rgb([0u8, 255u8, 0u8])); // Green pixel
+    let mut png_bytes = Vec::new();
+    let mut cursor = std::io::Cursor::new(&mut png_bytes);
+    img.write_to(&mut cursor, image::ImageFormat::Png).unwrap();
+
+    zip.start_file("images/logo.png", options).unwrap();
+    zip.write_all(&png_bytes).unwrap();
+
+    zip.finish().unwrap();
+    assert!(path.exists());
+}
+
 /// Create a minimal test EPUB file
-pub fn create_test_epub(path: &PathBuf) -> PathBuf {
+pub fn create_test_epub(path: &PathBuf) {
     use std::io::Write;
     use zip::write::FileOptions;
 
@@ -151,7 +193,7 @@ pub fn create_test_epub(path: &PathBuf) -> PathBuf {
         br#"<?xml version="1.0" encoding="UTF-8"?>
 <package xmlns="http://www.idpf.org/2007/opf" version="2.0" unique-identifier="BookId">
     <metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf">
-        <dc:title>Test EPUB Book</dc:title>
+        <dc:title>Demo EPUB Book</dc:title>
         <dc:creator>Test Author</dc:creator>
         <dc:language>en</dc:language>
         <dc:identifier id="BookId">urn:uuid:12345678-1234-1234-1234-123456789012</dc:identifier>
@@ -208,17 +250,15 @@ pub fn create_test_epub(path: &PathBuf) -> PathBuf {
 
     zip.finish().unwrap();
     assert!(path.exists());
-    path.clone()
 }
 
 /// Create a minimal test PDF file with multiple pages
-pub fn create_test_pdf(path: &PathBuf, page_count: usize) -> PathBuf {
+pub fn create_test_pdf(path: &PathBuf, page_count: usize) {
     // Create a minimal multi-page PDF using a simple approach
     // This creates a basic PDF structure with the specified number of pages
     let pdf_content = create_minimal_pdf_content(page_count);
     std::fs::write(path, pdf_content).unwrap();
     assert!(path.exists());
-    path.clone()
 }
 
 /// Generate minimal PDF content with the specified number of pages
@@ -260,8 +300,30 @@ fn create_minimal_pdf_content(page_count: usize) -> Vec<u8> {
 
         // Page object
         offsets.push(content.len());
-        let page_content_text = format!("(Page {})", i + 1);
-        let stream_content = format!("BT\n/F1 12 Tf\n72 720 Td\n{page_content_text} Tj\nET\n");
+        let page_content_text = "(Big document title)";
+        let p1 = "(Lorem ipsum dolor sit amet, consectetur adipiscing elit.)";
+        let p2 = "(Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.)";
+        let p3 = "(Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.)";
+        let p4 = "(Duis aute irure dolor in reprehenderit in voluptate velit esse cillum.)";
+
+        let stream_content = format!(
+            "BT\n\
+            /F1 24 Tf\n\
+            50 750 Td\n\
+            {page_content_text} Tj\n\
+            ET\n\
+            BT\n\
+            /F1 12 Tf\n\
+            50 700 Td\n\
+            {p1} Tj\n\
+            0 -20 Td\n\
+            {p2} Tj\n\
+            0 -20 Td\n\
+            {p3} Tj\n\
+            0 -20 Td\n\
+            {p4} Tj\n\
+            ET\n"
+        );
         let stream_length = stream_content.len();
 
         let page = format!(
@@ -281,7 +343,7 @@ fn create_minimal_pdf_content(page_count: usize) -> Vec<u8> {
     let info_obj_num = offsets.len();
     offsets.push(content.len());
     let info = format!(
-        "{} 0 obj\n<<\n/Title (Test PDF Title)\n/Author (Test PDF Author)\n/CreationDate (D:20230101120000)\n>>\nendobj\n",
+        "{} 0 obj\n<<\n/Title (Demo PDF File)\n/Author (Kiorg Integration tester)\n/CreationDate (D:20230101120000)\n>>\nendobj\n",
         info_obj_num
     );
     content.extend_from_slice(info.as_bytes());

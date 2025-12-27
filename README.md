@@ -33,6 +33,12 @@ bindings. It is built using the [egui](https://www.egui.rs/#demo) framework.
 </p>
 
 <p align="center">
+  <img src="crates/kiorg/tests/snapshots/preview_features_showcase.gif" alt="Content preview" width="800px">
+  <br>
+  <em>File content preview</em>
+</p>
+
+<p align="center">
   <img src="crates/kiorg/tests/snapshots/theme_selection_animation.gif" alt="Theme Selection" width="800px">
   <br>
   <em>Customizable color themes</em>

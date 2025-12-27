@@ -62,10 +62,7 @@ fn test_epub_preview() {
             );
 
             // Check specific values
-            assert!(
-                epub_meta.title.contains("Test EPUB Book"),
-                "Title should contain 'Test EPUB Book'"
-            );
+            assert_eq!(epub_meta.title, "Demo EPUB Book");
 
             assert!(
                 epub_meta.page_count > 0,

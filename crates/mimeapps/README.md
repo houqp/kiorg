@@ -1,5 +1,7 @@
 # mimeapps
 
+[![Crates.io](https://img.shields.io/crates/v/mimeapps.svg)](https://crates.io/crates/mimeapps) [![docs.rs](https://img.shields.io/docsrs/mimeapps)](https://docs.rs/mimeapps)
+
 Cross-platform library for looking up registered applications for a given file path.
 
 ## Features
