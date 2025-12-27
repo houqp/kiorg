@@ -263,11 +263,15 @@ impl PreviewContent {
         pdf_file: Arc<Mutex<PdfDocument>>,
         file_path: &std::path::Path,
     ) -> Self {
-        // Use provided title or default
-        let title = title.unwrap_or_else(|| "__Untitled__".to_string());
         // Generate unique file ID from path
         let file_id = file_path.to_string_lossy().to_string();
-
+        // Use provided title or file name
+        let title = title.unwrap_or_else(|| {
+            let file_name = file_path
+                .file_name()
+                .map(|f| f.to_string_lossy().to_string());
+            file_name.unwrap_or_else(|| file_id.clone())
+        });
         Self::Pdf(PdfMeta {
             file_id,
             title,
@@ -282,36 +286,36 @@ impl PreviewContent {
 
     /// Creates a new EPUB preview content with metadata and optional cover image
     #[must_use]
-    pub fn epub(
+    pub fn epub_with_file(
         mut metadata: HashMap<String, String>,
         cover_image: egui::widgets::ImageSource<'static>,
         page_count: isize,
+        file_path: &std::path::Path,
     ) -> Self {
-        let title = Self::extract_epub_book_title(&metadata);
-        // Remove title keys from metadata since we've extracted the title
-        metadata.remove("title");
-
+        fn pop_title(
+            metadata: &mut HashMap<String, String>,
+            file_path: &std::path::Path,
+        ) -> String {
+            let title_keys = ["title", "dc:title"];
+            for key in title_keys {
+                if let Some(v) = metadata.remove(key)
+                    && !v.is_empty()
+                {
+                    return v;
+                }
+            }
+            // no title key found, use file name/path as title
+            let file_name = file_path.file_name().map(|f| f.to_string_lossy());
+            file_name
+                .unwrap_or_else(|| file_path.to_string_lossy())
+                .to_string()
+        }
+        let title = pop_title(&mut metadata, file_path);
         Self::Epub(EpubMeta {
             title,
             metadata,
             cover: cover_image,
             page_count,
         })
-    }
-
-    /// Helper function to extract book title from EPUB metadata
-    fn extract_epub_book_title(metadata: &HashMap<String, String>) -> String {
-        // Check for title in various possible metadata keys
-        let title_keys = ["title", "dc:title"];
-
-        for key in &title_keys {
-            if let Some(value) = metadata.get(*key)
-                && !value.is_empty()
-            {
-                return value.clone();
-            }
-        }
-        // If no title found, return a default
-        "__Untitled__".to_string()
     }
 }

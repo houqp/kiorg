@@ -393,7 +393,12 @@ pub fn extract_epub_metadata(path: &Path) -> Result<PreviewContent, String> {
     });
 
     // Return the PreviewContent directly
-    Ok(PreviewContent::epub(metadata, cover_image, page_count))
+    Ok(PreviewContent::epub_with_file(
+        metadata,
+        cover_image,
+        page_count,
+        path,
+    ))
 }
 
 /// Helper function to create cover image source from image data and href
