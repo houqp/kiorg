@@ -159,12 +159,15 @@ pub fn update_cache(app: &mut Kiorg, ctx: &egui::Context) {
     } else {
         None
     };
-
     if let Some(plugin) = plugin_result {
+        let ctx_clone = ctx.clone();
         loading::load_preview_async(app, entry.path, move |path| {
-            let result = plugin.preview_file(&path.to_string_lossy());
+            let result = plugin.preview(&path.to_string_lossy());
             match result {
-                Ok(plugin_content) => Ok(PreviewContent::plugin_preview(plugin_content)),
+                Ok(plugin_content) => Ok(PreviewContent::plugin_preview_from_components(
+                    plugin_content,
+                    &ctx_clone,
+                )),
                 Err(e) => Ok(PreviewContent::text(format!("Plugin error: {}", e))),
             }
         });

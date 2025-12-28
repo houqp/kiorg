@@ -203,10 +203,7 @@ pub fn handle_preview_popup_input_pdf(
 ) {
     use crate::config::shortcuts::{self, ShortcutAction, ShortcutKey, TraverseResult};
 
-    // Get shortcuts from config or use defaults
     let shortcuts = shortcuts::get_default_shortcuts();
-
-    // Try to find a matching action for the key combination
     let shortcut_key = ShortcutKey { key, modifiers };
     if let TraverseResult::Action(action) = shortcuts.traverse_tree(&[shortcut_key]) {
         match action {

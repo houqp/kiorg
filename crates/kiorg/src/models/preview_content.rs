@@ -97,8 +97,8 @@ pub struct ImageMeta {
     pub metadata: HashMap<String, String>,
     /// EXIF metadata (key-value pairs), stored separately from regular metadata
     pub exif_data: Option<HashMap<String, String>>,
-    /// Image source (can be texture handle or URI for animated images)
-    pub image_source: egui::widgets::ImageSource<'static>,
+    /// Pre-constructed image widget ready for rendering
+    pub image: egui::Image<'static>,
     /// Keep the texture handle alive to prevent GPU texture from being freed
     pub _texture_handle: Option<egui::TextureHandle>,
 }
@@ -110,7 +110,7 @@ impl std::fmt::Debug for ImageMeta {
             .field("title", &self.title)
             .field("metadata", &self.metadata)
             .field("exif_data", &self.exif_data)
-            .field("image_source", &"ImageSource")
+            .field("image", &"Image")
             .field(
                 "_texture_handle",
                 &self._texture_handle.as_ref().map(|_| "TextureHandle"),
@@ -130,9 +130,7 @@ pub enum PreviewContent {
         language: &'static str,
     },
     /// Plugin-generated preview content
-    PluginPreview {
-        components: Vec<kiorg_plugin::Component>,
-    },
+    PluginPreview { components: Vec<RenderedComponent> },
     /// Image content with metadata
     Image(ImageMeta),
     /// Zip file content with a list of entries
@@ -182,15 +180,134 @@ pub struct TarEntry {
     pub permissions: String,
 }
 
+fn load_into_texture(
+    ctx: &egui::Context,
+    dynamic_image: image::DynamicImage,
+    name: String,
+) -> (egui::Image<'static>, Option<egui::TextureHandle>) {
+    let rgba8 = dynamic_image.to_rgba8();
+    let size = [rgba8.width() as usize, rgba8.height() as usize];
+    let color_image =
+        egui::ColorImage::from_rgba_unmultiplied(size, rgba8.as_flat_samples().as_slice());
+    let texture = ctx.load_texture(name, color_image, Default::default());
+    let image = egui::Image::new(&texture);
+    (image, Some(texture))
+}
+
+/// Rendered version of plugin components that can hold processed data like textures
+#[derive(Clone, Debug)]
+pub enum RenderedComponent {
+    Title(kiorg_plugin::TitleComponent),
+    Text(kiorg_plugin::TextComponent),
+    Image(RenderedImageComponent),
+    Table(kiorg_plugin::TableComponent),
+}
+
+#[derive(Clone)]
+pub struct RenderedImageComponent {
+    pub image: egui::Image<'static>,
+    pub interactive: bool,
+    pub _texture_handle: Option<egui::TextureHandle>,
+}
+
+impl std::fmt::Debug for RenderedImageComponent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RenderedImageComponent")
+            .field("image", &"Image")
+            .field("interactive", &self.interactive)
+            .field(
+                "_texture_handle",
+                &self._texture_handle.as_ref().map(|_| "TextureHandle"),
+            )
+            .finish()
+    }
+}
+
 impl PreviewContent {
     /// Creates a new text preview content
     pub fn text(content: impl Into<String>) -> Self {
         Self::Text(content.into())
     }
 
-    /// Creates a new plugin preview content
-    pub fn plugin_preview(components: Vec<kiorg_plugin::Component>) -> Self {
-        Self::PluginPreview { components }
+    /// Creates a new plugin preview content by processing plugin components
+    pub fn plugin_preview_from_components(
+        components: Vec<kiorg_plugin::Component>,
+        ctx: &egui::Context,
+    ) -> Self {
+        let mut rendered_components = Vec::with_capacity(components.len());
+
+        for component in components {
+            match component {
+                kiorg_plugin::Component::Title(t) => {
+                    rendered_components.push(RenderedComponent::Title(t))
+                }
+                kiorg_plugin::Component::Text(t) => {
+                    rendered_components.push(RenderedComponent::Text(t))
+                }
+                kiorg_plugin::Component::Table(t) => {
+                    rendered_components.push(RenderedComponent::Table(t))
+                }
+                kiorg_plugin::Component::Image(img) => match img.source {
+                    kiorg_plugin::ImageSource::Path(path) => match image::open(&path) {
+                        Ok(dynamic_image) => {
+                            let (image, texture_handle) = load_into_texture(
+                                ctx,
+                                dynamic_image,
+                                format!("plugin_preview_path_{}", path),
+                            );
+                            rendered_components.push(RenderedComponent::Image(
+                                RenderedImageComponent {
+                                    image,
+                                    interactive: img.interactive,
+                                    _texture_handle: texture_handle,
+                                },
+                            ));
+                        }
+                        Err(e) => {
+                            rendered_components.push(RenderedComponent::Text(
+                                kiorg_plugin::TextComponent {
+                                    text: format!(
+                                        "Failed to load image from path: {}\nError: {}",
+                                        path, e
+                                    ),
+                                },
+                            ));
+                        }
+                    },
+                    kiorg_plugin::ImageSource::Bytes { format, data, uid } => {
+                        match image::load_from_memory_with_format(&data, format) {
+                            Ok(dynamic_image) => {
+                                let (image, texture_handle) = load_into_texture(
+                                    ctx,
+                                    dynamic_image,
+                                    format!("plugin_preview_bytes_{}", uid),
+                                );
+                                rendered_components.push(RenderedComponent::Image(
+                                    RenderedImageComponent {
+                                        image,
+                                        interactive: img.interactive,
+                                        _texture_handle: texture_handle,
+                                    },
+                                ));
+                            }
+                            Err(e) => {
+                                rendered_components.push(RenderedComponent::Text(
+                                        kiorg_plugin::TextComponent {
+                                            text: format!(
+                                                "Failed to decode image (format: {:?}, uid: {}\nError: {}",
+                                                format, uid, e
+                                            ),
+                                        },
+                                    ));
+                            }
+                        }
+                    }
+                },
+            }
+        }
+        Self::PluginPreview {
+            components: rendered_components,
+        }
     }
 
     /// Creates a new image preview content with a texture handle
@@ -200,11 +317,12 @@ impl PreviewContent {
         texture: egui::TextureHandle,
         exif_data: Option<HashMap<String, String>>,
     ) -> Self {
+        let image = egui::Image::new(&texture);
         Self::Image(ImageMeta {
             title: title.into(),
             metadata,
             exif_data,
-            image_source: egui::widgets::ImageSource::from(&texture),
+            image,
             _texture_handle: Some(texture),
         })
     }
@@ -216,12 +334,13 @@ impl PreviewContent {
         uri: String,
         exif_data: Option<HashMap<String, String>>,
     ) -> Self {
+        let image = egui::Image::new(egui::widgets::ImageSource::Uri(uri.into()));
         Self::Image(ImageMeta {
             title: title.into(),
             metadata,
             exif_data,
-            image_source: egui::widgets::ImageSource::Uri(uri.into()),
-            _texture_handle: None, // No texture handle for URI-based images//
+            image,
+            _texture_handle: None, // No texture handle for URI-based images
         })
     }
 

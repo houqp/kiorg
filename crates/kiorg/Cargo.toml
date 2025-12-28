@@ -134,4 +134,3 @@ windows-sys = { version = "0.61.0", features = [
 name = "Kiorg"
 icon = ["../../assets/icons/1024x1024@2x.png"]
 osx_url_schemes = ["com.kiorg.kiorg"]
-

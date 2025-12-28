@@ -105,13 +105,24 @@ fn display_failed_plugins_grid<'a>(
         });
 }
 
+fn close_popup(app: &mut Kiorg) {
+    app.show_popup = None;
+    // For plugins, we need to clear the content/cache because the popup loads
+    // specific content via `preview_popup` that might differ from the
+    // standard right panel preview.
+    app.preview_content = None;
+    app.cached_preview_path = None;
+    // Force preview update in the main loop since we cleared the content
+    app.selection_changed = true;
+}
+
 pub fn draw(app: &mut Kiorg, ctx: &egui::Context) {
     let mut keep_open = true;
 
     // Check for shortcut actions based on input
     let action = app.get_shortcut_action_from_input(ctx);
     if let Some(ShortcutAction::Exit) = action {
-        app.show_popup = None;
+        close_popup(app);
         return;
     }
 
@@ -145,6 +156,6 @@ pub fn draw(app: &mut Kiorg, ctx: &egui::Context) {
     });
 
     if !keep_open {
-        app.show_popup = None;
+        close_popup(app);
     }
 }

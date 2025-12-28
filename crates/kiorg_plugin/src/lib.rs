@@ -5,7 +5,8 @@
 
 use serde::{Deserialize, Serialize};
 use std::io::{self, Read, Write};
-use uuid::Uuid;
+pub use uuid;
+pub use uuid::Uuid;
 
 /// Protocol version for compatibility checking
 /// Major version changes indicate incompatible protocol changes
@@ -84,6 +85,8 @@ pub enum EngineCommand {
     Hello { protocol_version: String },
     /// Preview command - takes a file path
     Preview { path: String },
+    /// Preview popup command - takes a file path
+    PreviewPopup { path: String },
 }
 
 /// Message sent from engine to plugin
@@ -108,6 +111,8 @@ pub enum PluginResponse {
         protocol_version: String,
         metadata: PluginMetadata,
     },
+    /// Error response for reporting issues back to the engine
+    Error { message: String },
 }
 
 /// Component types for rich preview
@@ -133,23 +138,40 @@ pub struct TextComponent {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ImageComponent {
     pub source: ImageSource,
+    pub interactive: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ImageFormat {
-    Png,
-    Jpeg,
-    Gif,
-    WebP,
-    Svg,
+impl ImageComponent {
+    /// Create a non-interactive image component from an image source
+    pub fn from_source(source: ImageSource) -> Self {
+        Self {
+            source,
+            interactive: false,
+        }
+    }
+
+    /// Create an interactive image component from an image source
+    pub fn from_source_interactive(source: ImageSource) -> Self {
+        Self {
+            source,
+            interactive: true,
+        }
+    }
 }
+
+pub use image::ImageFormat;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", content = "value")]
 pub enum ImageSource {
     Path(String),
-    Url(String),
-    Bytes { format: ImageFormat, data: Vec<u8> },
+    Bytes {
+        format: ImageFormat,
+        /// image data, must conform to the format specified
+        data: Vec<u8>,
+        /// unique identifier for the image
+        uid: String,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -185,6 +207,9 @@ pub trait PluginHandler {
         PluginResponse::Hello(self.metadata())
     }
     fn on_preview(&mut self, path: &str) -> PluginResponse;
+    fn on_preview_popup(&mut self, path: &str) -> PluginResponse {
+        self.on_preview(path)
+    }
     fn metadata(&self) -> PluginMetadata;
 
     fn run(mut self)
@@ -204,15 +229,40 @@ pub trait PluginHandler {
     /// This function will read messages from stdin and dispatch them to the handler.
     /// It will exit when stdin is closed (host process exited) or on communication error.
     fn run_plugin_loop(&mut self) {
-        while let Ok(message) = read_message() {
-            let response = match message.command {
-                EngineCommand::Hello { protocol_version } => self.on_hello(&protocol_version),
-                EngineCommand::Preview { path } => self.on_preview(&path),
-            };
+        loop {
+            match read_message() {
+                Ok(message) => {
+                    let response = match message.command {
+                        EngineCommand::Hello { protocol_version } => {
+                            self.on_hello(&protocol_version)
+                        }
+                        EngineCommand::Preview { path } => self.on_preview(&path),
+                        EngineCommand::PreviewPopup { path } => self.on_preview_popup(&path),
+                    };
 
-            if send_message(&response).is_err() {
-                // Failed to send response, host probably disconnected
-                break;
+                    if send_message(&response).is_err() {
+                        // Failed to send response, host probably disconnected
+                        break;
+                    }
+                }
+                Err(e) => {
+                    // Check if the error is a clean shutdown (UnexpectedEof)
+                    if let Some(io_err) = e.downcast_ref::<io::Error>() {
+                        if io_err.kind() == io::ErrorKind::UnexpectedEof {
+                            break;
+                        }
+                    }
+
+                    let error_msg = format!("Invalid command received: {}", e);
+                    eprintln!("{}", error_msg);
+
+                    // Try to send the error back to the engine
+                    let error_response = PluginResponse::Error { message: error_msg };
+                    if send_message(&error_response).is_err() {
+                        eprintln!("Failed to send error response to engine");
+                        std::process::exit(-2);
+                    }
+                }
             }
         }
     }
