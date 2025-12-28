@@ -13,23 +13,31 @@ struct HeifPlugin {
     metadata: PluginMetadata,
 }
 
+struct HeifData {
+    filename: String,
+    png_data: Vec<u8>,
+    metadata_rows: Vec<Vec<String>>,
+}
+
 impl PluginHandler for HeifPlugin {
     fn on_preview(&mut self, path: &str) -> PluginResponse {
         match self.process_heif(path) {
-            Ok((filename, png_data, metadata_rows)) => PluginResponse::Preview {
+            Ok(data) => PluginResponse::Preview {
                 components: vec![
-                    Component::Title(TitleComponent { text: filename }),
+                    Component::Title(TitleComponent {
+                        text: data.filename,
+                    }),
                     Component::Image(ImageComponent {
                         source: ImageSource::Bytes {
                             format: ImageFormat::Png,
-                            data: png_data,
+                            data: data.png_data,
                             uid: path.to_string(),
                         },
                         interactive: false,
                     }),
                     Component::Table(TableComponent {
                         headers: None,
-                        rows: metadata_rows,
+                        rows: data.metadata_rows,
                     }),
                 ],
             },
@@ -41,11 +49,11 @@ impl PluginHandler for HeifPlugin {
 
     fn on_preview_popup(&mut self, path: &str) -> PluginResponse {
         match self.process_heif(path) {
-            Ok((_, png_data, _)) => PluginResponse::Preview {
+            Ok(data) => PluginResponse::Preview {
                 components: vec![Component::Image(ImageComponent {
                     source: ImageSource::Bytes {
                         format: ImageFormat::Png,
-                        data: png_data,
+                        data: data.png_data,
                         uid: path.to_string(),
                     },
                     interactive: true,
@@ -63,10 +71,7 @@ impl PluginHandler for HeifPlugin {
 }
 
 impl HeifPlugin {
-    fn process_heif(
-        &self,
-        path: &str,
-    ) -> Result<(String, Vec<u8>, Vec<Vec<String>>), Box<dyn std::error::Error>> {
+    fn process_heif(&self, path: &str) -> Result<HeifData, Box<dyn std::error::Error>> {
         let lib_heif = LibHeif::new();
         let ctx = HeifContext::read_from_file(path)?;
         let handle = ctx.primary_image_handle()?;
@@ -171,7 +176,11 @@ impl HeifPlugin {
             .unwrap_or("HEIF Preview")
             .to_string();
 
-        Ok((filename, png_data, metadata_rows))
+        Ok(HeifData {
+            filename,
+            png_data,
+            metadata_rows,
+        })
     }
 }
 
