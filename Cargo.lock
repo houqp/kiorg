@@ -2705,6 +2705,7 @@ dependencies = [
  "ravif",
  "rayon",
  "rgb",
+ "serde",
  "tiff",
  "zune-core 0.5.0",
  "zune-jpeg 0.5.5",
@@ -3010,6 +3011,7 @@ dependencies = [
 name = "kiorg_plugin"
 version = "0.1.0"
 dependencies = [
+ "image",
  "rmp-serde",
  "serde",
  "uuid",

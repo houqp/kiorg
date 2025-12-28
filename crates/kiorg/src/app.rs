@@ -369,6 +369,30 @@ impl Kiorg {
         notification::check_notifications(self);
     }
 
+    /// Check and process background preview loading
+    pub fn new_preview_loaded(&mut self, ctx: &egui::Context) -> bool {
+        let receiver = match &self.preview_content {
+            Some(PreviewContent::Loading(_path, receiver, _cancel_sender)) => receiver.clone(),
+            _ => return false,
+        };
+        if let Ok(receiver_lock) = receiver.lock() {
+            if let Ok(result) = receiver_lock.try_recv() {
+                ctx.request_repaint();
+                match result {
+                    Ok(content) => {
+                        self.preview_content = Some(content);
+                    }
+                    Err(e) => {
+                        self.preview_content =
+                            Some(PreviewContent::text(format!("Error loading file: {e}")));
+                    }
+                }
+                return true;
+            }
+        }
+        false
+    }
+
     /// Get shortcuts from config or use defaults
     /// This method provides a centralized way to access shortcuts configuration
     /// that can be reused across the main input handler and popup components
@@ -925,6 +949,11 @@ impl eframe::App for Kiorg {
         #[cfg(feature = "debug")]
         ctx.set_debug_on_hover(true);
 
+        if self.new_preview_loaded(ctx) {
+            return;
+        }
+        self.check_notifications();
+
         if self
             .notify_fs_change
             .load(std::sync::atomic::Ordering::Relaxed)
@@ -940,9 +969,6 @@ impl eframe::App for Kiorg {
             self.notify_fs_change
                 .store(false, std::sync::atomic::Ordering::Relaxed);
         }
-
-        // Check for notification messages from background threads
-        self.check_notifications();
 
         // Update preview cache only if selection changed
         if self.selection_changed {
@@ -1024,17 +1050,14 @@ impl eframe::App for Kiorg {
             #[cfg(target_os = "macos")]
             Some(PopupType::Volumes(_)) => {
                 use crate::ui::popup::volumes;
-
-                // Handle volumes popup
                 let volume_action = volumes::show_volumes_popup(ctx, self);
-                // Process the volume action
                 match volume_action {
                     volumes::VolumeAction::Navigate(path) => self.navigate_to_dir(path),
                     volumes::VolumeAction::None => {}
                 };
             }
             Some(PopupType::Preview) => {
-                popup_preview::show_preview_popup(ctx, self);
+                popup_preview::draw(ctx, self);
             }
             Some(PopupType::Themes(_)) => {
                 theme::draw(self, ctx);

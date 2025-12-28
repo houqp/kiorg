@@ -307,22 +307,14 @@ fn process_key(
     match &app.show_popup {
         Some(PopupType::Preview) => {
             if is_cancel_keys(key) {
-                app.show_popup = None;
+                popup_preview::close_popup(app);
                 return;
             }
-
             // Handle preview popup input (PDF page navigation, etc.)
-            match &mut app.preview_content {
-                Some(crate::models::preview_content::PreviewContent::Pdf(pdf_meta)) => {
-                    popup_preview::doc::handle_preview_popup_input_pdf(
-                        pdf_meta, key, modifiers, ctx,
-                    );
-                }
-                Some(crate::models::preview_content::PreviewContent::Epub(_epub_meta)) => {
-                    // EPUB documents don't have page navigation in preview popup
-                    // Only handle ESC to close popup which is already handled above
-                }
-                _ => {}
+            if let Some(crate::models::preview_content::PreviewContent::Pdf(pdf_meta)) =
+                &mut app.preview_content
+            {
+                popup_preview::doc::handle_preview_popup_input_pdf(pdf_meta, key, modifiers, ctx);
             }
             return;
         }

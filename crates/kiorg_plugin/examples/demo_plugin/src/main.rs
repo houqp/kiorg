@@ -24,12 +24,13 @@ impl PluginHandler for DemoPlugin {
                 kiorg_plugin::Component::Text(kiorg_plugin::TextComponent {
                     text: format!("Hello from demo plugin!\n\nFile: {}", path),
                 }),
-                kiorg_plugin::Component::Image(kiorg_plugin::ImageComponent {
-                    source: kiorg_plugin::ImageSource::Bytes {
+                kiorg_plugin::Component::Image(kiorg_plugin::ImageComponent::from_source(
+                    kiorg_plugin::ImageSource::Bytes {
                         format: kiorg_plugin::ImageFormat::Png,
                         data: ICON_BYTES.to_vec(),
+                        uid: kiorg_plugin::uuid::Uuid::new_v4().to_string(),
                     },
-                }),
+                )),
                 kiorg_plugin::Component::Table(kiorg_plugin::TableComponent {
                     headers: Some(vec!["Property".to_string(), "Value".to_string()]),
                     rows: vec![

@@ -4,8 +4,7 @@
 
 use kiorg_plugin::{
     Component, ImageComponent, ImageFormat, ImageSource, PluginCapabilities, PluginHandler,
-    PluginMetadata, PluginResponse, PreviewCapability, TableComponent, TextComponent,
-    TitleComponent,
+    PluginMetadata, PluginResponse, PreviewCapability, TableComponent, TitleComponent,
 };
 use libheif_rs::{Channel, ColorSpace, HeifContext, LibHeif, RgbChroma};
 use std::io::Cursor;
@@ -16,17 +15,44 @@ struct HeifPlugin {
 
 impl PluginHandler for HeifPlugin {
     fn on_preview(&mut self, path: &str) -> PluginResponse {
-        match self.generate_preview(path) {
-            Ok(response) => response,
-            Err(e) => PluginResponse::Preview {
+        match self.process_heif(path) {
+            Ok((filename, png_data, metadata_rows)) => PluginResponse::Preview {
                 components: vec![
-                    Component::Title(TitleComponent {
-                        text: "Error generating preview".to_string(),
+                    Component::Title(TitleComponent { text: filename }),
+                    Component::Image(ImageComponent {
+                        source: ImageSource::Bytes {
+                            format: ImageFormat::Png,
+                            data: png_data,
+                            uid: path.to_string(),
+                        },
+                        interactive: false,
                     }),
-                    Component::Text(TextComponent {
-                        text: format!("Failed to process HEIF file: {}", e),
+                    Component::Table(TableComponent {
+                        headers: None,
+                        rows: metadata_rows,
                     }),
                 ],
+            },
+            Err(e) => PluginResponse::Error {
+                message: format!("Failed to process HEIF file: {}", e),
+            },
+        }
+    }
+
+    fn on_preview_popup(&mut self, path: &str) -> PluginResponse {
+        match self.process_heif(path) {
+            Ok((_, png_data, _)) => PluginResponse::Preview {
+                components: vec![Component::Image(ImageComponent {
+                    source: ImageSource::Bytes {
+                        format: ImageFormat::Png,
+                        data: png_data,
+                        uid: path.to_string(),
+                    },
+                    interactive: true,
+                })],
+            },
+            Err(e) => PluginResponse::Error {
+                message: format!("Failed to process HEIF file for popup: {}", e),
             },
         }
     }
@@ -37,7 +63,10 @@ impl PluginHandler for HeifPlugin {
 }
 
 impl HeifPlugin {
-    fn generate_preview(&self, path: &str) -> Result<PluginResponse, Box<dyn std::error::Error>> {
+    fn process_heif(
+        &self,
+        path: &str,
+    ) -> Result<(String, Vec<u8>, Vec<Vec<String>>), Box<dyn std::error::Error>> {
         let lib_heif = LibHeif::new();
         let ctx = HeifContext::read_from_file(path)?;
         let handle = ctx.primary_image_handle()?;
@@ -142,21 +171,7 @@ impl HeifPlugin {
             .unwrap_or("HEIF Preview")
             .to_string();
 
-        Ok(PluginResponse::Preview {
-            components: vec![
-                Component::Title(TitleComponent { text: filename }),
-                Component::Image(ImageComponent {
-                    source: ImageSource::Bytes {
-                        format: ImageFormat::Png,
-                        data: png_data,
-                    },
-                }),
-                Component::Table(TableComponent {
-                    headers: None,
-                    rows: metadata_rows,
-                }),
-            ],
-        })
+        Ok((filename, png_data, metadata_rows))
     }
 }
 

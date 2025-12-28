@@ -1,54 +1,56 @@
 use crate::config::colors::AppColors;
+use crate::models::preview_content::RenderedComponent;
 use crate::ui::preview;
 use egui::{RichText, Ui};
 
 pub fn render(
     ui: &mut Ui,
-    components: &[kiorg_plugin::Component],
+    components: &[RenderedComponent],
     colors: &AppColors,
     available_width: f32,
+    available_height: f32,
 ) {
-    ui.vertical(|ui| {
-        for component in components {
+    for (i, component) in components.iter().enumerate() {
+        ui.push_id(i, |ui| {
+            if i > 0 {
+                ui.add_space(10.0);
+            }
             match component {
-                kiorg_plugin::Component::Title(title) => {
+                RenderedComponent::Title(title) => {
                     ui.heading(RichText::new(&title.text).color(colors.fg));
                 }
-                kiorg_plugin::Component::Text(text) => {
+                RenderedComponent::Text(text) => {
                     preview::text::render(ui, &text.text, colors);
                 }
-                kiorg_plugin::Component::Image(image) => match &image.source {
-                    kiorg_plugin::ImageSource::Path(path) => {
-                        let uri = format!("file://{}", path);
-                        ui.add(egui::Image::new(uri).max_width(available_width));
-                    }
-                    kiorg_plugin::ImageSource::Url(url) => {
-                        ui.add(egui::Image::new(url).max_width(available_width));
-                    }
-                    kiorg_plugin::ImageSource::Bytes { format: _, data } => {
-                        use std::collections::hash_map::DefaultHasher;
-                        use std::hash::{Hash, Hasher};
-                        let mut hasher = DefaultHasher::new();
-                        data.hash(&mut hasher);
-                        let hash = hasher.finish();
-                        let uri = format!("bytes://{}", hash);
-                        ui.add(
-                            egui::Image::from_bytes(uri, data.clone()).max_width(available_width),
+                RenderedComponent::Image(image) => {
+                    if image.interactive {
+                        crate::ui::preview::image::render_interactive(
+                            ui,
+                            &image.image,
+                            available_width,
+                            available_height,
                         );
+                    } else {
+                        ui.vertical_centered(|ui| {
+                            ui.add(
+                                image
+                                    .image
+                                    .clone()
+                                    .max_size(egui::vec2(available_width, available_height * 0.6))
+                                    .maintain_aspect_ratio(true),
+                            );
+                        });
                     }
-                },
-                kiorg_plugin::Component::Table(table) => {
+                }
+                RenderedComponent::Table(table) => {
                     use egui_extras::{Column, TableBuilder};
                     let num_columns = if let Some(headers) = &table.headers {
                         headers.len()
                     } else if let Some(first_row) = table.rows.first() {
                         first_row.len()
                     } else {
-                        0
+                        return;
                     };
-                    if num_columns == 0 {
-                        continue;
-                    }
 
                     let mut builder = TableBuilder::new(ui).striped(true).vscroll(false);
                     for _ in 0..(num_columns - 1) {
@@ -84,7 +86,6 @@ pub fn render(
                     }
                 }
             }
-            ui.add_space(10.0);
-        }
-    });
+        });
+    }
 }

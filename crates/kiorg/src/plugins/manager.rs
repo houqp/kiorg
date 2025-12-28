@@ -82,8 +82,31 @@ impl Drop for LoadedPlugin {
 
 impl LoadedPlugin {
     /// Execute preview command on the plugin for the given file path
-    pub fn preview_file(
+    pub fn preview(&self, file_path: &str) -> Result<Vec<kiorg_plugin::Component>, PluginError> {
+        self.call_preview_internal(
+            EngineCommand::Preview {
+                path: file_path.to_string(),
+            },
+            file_path,
+        )
+    }
+
+    /// Execute preview popup command on the plugin for the given file path
+    pub fn preview_popup(
         &self,
+        file_path: &str,
+    ) -> Result<Vec<kiorg_plugin::Component>, PluginError> {
+        self.call_preview_internal(
+            EngineCommand::PreviewPopup {
+                path: file_path.to_string(),
+            },
+            file_path,
+        )
+    }
+
+    fn call_preview_internal(
+        &self,
+        command: EngineCommand,
         file_path: &str,
     ) -> Result<Vec<kiorg_plugin::Component>, PluginError> {
         let mut state = self.state.lock().expect("Failed to lock plugin state");
@@ -97,15 +120,13 @@ impl LoadedPlugin {
         // Create the preview command message
         let engine_message = EngineMessage {
             id: CallId::new(),
-            command: EngineCommand::Preview {
-                path: file_path.to_string(),
-            },
+            command,
         };
 
         let plugin_name = &self.metadata.name;
         debug!(
-            "Sending preview message to plugin '{}': {:?}",
-            plugin_name, engine_message
+            "Sending preview message to plugin '{}' for '{}': {:?}",
+            plugin_name, file_path, engine_message
         );
 
         // Send the message to plugin stdin with length prefix
@@ -119,6 +140,9 @@ impl LoadedPlugin {
                 // Extract the preview content
                 match plugin_response {
                     kiorg_plugin::PluginResponse::Preview { components } => Ok(components),
+                    kiorg_plugin::PluginResponse::Error { message } => {
+                        Err(PluginError::ExecutionError { message })
+                    }
                     _ => Err(PluginError::ProtocolError {
                         message: "Expected Preview response from plugin".to_string(),
                     }),
@@ -427,6 +451,9 @@ impl PluginManager {
                 protocol_version,
                 metadata: Box::new(metadata),
             }),
+            kiorg_plugin::PluginResponse::Error { message } => {
+                Err(PluginError::ExecutionError { message })
+            }
             _ => Err(PluginError::ProtocolError {
                 message: "Expected Hello response from plugin".to_string(),
             }),

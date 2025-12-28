@@ -21,35 +21,39 @@ kiorg_plugin = "*"
 
 ```rust
 use kiorg_plugin::{
-    read_message, send_message, EngineCommand,
-    PluginResponse, HelloMessage
+    Component, PluginCapabilities, PluginHandler, PluginMetadata,
+    PluginResponse, PreviewCapability, TextComponent,
 };
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    loop {
-        match read_message() {
-            Ok(message) => {
-                let response = match message.command {
-                    EngineCommand::Hello(_) => {
-                        PluginResponse::Hello(HelloMessage {
-                            version: "1.0.0".to_string(),
-                        })
-                    }
-                    EngineCommand::Preview { path } => {
-                        // Generate preview content for the file
-                        let content = generate_preview(&path)?;
-                        PluginResponse::Preview { content }
-                    }
-                };
-                send_message(&response)?;
-            }
-            Err(e) => {
-                eprintln!("Error reading message: {}", e);
-                break;
-            }
+struct MyPlugin;
+
+impl PluginHandler for MyPlugin {
+    fn on_preview(&mut self, path: &str) -> PluginResponse {
+        // Return rich preview components
+        PluginResponse::Preview {
+            components: vec![Component::Text(TextComponent {
+                text: format!("Previewing file: {}", path),
+            })],
         }
     }
+
+    fn metadata(&self) -> PluginMetadata {
+        PluginMetadata {
+            name: "my-plugin".to_string(),
+            version: "0.1.0".to_string(),
+            description: "A simple kiorg preview plugin".to_string(),
+            homepage: None,
+            capabilities: PluginCapabilities {
+                preview: Some(PreviewCapability {
+                    file_pattern: r"\.txt$".to_string(), // Match .txt files
+                }),
+            },
+        }
+    }
+}
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    MyPlugin.run();
     Ok(())
 }
 ```
-

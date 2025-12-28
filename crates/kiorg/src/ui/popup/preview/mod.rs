@@ -34,6 +34,30 @@ pub fn handle_show_file_preview(app: &mut Kiorg, _ctx: &egui::Context) {
         return;
     }
 
+    // First check if any plugins can handle this file
+    let plugin_result = if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
+        app.plugin_manager.get_preview_plugin_for_file(file_name)
+    } else {
+        None
+    };
+    if let Some(plugin) = plugin_result {
+        // Trigger a fresh load specifically for the popup using the PreviewPopup command
+        let path_buf = path.to_path_buf();
+        let ctx_clone = _ctx.clone();
+        crate::ui::preview::loading::load_preview_async(app, path_buf, move |path| {
+            let result = plugin.preview_popup(&path.to_string_lossy());
+            match result {
+                Ok(plugin_content) => Ok(PreviewContent::plugin_preview_from_components(
+                    plugin_content,
+                    &ctx_clone,
+                )),
+                Err(e) => Ok(PreviewContent::text(format!("Plugin error: {}", e))),
+            }
+        });
+        app.show_popup = Some(PopupType::Preview);
+        return;
+    }
+
     // Handle different file types based on extension
     match extension.as_str() {
         crate::ui::preview::pdf_extensions!() => {
@@ -110,129 +134,144 @@ pub fn handle_show_file_preview(app: &mut Kiorg, _ctx: &egui::Context) {
     }
 }
 
+pub fn close_popup(app: &mut Kiorg) {
+    app.show_popup = None;
+    // For plugins, we need to clear the content/cache because the popup loads
+    // specific content via `preview_popup` that might differ from the
+    // standard right panel preview.
+    app.preview_content = None;
+    app.cached_preview_path = None;
+    // Force preview update in the main loop since we cleared the content
+    app.selection_changed = true;
+}
+
 /// Shows the preview popup for the currently selected file
-pub fn show_preview_popup(ctx: &Context, app: &mut Kiorg) {
-    // Check if preview popup should be shown
-    if app.show_popup == Some(PopupType::Preview) {
-        let mut keep_open = true;
-        let screen_size = ctx.content_rect().size();
-        let popup_size = egui::vec2(screen_size.x * 0.9, screen_size.y * 0.9);
-        let popup_content_width = popup_size.x * 0.9; // Calculate once
+pub fn draw(ctx: &Context, app: &mut Kiorg) {
+    if app.show_popup != Some(PopupType::Preview) {
+        return;
+    }
 
-        let window_title = {
-            let tab = app.tab_manager.current_tab_ref();
-            let selected_entry = tab.selected_entry();
-            selected_entry.map_or_else(|| "File Preview".to_string(), |entry| entry.name.clone())
-        };
+    let mut keep_open = true;
+    let screen_size = ctx.content_rect().size();
+    let popup_size = egui::vec2(screen_size.x * 0.9, screen_size.y * 0.9);
+    let popup_content_width = popup_size.x * 0.9; // Calculate once
 
-        new_center_popup_window(&truncate_text(&window_title, popup_content_width))
-            .max_size(popup_size)
-            .min_size(popup_size)
-            .open(&mut keep_open)
-            .show(ctx, |ui| {
-                if let Some(content) = &mut app.preview_content {
-                    // Calculate available space in the popup
-                    let available_width = ui.available_width();
-                    let available_height = ui.available_height();
+    let window_title = {
+        let tab = app.tab_manager.current_tab_ref();
+        let selected_entry = tab.selected_entry();
+        selected_entry.map_or_else(|| "File Preview".to_string(), |entry| entry.name.clone())
+    };
 
-                    // Display the preview content based on its type
-                    match content {
-                        PreviewContent::Text(text) => {
-                            // Display text with syntax highlighting if it's source code
-                            egui::ScrollArea::both()
-                                .auto_shrink([false; 2])
-                                .show(ui, |ui| {
-                                    let mut text_str = text.as_str();
-                                    ui.add(
-                                        egui::TextEdit::multiline(&mut text_str)
-                                            .desired_width(f32::INFINITY)
-                                            .desired_rows(0)
-                                            .font(egui::TextStyle::Monospace)
-                                            .text_color(app.colors.fg)
-                                            .interactive(false),
-                                    );
-                                });
-                        }
-                        PreviewContent::HighlightedCode { content, language } => {
-                            // Display syntax highlighted code with both horizontal and vertical scrolling
-                            egui::ScrollArea::both()
-                                .auto_shrink([false; 2])
-                                .show(ui, |ui| {
-                                    crate::ui::preview::text::render_highlighted(
-                                        ui, content, language,
-                                    );
-                                });
-                        }
-                        PreviewContent::Image(image_meta) => {
-                            image::render_popup(
-                                ui,
-                                image_meta,
-                                &app.colors,
-                                available_width,
-                                available_height,
+    new_center_popup_window(&truncate_text(&window_title, popup_content_width))
+        .max_size(popup_size)
+        .min_size(popup_size)
+        .open(&mut keep_open)
+        .show(ctx, |ui| {
+            let content = if let Some(content) = &mut app.preview_content {
+                content
+            } else {
+                ui.vertical_centered(|ui| {
+                    ui.label("No preview content available");
+                });
+                return;
+            };
+
+            // Calculate available space in the popup
+            let available_width = ui.available_width();
+            let available_height = ui.available_height();
+
+            // Display the preview content based on its type
+            match content {
+                PreviewContent::Text(text) => {
+                    // Display text with syntax highlighting if it's source code
+                    egui::ScrollArea::both()
+                        .auto_shrink([false; 2])
+                        .show(ui, |ui| {
+                            let mut text_str = text.as_str();
+                            ui.add(
+                                egui::TextEdit::multiline(&mut text_str)
+                                    .desired_width(f32::INFINITY)
+                                    .desired_rows(0)
+                                    .font(egui::TextStyle::Monospace)
+                                    .text_color(app.colors.fg)
+                                    .interactive(false),
                             );
-                        }
-                        PreviewContent::Pdf(pdf_meta) => {
-                            doc::render_pdf_popup(
-                                ui,
-                                pdf_meta,
-                                &app.colors,
-                                available_width,
-                                available_height,
-                            );
-                        }
-                        PreviewContent::Epub(epub_meta) => {
-                            doc::render_epub_popup(
-                                ui,
-                                epub_meta,
-                                &app.colors,
-                                available_width,
-                                available_height,
-                            );
-                        }
-                        PreviewContent::Zip(zip_entries) => {
-                            egui::ScrollArea::vertical()
-                                .id_salt("zip_popup_scroll")
-                                .show(ui, |ui| {
-                                    crate::ui::preview::zip::render(ui, zip_entries, &app.colors);
-                                });
-                        }
-                        PreviewContent::Tar(tar_entries) => {
-                            egui::ScrollArea::vertical()
-                                .id_salt("tar_popup_scroll")
-                                .show(ui, |ui| {
-                                    crate::ui::preview::tar::render(ui, tar_entries, &app.colors);
-                                });
-                        }
-                        PreviewContent::Loading(path, _, _) => {
-                            ui.vertical_centered(|ui| {
-                                ui.add_space(20.0);
-                                ui.spinner();
-                                ui.add_space(10.0);
-                                ui.label(egui::RichText::new(format!(
-                                    "Loading preview contents for {}",
-                                    path.file_name().unwrap_or_default().to_string_lossy()
-                                )));
-                                ui.add_space(20.0);
-                            });
-                        }
-                        // For other file types
-                        _ => {
-                            ui.vertical_centered(|ui| {
-                                ui.label("Preview not implemented for this file type yet.");
-                            });
-                        }
-                    }
-                } else {
+                        });
+                }
+                PreviewContent::HighlightedCode { content, language } => {
+                    // Display syntax highlighted code with both horizontal and vertical scrolling
+                    egui::ScrollArea::both()
+                        .auto_shrink([false; 2])
+                        .show(ui, |ui| {
+                            crate::ui::preview::text::render_highlighted(ui, content, language);
+                        });
+                }
+                PreviewContent::Image(image_meta) => {
+                    image::render_popup(ui, image_meta, available_width, available_height);
+                }
+                PreviewContent::Pdf(pdf_meta) => {
+                    doc::render_pdf_popup(
+                        ui,
+                        pdf_meta,
+                        &app.colors,
+                        available_width,
+                        available_height,
+                    );
+                }
+                PreviewContent::Epub(epub_meta) => {
+                    doc::render_epub_popup(
+                        ui,
+                        epub_meta,
+                        &app.colors,
+                        available_width,
+                        available_height,
+                    );
+                }
+                PreviewContent::Zip(zip_entries) => {
+                    egui::ScrollArea::vertical()
+                        .id_salt("zip_popup_scroll")
+                        .show(ui, |ui| {
+                            crate::ui::preview::zip::render(ui, zip_entries, &app.colors);
+                        });
+                }
+                PreviewContent::Tar(tar_entries) => {
+                    egui::ScrollArea::vertical()
+                        .id_salt("tar_popup_scroll")
+                        .show(ui, |ui| {
+                            crate::ui::preview::tar::render(ui, tar_entries, &app.colors);
+                        });
+                }
+                PreviewContent::PluginPreview { components } => {
+                    crate::ui::preview::plugin::render(
+                        ui,
+                        components,
+                        &app.colors,
+                        available_width,
+                        available_height,
+                    );
+                }
+                PreviewContent::Loading(path, _, _) => {
                     ui.vertical_centered(|ui| {
-                        ui.label("No preview content available");
+                        ui.add_space(20.0);
+                        ui.spinner();
+                        ui.add_space(10.0);
+                        ui.label(egui::RichText::new(format!(
+                            "Loading preview contents for {}",
+                            path.file_name().unwrap_or_default().to_string_lossy()
+                        )));
+                        ui.add_space(20.0);
                     });
                 }
-            });
+                // For other file types
+                _ => {
+                    ui.vertical_centered(|ui| {
+                        ui.label("Preview not implemented for this file type yet.");
+                    });
+                }
+            }
+        });
 
-        // Handle popup close
-        if !keep_open {
-            app.show_popup = None;
-        }
+    if !keep_open {
+        close_popup(app);
     }
 }
