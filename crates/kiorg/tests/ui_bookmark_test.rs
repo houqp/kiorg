@@ -6,6 +6,8 @@ use kiorg::ui::popup::PopupType;
 use tempfile::tempdir;
 use ui_test_helpers::{create_harness, create_test_files, shift_modifiers};
 
+use crate::ui_test_helpers::wait_for_condition;
+
 #[test]
 fn test_bookmark_feature() {
     // Create a temporary directory for testing
@@ -107,13 +109,6 @@ fn test_bookmark_feature() {
         assert_eq!(app.bookmarks.len(), 1);
         assert!(app.bookmarks[0].ends_with("dir2")); // Only dir2 remains
     }
-
-    // Close bookmark popup with 'q'
-    harness.key_press(Key::Q);
-    harness.step();
-
-    // Verify bookmark popup is closed
-    assert!(harness.state().show_popup.is_none());
 }
 
 #[test]
@@ -175,7 +170,10 @@ fn test_bookmark_popup_close_with_q_and_esc() {
 
     // Close bookmark popup with 'Esc'
     harness.key_press(Key::Escape);
-    harness.step();
+    wait_for_condition(|| {
+        harness.step();
+        harness.state().show_popup.is_none()
+    });
 
     // Verify bookmark popup is closed
     assert!(
