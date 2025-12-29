@@ -5,6 +5,8 @@ use egui::Key;
 use tempfile::tempdir;
 use ui_test_helpers::{create_harness, create_test_files, ctrl_modifiers};
 
+use crate::ui_test_helpers::wait_for_condition;
+
 #[cfg(windows)]
 fn set_hidden_attribute_on_paths(paths: &[std::path::PathBuf]) {
     use std::os::windows::ffi::OsStrExt;
@@ -70,12 +72,15 @@ fn test_ctrl_h_toggle_hidden_files() {
 
     // Press Ctrl+H again to hide the files
     harness.key_press_modifiers(ctrl_modifiers(), Key::H);
-    harness.step();
+    wait_for_condition(|| {
+        harness.step();
+        !harness.state().tab_manager.show_hidden
+    });
 
     // Verify hidden files are hidden again
     {
-        let tab = harness.state().tab_manager.current_tab_ref();
         assert!(!harness.state().tab_manager.show_hidden);
+        let tab = harness.state().tab_manager.current_tab_ref();
         assert_eq!(tab.entries.len(), 1);
     }
 }

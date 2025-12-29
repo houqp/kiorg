@@ -86,6 +86,10 @@ fn main() -> Result<(), eframe::Error> {
         options,
         Box::new(|cc| {
             egui_extras::install_image_loaders(&cc.egui_ctx);
+            // Kiorg manages its own theme system, so we disable system theme following
+            // by enforcing Dark theme preference (defaulting to dark base).
+            cc.egui_ctx
+                .options_mut(|o| o.theme_preference = egui::ThemePreference::Dark);
 
             // Configure fonts for proper emoji and system font rendering
             kiorg::font::configure_egui_fonts(&cc.egui_ctx);

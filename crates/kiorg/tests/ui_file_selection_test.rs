@@ -74,12 +74,14 @@ fn test_ctrl_a_select_all_and_delete() {
 
     // Confirm the first deletion prompt
     harness.key_press(Key::Enter);
-    harness.step();
+    wait_for_condition(|| {
+        harness.step();
+        matches!(harness.state().show_popup, Some(PopupType::Delete(_, _)))
+    });
 
     // Verify we're in the recursive confirmation state
     {
-        let app = harness.state();
-        if let Some(PopupType::Delete(state, _)) = &app.show_popup {
+        if let Some(PopupType::Delete(state, _)) = &harness.state().show_popup {
             assert_eq!(
                 *state,
                 kiorg::ui::popup::delete::DeleteConfirmState::RecursiveConfirm,
