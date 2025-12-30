@@ -52,7 +52,7 @@ Pre-built binaries for all platforms are available on the [releases page](https:
 Alternatively, you can build and install from source using cargo:
 
 ```bash
-cargo install --git https://github.com/houqp/kiorg.git kiorg
+cargo install --locked --git  https://github.com/houqp/kiorg.git kiorg
 ```
 
 ## Configuration
@@ -91,4 +91,36 @@ ActivateSearch = [
   { key = "/" },
   { key = "f", ctrl = true }
 ]
+```
+
+### Custom Theme
+
+To define a custom theme:
+
+```toml
+# Select your custom theme
+theme = "oasis_starlight"
+
+# Define the custom theme colors
+[[custom_themes]]
+name = "oasis_starlight"
+display_name = "Oasis Starlight"
+[custom_themes.colors]
+fg = "#FAF7F0"                  # Main text color
+bg = "#000000"                  # Main background color
+bg_light = "#080808"            # Lighter background (panels, separators)
+bg_extreme = "#050505"          # Darkest background (scrollbars, inputs)
+bg_selected = "#1A1A1A"         # Selected item background
+bg_fill = "#1A1A1A"             # UI element background
+bg_interactive_fill = "#262626" # Interactive element background
+bg_active = "#333333"           # Active element background
+fg_selected = "#FAF7F0"         # Selected text color
+fg_light = "#4E5A6A"            # Dimmed/secondary text
+fg_folder = "#87CEEB"           # Folder icon color
+highlight = "#FFA247"           # Highlight color
+link_text = "#7FA5CC"           # Link text color
+link_underscore = "#58B8FD"     # Link underline color
+warn = "#FFA247"                # Warning color
+error = "#D06666"               # Error color
+success = "#6BBF59"             # Success color
 ```
