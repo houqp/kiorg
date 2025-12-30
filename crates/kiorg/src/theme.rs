@@ -11,6 +11,8 @@ pub const LIGHT_EVERFOREST_KEY: &str = "light_everforest";
 pub const MOLOKAI_KEY: &str = "molokai";
 pub const DARK_TOKYONIGHT_KEY: &str = "dark_tokyonight";
 pub const LIGHT_TOKYONIGHT_KEY: &str = "light_tokyonight";
+pub const PANDA_KEY: &str = "panda";
+pub const DRACULA_KEY: &str = "dracula";
 
 // Static builtin themes - single source of truth
 static DARK_KIORG_THEME: LazyLock<Theme> = LazyLock::new(|| Theme {
@@ -181,6 +183,54 @@ static LIGHT_TOKYONIGHT_THEME: LazyLock<Theme> = LazyLock::new(|| Theme {
     },
 });
 
+static PANDA_THEME: LazyLock<Theme> = LazyLock::new(|| Theme {
+    name: PANDA_KEY.to_string(),
+    display_name: "Panda".to_string(),
+    colors: AppColors {
+        bg: hex_color!("#292A2B"),
+        bg_light: hex_color!("#303234"),
+        bg_extreme: hex_color!("#242526"),
+        bg_fill: hex_color!("#373b41"),
+        bg_interactive_fill: hex_color!("#4a4e55"),
+        bg_active: hex_color!("#404244"),
+        fg: hex_color!("#E6E6E6"),
+        fg_selected: hex_color!("#f3f3f3"),
+        error: hex_color!("#FF2C6D"),
+        warn: hex_color!("#FFB86C"),
+        highlight: hex_color!("#45A9F9"),
+        success: hex_color!("#19f9d8"),
+        link_underscore: hex_color!("#FF75B5"),
+        fg_folder: hex_color!("#45A9F9"),
+        link_text: hex_color!("#B084EB"),
+        bg_selected: hex_color!("#454749"),
+        fg_light: hex_color!("#757575"),
+    },
+});
+
+static DRACULA_THEME: LazyLock<Theme> = LazyLock::new(|| Theme {
+    name: DRACULA_KEY.to_string(),
+    display_name: "Dracula".to_string(),
+    colors: AppColors {
+        bg: hex_color!("#282a36"),
+        bg_selected: hex_color!("#44475a"),
+        bg_light: hex_color!("#343746"),
+        bg_extreme: hex_color!("#191a21"),
+        bg_fill: hex_color!("#21222c"),
+        bg_interactive_fill: hex_color!("#424450"),
+        bg_active: hex_color!("#44475a"),
+        fg: hex_color!("#f8f8f2"),
+        fg_selected: hex_color!("#f8f8f2"),
+        error: hex_color!("#ff5555"),
+        warn: hex_color!("#ffb86c"),
+        highlight: hex_color!("#f1fa8c"),
+        success: hex_color!("#50fa7b"),
+        link_underscore: hex_color!("#ff79c6"),
+        fg_folder: hex_color!("#bd93f9"),
+        link_text: hex_color!("#8be9fd"),
+        fg_light: hex_color!("#6272a4"),
+    },
+});
+
 // All builtin themes
 static ALL_THEMES: LazyLock<Vec<&Theme>> = LazyLock::new(|| {
     vec![
@@ -191,6 +241,8 @@ static ALL_THEMES: LazyLock<Vec<&Theme>> = LazyLock::new(|| {
         &MOLOKAI_THEME,
         &DARK_TOKYONIGHT_THEME,
         &LIGHT_TOKYONIGHT_THEME,
+        &PANDA_THEME,
+        &DRACULA_THEME,
     ]
 });
 
@@ -241,6 +293,8 @@ impl Theme {
             MOLOKAI_KEY => Some(&MOLOKAI_THEME),
             DARK_TOKYONIGHT_KEY => Some(&DARK_TOKYONIGHT_THEME),
             LIGHT_TOKYONIGHT_KEY => Some(&LIGHT_TOKYONIGHT_THEME),
+            PANDA_KEY => Some(&PANDA_THEME),
+            DRACULA_KEY => Some(&DRACULA_THEME),
             _ => None,
         }
     }

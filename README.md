@@ -124,3 +124,5 @@ warn = "#FFA247"                # Warning color
 error = "#D06666"               # Error color
 success = "#6BBF59"             # Success color
 ```
+
+You can try asking LLM to generate these custom theme configs for you based on themes from other apps, it typically works one shot.
