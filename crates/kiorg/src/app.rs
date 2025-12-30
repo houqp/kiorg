@@ -949,9 +949,7 @@ impl eframe::App for Kiorg {
         #[cfg(feature = "debug")]
         ctx.set_debug_on_hover(true);
 
-        if self.new_preview_loaded(ctx) {
-            return;
-        }
+        self.new_preview_loaded(ctx);
         self.check_notifications();
 
         if self
