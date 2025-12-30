@@ -99,12 +99,12 @@ To define a custom theme:
 
 ```toml
 # Select your custom theme
-theme = "oasis_starlight"
+theme = "my_cool_theme"
 
 # Define the custom theme colors
 [[custom_themes]]
-name = "oasis_starlight"
-display_name = "Oasis Starlight"
+name = "my_cool_theme"
+display_name = "My Cool Theme"
 [custom_themes.colors]
 fg = "#FAF7F0"                  # Main text color
 bg = "#000000"                  # Main background color
