@@ -23,6 +23,7 @@ bindings. It is built using the [egui](https://www.egui.rs/#demo) framework.
 * Builtin terminal emulator
 * App state persistence
 * Language agnostic plugin system
+* Undo/redo file operations
 
 ## Screenshots
 
@@ -48,15 +49,15 @@ bindings. It is built using the [egui](https://www.egui.rs/#demo) framework.
 
 Pre-built binaries for all platforms are available on the [releases page](https://github.com/houqp/kiorg/releases).
 
-Alternatively, you can build it from source using cargo:
+Alternatively, you can build and install from source using cargo:
 
 ```bash
-git clone --recurse-submodules https://github.com/houqp/kiorg.git && cargo install --locked --path ./kiorg
+cargo install --git https://github.com/houqp/kiorg.git kiorg
 ```
 
 ## Configuration
 
-Kiorg uses TOML configuration files stored in the user's config directory:
+Kiorg reads the `config.toml` TOML configuration file stored in the following locations:
 
 * Linux: `~/.config/kiorg/`
 * macOS: `~/.config/kiorg/` (if it exists) or `~/Library/Application Support/kiorg/`
