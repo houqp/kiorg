@@ -247,6 +247,14 @@ pub fn read_image_with_metadata(
         if format == ImageFormat::Gif {
             // For GIF files, use URI source to enable animation
             let uri = image_path_to_uri(path);
+            // need to manually clear cache to reload the gif if there is a
+            // change in content.
+            //
+            // ctx.forget_image(&uri) won't work because internal egui animation
+            // code creates one uri per gif animation frame.
+            for loader in ctx.loaders().image.lock().iter() {
+                loader.forget_all();
+            }
             return Ok(PreviewContent::image_from_uri(
                 title, metadata, uri, exif_data,
             ));
