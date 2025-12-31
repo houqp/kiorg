@@ -1,13 +1,11 @@
 //! Image preview module
 
 use crate::config::colors::AppColors;
-use crate::models::preview_content::{ImageMeta, PreviewContent};
+use crate::models::preview_content::{ImageMeta, PreviewContent, metadata};
 use egui::{Rect, RichText};
 use image::{GenericImageView, ImageDecoder, ImageFormat};
 use std::collections::HashMap;
 use std::path::Path;
-
-const METADATA_KEY_COLUMN_WIDTH: f32 = 100.0;
 
 /// Render image content
 pub fn render(
@@ -59,8 +57,8 @@ pub fn render(
             for key in sorted_keys {
                 if let Some(value) = image_meta.metadata.get(key) {
                     ui.with_layout(egui::Layout::left_to_right(egui::Align::LEFT), |ui| {
-                        ui.set_min_width(METADATA_KEY_COLUMN_WIDTH);
-                        ui.set_max_width(METADATA_KEY_COLUMN_WIDTH);
+                        ui.set_min_width(super::METADATA_TBL_KEY_COL_W);
+                        ui.set_max_width(super::METADATA_TBL_KEY_COL_W);
                         ui.add(egui::Label::new(RichText::new(key).color(colors.fg)).wrap());
                     });
                     ui.add(egui::Label::new(RichText::new(value).color(colors.fg)).wrap());
@@ -92,8 +90,8 @@ pub fn render(
                 for key in sorted_keys {
                     if let Some(value) = exif_data.get(key) {
                         ui.with_layout(egui::Layout::left_to_right(egui::Align::LEFT), |ui| {
-                            ui.set_min_width(METADATA_KEY_COLUMN_WIDTH);
-                            ui.set_max_width(METADATA_KEY_COLUMN_WIDTH);
+                            ui.set_min_width(super::METADATA_TBL_KEY_COL_W);
+                            ui.set_max_width(super::METADATA_TBL_KEY_COL_W);
                             ui.add(egui::Label::new(RichText::new(key).color(colors.fg)).wrap());
                         });
                         ui.add(egui::Label::new(RichText::new(value).color(colors.fg)).wrap());
@@ -175,26 +173,41 @@ pub fn read_image_with_metadata(
     // Extract basic image information
     let dimensions = img.dimensions();
     metadata.insert(
-        "Dimensions".to_string(),
+        metadata::IMG_DIMENSIONS.to_string(),
         format!("{}x{} pixels", dimensions.0, dimensions.1),
     );
 
     // Get color type
-    metadata.insert("Color Type".to_string(), format!("{:?}", img.color()));
+    metadata.insert(
+        metadata::IMG_COLOR_TYPE.to_string(),
+        format!("{:?}", img.color()),
+    );
 
     // Add color depth information
     match img.color() {
         image::ColorType::Rgb8 | image::ColorType::Rgba8 => {
-            metadata.insert("Bit Depth".to_string(), "8 bits per channel".to_string());
+            metadata.insert(
+                metadata::IMG_BIT_DEPTH.to_string(),
+                "8 bits per channel".to_string(),
+            );
         }
         image::ColorType::Rgb16 | image::ColorType::Rgba16 => {
-            metadata.insert("Bit Depth".to_string(), "16 bits per channel".to_string());
+            metadata.insert(
+                metadata::IMG_BIT_DEPTH.to_string(),
+                "16 bits per channel".to_string(),
+            );
         }
         image::ColorType::L8 | image::ColorType::La8 => {
-            metadata.insert("Bit Depth".to_string(), "8 bits (grayscale)".to_string());
+            metadata.insert(
+                metadata::IMG_BIT_DEPTH.to_string(),
+                "8 bits (grayscale)".to_string(),
+            );
         }
         image::ColorType::L16 | image::ColorType::La16 => {
-            metadata.insert("Bit Depth".to_string(), "16 bits (grayscale)".to_string());
+            metadata.insert(
+                metadata::IMG_BIT_DEPTH.to_string(),
+                "16 bits (grayscale)".to_string(),
+            );
         }
         _ => {
             // Other color types
@@ -205,7 +218,7 @@ pub fn read_image_with_metadata(
     if let Ok(metadata_os) = std::fs::metadata(path) {
         let size = metadata_os.len();
         metadata.insert(
-            "File Size".to_string(),
+            metadata::IMG_FILE_SIZE.to_string(),
             humansize::format_size(size, humansize::BINARY),
         );
     }
@@ -241,7 +254,7 @@ pub fn read_image_with_metadata(
                 }
             }
         };
-        metadata.insert("Format".to_string(), format_name);
+        metadata.insert(metadata::IMG_FORMAT.to_string(), format_name);
 
         // Add format-specific metadata
         if format == ImageFormat::Gif {

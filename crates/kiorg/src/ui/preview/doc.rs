@@ -1,15 +1,13 @@
 //! Document preview module (PDF, EPUB)
 
 use crate::config::colors::AppColors;
-use crate::models::preview_content::{EpubMeta, PdfMeta, PreviewContent};
+use crate::models::preview_content::{EpubMeta, PdfMeta, PreviewContent, metadata};
 use egui::{
     ColorImage, RichText, TextureId, TextureOptions, Vec2, load::SizedTexture, widgets::ImageSource,
 };
 use pdfium_bind::PdfDocument;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
-
-const METADATA_KEY_COLUMN_WIDTH: f32 = 100.0;
 
 fn format_pdf_date(pdf_date: &str) -> String {
     // PDF date format: D:YYYYMMDDHHmmSSOHH'mm'
@@ -89,9 +87,12 @@ fn render_pdf_preview(
         .show(ui, |ui| {
             // Add page count first
             ui.with_layout(egui::Layout::left_to_right(egui::Align::LEFT), |ui| {
-                ui.set_min_width(METADATA_KEY_COLUMN_WIDTH);
-                ui.set_max_width(METADATA_KEY_COLUMN_WIDTH);
-                ui.add(egui::Label::new(RichText::new("Page Count").color(colors.fg)).wrap());
+                ui.set_min_width(super::METADATA_TBL_KEY_COL_W);
+                ui.set_max_width(super::METADATA_TBL_KEY_COL_W);
+                ui.add(
+                    egui::Label::new(RichText::new(metadata::PDF_PAGE_COUNT).color(colors.fg))
+                        .wrap(),
+                );
             });
             ui.add(
                 egui::Label::new(RichText::new(pdf_meta.page_count.to_string()).color(colors.fg))
@@ -109,8 +110,8 @@ fn render_pdf_preview(
                     // Format the key with proper capitalization for display
                     let display_key = format_metadata_key(key);
                     ui.with_layout(egui::Layout::left_to_right(egui::Align::LEFT), |ui| {
-                        ui.set_min_width(METADATA_KEY_COLUMN_WIDTH);
-                        ui.set_max_width(METADATA_KEY_COLUMN_WIDTH);
+                        ui.set_min_width(super::METADATA_TBL_KEY_COL_W);
+                        ui.set_max_width(super::METADATA_TBL_KEY_COL_W);
                         ui.add(
                             egui::Label::new(RichText::new(display_key).color(colors.fg)).wrap(),
                         );
@@ -156,9 +157,12 @@ fn render_epub_preview(
         .show(ui, |ui| {
             // Add page count first
             ui.with_layout(egui::Layout::left_to_right(egui::Align::LEFT), |ui| {
-                ui.set_min_width(METADATA_KEY_COLUMN_WIDTH);
-                ui.set_max_width(METADATA_KEY_COLUMN_WIDTH);
-                ui.add(egui::Label::new(RichText::new("Page Count").color(colors.fg)).wrap());
+                ui.set_min_width(super::METADATA_TBL_KEY_COL_W);
+                ui.set_max_width(super::METADATA_TBL_KEY_COL_W);
+                ui.add(
+                    egui::Label::new(RichText::new(metadata::PDF_PAGE_COUNT).color(colors.fg))
+                        .wrap(),
+                );
             });
             ui.add(
                 egui::Label::new(RichText::new(epub_meta.page_count.to_string()).color(colors.fg))
@@ -176,8 +180,8 @@ fn render_epub_preview(
                     // Format the key with proper capitalization for display
                     let display_key = format_metadata_key(key);
                     ui.with_layout(egui::Layout::left_to_right(egui::Align::LEFT), |ui| {
-                        ui.set_min_width(METADATA_KEY_COLUMN_WIDTH);
-                        ui.set_max_width(METADATA_KEY_COLUMN_WIDTH);
+                        ui.set_min_width(super::METADATA_TBL_KEY_COL_W);
+                        ui.set_max_width(super::METADATA_TBL_KEY_COL_W);
                         ui.add(
                             egui::Label::new(RichText::new(display_key).color(colors.fg)).wrap(),
                         );
@@ -281,23 +285,29 @@ pub fn extract_pdf_metadata(path: &Path, ctx: &egui::Context) -> Result<PreviewC
     // Extract metadata
     let mut metadata = std::collections::HashMap::new();
     for &field in &[
-        "Title", "Author", "Subject", "Keywords", "Creator", "Producer", "Trapped",
+        metadata::PDF_TITLE,
+        metadata::PDF_AUTHOR,
+        metadata::PDF_SUBJECT,
+        metadata::PDF_KEYWORDS,
+        metadata::PDF_CREATOR,
+        metadata::PDF_PRODUCER,
+        metadata::PDF_TRAPPED,
     ] {
         if let Some(value) = doc.get_metadata_value(field) {
             metadata.insert(field.to_string(), value);
         }
     }
 
-    for &field in &["CreationDate", "ModDate"] {
+    for &field in &[metadata::PDF_CREATION_DATE, metadata::PDF_MOD_DATE] {
         if let Some(value) = doc.get_metadata_value(field) {
             metadata.insert(field.to_string(), format_pdf_date(&value));
         }
     }
 
     let version = doc.get_pdf_version();
-    metadata.insert("PDF Version".to_string(), format!("{}", version));
+    metadata.insert(metadata::PDF_VERSION.to_string(), format!("{}", version));
 
-    let title = metadata.get("Title").cloned();
+    let title = metadata.get(metadata::PDF_TITLE).cloned();
     let page_count = doc.page_count();
 
     // Return PreviewContent with metadata, title, and the rendered first page as cover

@@ -1,5 +1,7 @@
 //! Preview content modules for different file types
 
+pub const METADATA_TBL_KEY_COL_W: f32 = 100.0;
+
 pub mod directory;
 pub mod doc;
 pub mod image;
@@ -7,6 +9,7 @@ pub mod loading;
 pub mod plugin;
 pub mod tar;
 pub mod text;
+pub mod video;
 pub mod zip;
 
 use crate::app::Kiorg;
@@ -55,6 +58,13 @@ pub fn path_to_ext_info(path: &std::path::Path) -> String {
 }
 
 // Macros for file extension patterns to avoid duplication
+#[macro_export]
+macro_rules! video_extensions {
+    () => {
+        "mp4" | "m4v" | "mkv" | "webm" | "mov" | "avi" | "wmv" | "mpg" | "flv"
+    };
+}
+
 #[macro_export]
 macro_rules! image_extensions {
     () => {
@@ -108,6 +118,7 @@ pub use epub_extensions;
 pub use image_extensions;
 pub use pdf_extensions;
 pub use tar_extensions;
+pub use video_extensions;
 pub use zip_extensions;
 
 #[inline]
@@ -180,6 +191,12 @@ pub fn update_cache(app: &mut Kiorg, ctx: &egui::Context) {
             let ctx_clone = ctx.clone();
             loading::load_preview_async(app, entry.path, move |path| {
                 image::read_image_with_metadata(&path, &ctx_clone)
+            });
+        }
+        video_extensions!() => {
+            let ctx_clone = ctx.clone();
+            loading::load_preview_async(app, entry.path, move |path| {
+                video::read_video_with_metadata(&path, &ctx_clone)
             });
         }
         zip_extensions!() => {
