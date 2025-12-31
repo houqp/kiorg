@@ -42,7 +42,7 @@ fn create_test_app(file_count: usize) -> (Kiorg, tempfile::TempDir, tempfile::Te
     let ctx = egui::Context::default();
     let cc = eframe::CreationContext::_new_kittest(ctx);
 
-    let app = Kiorg::new_with_config_dir(
+    let app = Kiorg::new(
         &cc,
         Some(temp_dir.path().to_path_buf()),
         Some(test_config_dir),
@@ -75,7 +75,7 @@ fn create_app_with_deep_path(depth: usize) -> (Kiorg, tempfile::TempDir, tempfil
     let ctx = egui::Context::default();
     let cc = eframe::CreationContext::_new_kittest(ctx);
 
-    let mut app = Kiorg::new_with_config_dir(
+    let mut app = Kiorg::new(
         &cc,
         Some(temp_dir.path().to_path_buf()),
         Some(test_config_dir),

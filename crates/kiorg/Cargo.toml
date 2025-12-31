@@ -38,7 +38,7 @@ serde_json = "1"
 rmp-serde = "1.1"
 dirs = "6"
 open = "5"
-clap = { version = "4.5.1", features = ["derive"] }
+clap = { version = "4.5.1", features = ["derive", "env"] }
 notify = "8"
 egui_extras = { version = "0.33", features = ["all_loaders", "syntect"] }
 

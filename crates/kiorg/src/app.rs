@@ -194,13 +194,6 @@ impl Kiorg {
     pub fn new(
         cc: &eframe::CreationContext<'_>,
         initial_dir: Option<PathBuf>,
-    ) -> Result<Self, KiorgError> {
-        Self::new_with_config_dir(cc, initial_dir, None)
-    }
-
-    pub fn new_with_config_dir(
-        cc: &eframe::CreationContext<'_>,
-        initial_dir: Option<PathBuf>,
         config_dir_override: Option<PathBuf>,
     ) -> Result<Self, KiorgError> {
         let config = config::load_config_with_override(config_dir_override.as_ref())?;

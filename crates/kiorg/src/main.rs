@@ -12,6 +12,10 @@ use kiorg::app::Kiorg;
 struct Args {
     /// Directory to open (default: use saved state or current directory)
     directory: Option<PathBuf>,
+
+    /// Override the configuration directory
+    #[arg(short, long, env = "KIORG_CONFIG_DIR")]
+    config_dir: Option<PathBuf>,
 }
 
 fn init_tracing() {
@@ -94,7 +98,7 @@ fn main() -> Result<(), eframe::Error> {
             // Configure fonts for proper emoji and system font rendering
             kiorg::font::configure_egui_fonts(&cc.egui_ctx);
 
-            match Kiorg::new(cc, initial_dir) {
+            match Kiorg::new(cc, initial_dir, args.config_dir) {
                 Ok(app) => Ok(Box::new(app)),
                 Err(e) => {
                     // Show the error in a startup error dialog instead of exiting

@@ -103,12 +103,8 @@ fn test_tab_selection_not_persisted() {
         let cc = eframe::CreationContext::_new_kittest(ctx);
 
         // Create the app with the test config directory override
-        let app = kiorg::Kiorg::new_with_config_dir(
-            &cc,
-            Some(test_dir_path),
-            Some(config_dir_path.clone()),
-        )
-        .expect("Failed to create Kiorg app");
+        let app = kiorg::Kiorg::new(&cc, Some(test_dir_path), Some(config_dir_path.clone()))
+            .expect("Failed to create Kiorg app");
 
         // Create a test harness
         let mut harness = egui_kittest::Harness::builder()
@@ -219,7 +215,7 @@ fn test_tab_selection_not_persisted() {
 
         // Create the app with the same config directory to load the saved state
         // Pass None as initial_dir to force loading from saved state
-        let app = kiorg::Kiorg::new_with_config_dir(
+        let app = kiorg::Kiorg::new(
             &cc,
             None, // Use None to load from saved state
             Some(config_dir_path),
