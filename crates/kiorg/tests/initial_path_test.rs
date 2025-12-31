@@ -33,8 +33,7 @@ fn test_fallback_to_current_dir_when_saved_path_nonexistent() {
 
     // Create the app with the test config directory override
     // We don't provide an initial directory, so it should try to load from state.json
-    let app = Kiorg::new_with_config_dir(&cc, None, Some(config_dir))
-        .expect("Failed to create Kiorg app");
+    let app = Kiorg::new(&cc, None, Some(config_dir)).expect("Failed to create Kiorg app");
 
     // Check that the current path is not the non-existent path from state.json
     let current_path = app.tab_manager.current_tab_ref().current_path.clone();

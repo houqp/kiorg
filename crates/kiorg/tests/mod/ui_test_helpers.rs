@@ -422,7 +422,7 @@ impl TestHarnessBuilder {
         let ctx = egui::Context::default();
         let cc = eframe::CreationContext::_new_kittest(ctx);
 
-        let app = Kiorg::new_with_config_dir(&cc, Some(temp_dir), Some(test_config_dir))
+        let app = Kiorg::new(&cc, Some(temp_dir), Some(test_config_dir))
             .expect("Failed to create Kiorg app");
 
         // Create a test harness with more steps to ensure all events are processed

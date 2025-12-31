@@ -597,8 +597,7 @@ fn test_navigate_to_nonexistent_directory_removes_from_history() {
     // Create the app with the config directory
     let ctx = egui::Context::default();
     let cc = eframe::CreationContext::_new_kittest(ctx);
-    let mut app =
-        Kiorg::new_with_config_dir(&cc, Some(home_dir.clone()), Some(config_dir.clone())).unwrap();
+    let mut app = Kiorg::new(&cc, Some(home_dir.clone()), Some(config_dir.clone())).unwrap();
 
     // Verify the history was loaded correctly
     assert_eq!(app.visit_history.len(), 2);
