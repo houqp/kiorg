@@ -1,7 +1,8 @@
 //! Video preview module
 
 use egui::RichText;
-use ffmpeg_sidecar::event::{FfmpegEvent, StreamTypeSpecificData};
+use ffmpeg_sidecar::event::{FfmpegEvent, OutputVideoFrame, StreamTypeSpecificData};
+use image::EncodableLayout;
 use rayon::prelude::*;
 use std::path::Path;
 
@@ -9,7 +10,7 @@ use crate::config::colors::AppColors;
 use crate::models::preview_content::{
     FfmpegMeta, InputMeta, PreviewContent, StreamMeta, StreamTypeMeta, VideoMeta, metadata,
 };
-use tracing::debug;
+use tracing::{debug, warn};
 
 const MIN_SUFFICIENT_QUALITY_SCORE: f64 = 0.5;
 const THUMBNAIL_SAMPLE_RATIOS: [f64; 3] = [0.25, 0.5, 0.75];
@@ -50,7 +51,11 @@ mod ffmpeg {
             .spawn()
             .ok()?;
 
-        debug!("ffmpeg frame extraction spawn took {:?}", start.elapsed());
+        debug!(
+            "ffmpeg frame extraction spawn took {:?} for {}",
+            start.elapsed(),
+            seek_time
+        );
 
         let iter = cmd.iter().ok()?;
         Some(iter.filter_frames())
@@ -303,7 +308,7 @@ pub fn read_video_with_metadata(
 fn extract_video_thumbnail(
     ctx: &egui::Context,
     path: &Path,
-    ffmpeg_meta: &mut crate::models::preview_content::FfmpegMeta,
+    ffmpeg_meta: &mut FfmpegMeta,
 ) -> Result<egui::TextureHandle, String> {
     let start = std::time::Instant::now();
     let path_str = path.to_str().ok_or("Invalid path encoding")?;
@@ -313,13 +318,13 @@ fn extract_video_thumbnail(
         || probe_metadata(path_str, ffmpeg_meta),
         || extract_and_score_frame(path_str, 0.0),
     );
-
     probe_res.map_err(|e| format!("Failed to probe metadata: {e}"))?;
 
     // Collect all samples
     let mut samples = Vec::new();
     let mut skip_remaining = false;
-    if let Some(first) = first_sample_res {
+    if let Some(first_res) = first_sample_res {
+        let first = first_res?;
         // Optimization: if the first frame has a good enough score, skip the remaining position frame sampling to save time
         if first.0 > MIN_SUFFICIENT_QUALITY_SCORE {
             skip_remaining = true;
@@ -334,7 +339,16 @@ fn extract_video_thumbnail(
     {
         let mut remaining_samples: Vec<_> = THUMBNAIL_SAMPLE_RATIOS
             .par_iter()
-            .filter_map(|&ratio| extract_and_score_frame(path_str, duration_secs * ratio))
+            .filter_map(
+                |&ratio| match extract_and_score_frame(path_str, duration_secs * ratio) {
+                    Some(Ok(frame)) => Some(frame),
+                    Some(Err(e)) => {
+                        warn!("Failed to extract frame at ratio {}: {}", ratio, e);
+                        None
+                    }
+                    None => None,
+                },
+            )
             .collect();
         samples.append(&mut remaining_samples);
     }
@@ -345,7 +359,7 @@ fn extract_video_thumbnail(
         .into_iter()
         .max_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
 
-    let (best_score, width, height, rgb_data) =
+    let (best_score, frame) =
         best_result.ok_or_else(|| "No frames could be extracted".to_string())?;
 
     debug!(
@@ -357,17 +371,15 @@ fn extract_video_thumbnail(
     );
 
     // Create texture
-    let color_image = egui::ColorImage::from_rgb([width as usize, height as usize], &rgb_data);
+    let color_image =
+        egui::ColorImage::from_rgb([frame.width as usize, frame.height as usize], &frame.data);
     let texture_id = format!("video_thumbnail_{}", path.display());
     let texture = ctx.load_texture(texture_id, color_image, egui::TextureOptions::default());
 
     Ok(texture)
 }
 
-fn probe_metadata(
-    path_str: &str,
-    meta: &mut crate::models::preview_content::FfmpegMeta,
-) -> Result<(), String> {
+fn probe_metadata(path_str: &str, meta: &mut FfmpegMeta) -> Result<(), String> {
     for event in ffmpeg::get_metadata_probe_iter(path_str)? {
         match event {
             FfmpegEvent::Log(_level, msg) => {
@@ -428,35 +440,68 @@ fn probe_metadata(
     Ok(())
 }
 
-fn extract_and_score_frame(path_str: &str, seek_time: f64) -> Option<(f64, u32, u32, Vec<u8>)> {
+fn extract_and_score_frame(
+    path_str: &str,
+    seek_time: f64,
+) -> Option<Result<(f64, OutputVideoFrame), String>> {
     let mut iter = ffmpeg::get_frame_extraction_iter(path_str, seek_time)?;
-    if let Some(frame) = iter.next() {
-        let score = calculate_frame_quality(&frame.data, frame.width, frame.height);
-        return Some((score, frame.width, frame.height, frame.data));
-    }
-    None
+    let frame = iter.next()?;
+
+    let score = {
+        let rgb_img = match image::RgbImage::from_raw(frame.width, frame.height, frame.data.clone())
+        {
+            Some(img) => img,
+            None => {
+                return Some(Err(format!(
+                    "Failed to create image buffer from raw data for frame at {}",
+                    seek_time
+                )));
+            }
+        };
+        // Use grayscale version for faster scoring
+        const CLIP_WIDTH: u32 = 320;
+        let gray = if frame.width > CLIP_WIDTH {
+            let n_width = CLIP_WIDTH;
+            let n_height = (frame.height as f64 * (n_width as f64 / frame.width as f64)) as u32;
+            let resized = image::imageops::resize(
+                &rgb_img,
+                n_width,
+                n_height,
+                image::imageops::FilterType::Triangle,
+            );
+            image::DynamicImage::ImageRgb8(resized)
+        } else {
+            image::DynamicImage::ImageRgb8(rgb_img)
+        }
+        .grayscale();
+        calculate_frame_quality(&gray)
+    };
+
+    Some(Ok((score, frame)))
 }
 
-fn calculate_frame_quality(rgb_data: &[u8], width: u32, height: u32) -> f64 {
-    let pixel_count = (width * height) as usize;
-    if pixel_count == 0 || rgb_data.len() < pixel_count * 3 {
+fn calculate_frame_quality(dynamic_img: &image::DynamicImage) -> f64 {
+    let img = dynamic_img.to_luma8();
+    let (width, height) = img.dimensions();
+    let total_pixels = (width * height) as f64;
+    if total_pixels == 0.0 {
         return 0.0;
     }
+    let pixels = img.as_bytes();
 
-    let mut total_brightness = 0.0;
-    let mut brightness_values = Vec::with_capacity(pixel_count);
+    // Pass 1: Calculate the mean brightness
+    let sum: u64 = pixels.iter().map(|p| *p as u64).sum();
+    let avg_brightness = sum as f64 / total_pixels;
 
-    for chunk in rgb_data.chunks_exact(3) {
-        let r = chunk[0] as f64;
-        let g = chunk[1] as f64;
-        let b = chunk[2] as f64;
-        // Calculate luminance using Photometric/digital ITU BT.709
-        let luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-        total_brightness += luminance;
-        brightness_values.push(luminance);
-    }
-
-    let avg_brightness = total_brightness / pixel_count as f64;
+    // Pass 2: Calculate the population variance (sum of squared differences from the mean)
+    let sum_sq_diff: f64 = pixels
+        .iter()
+        .map(|p| {
+            let diff = *p as f64 - avg_brightness;
+            diff * diff
+        })
+        .sum();
+    let variance = sum_sq_diff / total_pixels;
 
     // Brightness suitability score
     let brightness_score = if !(22.0..=194.0).contains(&avg_brightness) {
@@ -469,17 +514,11 @@ fn calculate_frame_quality(rgb_data: &[u8], width: u32, height: u32) -> f64 {
         1.0 - (avg_brightness - 171.0) / (194.0 - 171.0)
     };
 
-    // Variance score (diversity of colors/brightness)
-    let variance = brightness_values
-        .iter()
-        .map(|&v| (v - avg_brightness).powi(2))
-        .sum::<f64>()
-        / pixel_count as f64;
+    // Variance score (diversity of brightness)
     let variance_score = (variance / 5000.0).min(1.0);
 
     // Sharpness (Laplacian variance)
     let mut lap_sum = 0.0;
-    let mut lap_count = 0;
     let w = width as usize;
     let h = height as usize;
 
@@ -490,20 +529,20 @@ fn calculate_frame_quality(rgb_data: &[u8], width: u32, height: u32) -> f64 {
             let next_row_offset = (y + 1) * w;
 
             for x in 1..w - 1 {
-                let center = brightness_values[row_offset + x];
-                let top = brightness_values[prev_row_offset + x];
-                let bottom = brightness_values[next_row_offset + x];
-                let left = brightness_values[row_offset + x - 1];
-                let right = brightness_values[row_offset + x + 1];
+                let center = pixels[row_offset + x] as f64;
+                let top = pixels[prev_row_offset + x] as f64;
+                let bottom = pixels[next_row_offset + x] as f64;
+                let left = pixels[row_offset + x - 1] as f64;
+                let right = pixels[row_offset + x + 1] as f64;
 
                 // Laplacian kernel: [[0,-1,0], [-1,4,-1], [0,-1,0]]
                 let laplacian = 4.0 * center - top - bottom - left - right;
                 lap_sum += laplacian * laplacian;
-                lap_count += 1;
             }
         }
     }
 
+    let lap_count = (w - 2) * (h - 2);
     let lap_variance = if lap_count > 0 {
         lap_sum / lap_count as f64
     } else {
@@ -571,4 +610,47 @@ fn generate_placeholder_thumbnail(
     let texture = ctx.load_texture(texture_id, color_image, egui::TextureOptions::default());
 
     Ok(texture)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use image::{DynamicImage, GrayImage, Luma};
+
+    #[test]
+    fn test_calculate_frame_quality_black_image() {
+        let width = 100;
+        let height = 100;
+        let img = GrayImage::new(width, height); // Initializes to black (0)
+        let dynamic_img = DynamicImage::ImageLuma8(img);
+
+        let score = calculate_frame_quality(&dynamic_img);
+
+        assert!(
+            score < 0.01,
+            "Black image should have a very low score, got {}",
+            score
+        );
+        assert_eq!(score, 0.0);
+    }
+
+    #[test]
+    fn test_calculate_frame_quality_gradient_image() {
+        let width = 100;
+        let height = 100;
+        let mut img = GrayImage::new(width, height);
+        for (x, y, pixel) in img.enumerate_pixels_mut() {
+            let val = (((x + y) as f64) / ((width + height) as f64) * 255.0) as u8;
+            *pixel = Luma([val]);
+        }
+        let dynamic_img = DynamicImage::ImageLuma8(img);
+
+        let score = calculate_frame_quality(&dynamic_img);
+
+        assert!(
+            score > 0.5,
+            "Gradient image should have a higher score than black image, got {}",
+            score
+        );
+    }
 }
