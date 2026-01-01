@@ -108,7 +108,7 @@ pdfium-bind = { path = "../pdfium-bind", default-features = false, features = ["
 
 [target.'cfg(not(target_os = "macos"))'.dependencies]
 # we don't have static pdfium build for windows and linux yet, embed dynamic lib to workaround
-pdfium-bind = { path = "../pdfium-bind", features = ["dynamic"] }
+pdfium-bind = { path = "../pdfium-bind" }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows-sys = { version = "0.61.2", features = [

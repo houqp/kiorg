@@ -247,11 +247,6 @@ fn main() {
     }
 
     let feature_static = env::var("CARGO_FEATURE_STATIC").is_ok();
-    let feature_dynamic = env::var("CARGO_FEATURE_DYNAMIC").is_ok();
-
-    if feature_static && feature_dynamic {
-        panic!("Both 'static' and 'dynamic' features are enabled. Please choose only one.");
-    }
 
     println!("cargo:rerun-if-env-changed=PDFIUM_STATIC_LIB_PATH");
     println!("cargo:rerun-if-env-changed=PDFIUM_DYNAMIC_LIB_PATH");
@@ -261,7 +256,7 @@ fn main() {
     let env_dynamic_lib_path = env::var("PDFIUM_DYNAMIC_LIB_PATH").ok().map(PathBuf::from);
     let env_include_path = env::var("PDFIUM_INCLUDE_PATH").ok().map(PathBuf::from);
 
-    let pdfium_include_dir = if feature_static || !feature_dynamic {
+    let pdfium_include_dir = if feature_static {
         let (pdfium_include_dir, pdfium_lib_dir) = if let Some(static_lib_path) =
             env_static_lib_path
         {
@@ -285,7 +280,7 @@ fn main() {
         println!("cargo:rustc-link-lib=static=pdfium");
 
         pdfium_include_dir
-    } else if feature_dynamic {
+    } else {
         let (pdfium_include_dir, pdfium_lib_path) = if let Some(dynamic_lib_path) =
             env_dynamic_lib_path
         {
@@ -310,8 +305,6 @@ fn main() {
             pdfium_lib_path.display()
         );
         pdfium_include_dir
-    } else {
-        panic!("Neither 'static' nor 'dynamic' feature is enabled. Please enable at least one.");
     };
 
     println!("cargo:rerun-if-changed={}", pdfium_include_dir.display());
