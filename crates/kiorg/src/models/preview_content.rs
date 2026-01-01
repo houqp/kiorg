@@ -4,6 +4,35 @@ use std::path::PathBuf;
 use std::sync::mpsc::Receiver;
 use std::sync::{Arc, Mutex};
 
+pub mod metadata {
+    // Video Metadata
+    pub const VID_DURATION: &str = "Duration";
+    pub const VID_DIMENSIONS: &str = "Dimensions";
+    pub const VID_DISPLAY_DIMENSIONS: &str = "Display Dimensions";
+    pub const VID_FORMAT: &str = "Format";
+    pub const VID_PIXEL_ASPECT_RATIO: &str = "Pixel Aspect Ratio";
+
+    // Image Metadata
+    pub const IMG_COLOR_TYPE: &str = "Color Type";
+    pub const IMG_BIT_DEPTH: &str = "Bit Depth";
+    pub const IMG_DIMENSIONS: &str = "Dimensions";
+    pub const IMG_FILE_SIZE: &str = "File Size";
+    pub const IMG_FORMAT: &str = "Format";
+
+    // PDF Document Metadata
+    pub const PDF_PAGE_COUNT: &str = "Page Count";
+    pub const PDF_VERSION: &str = "PDF Version";
+    pub const PDF_TITLE: &str = "Title";
+    pub const PDF_AUTHOR: &str = "Author";
+    pub const PDF_SUBJECT: &str = "Subject";
+    pub const PDF_KEYWORDS: &str = "Keywords";
+    pub const PDF_CREATOR: &str = "Creator";
+    pub const PDF_PRODUCER: &str = "Producer";
+    pub const PDF_TRAPPED: &str = "Trapped";
+    pub const PDF_CREATION_DATE: &str = "CreationDate";
+    pub const PDF_MOD_DATE: &str = "ModDate";
+}
+
 /// Type alias for the async preview content receiver
 // TODO: can we delete the option wrapper?
 pub type PreviewReceiver = Arc<Mutex<Receiver<Result<PreviewContent, String>>>>;
@@ -88,6 +117,74 @@ pub struct EpubMeta {
     pub page_count: isize,
 }
 
+pub use ffmpeg_sidecar::event::{AudioStream, VideoStream};
+
+/// Stream type specific metadata
+#[derive(Clone, Debug, Default)]
+pub enum StreamTypeMeta {
+    Video(VideoStream),
+    Audio(AudioStream),
+    Subtitle,
+    #[default]
+    Unknown,
+}
+
+/// Metadata for a single stream
+#[derive(Clone, Debug, Default)]
+pub struct StreamMeta {
+    pub index: usize,
+    pub format: String,
+    pub language: String,
+    pub kind: StreamTypeMeta,
+}
+
+/// Metadata for a single input
+#[derive(Clone, Debug, Default)]
+pub struct InputMeta {
+    pub streams: Vec<StreamMeta>,
+}
+
+/// FFmpeg-extracted metadata for video files
+#[derive(Clone, Debug, Default)]
+pub struct FfmpegMeta {
+    /// Video metadata (key-value pairs) for priority display
+    pub key_metadata: HashMap<String, String>,
+    /// Miscellaneous video metadata (key-value pairs)
+    pub misc_metadata: HashMap<String, String>,
+    /// List of inputs and their streams
+    pub inputs: Vec<InputMeta>,
+    /// Duration in seconds (if available)
+    pub duration_secs: Option<f64>,
+}
+
+/// Metadata for video files
+#[derive(Clone)]
+pub struct VideoMeta {
+    /// Video title (usually filename)
+    pub title: String,
+    /// FFmpeg-extracted metadata
+    pub ffmpeg: FfmpegMeta,
+    /// Video thumbnail as an Image widget
+    pub thumbnail_image: egui::Image<'static>,
+    /// Keep the texture handle alive to prevent GPU texture from being freed
+    pub _texture_handle: Option<egui::TextureHandle>,
+}
+
+// Manual implementation of Debug for VideoMeta
+impl std::fmt::Debug for VideoMeta {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("VideoMeta")
+            .field("title", &self.title)
+            .field("ffmpeg", &self.ffmpeg)
+            .field("thumbnail_image", &"Image")
+            .field(
+                "_texture_handle",
+                &self._texture_handle.as_ref().map(|_| "TextureHandle"),
+            )
+            .finish()
+    }
+}
+
 /// Metadata for image files
 #[derive(Clone)]
 pub struct ImageMeta {
@@ -133,6 +230,8 @@ pub enum PreviewContent {
     PluginPreview { components: Vec<RenderedComponent> },
     /// Image content with metadata
     Image(ImageMeta),
+    /// Video content with metadata and thumbnail
+    Video(VideoMeta),
     /// Zip file content with a list of entries
     Zip(Vec<ZipEntry>),
     /// Tar file content with a list of entries (supports both compressed and uncompressed)
@@ -323,6 +422,21 @@ impl PreviewContent {
             metadata,
             exif_data,
             image,
+            _texture_handle: Some(texture),
+        })
+    }
+
+    /// Creates a new video preview content
+    pub fn video(
+        title: impl Into<String>,
+        ffmpeg: FfmpegMeta,
+        texture: egui::TextureHandle,
+    ) -> Self {
+        let thumbnail_image = egui::Image::new(&texture);
+        Self::Video(VideoMeta {
+            title: title.into(),
+            ffmpeg,
+            thumbnail_image,
             _texture_handle: Some(texture),
         })
     }

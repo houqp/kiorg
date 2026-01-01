@@ -88,6 +88,11 @@ image = { version = "0" }
 image-extras = { git = "https://github.com/image-rs/image-extras.git", rev = "fbf3e82f9646cd63e5e6e9dc0555bb781fc5dcd4" }
 kamadak-exif = "0"
 
+# video handling
+ffmpeg-sidecar = { workspace = true }
+rayon = { workspace = true }
+
+
 
 egui_nerdfonts = { git = "https://github.com/houqp/egui_nerdfonts", rev = "6f540170520692ccf1a7d89aee94aea61c89da07" }
 

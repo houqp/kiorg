@@ -13,3 +13,5 @@ resolver = "2"
 [workspace.dependencies]
 kiorg_plugin = { path = "crates/kiorg_plugin" }
 mimeapps = { path = "crates/mimeapps" }
+ffmpeg-sidecar = "2.4.0"
+rayon = "1"

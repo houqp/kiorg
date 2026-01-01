@@ -1635,7 +1635,7 @@ checksum = "59a81c221a1e4dad06cb9c9deb19aea1193a5eea084e8cd42d869068132bf876"
 dependencies = [
  "document-features",
  "js-sys",
- "ureq",
+ "ureq 2.12.1",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
@@ -1876,6 +1876,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1e6853b52649d4ac5c0bd02320cddc5ba956bdb407c4b75a2c6b75bf51500f8c"
 dependencies = [
  "simd-adler32",
+]
+
+[[package]]
+name = "ffmpeg-sidecar"
+version = "2.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f076483fb6efcf02e4abcf3e9388d30123346f85b9a96e8fe834718951b945ed"
+dependencies = [
+ "anyhow",
+ "tar",
+ "ureq 3.1.4",
+ "xz2",
+ "zip 4.6.1",
 ]
 
 [[package]]
@@ -2967,6 +2980,7 @@ dependencies = [
  "egui_kittest",
  "egui_nerdfonts",
  "egui_term",
+ "ffmpeg-sidecar",
  "file_type",
  "flate2",
  "font-kit",
@@ -2985,6 +2999,7 @@ dependencies = [
  "objc2-uniform-type-identifiers",
  "open",
  "pdfium-bind",
+ "rayon",
  "rbook",
  "regex",
  "rmp-serde",
@@ -3000,7 +3015,7 @@ dependencies = [
  "toml",
  "tracing",
  "tracing-subscriber",
- "ureq",
+ "ureq 2.12.1",
  "uuid",
  "windows-sys 0.61.2",
  "yazi-prebuilt",
@@ -4289,7 +4304,7 @@ dependencies = [
  "sha2",
  "tar",
  "tempfile",
- "ureq",
+ "ureq 2.12.1",
 ]
 
 [[package]]
@@ -6141,6 +6156,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "ureq"
+version = "3.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d39cb1dbab692d82a977c0392ffac19e188bd9186a9f32806f0aaa859d75585a"
+dependencies = [
+ "base64",
+ "flate2",
+ "log",
+ "percent-encoding",
+ "rustls",
+ "rustls-pki-types",
+ "ureq-proto",
+ "utf-8",
+ "webpki-roots 1.0.4",
+]
+
+[[package]]
+name = "ureq-proto"
+version = "0.5.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d81f9efa9df032be5934a46a068815a10a042b494b6a58cb0a1a97bb5467ed6f"
+dependencies = [
+ "base64",
+ "http",
+ "httparse",
+ "log",
+]
+
+[[package]]
 name = "url"
 version = "2.5.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6179,6 +6223,12 @@ dependencies = [
  "tiny-skia-path",
  "xmlwriter",
 ]
+
+[[package]]
+name = "utf-8"
+version = "0.7.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "09cc8ee72d2a9becf2f2febe0205bbed8fc6615b7cb429ad062dc7b7ddd036a9"
 
 [[package]]
 name = "utf8_iter"
@@ -7614,6 +7664,20 @@ dependencies = [
  "sha1",
  "xz2",
  "zeroize",
+ "zopfli",
+]
+
+[[package]]
+name = "zip"
+version = "4.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "caa8cd6af31c3b31c6631b8f483848b91589021b28fffe50adada48d4f4d2ed1"
+dependencies = [
+ "arbitrary",
+ "crc32fast",
+ "flate2",
+ "indexmap",
+ "memchr",
  "zopfli",
 ]
 

@@ -1,0 +1,574 @@
+//! Video preview module
+
+use egui::RichText;
+use ffmpeg_sidecar::event::{FfmpegEvent, StreamTypeSpecificData};
+use rayon::prelude::*;
+use std::path::Path;
+
+use crate::config::colors::AppColors;
+use crate::models::preview_content::{
+    FfmpegMeta, InputMeta, PreviewContent, StreamMeta, StreamTypeMeta, VideoMeta, metadata,
+};
+use tracing::debug;
+
+const MIN_SUFFICIENT_QUALITY_SCORE: f64 = 0.5;
+const THUMBNAIL_SAMPLE_RATIOS: [f64; 3] = [0.25, 0.5, 0.75];
+
+#[cfg(not(any(test, feature = "testing")))]
+mod ffmpeg {
+    use ffmpeg_sidecar::command::FfmpegCommand;
+    use ffmpeg_sidecar::event::FfmpegEvent;
+    use std::time::Instant;
+    use tracing::debug;
+
+    pub(super) fn get_metadata_probe_iter(
+        path_str: &str,
+    ) -> Result<impl Iterator<Item = FfmpegEvent>, String> {
+        let start = Instant::now();
+        let mut cmd = FfmpegCommand::new()
+            .input(path_str)
+            .args(["-f", "null", "-vframes", "0", "-"]) // Fast metadata probe
+            .spawn()
+            .map_err(|e| format!("Failed to spawn ffmpeg probe: {e}"))?;
+
+        debug!("ffmpeg probe spawn took {:?}", start.elapsed());
+
+        cmd.iter()
+            .map_err(|e| format!("Failed to extract video metadata: {e}"))
+    }
+
+    pub(super) fn get_frame_extraction_iter(
+        path_str: &str,
+        seek_time: f64,
+    ) -> Option<impl Iterator<Item = ffmpeg_sidecar::event::OutputVideoFrame>> {
+        let start = Instant::now();
+        let mut cmd = FfmpegCommand::new()
+            // Fast seek: -ss before -i
+            .args(["-ss", &seek_time.to_string()])
+            .input(path_str)
+            .args(["-vframes", "1", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"])
+            .spawn()
+            .ok()?;
+
+        debug!("ffmpeg frame extraction spawn took {:?}", start.elapsed());
+
+        let iter = cmd.iter().ok()?;
+        Some(iter.filter_frames())
+    }
+
+    pub(super) fn init() -> Result<(), String> {
+        let start = Instant::now();
+        static INIT: std::sync::OnceLock<Result<(), String>> = std::sync::OnceLock::new();
+        let res = INIT
+            .get_or_init(|| {
+                ffmpeg_sidecar::download::auto_download()
+                    .map_err(|e| format!("Failed to auto-download ffmpeg: {e}"))
+            })
+            .clone();
+        debug!("ffmpeg init took {:?}", start.elapsed());
+        res
+    }
+}
+
+#[cfg(any(test, feature = "testing"))]
+mod ffmpeg {
+    use ffmpeg_sidecar::event::OutputVideoFrame;
+    use ffmpeg_sidecar::event::{
+        AudioStream, FfmpegEvent, Stream, StreamTypeSpecificData, VideoStream,
+    };
+
+    pub(super) fn get_metadata_probe_iter(
+        _path_str: &str,
+    ) -> Result<impl Iterator<Item = FfmpegEvent>, String> {
+        let events = vec![
+            FfmpegEvent::ParsedInputStream(Stream {
+                stream_index: 0,
+                format: "h264".to_string(),
+                language: "eng".to_string(),
+                parent_index: 0,
+                raw_log_message: String::new(),
+                type_specific_data: StreamTypeSpecificData::Video(VideoStream {
+                    width: 1920,
+                    height: 1080,
+                    pix_fmt: "yuv420p".to_string(),
+                    fps: 30.0,
+                }),
+            }),
+            FfmpegEvent::ParsedInputStream(Stream {
+                stream_index: 1,
+                format: "aac".to_string(),
+                language: "eng".to_string(),
+                parent_index: 0,
+                raw_log_message: String::new(),
+                type_specific_data: StreamTypeSpecificData::Audio(AudioStream {
+                    sample_rate: 44100,
+                    channels: "2".to_string(),
+                }),
+            }),
+        ];
+        Ok(events.into_iter())
+    }
+
+    pub(super) fn get_frame_extraction_iter(
+        _path_str: &str,
+        _seek_time: f64,
+    ) -> Option<impl Iterator<Item = OutputVideoFrame>> {
+        // Create a fake frame with some variation to pass quality check
+        let width = 100;
+        let height = 100;
+        let mut data = Vec::with_capacity((width * height * 3) as usize);
+        for i in 0..(width * height) {
+            let ft = i as f64 / (width * height) as f64;
+            // Generate a gradient
+            data.push((ft * 255.0) as u8);
+            data.push(((1.0 - ft) * 255.0) as u8);
+            data.push(128);
+        }
+
+        let frame = OutputVideoFrame {
+            width,
+            height,
+            data,
+            output_index: 0,
+            pix_fmt: "rgb24".to_string(),
+            frame_num: 0,
+            timestamp: 0.0,
+        };
+
+        Some(vec![frame].into_iter())
+    }
+
+    pub(super) fn init() -> Result<(), String> {
+        Ok(())
+    }
+}
+
+/// Render video content
+pub fn render(
+    ui: &mut egui::Ui,
+    video_meta: &VideoMeta,
+    colors: &AppColors,
+    available_width: f32,
+    available_height: f32,
+) {
+    // Display video title
+    ui.label(
+        RichText::new(&video_meta.title)
+            .color(colors.fg)
+            .strong()
+            .size(20.0),
+    );
+    ui.add_space(10.0);
+
+    // Display video thumbnail (centered)
+    ui.vertical_centered(|ui| {
+        ui.add(
+            video_meta
+                .thumbnail_image
+                .clone()
+                .max_size(egui::vec2(available_width, available_height * 0.6))
+                .maintain_aspect_ratio(true),
+        );
+    });
+    ui.add_space(15.0);
+
+    // Create a table for general video metadata
+    ui.label(
+        RichText::new("File Metadata")
+            .color(colors.fg_folder)
+            .strong()
+            .size(14.0),
+    );
+    ui.add_space(5.0);
+
+    egui::Grid::new("video_metadata_grid")
+        .num_columns(2)
+        .spacing([10.0, 6.0])
+        .striped(true)
+        .show(ui, |ui| {
+            for (key, value) in &video_meta.ffmpeg.key_metadata {
+                render_metadata_row(ui, key, value, colors);
+            }
+            for (key, value) in &video_meta.ffmpeg.misc_metadata {
+                render_metadata_row(ui, key, value, colors);
+            }
+        });
+
+    // Render inputs and their streams
+    for (input_idx, input) in video_meta.ffmpeg.inputs.iter().enumerate() {
+        ui.add_space(15.0);
+        ui.label(
+            RichText::new(format!("Input #{}", input_idx))
+                .color(colors.fg_folder)
+                .strong()
+                .size(14.0),
+        );
+
+        for stream in &input.streams {
+            ui.add_space(5.0);
+            let stream_type_label = match stream.kind {
+                StreamTypeMeta::Video(_) => "Video",
+                StreamTypeMeta::Audio(_) => "Audio",
+                StreamTypeMeta::Subtitle => "Subtitle",
+                StreamTypeMeta::Unknown => "Unknown",
+            };
+
+            ui.label(
+                RichText::new(format!("Stream #{}: {}", stream.index, stream_type_label))
+                    .color(colors.fg_folder) // Using folder color for section headers
+                    .strong(),
+            );
+
+            egui::Grid::new(format!("input_{}_stream_{}_grid", input_idx, stream.index))
+                .num_columns(2)
+                .spacing([10.0, 6.0])
+                .striped(true)
+                .show(ui, |ui| {
+                    render_metadata_row(ui, "Format", &stream.format, colors);
+                    if !stream.language.is_empty() && stream.language != "und" {
+                        render_metadata_row(ui, "Language", &stream.language, colors);
+                    }
+
+                    match &stream.kind {
+                        StreamTypeMeta::Video(v) => {
+                            render_metadata_row(
+                                ui,
+                                "Dimensions",
+                                &format!("{}x{}", v.width, v.height),
+                                colors,
+                            );
+                            if !v.pix_fmt.is_empty() {
+                                render_metadata_row(ui, "Pixel Format", &v.pix_fmt, colors);
+                            }
+                            if v.fps > 0.0 {
+                                render_metadata_row(ui, "FPS", &format!("{:.2}", v.fps), colors);
+                            }
+                        }
+                        StreamTypeMeta::Audio(a) => {
+                            render_metadata_row(
+                                ui,
+                                "Sample Rate",
+                                &format!("{} Hz", a.sample_rate),
+                                colors,
+                            );
+                            render_metadata_row(ui, "Channels", &a.channels.to_string(), colors);
+                        }
+                        _ => {}
+                    }
+                });
+        }
+    }
+}
+
+fn render_metadata_row(ui: &mut egui::Ui, key: &str, value: &str, colors: &AppColors) {
+    ui.with_layout(egui::Layout::left_to_right(egui::Align::LEFT), |ui| {
+        ui.set_min_width(super::METADATA_TBL_KEY_COL_W);
+        ui.set_max_width(super::METADATA_TBL_KEY_COL_W);
+        ui.add(egui::Label::new(RichText::new(key).color(colors.fg)).wrap());
+    });
+    ui.add(egui::Label::new(RichText::new(value).color(colors.fg)).wrap());
+    ui.end_row();
+}
+
+/// Read video file, extract metadata and generate thumbnail, and create a `PreviewContent`
+pub fn read_video_with_metadata(
+    path: &Path,
+    ctx: &egui::Context,
+) -> Result<PreviewContent, String> {
+    ffmpeg::init()?;
+
+    let title = path
+        .file_name()
+        .unwrap_or_default()
+        .to_string_lossy()
+        .to_string();
+
+    // Create FfmpegMeta to store all gathered metadata
+    let mut ffmpeg_meta = FfmpegMeta::default();
+
+    // Try to extract a real thumbnail from the video
+    let thumbnail_texture = match extract_video_thumbnail(ctx, path, &mut ffmpeg_meta) {
+        Ok(texture) => texture,
+        Err(_) => {
+            // Fall back to placeholder thumbnail
+            generate_placeholder_thumbnail(ctx, path)
+                .map_err(|e| format!("Failed to generate thumbnail: {e}"))?
+        }
+    };
+
+    Ok(PreviewContent::video(title, ffmpeg_meta, thumbnail_texture))
+}
+
+/// Extract a thumbnail from the video file using ffmpeg-sidecar
+fn extract_video_thumbnail(
+    ctx: &egui::Context,
+    path: &Path,
+    ffmpeg_meta: &mut crate::models::preview_content::FfmpegMeta,
+) -> Result<egui::TextureHandle, String> {
+    let start = std::time::Instant::now();
+    let path_str = path.to_str().ok_or("Invalid path encoding")?;
+
+    // 1. Probe metadata and extract the first sample frame concurrently
+    let (probe_res, first_sample_res) = rayon::join(
+        || probe_metadata(path_str, ffmpeg_meta),
+        || extract_and_score_frame(path_str, 0.0),
+    );
+
+    probe_res.map_err(|e| format!("Failed to probe metadata: {e}"))?;
+
+    // Collect all samples
+    let mut samples = Vec::new();
+    let mut skip_remaining = false;
+    if let Some(first) = first_sample_res {
+        // Optimization: if the first frame has a good enough score, skip the remaining position frame sampling to save time
+        if first.0 > MIN_SUFFICIENT_QUALITY_SCORE {
+            skip_remaining = true;
+        }
+        samples.push(first);
+    }
+
+    // 2. Sample remaining positions in parallel if duration is known
+    if !skip_remaining
+        && let Some(duration_secs) = ffmpeg_meta.duration_secs
+        && duration_secs > 0.0
+    {
+        let mut remaining_samples: Vec<_> = THUMBNAIL_SAMPLE_RATIOS
+            .par_iter()
+            .filter_map(|&ratio| extract_and_score_frame(path_str, duration_secs * ratio))
+            .collect();
+        samples.append(&mut remaining_samples);
+    }
+
+    let num_samples = samples.len();
+    // Find the best sample
+    let best_result = samples
+        .into_iter()
+        .max_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
+
+    let (best_score, width, height, rgb_data) =
+        best_result.ok_or_else(|| "No frames could be extracted".to_string())?;
+
+    debug!(
+        "extracted video thumbnail in {:?} (score: {:.2}, samples: {}, skipped remaining: {})",
+        start.elapsed(),
+        best_score,
+        num_samples,
+        skip_remaining
+    );
+
+    // Create texture
+    let color_image = egui::ColorImage::from_rgb([width as usize, height as usize], &rgb_data);
+    let texture_id = format!("video_thumbnail_{}", path.display());
+    let texture = ctx.load_texture(texture_id, color_image, egui::TextureOptions::default());
+
+    Ok(texture)
+}
+
+fn probe_metadata(
+    path_str: &str,
+    meta: &mut crate::models::preview_content::FfmpegMeta,
+) -> Result<(), String> {
+    for event in ffmpeg::get_metadata_probe_iter(path_str)? {
+        match event {
+            FfmpegEvent::Log(_level, msg) => {
+                // Parse generic metadata lines
+                // Example: "[info]     major_brand     : mp42"
+                if let Some(colon_idx) = msg.find(':') {
+                    let key_part = &msg[..colon_idx];
+                    // Metadata keys are usually indented with 4 spaces after "[info] "
+                    if key_part.contains("    ") {
+                        let key = key_part.split_whitespace().last().unwrap_or("").trim();
+                        let value = msg[colon_idx + 1..].trim();
+                        if !key.is_empty() && !value.is_empty() {
+                            meta.misc_metadata
+                                .insert(key.to_string(), value.to_string());
+                        }
+                    }
+                }
+            }
+            FfmpegEvent::ParsedDuration(d) => {
+                meta.duration_secs = Some(d.duration);
+                // format duration back to HH:MM:SS.ss for display
+                let hrs = (d.duration / 3600.0) as u32;
+                let mins = ((d.duration % 3600.0) / 60.0) as u32;
+                let secs = d.duration % 60.0;
+                let duration_str = if hrs > 0 {
+                    format!("{:02}:{:02}:{:05.2}", hrs, mins, secs)
+                } else {
+                    format!("{:02}:{:05.2}", mins, secs)
+                };
+                meta.key_metadata
+                    .insert(metadata::VID_DURATION.to_string(), duration_str);
+            }
+            FfmpegEvent::ParsedInputStream(stream) => {
+                // Determine kind
+                let kind = match stream.type_specific_data {
+                    StreamTypeSpecificData::Video(v) => StreamTypeMeta::Video(v),
+                    StreamTypeSpecificData::Audio(a) => StreamTypeMeta::Audio(a),
+                    _ => StreamTypeMeta::Unknown,
+                };
+
+                // Ensure input exists
+                let parent_idx = stream.parent_index as usize;
+                if meta.inputs.len() <= parent_idx {
+                    meta.inputs.resize(parent_idx + 1, InputMeta::default());
+                }
+
+                // Add stream to input
+                meta.inputs[parent_idx].streams.push(StreamMeta {
+                    index: stream.stream_index as usize,
+                    format: stream.format,
+                    language: stream.language,
+                    kind,
+                });
+            }
+            _ => {}
+        }
+    }
+    Ok(())
+}
+
+fn extract_and_score_frame(path_str: &str, seek_time: f64) -> Option<(f64, u32, u32, Vec<u8>)> {
+    let mut iter = ffmpeg::get_frame_extraction_iter(path_str, seek_time)?;
+    if let Some(frame) = iter.next() {
+        let score = calculate_frame_quality(&frame.data, frame.width, frame.height);
+        return Some((score, frame.width, frame.height, frame.data));
+    }
+    None
+}
+
+fn calculate_frame_quality(rgb_data: &[u8], width: u32, height: u32) -> f64 {
+    let pixel_count = (width * height) as usize;
+    if pixel_count == 0 || rgb_data.len() < pixel_count * 3 {
+        return 0.0;
+    }
+
+    let mut total_brightness = 0.0;
+    let mut brightness_values = Vec::with_capacity(pixel_count);
+
+    for chunk in rgb_data.chunks_exact(3) {
+        let r = chunk[0] as f64;
+        let g = chunk[1] as f64;
+        let b = chunk[2] as f64;
+        // Calculate luminance using Photometric/digital ITU BT.709
+        let luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        total_brightness += luminance;
+        brightness_values.push(luminance);
+    }
+
+    let avg_brightness = total_brightness / pixel_count as f64;
+
+    // Brightness suitability score
+    let brightness_score = if !(22.0..=194.0).contains(&avg_brightness) {
+        0.0
+    } else if avg_brightness < 56.0 {
+        (avg_brightness - 22.0) / (56.0 - 22.0)
+    } else if avg_brightness <= 171.0 {
+        1.0
+    } else {
+        1.0 - (avg_brightness - 171.0) / (194.0 - 171.0)
+    };
+
+    // Variance score (diversity of colors/brightness)
+    let variance = brightness_values
+        .iter()
+        .map(|&v| (v - avg_brightness).powi(2))
+        .sum::<f64>()
+        / pixel_count as f64;
+    let variance_score = (variance / 5000.0).min(1.0);
+
+    // Sharpness (Laplacian variance)
+    let mut lap_sum = 0.0;
+    let mut lap_count = 0;
+    let w = width as usize;
+    let h = height as usize;
+
+    if h > 2 && w > 2 {
+        for y in 1..h - 1 {
+            let row_offset = y * w;
+            let prev_row_offset = (y - 1) * w;
+            let next_row_offset = (y + 1) * w;
+
+            for x in 1..w - 1 {
+                let center = brightness_values[row_offset + x];
+                let top = brightness_values[prev_row_offset + x];
+                let bottom = brightness_values[next_row_offset + x];
+                let left = brightness_values[row_offset + x - 1];
+                let right = brightness_values[row_offset + x + 1];
+
+                // Laplacian kernel: [[0,-1,0], [-1,4,-1], [0,-1,0]]
+                let laplacian = 4.0 * center - top - bottom - left - right;
+                lap_sum += laplacian * laplacian;
+                lap_count += 1;
+            }
+        }
+    }
+
+    let lap_variance = if lap_count > 0 {
+        lap_sum / lap_count as f64
+    } else {
+        0.0
+    };
+    let sharpness_score = (lap_variance / 2000.0).min(1.0);
+
+    // Weighted average of all factors
+    brightness_score * 0.33 + variance_score * 0.33 + sharpness_score * 0.34
+}
+
+/// Generate a placeholder thumbnail for video files if extraction fails
+fn generate_placeholder_thumbnail(
+    ctx: &egui::Context,
+    path: &Path,
+) -> Result<egui::TextureHandle, String> {
+    let width = 320;
+    let height = 240;
+
+    let mut rgb_data = Vec::with_capacity(width * height * 3);
+
+    // Create a dark background with a play button symbol
+    for y in 0..height {
+        for x in 0..width {
+            // Create a dark gray background
+            let mut r = 40u8;
+            let mut g = 40u8;
+            let mut b = 40u8;
+
+            // Add a border
+            if x < 2 || x >= width - 2 || y < 2 || y >= height - 2 {
+                r = 80;
+                g = 80;
+                b = 80;
+            }
+
+            // Add a triangular play button in the center
+            let center_x = width / 2;
+            let center_y = height / 2;
+            let rel_x = x as i32 - center_x as i32;
+            let rel_y = y as i32 - center_y as i32;
+
+            if (-15..=15).contains(&rel_x) && rel_y.abs() <= 15 {
+                let max_y = if rel_x <= 0 {
+                    15
+                } else {
+                    15 - (rel_x * 15) / 15
+                };
+
+                if rel_y.abs() <= max_y {
+                    r = 220;
+                    g = 220;
+                    b = 220;
+                }
+            }
+
+            rgb_data.push(r);
+            rgb_data.push(g);
+            rgb_data.push(b);
+        }
+    }
+
+    let color_image = egui::ColorImage::from_rgb([width, height], &rgb_data);
+    let texture_id = format!("video_placeholder_{}", path.display());
+    let texture = ctx.load_texture(texture_id, color_image, egui::TextureOptions::default());
+
+    Ok(texture)
+}

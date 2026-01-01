@@ -5,8 +5,8 @@ use egui::Key;
 use kiorg::models::preview_content::PreviewContent;
 use tempfile::tempdir;
 use ui_test_helpers::{
-    create_harness, create_test_image, create_test_pdf, create_test_tar, create_test_zip,
-    wait_for_condition, wait_for_condition_with_timeout,
+    create_harness, create_test_image, create_test_pdf, create_test_tar, create_test_video,
+    create_test_zip, wait_for_condition, wait_for_condition_with_timeout,
 };
 
 /// Test for text preview of regular text files
@@ -185,6 +185,83 @@ fn test_image_preview() {
         }
         Some(other) => {
             panic!("Preview content should be Image variant, got {other:?}");
+        }
+        None => panic!("Preview content should not be None"),
+    }
+}
+
+/// Test for video preview with metadata extraction
+#[test]
+fn test_video_file_preview() {
+    // Create a temporary directory for testing
+    let temp_dir = tempdir().unwrap();
+
+    // Create test video file
+    let video_path = temp_dir.path().join("test_video.mp4");
+    create_test_video(&video_path);
+
+    // Start the harness
+    let mut harness = create_harness(&temp_dir);
+
+    // Navigate to the video file
+    harness.key_press(Key::J);
+    harness.step();
+
+    // Wait for video preview to load - use a longer timeout as ffmpeg might be downloading
+    wait_for_condition_with_timeout(
+        || {
+            harness.step();
+            matches!(
+                harness.state().preview_content,
+                Some(PreviewContent::Video(_))
+            )
+        },
+        std::time::Duration::from_secs(10),
+    );
+
+    // Check if the preview content is video
+    match &harness.state().preview_content {
+        Some(PreviewContent::Video(video_meta)) => {
+            // Check that basic metadata is present
+            assert!(
+                video_meta.title.contains("test_video.mp4"),
+                "Video title should contain filename"
+            );
+
+            // check for video stream metadata extraction
+            use kiorg::models::preview_content::StreamTypeMeta;
+
+            // Allow time for async metadata loading if needed (though mock is synchronous in test)
+            // Verify we have at least one input
+            assert!(
+                !video_meta.ffmpeg.inputs.is_empty(),
+                "Should have at least one input"
+            );
+            let input = &video_meta.ffmpeg.inputs[0];
+            // Verify Video Stream (Stream 0)
+            let video_stream = &input.streams[0];
+            assert_eq!(video_stream.format, "h264");
+            if let StreamTypeMeta::Video(v) = &video_stream.kind {
+                assert_eq!(v.fps, 30.0);
+                assert_eq!(v.pix_fmt, "yuv420p");
+                assert_eq!(v.width, 1920);
+                assert_eq!(v.height, 1080);
+            } else {
+                panic!("Stream 0 should be Video, got {:?}", video_stream.kind);
+            }
+
+            // Verify Audio Stream (Stream 1)
+            let audio_stream = &input.streams[1];
+            assert_eq!(audio_stream.format, "aac");
+            if let StreamTypeMeta::Audio(a) = &audio_stream.kind {
+                assert_eq!(a.sample_rate, 44100);
+                assert_eq!(a.channels, "2");
+            } else {
+                panic!("Stream 1 should be Audio, got {:?}", audio_stream.kind);
+            }
+        }
+        Some(other) => {
+            panic!("Preview content should be Video variant, got {other:?}");
         }
         None => panic!("Preview content should not be None"),
     }
