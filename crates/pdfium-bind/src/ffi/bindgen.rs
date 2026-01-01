@@ -13,7 +13,7 @@ pub use bindgen_incl::{
     FPDF_PRINTING,
 };
 
-#[cfg(feature = "dynamic")]
+#[cfg(not(feature = "static"))]
 pub use bindgen_incl::{FPDF_BITMAP, FPDF_BYTESTRING, FPDF_PAGE};
 
 // in static build, reuse bindgen symbols directly

@@ -7,7 +7,7 @@ mod static_lib;
 #[cfg(feature = "static")]
 pub use static_lib::*;
 
-#[cfg(feature = "dynamic")]
+#[cfg(not(feature = "static"))]
 mod dynamic_lib;
-#[cfg(feature = "dynamic")]
+#[cfg(not(feature = "static"))]
 pub use dynamic_lib::*;

@@ -13,7 +13,7 @@ static PDFIUM_INIT: Once = Once::new();
 
 /// Cleanup old cached PDFium library files from the cache directory.
 pub fn cleanup_cache() {
-    #[cfg(feature = "dynamic")]
+    #[cfg(not(feature = "static"))]
     ffi::cleanup_cache();
 }
 
