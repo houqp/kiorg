@@ -133,7 +133,8 @@ You can try asking LLM to generate these custom theme configs for you based on t
 ### Common workflows
 
 * To run static analysis: `cargo clippy --workspace --all-targets -- -D warnings`
-* To execute tests, run `cargo test` or `cargo nextest run`. Recommend nextest since it's 2-3x faster.
+* To execute tests, run: `cargo test` or `cargo nextest run`
+  * Recommend nextest since it's 2-3x faster.
 * To regenerate screenshots in readme: `UPDATE_SNAPSHOTS=1 cargo test --features=snapshot`
 
 ### Design patterns
