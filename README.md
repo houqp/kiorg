@@ -15,7 +15,7 @@ bindings. It is built using the [egui](https://www.egui.rs/#demo) framework.
 * Multi-tab support
 * Vim-inspired keyboard shortcuts
 * Built-in zoxide like fuzzy directory teleport
-* Content preview for various file formats including code syntax highlight, image, pdf, epub, etc.
+* Content preview for various file formats including code syntax highlight, image, video,pdf, epub, etc.
 * Customizable shortcuts and color themes through TOML config files
 * Cross-platform support (Linux, macOS, Windows)
 * Bookmarks for quick access to frequently used directories
@@ -126,3 +126,20 @@ success = "#6BBF59"             # Success color
 ```
 
 You can try asking LLM to generate these custom theme configs for you based on themes from other apps, it typically works one shot.
+
+
+## Development
+
+### Common workflows
+
+* To run static analysis: `cargo clippy --workspace --all-targets -- -D warnings`
+* To execute tests, run `cargo test` or `cargo nextest run`. Recommend nextest since it's 2-3x faster.
+* To regenerate screenshots in readme: `UPDATE_SNAPSHOTS=1 cargo test --features=snapshot`
+
+### Design patterns
+
+* Composition over inheritance.
+* Simple modular design and avoid unnecessary abstractions.
+* Leverage async operations for long-running tasks to prevent blockign UI rendering.
+* Implementing user preference persistence for improved user experience.
+* Clean layout with compact spacing and alignment, functionality over flashy visuals.
