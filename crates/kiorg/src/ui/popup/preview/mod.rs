@@ -140,14 +140,19 @@ pub fn handle_show_file_preview(app: &mut Kiorg, _ctx: &egui::Context) {
 }
 
 pub fn close_popup(app: &mut Kiorg) {
+    if let Some(PreviewContent::PluginPreview { .. }) = app.preview_content {
+        // For plugins, we need to clear the content/cache because the popup loads
+        // specific content via `preview_popup` that might differ from the
+        // standard right panel preview.
+        //
+        // TODO: In the long run, separate storage of popup preview content and
+        // right panel preview content.
+        app.preview_content = None;
+        app.cached_preview_path = None;
+        // Force preview update in the main loop since we cleared the content
+        app.selection_changed = true;
+    }
     app.show_popup = None;
-    // For plugins, we need to clear the content/cache because the popup loads
-    // specific content via `preview_popup` that might differ from the
-    // standard right panel preview.
-    app.preview_content = None;
-    app.cached_preview_path = None;
-    // Force preview update in the main loop since we cleared the content
-    app.selection_changed = true;
 }
 
 /// Shows the preview popup for the currently selected file
