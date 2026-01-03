@@ -5,9 +5,7 @@ use egui::Key;
 use kiorg::models::preview_content::PreviewContent;
 use kiorg::ui::popup::PopupType;
 use tempfile::tempdir;
-use ui_test_helpers::{
-    cmd_modifiers, create_harness, create_test_image, shift_modifiers, wait_for_condition,
-};
+use ui_test_helpers::{cmd_modifiers, create_harness, shift_modifiers, wait_for_condition};
 
 /// Test that number keys don't trigger tab switches when preview popup is active
 #[test]
@@ -15,9 +13,9 @@ fn test_preview_popup_consumes_number_keys() {
     // Create a temporary directory for testing
     let temp_dir = tempdir().unwrap();
 
-    // Create a test image
-    let image_path = temp_dir.path().join("test.png");
-    create_test_image(&image_path);
+    // Create a test text file
+    let text_path = temp_dir.path().join("test.txt");
+    std::fs::write(&text_path, "Hello world").unwrap();
 
     // Start the harness
     let mut harness = create_harness(&temp_dir);
@@ -54,22 +52,22 @@ fn test_preview_popup_consumes_number_keys() {
         "Should be on tab 2 (index 1)"
     );
 
-    // Select the image file
+    // Select the text file
     {
         let tab = harness.state().tab_manager.current_tab_ref();
-        let image_index = tab
+        let text_index = tab
             .entries
             .iter()
-            .position(|e| e.name == "test.png")
-            .expect("Image file should be in the entries");
+            .position(|e| e.name == "test.txt")
+            .expect("Text file should be in the entries");
         let tab = harness.state_mut().tab_manager.current_tab_mut();
-        tab.selected_index = image_index;
+        tab.selected_index = text_index;
     }
     harness.step();
 
-    // Wait for the image preview to load
+    // Wait for the text preview to load
     wait_for_condition(|| match harness.state().preview_content.as_ref() {
-        Some(PreviewContent::Image(_)) => true,
+        Some(PreviewContent::HighlightedCode { .. }) => true,
         Some(PreviewContent::Loading(..)) => {
             harness.step();
             false
@@ -80,10 +78,10 @@ fn test_preview_popup_consumes_number_keys() {
         }
     });
 
-    // Verify image preview is loaded
+    // Verify text preview is loaded
     match harness.state().preview_content.as_ref() {
-        Some(PreviewContent::Image(_)) => {}
-        other => panic!("Preview content should be Image, got {other:?}"),
+        Some(PreviewContent::HighlightedCode { .. }) => {}
+        other => panic!("Preview content should be HighlightedCode, got {other:?}"),
     }
 
     // Open preview popup with Shift+K
@@ -140,9 +138,8 @@ fn test_preview_popup_consumes_number_keys() {
     harness.step();
 
     // Verify the popup is closed
-    assert_eq!(
-        harness.state().show_popup,
-        None,
+    assert!(
+        harness.state().show_popup.is_none(),
         "Preview popup should be closed after pressing Escape"
     );
 
@@ -162,29 +159,29 @@ fn test_preview_popup_consumes_other_keys() {
     // Create a temporary directory for testing
     let temp_dir = tempdir().unwrap();
 
-    // Create a test image
-    let image_path = temp_dir.path().join("test.png");
-    create_test_image(&image_path);
+    // Create a test text file
+    let text_path = temp_dir.path().join("test.txt");
+    std::fs::write(&text_path, "Hello world").unwrap();
 
     // Start the harness
     let mut harness = create_harness(&temp_dir);
 
-    // Select the image file
+    // Select the text file
     {
         let tab = harness.state().tab_manager.current_tab_ref();
-        let image_index = tab
+        let text_index = tab
             .entries
             .iter()
-            .position(|e| e.name == "test.png")
-            .expect("Image file should be in the entries");
+            .position(|e| e.name == "test.txt")
+            .expect("Text file should be in the entries");
         let tab = harness.state_mut().tab_manager.current_tab_mut();
-        tab.selected_index = image_index;
+        tab.selected_index = text_index;
     }
     harness.step();
 
-    // Wait for the image preview to load
+    // Wait for the text preview to load
     wait_for_condition(|| match harness.state().preview_content.as_ref() {
-        Some(PreviewContent::Image(_)) => true,
+        Some(PreviewContent::HighlightedCode { .. }) => true,
         Some(PreviewContent::Loading(..)) => {
             harness.step();
             false
@@ -243,9 +240,8 @@ fn test_preview_popup_consumes_other_keys() {
     harness.step();
 
     // Verify the popup is closed
-    assert_eq!(
-        harness.state().show_popup,
-        None,
+    assert!(
+        harness.state().show_popup.is_none(),
         "Preview popup should be closed after pressing Escape"
     );
 }

@@ -8,7 +8,7 @@ use crate::utils::icon;
 /// Show about popup with application information
 pub fn show_about_popup(ctx: &Context, app: &mut Kiorg) {
     // Check if the popup should be shown based on the show_popup field
-    if app.show_popup != Some(PopupType::About) {
+    if !matches!(app.show_popup, Some(PopupType::About)) {
         return;
     }
 

@@ -362,28 +362,80 @@ impl Kiorg {
         notification::check_notifications(self);
     }
 
-    /// Check and process background preview loading
-    pub fn new_preview_loaded(&mut self, ctx: &egui::Context) -> bool {
+    pub fn poll_preview_content(&mut self, ctx: &egui::Context) {
+        // Handle preview content loading
         let receiver = match &self.preview_content {
             Some(PreviewContent::Loading(_path, receiver, _cancel_sender)) => receiver.clone(),
-            _ => return false,
-        };
-        if let Ok(receiver_lock) = receiver.lock() {
-            if let Ok(result) = receiver_lock.try_recv() {
-                ctx.request_repaint();
-                match result {
-                    Ok(content) => {
-                        self.preview_content = Some(content);
-                    }
-                    Err(e) => {
-                        self.preview_content =
-                            Some(PreviewContent::text(format!("Error loading file: {e}")));
-                    }
-                }
-                return true;
+            _ => {
+                return;
             }
+        };
+        let receiver_lock = if let Ok(receiver_lock) = receiver.lock() {
+            receiver_lock
+        } else {
+            return;
+        };
+        if let Ok(result) = receiver_lock.try_recv() {
+            match result {
+                Ok(content) => {
+                    self.preview_content = Some(content);
+                }
+                Err(e) => {
+                    self.preview_content =
+                        Some(PreviewContent::text(format!("Error loading file: {e}")));
+                }
+            }
+            ctx.request_repaint();
         }
-        false
+    }
+
+    /// Poll all popup viewers for async content loading
+    fn poll_popup_viewers(&mut self, ctx: &egui::Context) {
+        use crate::ui::popup::{PopupApp, PopupType};
+
+        // Generic helper function to poll any viewer that implements PopupApp
+        fn poll_viewer<V: PopupApp>(viewer: &mut Box<V>) -> bool {
+            let result = {
+                let Some(rx) = viewer.as_loading() else {
+                    return false;
+                };
+
+                let Ok(rx_lock) = rx.lock() else {
+                    tracing::error!("Failed to lock {} receiver", viewer.title());
+                    return false;
+                };
+
+                let Ok(result) = rx_lock.try_recv() else {
+                    return false;
+                };
+
+                result
+            };
+
+            **viewer = match result {
+                Ok(content) => V::loaded(content),
+                Err(e) => V::error(e),
+            };
+            true
+        }
+
+        let popup = if let Some(popup) = &mut self.show_popup {
+            popup
+        } else {
+            return;
+        };
+
+        let did_update = match popup {
+            PopupType::Pdf(pdf_viewer) => poll_viewer(pdf_viewer),
+            PopupType::Ebook(ebook_viewer) => poll_viewer(ebook_viewer),
+            PopupType::Image(image_viewer) => poll_viewer(image_viewer),
+            PopupType::Video(video_viewer) => poll_viewer(video_viewer),
+            PopupType::Plugin(plugin_viewer) => poll_viewer(plugin_viewer),
+            _ => false,
+        };
+        if did_update {
+            ctx.request_repaint();
+        }
     }
 
     /// Get shortcuts from config or use defaults
@@ -942,7 +994,8 @@ impl eframe::App for Kiorg {
         #[cfg(feature = "debug")]
         ctx.set_debug_on_hover(true);
 
-        self.new_preview_loaded(ctx);
+        self.poll_preview_content(ctx);
+        self.poll_popup_viewers(ctx);
         self.check_notifications();
 
         if self
@@ -971,7 +1024,7 @@ impl eframe::App for Kiorg {
 
         self.process_input(ctx);
 
-        match &self.show_popup {
+        match &mut self.show_popup {
             Some(PopupType::Help) => {
                 let mut keep_open = true;
                 help_window::show_help_window(
@@ -1049,6 +1102,31 @@ impl eframe::App for Kiorg {
             }
             Some(PopupType::Preview) => {
                 popup_preview::draw(ctx, self);
+            }
+            Some(PopupType::Pdf(pdf_viewer)) => {
+                if !pdf_viewer.draw(ctx, &self.colors) {
+                    self.show_popup = None;
+                }
+            }
+            Some(PopupType::Ebook(ebook_viewer)) => {
+                if !ebook_viewer.draw(ctx, &self.colors) {
+                    self.show_popup = None;
+                }
+            }
+            Some(PopupType::Image(image_viewer)) => {
+                if !image_viewer.draw(ctx, &self.colors) {
+                    self.show_popup = None;
+                }
+            }
+            Some(PopupType::Video(video_viewer)) => {
+                if !video_viewer.draw(ctx, &self.colors) {
+                    self.show_popup = None;
+                }
+            }
+            Some(PopupType::Plugin(plugin_viewer)) => {
+                if !plugin_viewer.draw(ctx, &self.colors) {
+                    self.show_popup = None;
+                }
             }
             Some(PopupType::Themes(_)) => {
                 theme::draw(self, ctx);

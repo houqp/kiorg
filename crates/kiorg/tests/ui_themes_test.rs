@@ -209,9 +209,8 @@ error = "#aa3333"
     // Test closing with Q (Exit shortcut)
     harness.key_press(Key::Q);
     harness.step();
-    assert_eq!(
-        harness.state().show_popup,
-        None,
+    assert!(
+        harness.state().show_popup.is_none(),
         "Themes popup should close with Q"
     );
 }
@@ -582,9 +581,8 @@ error = "#ff8888"
     harness.step();
 
     // Verify the popup closed and theme was applied
-    assert_eq!(
-        harness.state().show_popup,
-        None,
+    assert!(
+        harness.state().show_popup.is_none(),
         "Themes popup should close after selecting a theme"
     );
 
@@ -657,9 +655,8 @@ error = "#ff8888"
     harness.step();
 
     // Verify the popup closed and purple theme was applied
-    assert_eq!(
-        harness.state().show_popup,
-        None,
+    assert!(
+        harness.state().show_popup.is_none(),
         "Themes popup should close after selecting purple theme"
     );
 

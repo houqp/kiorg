@@ -360,8 +360,8 @@ fn test_ui_navigation_mouse_click_selects_and_previews() {
         Some(PreviewContent::Pdf(_)) => {
             panic!("Preview content should be Text or HighlightedCode variant, not PDF")
         }
-        Some(PreviewContent::Epub(_)) => {
-            panic!("Preview content should be Text or HighlightedCode variant, not EPUB")
+        Some(PreviewContent::Ebook(_)) => {
+            panic!("Preview content should be Text or HighlightedCode variant, not Ebook")
         }
         Some(PreviewContent::Directory(_)) => {
             panic!("Preview content should be Text or HighlightedCode variant, not Directory")
@@ -485,8 +485,8 @@ fn test_ui_navigation_image_preview() {
         Some(PreviewContent::Pdf(_)) => {
             panic!("Preview content should be Image variant, not PDF");
         }
-        Some(PreviewContent::Epub(_)) => {
-            panic!("Preview content should be Image variant, not EPUB");
+        Some(PreviewContent::Ebook(_)) => {
+            panic!("Preview content should be Image variant, not Ebook");
         }
         Some(PreviewContent::Directory(_)) => {
             panic!("Preview content should be Image variant, not Directory");

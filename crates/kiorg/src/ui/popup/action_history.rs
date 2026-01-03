@@ -9,7 +9,7 @@ use super::window_utils::new_center_popup_window;
 
 /// Draw the action history popup with rollback options
 pub fn draw(ctx: &Context, app: &mut Kiorg) {
-    if Some(PopupType::ActionHistory) != app.show_popup {
+    if !matches!(app.show_popup, Some(PopupType::ActionHistory)) {
         return;
     }
 

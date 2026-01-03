@@ -301,7 +301,11 @@ pub fn read_video_with_metadata(
         }
     };
 
-    Ok(PreviewContent::video(title, ffmpeg_meta, thumbnail_texture))
+    Ok(PreviewContent::Video(VideoMeta::new(
+        title,
+        ffmpeg_meta,
+        thumbnail_texture,
+    )))
 }
 
 /// Extract a thumbnail from the video file using ffmpeg-sidecar

@@ -75,9 +75,8 @@ fn test_file_drop_popup_copy() {
     });
 
     // Verify the popup is closed
-    assert_eq!(
-        harness.state().show_popup,
-        None,
+    assert!(
+        harness.state().show_popup.is_none(),
         "File drop popup should be closed after copy operation"
     );
 
@@ -180,9 +179,8 @@ fn test_file_drop_popup_move() {
     });
 
     // Verify the popup is closed
-    assert_eq!(
-        harness.state().show_popup,
-        None,
+    assert!(
+        harness.state().show_popup.is_none(),
         "File drop popup should be closed after move operation"
     );
 
@@ -266,9 +264,8 @@ fn test_file_drop_popup_cancel() {
     harness.step();
 
     // Verify the popup is closed
-    assert_eq!(
-        harness.state().show_popup,
-        None,
+    assert!(
+        harness.state().show_popup.is_none(),
         "File drop popup should be closed after cancel"
     );
 

@@ -250,9 +250,8 @@ fn test_undo_redo_rename_file() {
     });
 
     // Verify the popup is closed
-    assert_eq!(
-        harness.state().show_popup,
-        None,
+    assert!(
+        harness.state().show_popup.is_none(),
         "Rename popup should be closed after confirming"
     );
 

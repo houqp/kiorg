@@ -1,7 +1,7 @@
 //! Image preview module
 
 use crate::config::colors::AppColors;
-use crate::models::preview_content::{ImageMeta, PreviewContent, metadata};
+use crate::models::preview_content::{ImageMeta, metadata};
 use egui::{Rect, RichText};
 use image::{GenericImageView, ImageDecoder, ImageFormat};
 use std::collections::HashMap;
@@ -121,7 +121,7 @@ fn image_path_to_uri(path: &Path) -> String {
 pub fn read_image_with_metadata(
     path: &Path,
     ctx: &egui::Context,
-) -> Result<PreviewContent, String> {
+) -> Result<crate::models::preview_content::ImageMeta, String> {
     // Get the filename for the title
     let title = path
         .file_name()
@@ -268,7 +268,7 @@ pub fn read_image_with_metadata(
             for loader in ctx.loaders().image.lock().iter() {
                 loader.forget_all();
             }
-            return Ok(PreviewContent::image_from_uri(
+            return Ok(crate::models::preview_content::ImageMeta::from_uri(
                 title, metadata, uri, exif_data,
             ));
         }
@@ -286,7 +286,9 @@ pub fn read_image_with_metadata(
     // Create a unique texture ID based on the path
     let texture_id = format!("image_{}", path.display());
     let texture = ctx.load_texture(texture_id, color_image, egui::TextureOptions::default());
-    Ok(PreviewContent::image(title, metadata, texture, exif_data))
+    Ok(crate::models::preview_content::ImageMeta::new(
+        title, metadata, texture, exif_data,
+    ))
 }
 
 /// Render an interactive image with pan and zoom support

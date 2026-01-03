@@ -1,12 +1,88 @@
-//! Document preview module for popup display (PDF, EPUB)
-
 use crate::config::colors::AppColors;
-use crate::models::preview_content::{EpubMeta, PdfMeta};
+use crate::models::preview_content::PdfMeta;
+use crate::ui::file_list::truncate_text;
+use crate::ui::popup::window_utils::new_center_popup_window;
 use egui::{Button, Image, Key, Modifiers, RichText};
+use std::path::PathBuf;
+use std::sync::{Arc, Mutex, mpsc};
 use tracing::error;
 
-/// Render PDF document in popup with page navigation
-pub fn render_pdf_popup(
+/// Type alias for PDF meta receiver
+pub type PdfMetaReceiver = Arc<Mutex<mpsc::Receiver<Result<PdfMeta, String>>>>;
+
+/// Dedicated state for the PDF viewer app
+#[derive(Debug)]
+pub enum PdfViewer {
+    Loading(PathBuf, PdfMetaReceiver, std::sync::mpsc::Sender<()>),
+    Loaded(PdfMeta),
+    Error(String),
+}
+
+impl crate::ui::popup::PopupApp for PdfViewer {
+    type Content = PdfMeta;
+
+    fn loading(
+        path: PathBuf,
+        receiver: Arc<Mutex<mpsc::Receiver<Result<Self::Content, String>>>>,
+        cancel_sender: mpsc::Sender<()>,
+    ) -> Self {
+        Self::Loading(path, receiver, cancel_sender)
+    }
+
+    fn loaded(content: Self::Content) -> Self {
+        Self::Loaded(content)
+    }
+
+    fn error(message: String) -> Self {
+        Self::Error(message)
+    }
+
+    fn as_loading(&self) -> Option<&Arc<Mutex<mpsc::Receiver<Result<Self::Content, String>>>>> {
+        match self {
+            Self::Loading(_, receiver, _) => Some(receiver),
+            _ => None,
+        }
+    }
+
+    fn title(&self) -> String {
+        "PDF Viewer".to_string()
+    }
+}
+
+impl PdfViewer {
+    pub fn draw(&mut self, ctx: &egui::Context, colors: &AppColors) -> bool {
+        let mut keep_open = true;
+        let screen_size = ctx.content_rect().size();
+        let popup_size = egui::vec2(screen_size.x * 0.9, screen_size.y * 0.9);
+        let popup_content_width = popup_size.x * 0.9;
+
+        new_center_popup_window(&truncate_text("PDF Viewer", popup_content_width))
+            .max_size(popup_size)
+            .min_size(popup_size)
+            .open(&mut keep_open)
+            .show(ctx, |ui| {
+                let available_width = ui.available_width();
+                let available_height = ui.available_height();
+
+                match self {
+                    Self::Loaded(pdf_meta) => {
+                        render_popup(ui, pdf_meta, colors, available_width, available_height);
+                    }
+                    Self::Loading(path, _, _) => {
+                        crate::ui::popup::preview::render_loading(ui, path, colors);
+                    }
+                    Self::Error(e) => {
+                        crate::ui::popup::preview::render_error(ui, e, colors);
+                    }
+                }
+            });
+
+        keep_open
+    }
+}
+
+/// Render PDF in popup with page navigation
+pub fn render_popup(
     ui: &mut egui::Ui,
     pdf_meta: &mut PdfMeta,
     colors: &AppColors,
@@ -38,7 +114,7 @@ pub fn render_pdf_popup(
 
                 // Editable page input
                 ui.horizontal(|ui| {
-                    // Use egui's memory to store the page input text per document
+                    // Use egui's memory to store the page input text per PDF
                     let input_id = pdf_meta.page_input_id();
 
                     // Get or initialize the input text
@@ -115,43 +191,18 @@ pub fn render_pdf_popup(
     ui.add_space(5.0);
 
     // Display cover image (using most of the available space)
-    // Calculate available space for the document, accounting for the navigation bar
+    // Calculate available space for the PDF, accounting for the navigation bar
     let nav_bar_height = 30.0; // Navigation bar + spacing
     let max_height = available_height - nav_bar_height;
     let max_width = available_width * 0.95;
 
-    // Add the document preview with maximum possible size
+    // Add the PDF preview with maximum possible size
     ui.add_sized(
         egui::vec2(max_width, max_height),
         Image::new(pdf_meta.cover.clone())
             .max_size(egui::vec2(max_width, max_height))
             .maintain_aspect_ratio(true),
     );
-}
-
-/// Render EPUB document in popup without page navigation
-pub fn render_epub_popup(
-    ui: &mut egui::Ui,
-    epub_meta: &EpubMeta,
-    _colors: &AppColors,
-    available_width: f32,
-    available_height: f32,
-) {
-    ui.vertical_centered(|ui| {
-        // Add a small space at the top
-        ui.add_space(10.0);
-
-        // For EPUB, just display the cover without any page navigation controls or page count
-        // Use maximum available space since there's no navigation bar or page count display
-        let max_height = available_height * 0.95;
-        let max_width = available_width * 0.95;
-
-        // Add the document preview with maximum possible size
-        ui.add_sized(
-            egui::vec2(max_width, max_height),
-            Image::new(epub_meta.cover.clone()).maintain_aspect_ratio(true),
-        );
-    });
 }
 
 /// Helper function to navigate to the next page in PDF

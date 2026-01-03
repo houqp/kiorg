@@ -19,7 +19,7 @@ pub mod metadata {
     pub const IMG_FILE_SIZE: &str = "File Size";
     pub const IMG_FORMAT: &str = "Format";
 
-    // PDF Document Metadata
+    // PDF Ebook Metadata
     pub const PDF_PAGE_COUNT: &str = "Page Count";
     pub const PDF_VERSION: &str = "PDF Version";
     pub const PDF_TITLE: &str = "Title";
@@ -77,9 +77,41 @@ impl std::fmt::Debug for PdfMeta {
 }
 
 impl PdfMeta {
+    /// Creates a new PdfMeta with cached PDF file
+    #[must_use]
+    pub fn new(
+        image: egui::widgets::ImageSource<'static>,
+        texture_handle: Option<egui::TextureHandle>,
+        metadata: HashMap<String, String>,
+        title: Option<String>,
+        page_count: isize,
+        pdf_file: Arc<Mutex<PdfDocument>>,
+        file_path: &std::path::Path,
+    ) -> Self {
+        // Generate unique file ID from path
+        let file_id = file_path.to_string_lossy().to_string();
+        // Use provided title or file name
+        let title = title.unwrap_or_else(|| {
+            let file_name = file_path
+                .file_name()
+                .map(|f| f.to_string_lossy().to_string());
+            file_name.unwrap_or_else(|| file_id.clone())
+        });
+        Self {
+            file_id,
+            title,
+            metadata,
+            cover: image,
+            _texture_handle: texture_handle,
+            current_page: 0,
+            page_count,
+            pdf_file,
+        }
+    }
+
     pub fn render_page(&mut self, ctx: &egui::Context) -> Result<(), String> {
         // Render the new page using cached file
-        let (img_source, texture_handle) = crate::ui::preview::doc::render_pdf_page_high_dpi(
+        let (img_source, texture_handle) = crate::ui::preview::pdf::render_pdf_page_high_dpi(
             &self.pdf_file.lock().expect("failed to lock pdf_file"),
             self.current_page,
             Some(&self.file_id),
@@ -106,15 +138,52 @@ impl PdfMeta {
 
 /// Metadata for EPUB documents
 #[derive(Clone, Debug)]
-pub struct EpubMeta {
+pub struct EbookMeta {
     /// Document title
     pub title: String,
     /// Document metadata (key-value pairs)
     pub metadata: HashMap<String, String>,
     /// Cover image or first page
     pub cover: egui::widgets::ImageSource<'static>,
-    /// Total number of pages in the EPUB
+    /// Total number of pages in the ebook
     pub page_count: isize,
+}
+
+impl EbookMeta {
+    /// Creates a new EbookMeta with metadata and optional cover image
+    #[must_use]
+    pub fn new(
+        mut metadata: HashMap<String, String>,
+        cover_image: egui::widgets::ImageSource<'static>,
+        page_count: isize,
+        file_path: &std::path::Path,
+    ) -> Self {
+        fn pop_title(
+            metadata: &mut HashMap<String, String>,
+            file_path: &std::path::Path,
+        ) -> String {
+            let title_keys = ["title", "dc:title"];
+            for key in title_keys {
+                if let Some(v) = metadata.remove(key)
+                    && !v.is_empty()
+                {
+                    return v;
+                }
+            }
+            // no title key found, use file name/path as title
+            let file_name = file_path.file_name().map(|f| f.to_string_lossy());
+            file_name
+                .unwrap_or_else(|| file_path.to_string_lossy())
+                .to_string()
+        }
+        let title = pop_title(&mut metadata, file_path);
+        Self {
+            title,
+            metadata,
+            cover: cover_image,
+            page_count,
+        }
+    }
 }
 
 pub use ffmpeg_sidecar::event::{AudioStream, VideoStream};
@@ -185,6 +254,19 @@ impl std::fmt::Debug for VideoMeta {
     }
 }
 
+impl VideoMeta {
+    /// Creates a new VideoMeta
+    pub fn new(title: impl Into<String>, ffmpeg: FfmpegMeta, texture: egui::TextureHandle) -> Self {
+        let thumbnail_image = egui::Image::new(&texture);
+        Self {
+            title: title.into(),
+            ffmpeg,
+            thumbnail_image,
+            _texture_handle: Some(texture),
+        }
+    }
+}
+
 /// Metadata for image files
 #[derive(Clone)]
 pub struct ImageMeta {
@@ -216,6 +298,42 @@ impl std::fmt::Debug for ImageMeta {
     }
 }
 
+impl ImageMeta {
+    /// Creates a new ImageMeta with a texture handle
+    pub fn new(
+        title: impl Into<String>,
+        metadata: HashMap<String, String>,
+        texture: egui::TextureHandle,
+        exif_data: Option<HashMap<String, String>>,
+    ) -> Self {
+        let image = egui::Image::new(&texture);
+        Self {
+            title: title.into(),
+            metadata,
+            exif_data,
+            image,
+            _texture_handle: Some(texture),
+        }
+    }
+
+    /// Creates a new ImageMeta with a URI (for animated images like GIFs)
+    pub fn from_uri(
+        title: impl Into<String>,
+        metadata: HashMap<String, String>,
+        uri: String,
+        exif_data: Option<HashMap<String, String>>,
+    ) -> Self {
+        let image = egui::Image::new(egui::widgets::ImageSource::Uri(uri.into()));
+        Self {
+            title: title.into(),
+            metadata,
+            exif_data,
+            image,
+            _texture_handle: None, // No texture handle for URI-based images
+        }
+    }
+}
+
 /// Represents different types of preview content that can be displayed in the right panel
 #[derive(Clone, Debug)]
 pub enum PreviewContent {
@@ -238,8 +356,8 @@ pub enum PreviewContent {
     Tar(Vec<TarEntry>),
     /// PDF document with page navigation support
     Pdf(PdfMeta),
-    /// EPUB document without page navigation
-    Epub(EpubMeta),
+    /// Ebook document without page navigation
+    Ebook(EbookMeta),
     /// Directory content with a list of entries
     Directory(Vec<DirectoryEntry>),
     /// Loading state with path being loaded and optional receiver for async loading
@@ -409,55 +527,6 @@ impl PreviewContent {
         }
     }
 
-    /// Creates a new image preview content with a texture handle
-    pub fn image(
-        title: impl Into<String>,
-        metadata: HashMap<String, String>,
-        texture: egui::TextureHandle,
-        exif_data: Option<HashMap<String, String>>,
-    ) -> Self {
-        let image = egui::Image::new(&texture);
-        Self::Image(ImageMeta {
-            title: title.into(),
-            metadata,
-            exif_data,
-            image,
-            _texture_handle: Some(texture),
-        })
-    }
-
-    /// Creates a new video preview content
-    pub fn video(
-        title: impl Into<String>,
-        ffmpeg: FfmpegMeta,
-        texture: egui::TextureHandle,
-    ) -> Self {
-        let thumbnail_image = egui::Image::new(&texture);
-        Self::Video(VideoMeta {
-            title: title.into(),
-            ffmpeg,
-            thumbnail_image,
-            _texture_handle: Some(texture),
-        })
-    }
-
-    /// Creates a new image preview content with a URI (for animated images like GIFs)
-    pub fn image_from_uri(
-        title: impl Into<String>,
-        metadata: HashMap<String, String>,
-        uri: String,
-        exif_data: Option<HashMap<String, String>>,
-    ) -> Self {
-        let image = egui::Image::new(egui::widgets::ImageSource::Uri(uri.into()));
-        Self::Image(ImageMeta {
-            title: title.into(),
-            metadata,
-            exif_data,
-            image,
-            _texture_handle: None, // No texture handle for URI-based images
-        })
-    }
-
     /// Creates a new zip preview content from a list of entries
     #[must_use]
     pub const fn zip(entries: Vec<ZipEntry>) -> Self {
@@ -474,81 +543,5 @@ impl PreviewContent {
     #[must_use]
     pub const fn directory(entries: Vec<DirectoryEntry>) -> Self {
         Self::Directory(entries)
-    }
-
-    /// Creates a new loading preview content with a receiver for async updates
-    pub fn loading_with_receiver(
-        path: impl Into<PathBuf>,
-        receiver: Receiver<Result<Self, String>>,
-        cancel_sender: std::sync::mpsc::Sender<()>,
-    ) -> Self {
-        Self::Loading(path.into(), Arc::new(Mutex::new(receiver)), cancel_sender)
-    }
-
-    /// Creates a new PDF document preview content with cached PDF file
-    #[must_use]
-    pub fn pdf_with_file(
-        image: egui::widgets::ImageSource<'static>,
-        texture_handle: Option<egui::TextureHandle>,
-        metadata: HashMap<String, String>,
-        title: Option<String>,
-        page_count: isize,
-        pdf_file: Arc<Mutex<PdfDocument>>,
-        file_path: &std::path::Path,
-    ) -> Self {
-        // Generate unique file ID from path
-        let file_id = file_path.to_string_lossy().to_string();
-        // Use provided title or file name
-        let title = title.unwrap_or_else(|| {
-            let file_name = file_path
-                .file_name()
-                .map(|f| f.to_string_lossy().to_string());
-            file_name.unwrap_or_else(|| file_id.clone())
-        });
-        Self::Pdf(PdfMeta {
-            file_id,
-            title,
-            metadata,
-            cover: image,
-            _texture_handle: texture_handle,
-            current_page: 0,
-            page_count,
-            pdf_file,
-        })
-    }
-
-    /// Creates a new EPUB preview content with metadata and optional cover image
-    #[must_use]
-    pub fn epub_with_file(
-        mut metadata: HashMap<String, String>,
-        cover_image: egui::widgets::ImageSource<'static>,
-        page_count: isize,
-        file_path: &std::path::Path,
-    ) -> Self {
-        fn pop_title(
-            metadata: &mut HashMap<String, String>,
-            file_path: &std::path::Path,
-        ) -> String {
-            let title_keys = ["title", "dc:title"];
-            for key in title_keys {
-                if let Some(v) = metadata.remove(key)
-                    && !v.is_empty()
-                {
-                    return v;
-                }
-            }
-            // no title key found, use file name/path as title
-            let file_name = file_path.file_name().map(|f| f.to_string_lossy());
-            file_name
-                .unwrap_or_else(|| file_path.to_string_lossy())
-                .to_string()
-        }
-        let title = pop_title(&mut metadata, file_path);
-        Self::Epub(EpubMeta {
-            title,
-            metadata,
-            cover: cover_image,
-            page_count,
-        })
     }
 }

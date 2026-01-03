@@ -29,9 +29,8 @@ fn test_exit_popup_enter_key() {
     harness.step();
 
     // Verify exit popup is shown
-    assert_eq!(
-        harness.state().show_popup,
-        Some(PopupType::Exit),
+    assert!(
+        matches!(harness.state().show_popup, Some(PopupType::Exit)),
         "Exit popup should be shown after pressing 'q'"
     );
 
@@ -40,9 +39,8 @@ fn test_exit_popup_enter_key() {
     harness.step();
 
     // Verify shutdown was requested
-    assert_eq!(
-        harness.state().show_popup,
-        None,
+    assert!(
+        harness.state().show_popup.is_none(),
         "Confirming exit should close popup"
     );
     // Verify config is correctly serialized on exit
@@ -67,9 +65,8 @@ fn test_exit_popup_escape_key() {
     harness.step();
 
     // Verify exit popup is shown
-    assert_eq!(
-        harness.state().show_popup,
-        Some(PopupType::Exit),
+    assert!(
+        matches!(harness.state().show_popup, Some(PopupType::Exit)),
         "Exit popup should be shown after pressing 'q'"
     );
 
@@ -78,9 +75,8 @@ fn test_exit_popup_escape_key() {
     harness.step();
 
     // Verify popup is closed
-    assert_eq!(
-        harness.state().show_popup,
-        None,
+    assert!(
+        harness.state().show_popup.is_none(),
         "Exit popup should be closed after pressing Escape"
     );
 
@@ -109,9 +105,8 @@ fn test_exit_popup_q_key() {
     harness.step();
 
     // Verify exit popup is shown
-    assert_eq!(
-        harness.state().show_popup,
-        Some(PopupType::Exit),
+    assert!(
+        matches!(harness.state().show_popup, Some(PopupType::Exit)),
         "Exit popup should be shown after pressing 'q'"
     );
 
@@ -120,9 +115,8 @@ fn test_exit_popup_q_key() {
     harness.step();
 
     // Verify popup is closed
-    assert_eq!(
-        harness.state().show_popup,
-        None,
+    assert!(
+        harness.state().show_popup.is_none(),
         "Exit popup should be closed after pressing 'q'"
     );
 

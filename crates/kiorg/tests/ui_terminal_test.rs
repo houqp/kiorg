@@ -12,9 +12,8 @@ fn test_open_terminal_shortcut() {
     let mut harness = create_harness(&temp_dir);
 
     // Initially, terminal should not be shown
-    assert_eq!(
-        harness.state().show_popup,
-        None,
+    assert!(
+        harness.state().show_popup.is_none(),
         "No popup should be shown initially"
     );
 

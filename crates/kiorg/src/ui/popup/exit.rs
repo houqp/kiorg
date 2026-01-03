@@ -20,7 +20,7 @@ pub fn cancel_exit(app: &mut Kiorg) {
 /// Draw the exit confirmation popup
 pub fn draw(ctx: &Context, app: &mut Kiorg) {
     // Early return if not in exit mode
-    if app.show_popup != Some(PopupType::Exit) {
+    if !matches!(app.show_popup, Some(PopupType::Exit)) {
         return;
     }
 

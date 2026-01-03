@@ -28,7 +28,7 @@ fn test_epub_preview() {
 
     // Try multiple steps to allow async loading to complete
     wait_for_condition(|| match &harness.state().preview_content {
-        Some(PreviewContent::Epub(_)) => true,
+        Some(PreviewContent::Ebook(_)) => true,
         _ => {
             harness.step();
             false
@@ -36,37 +36,37 @@ fn test_epub_preview() {
     });
 
     match &harness.state().preview_content {
-        Some(PreviewContent::Epub(epub_meta)) => {
-            // Verify EPUB metadata
+        Some(PreviewContent::Ebook(ebook_meta)) => {
+            // Verify ebook metadata
             assert!(
-                !epub_meta.metadata.is_empty(),
-                "EPUB metadata should not be empty"
+                !ebook_meta.metadata.is_empty(),
+                "Ebook metadata should not be empty"
             );
 
             // Check for expected metadata fields
-            let creator = epub_meta
+            let creator = ebook_meta
                 .metadata
                 .get("creator")
-                .or_else(|| epub_meta.metadata.get("dc:creator"));
-            let language = epub_meta
+                .or_else(|| ebook_meta.metadata.get("dc:creator"));
+            let language = ebook_meta
                 .metadata
                 .get("language")
-                .or_else(|| epub_meta.metadata.get("dc:language"));
+                .or_else(|| ebook_meta.metadata.get("dc:language"));
 
             // Title is now stored in the title field, not in metadata
-            assert!(!epub_meta.title.is_empty(), "Title should not be empty");
-            assert!(creator.is_some(), "Creator should be in the EPUB metadata");
+            assert!(!ebook_meta.title.is_empty(), "Title should not be empty");
+            assert!(creator.is_some(), "Creator should be in the ebook metadata");
             assert!(
                 language.is_some(),
-                "Language should be in the EPUB metadata"
+                "Language should be in the ebook metadata"
             );
 
             // Check specific values
-            assert_eq!(epub_meta.title, "Demo EPUB Book");
+            assert_eq!(ebook_meta.title, "Demo EPUB Book");
 
             assert!(
-                epub_meta.page_count > 0,
-                "EPUB page count should be available and greater than 0"
+                ebook_meta.page_count > 0,
+                "Ebook page count should be available and greater than 0"
             );
 
             if let Some(creator_value) = creator {
@@ -116,28 +116,31 @@ fn test_epub_page_count_metadata_available() {
     wait_for_condition(|| {
         harness.step();
 
-        // Check if EPUB preview content is loaded
-        if let Some(PreviewContent::Epub(epub_meta)) = &harness.state().preview_content {
+        // Check if ebook preview content is loaded
+        if let Some(PreviewContent::Ebook(ebook_meta)) = &harness.state().preview_content {
             // Verify page count is accessible for right panel display
             assert!(
-                epub_meta.page_count > 0,
-                "EPUB page count should be available and greater than 0"
+                ebook_meta.page_count > 0,
+                "Ebook page count should be available and greater than 0"
             );
 
-            // Verify standard EPUB metadata is present
+            // Verify standard ebook metadata is present
             assert!(
-                !epub_meta.title.is_empty(),
-                "EPUB should have a non-empty title"
+                !ebook_meta.title.is_empty(),
+                "Ebook should have a non-empty title"
             );
-            assert!(!epub_meta.metadata.is_empty(), "EPUB should have metadata");
-
-            // Check for expected metadata fields from the test EPUB
             assert!(
-                epub_meta.metadata.contains_key("creator")
-                    || epub_meta.metadata.contains_key("Creator")
-                    || epub_meta.metadata.contains_key("author")
-                    || epub_meta.metadata.contains_key("Author"),
-                "EPUB should contain author/creator metadata"
+                !ebook_meta.metadata.is_empty(),
+                "Ebook should have metadata"
+            );
+
+            // Check for expected metadata fields from the test ebook
+            assert!(
+                ebook_meta.metadata.contains_key("creator")
+                    || ebook_meta.metadata.contains_key("Creator")
+                    || ebook_meta.metadata.contains_key("author")
+                    || ebook_meta.metadata.contains_key("Author"),
+                "Ebook should contain author/creator metadata"
             );
 
             epub_loaded = true;
