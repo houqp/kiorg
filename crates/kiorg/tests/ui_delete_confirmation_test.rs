@@ -87,9 +87,8 @@ fn test_folder_delete_double_confirmation() {
     });
 
     // Verify popup is closed
-    assert_eq!(
-        harness.state().show_popup,
-        None,
+    assert!(
+        harness.state().show_popup.is_none(),
         "Delete popup should be closed after second confirmation"
     );
 
@@ -131,9 +130,8 @@ fn test_folder_delete_cancel_first_confirmation() {
     harness.step();
 
     // Verify popup is closed
-    assert_eq!(
-        harness.state().show_popup,
-        None,
+    assert!(
+        harness.state().show_popup.is_none(),
         "Delete popup should be closed after Escape"
     );
 
@@ -183,9 +181,8 @@ fn test_folder_delete_cancel_second_confirmation() {
     harness.step();
 
     // Verify popup is closed
-    assert_eq!(
-        harness.state().show_popup,
-        None,
+    assert!(
+        harness.state().show_popup.is_none(),
         "Delete popup should be closed after Escape"
     );
 

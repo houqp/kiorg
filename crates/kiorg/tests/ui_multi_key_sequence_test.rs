@@ -128,7 +128,7 @@ key = "mnws"
     harness.state_mut().refresh_entries();
 
     // Initially no popup should be showing
-    assert_eq!(harness.state().show_popup, None);
+    assert!(harness.state().show_popup.is_none());
 
     // Press the 4-character sequence: m, n, w, s
     let keys = [Key::M, Key::N, Key::W, Key::S];
@@ -139,7 +139,7 @@ key = "mnws"
         harness.step();
 
         // Should still have no popup
-        assert_eq!(harness.state().show_popup, None);
+        assert!(harness.state().show_popup.is_none());
     }
 
     // Press the final key to complete sequence
@@ -188,14 +188,14 @@ key = "mne"
     harness.step();
 
     // Should have no popup but buffer should be building
-    assert_eq!(harness.state().show_popup, None);
+    assert!(harness.state().show_popup.is_none());
 
     // Press 's' instead of 'e' - this should clear the buffer and not trigger action
     harness.key_press(Key::S); // This doesn't match the expected 'e'
     harness.step();
 
     // Should clear the buffer and not show any popup
-    assert_eq!(harness.state().show_popup, None);
+    assert!(harness.state().show_popup.is_none());
 }
 
 #[test]
@@ -234,7 +234,7 @@ key = "ws"
     harness.step();
 
     // Should be building sequence
-    assert_eq!(harness.state().show_popup, None);
+    assert!(harness.state().show_popup.is_none());
 
     harness.key_press(Key::N);
     harness.step();
@@ -255,7 +255,7 @@ key = "ws"
     harness.step();
 
     // Should trigger Help popup
-    assert_eq!(harness.state().show_popup, Some(PopupType::Help));
+    assert!(matches!(harness.state().show_popup, Some(PopupType::Help)));
 }
 
 #[test]
@@ -295,21 +295,21 @@ shift = true
     harness.state_mut().refresh_entries();
 
     // Test 1: Ctrl+m, Ctrl+n should trigger Help popup
-    assert_eq!(harness.state().show_popup, None);
+    assert!(harness.state().show_popup.is_none());
 
     // Press Ctrl+m (first key with modifier)
     harness.key_press_modifiers(ctrl_modifiers(), Key::M);
     harness.step();
 
     // Should be building sequence, no popup yet
-    assert_eq!(harness.state().show_popup, None);
+    assert!(harness.state().show_popup.is_none());
 
     // Press Ctrl+n (second key with modifier to complete sequence)
     harness.key_press_modifiers(ctrl_modifiers(), Key::N);
     harness.step();
 
     // Should trigger Help popup
-    assert_eq!(harness.state().show_popup, Some(PopupType::Help));
+    assert!(matches!(harness.state().show_popup, Some(PopupType::Help)));
 
     // Clear popup for next test
     harness.state_mut().show_popup = None;
@@ -321,7 +321,7 @@ shift = true
     harness.step();
 
     // Should NOT trigger Help popup (no modifier)
-    assert_eq!(harness.state().show_popup, None);
+    assert!(harness.state().show_popup.is_none());
 
     // Test 3: Shift+w, Shift+s should trigger Teleport popup
 
@@ -330,7 +330,7 @@ shift = true
     harness.step();
 
     // Should be building sequence, no popup yet
-    assert_eq!(harness.state().show_popup, None);
+    assert!(harness.state().show_popup.is_none());
 
     // Press Shift+s to complete sequence
     harness.key_press_modifiers(shift_modifiers(), Key::S);
@@ -352,7 +352,7 @@ shift = true
     harness.step();
 
     // Should NOT trigger Teleport popup (no modifier)
-    assert_eq!(harness.state().show_popup, None);
+    assert!(harness.state().show_popup.is_none());
 
     // Test 5: Verify that mixing modifiers doesn't work (Ctrl+m, Shift+n)
     harness.key_press_modifiers(ctrl_modifiers(), Key::M);
@@ -361,5 +361,5 @@ shift = true
     harness.step();
 
     // Should NOT trigger Help popup (inconsistent modifiers)
-    assert_eq!(harness.state().show_popup, None);
+    assert!(harness.state().show_popup.is_none());
 }

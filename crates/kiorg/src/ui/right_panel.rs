@@ -91,7 +91,7 @@ pub fn draw(app: &mut Kiorg, _ctx: &egui::Context, ui: &mut Ui, width: f32, heig
                         );
                     }
                     Some(PreviewContent::Pdf(pdf_meta)) => {
-                        preview::doc::render(
+                        preview::pdf::render(
                             ui,
                             pdf_meta,
                             colors,
@@ -99,10 +99,10 @@ pub fn draw(app: &mut Kiorg, _ctx: &egui::Context, ui: &mut Ui, width: f32, heig
                             available_height,
                         );
                     }
-                    Some(PreviewContent::Epub(epub_meta)) => {
-                        preview::doc::render_epub(
+                    Some(PreviewContent::Ebook(ebook_meta)) => {
+                        crate::ui::preview::ebook::render(
                             ui,
-                            epub_meta,
+                            ebook_meta,
                             colors,
                             available_width,
                             available_height,

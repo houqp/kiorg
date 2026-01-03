@@ -58,9 +58,8 @@ fn test_rename_popup() {
     harness.step();
 
     // Verify the popup is closed
-    assert_eq!(
-        harness.state().show_popup,
-        None,
+    assert!(
+        harness.state().show_popup.is_none(),
         "Rename popup should be closed after confirming"
     );
 
@@ -116,9 +115,8 @@ fn test_rename_popup() {
     harness.step();
 
     // Verify the popup is closed
-    assert_eq!(
-        harness.state().show_popup,
-        None,
+    assert!(
+        harness.state().show_popup.is_none(),
         "Rename popup should be closed after canceling"
     );
 

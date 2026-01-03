@@ -212,7 +212,7 @@ fn restart_app() {
 
 /// Show update restart confirmation popup
 pub fn show_update_restart_popup(ctx: &Context, app: &mut Kiorg) {
-    if app.show_popup != Some(PopupType::UpdateRestart) {
+    if !matches!(app.show_popup, Some(PopupType::UpdateRestart)) {
         return;
     };
 

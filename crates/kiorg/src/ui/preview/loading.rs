@@ -5,7 +5,7 @@ use crate::config::colors::AppColors;
 use crate::models::preview_content::{PreviewContent, PreviewReceiver};
 use egui::RichText;
 use std::path::{Path, PathBuf};
-use std::sync::mpsc;
+use std::sync::{Arc, Mutex, mpsc};
 use std::time::Duration;
 
 /// Render loading state
@@ -67,21 +67,26 @@ pub fn load_preview_async<F>(app: &mut Kiorg, path: PathBuf, processor: F)
 where
     F: FnOnce(PathBuf) -> Result<PreviewContent, String> + Send + 'static,
 {
-    // Create a channel for process result communication
-    let (sender, receiver) = std::sync::mpsc::channel();
-    // Create a channel for cancel signaling
-    let (cancel_sender, cancel_receiver) = mpsc::channel();
-
     // Check for existing loading content and trigger cancel signal
     if let Some(PreviewContent::Loading(_, _, existing_cancel_sender)) = &app.preview_content {
         let _ = existing_cancel_sender.send(());
     }
+
+    let (receiver, cancel_sender) = create_preview_task(path.clone(), processor);
+
     // Set the initial loading state with the receiver
-    app.preview_content = Some(PreviewContent::loading_with_receiver(
-        path.clone(),
-        receiver,
-        cancel_sender,
-    ));
+    app.preview_content = Some(PreviewContent::Loading(path, receiver, cancel_sender));
+}
+
+/// Create an async preview content loading task
+pub fn create_preview_task<F>(path: PathBuf, processor: F) -> (PreviewReceiver, mpsc::Sender<()>)
+where
+    F: FnOnce(PathBuf) -> Result<PreviewContent, String> + Send + 'static,
+{
+    // Create a channel for process result communication
+    let (sender, receiver) = std::sync::mpsc::channel();
+    // Create a channel for cancel signaling
+    let (cancel_sender, cancel_receiver) = mpsc::channel();
 
     // Spawn a thread to process the file
     std::thread::spawn(move || {
@@ -98,4 +103,33 @@ where
         let preview_result = processor(path);
         let _ = sender.send(preview_result);
     });
+
+    (Arc::new(Mutex::new(receiver)), cancel_sender)
+}
+
+/// Type alias for the return type of popup loading tasks
+pub type PopupLoadTask<T> = (
+    Arc<Mutex<mpsc::Receiver<Result<T, String>>>>,
+    mpsc::Sender<()>,
+);
+
+/// Generic function to create an async loading task for popup viewers
+/// No debouncing since popups are explicitly triggered by user action
+pub fn create_load_popup_meta_task<T, F>(path: PathBuf, processor: F) -> PopupLoadTask<T>
+where
+    T: Send + 'static,
+    F: FnOnce(PathBuf) -> Result<T, String> + Send + 'static,
+{
+    let (sender, receiver) = std::sync::mpsc::channel();
+    let (cancel_sender, cancel_receiver) = mpsc::channel();
+
+    std::thread::spawn(move || {
+        // Check for cancellation before processing
+        if cancel_receiver.try_recv().is_ok() {
+            return;
+        }
+        let _ = sender.send(processor(path));
+    });
+
+    (Arc::new(Mutex::new(receiver)), cancel_sender)
 }

@@ -3,9 +3,10 @@
 pub const METADATA_TBL_KEY_COL_W: f32 = 100.0;
 
 pub mod directory;
-pub mod doc;
+pub mod ebook;
 pub mod image;
 pub mod loading;
+pub mod pdf;
 pub mod plugin;
 pub mod tar;
 pub mod text;
@@ -190,7 +191,7 @@ pub fn update_cache(app: &mut Kiorg, ctx: &egui::Context) {
         image_extensions!() => {
             let ctx_clone = ctx.clone();
             loading::load_preview_async(app, entry.path, move |path| {
-                image::read_image_with_metadata(&path, &ctx_clone)
+                image::read_image_with_metadata(&path, &ctx_clone).map(PreviewContent::Image)
             });
         }
         video_extensions!() => {
@@ -212,12 +213,14 @@ pub fn update_cache(app: &mut Kiorg, ctx: &egui::Context) {
             });
         }
         epub_extensions!() => {
-            loading::load_preview_async(app, entry.path, |path| doc::extract_epub_metadata(&path));
+            loading::load_preview_async(app, entry.path, |path| {
+                ebook::extract_ebook_metadata(&path).map(PreviewContent::Ebook)
+            });
         }
         pdf_extensions!() => {
             let ctx_clone = ctx.clone();
             loading::load_preview_async(app, entry.path, move |path| {
-                doc::extract_pdf_metadata(&path, &ctx_clone)
+                pdf::extract_pdf_metadata(&path, &ctx_clone).map(PreviewContent::Pdf)
             });
         }
         // All other files

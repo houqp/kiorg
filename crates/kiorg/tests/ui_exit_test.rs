@@ -45,9 +45,8 @@ fn test_exit_saves_state() {
     harness.step();
 
     // Verify exit popup is shown
-    assert_eq!(
-        harness.state().show_popup,
-        Some(PopupType::Exit),
+    assert!(
+        matches!(harness.state().show_popup, Some(PopupType::Exit)),
         "Exit popup should be shown after pressing 'q'"
     );
 

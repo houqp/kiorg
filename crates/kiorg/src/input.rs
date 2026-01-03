@@ -17,7 +17,7 @@ fn is_cancel_keys(key: Key) -> bool {
 #[allow(clippy::too_many_lines)]
 fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: &ShortcutAction) {
     match action {
-        ShortcutAction::ShowFilePreview => popup_preview::handle_show_file_preview(app, ctx),
+        ShortcutAction::ShowFilePreview => popup_preview::handle_show_file_popup(app, ctx),
         ShortcutAction::MoveDown => app.move_selection(1),
         ShortcutAction::MoveUp => app.move_selection(-1),
         ShortcutAction::GoToParentDirectory => {
@@ -202,7 +202,7 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: &Shortcu
         }
         ShortcutAction::ShowHelp => {
             // Toggle help popup
-            if app.show_popup == Some(PopupType::Help) {
+            if matches!(app.show_popup, Some(PopupType::Help)) {
                 app.show_popup = None;
             } else {
                 app.show_popup = Some(PopupType::Help);
@@ -305,16 +305,16 @@ fn process_key(
 
     // Handle special modal states first based on the show_popup field
     match &app.show_popup {
-        Some(PopupType::Preview) => {
+        Some(PopupType::Preview) | Some(PopupType::Pdf(_)) | Some(PopupType::Ebook(_)) => {
             if is_cancel_keys(key) {
                 popup_preview::close_popup(app);
                 return;
             }
-            // Handle preview popup input (PDF page navigation, etc.)
-            if let Some(crate::models::preview_content::PreviewContent::Pdf(pdf_meta)) =
-                &mut app.preview_content
-            {
-                popup_preview::doc::handle_preview_popup_input_pdf(pdf_meta, key, modifiers, ctx);
+            // Special handling for PDF navigation follows below
+        }
+        Some(PopupType::Image(_)) | Some(PopupType::Plugin(_)) | Some(PopupType::Video(_)) => {
+            if is_cancel_keys(key) {
+                popup_preview::close_popup(app);
             }
             return;
         }
@@ -418,19 +418,22 @@ fn process_key(
             }
             return;
         }
-        Some(PopupType::UpdateConfirm(_)) => {
-            // Update confirm popup handles its own input - just return
-            return;
-        }
-        Some(PopupType::UpdateProgress(_)) => {
-            // Update progress popup doesn't handle input - just return
-            return;
-        }
-        Some(PopupType::UpdateRestart) => {
-            // Update restart popup handles its own input - just return
+        Some(
+            PopupType::UpdateConfirm(_) | PopupType::UpdateProgress(_) | PopupType::UpdateRestart,
+        ) => {
+            // These popups handle their own input or don't handle any - just return
             return;
         }
         None => {}
+    }
+
+    // Special handling for PDF navigation which needs mutable access to metadata
+    if let Some(PopupType::Pdf(pdf_viewer)) = &mut app.show_popup {
+        use crate::ui::popup::pdf_viewer;
+        if let pdf_viewer::PdfViewer::Loaded(pdf_meta) = pdf_viewer.as_mut() {
+            pdf_viewer::handle_preview_popup_input_pdf(pdf_meta, key, modifiers, ctx);
+        }
+        return;
     }
 
     // Handle ESC key to clear search filter when search is active but not focused

@@ -1,19 +1,21 @@
 //! Preview popup module for displaying file previews in a popup window
 
-use crate::app::Kiorg;
-use crate::models::preview_content::PreviewContent;
-use crate::ui::file_list::truncate_text;
-use crate::ui::popup::PopupType;
-use crate::ui::popup::window_utils::new_center_popup_window;
 use egui::Context;
 
-pub mod doc;
-pub mod image;
+use crate::app::Kiorg;
+use crate::config::colors::AppColors;
+use crate::models::preview_content::PreviewContent;
+use crate::ui::file_list::truncate_text;
+use crate::ui::popup::PopupApp;
+use crate::ui::popup::PopupType;
+use crate::ui::popup::window_utils::new_center_popup_window;
+use crate::ui::preview::loading::create_load_popup_meta_task;
+
 pub mod video;
 
 /// Handle the `ShowFilePreview` shortcut action
 /// This function was extracted from input.rs to reduce complexity
-pub fn handle_show_file_preview(app: &mut Kiorg, _ctx: &egui::Context) {
+pub fn handle_show_file_popup(app: &mut Kiorg, ctx: &egui::Context) {
     // Store path and extension information before borrowing app mutably
     let (is_dir, path, extension) = {
         let tab = app.tab_manager.current_tab_ref();
@@ -44,80 +46,108 @@ pub fn handle_show_file_preview(app: &mut Kiorg, _ctx: &egui::Context) {
     if let Some(plugin) = plugin_result {
         // Trigger a fresh load specifically for the popup using the PreviewPopup command
         let path_buf = path.to_path_buf();
-        let ctx_clone = _ctx.clone();
-        crate::ui::preview::loading::load_preview_async(app, path_buf, move |path| {
+        let filename = path_buf
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_else(|| "Plugin".to_string());
+        let ctx_clone = ctx.clone();
+        let (rx, cancel_sender) = create_load_popup_meta_task(path_buf.clone(), move |path| {
             let result = plugin.preview_popup(&path.to_string_lossy());
             match result {
-                Ok(plugin_content) => Ok(PreviewContent::plugin_preview_from_components(
-                    plugin_content,
-                    &ctx_clone,
-                )),
-                Err(e) => Ok(PreviewContent::text(format!("Plugin error: {}", e))),
+                Ok(plugin_content) => {
+                    let content =
+                        PreviewContent::plugin_preview_from_components(plugin_content, &ctx_clone);
+                    // Extract components from PreviewContent
+                    match content {
+                        PreviewContent::PluginPreview { components } => {
+                            Ok(crate::ui::popup::plugin_viewer::PluginContent {
+                                filename,
+                                components,
+                            })
+                        }
+                        _ => Err("Unexpected content type for Plugin viewer".into()),
+                    }
+                }
+                Err(e) => Err(format!("Plugin error: {}", e)),
             }
         });
-        app.show_popup = Some(PopupType::Preview);
+        app.show_popup = Some(PopupType::Plugin(Box::new(PopupApp::loading(
+            path_buf,
+            rx,
+            cancel_sender,
+        ))));
         return;
     }
 
     // Handle different file types based on extension
     match extension.as_str() {
         crate::ui::preview::pdf_extensions!() => {
-            // Get the current selected path
-            let selected_path = {
-                let tab = app.tab_manager.current_tab_ref();
-                tab.selected_entry().map(|entry| entry.path.clone())
-            };
-
-            if let Some(path) = selected_path {
-                // We can assume preview_content will always be Pdf due to right panel loading
-                if let Some(PreviewContent::Pdf(ref mut pdf_meta)) = app.preview_content {
-                    // We already have pdf meta with correct metadata, just update the cover with high DPI
-                    // Generate a unique file ID based on the path
-                    let file_id = path.to_string_lossy().to_string();
-
-                    match crate::ui::preview::doc::render_pdf_page_high_dpi(
-                        &pdf_meta.pdf_file.lock().unwrap(),
-                        pdf_meta.current_page, // Use current page from existing meta
-                        Some(&file_id),
-                        _ctx,
-                    ) {
-                        Ok((img_source, texture_handle)) => {
-                            // Update the cover with high DPI version
-                            pdf_meta.cover = img_source;
-                            pdf_meta._texture_handle = Some(texture_handle);
-
-                            // Show preview popup after successful rendering
-                            app.show_popup = Some(PopupType::Preview);
-                        }
-                        Err(_) => {
-                            // If error rendering, don't show popup
-                        }
-                    }
-                } else {
-                    // For EPUB or other doc types, just show the popup directly
-                    app.show_popup = Some(PopupType::Preview);
+            // Not loaded or different type, start a new high-DPI load for PdfViewer
+            let ctx_clone = ctx.clone();
+            let (rx, cancel_sender) = create_load_popup_meta_task(path.clone(), move |p| {
+                let mut meta = crate::ui::preview::pdf::extract_pdf_metadata(&p, &ctx_clone)?;
+                // Upgrade to high DPI for the popup
+                {
+                    let doc_lock = meta.pdf_file.lock().map_err(|_| "Failed to lock PDF doc")?;
+                    let (img, handle) = crate::ui::preview::pdf::render_pdf_page_high_dpi(
+                        &doc_lock,
+                        0,
+                        Some(&meta.file_id),
+                        &ctx_clone,
+                    )?;
+                    meta.cover = img;
+                    meta._texture_handle = Some(handle);
                 }
-            }
+                Ok(meta)
+            });
+            app.show_popup = Some(PopupType::Pdf(Box::new(PopupApp::loading(
+                path.to_path_buf(),
+                rx,
+                cancel_sender,
+            ))));
         }
         crate::ui::preview::epub_extensions!() => {
-            // Show preview popup for EPUB files
-            app.show_popup = Some(PopupType::Preview);
-        }
-        crate::ui::preview::zip_extensions!() => {
-            // Show preview popup for zip files
-            app.show_popup = Some(PopupType::Preview);
-        }
-        crate::ui::preview::tar_extensions!() => {
-            // Show preview popup for tar files
-            app.show_popup = Some(PopupType::Preview);
+            let path_buf = path.to_path_buf();
+            let (rx, cancel_sender) = create_load_popup_meta_task(path_buf.clone(), |p| {
+                crate::ui::preview::ebook::extract_ebook_metadata(&p)
+            });
+            app.show_popup = Some(PopupType::Ebook(Box::new(PopupApp::loading(
+                path_buf,
+                rx,
+                cancel_sender,
+            ))));
         }
         crate::ui::preview::image_extensions!() => {
-            // Show preview popup for image files
+            let path_buf = path.to_path_buf();
+            let ctx_clone = ctx.clone();
+            let (rx, cancel_sender) = create_load_popup_meta_task(path_buf.clone(), move |p| {
+                crate::ui::preview::image::read_image_with_metadata(&p, &ctx_clone)
+            });
+            app.show_popup = Some(PopupType::Image(Box::new(PopupApp::loading(
+                path_buf,
+                rx,
+                cancel_sender,
+            ))));
+        }
+        crate::ui::preview::zip_extensions!() | crate::ui::preview::tar_extensions!() => {
             app.show_popup = Some(PopupType::Preview);
         }
         crate::ui::preview::video_extensions!() => {
-            // Show preview popup for video files
-            app.show_popup = Some(PopupType::Preview);
+            let path_buf = path.to_path_buf();
+            let ctx_clone = ctx.clone();
+            let (rx, cancel_sender) = create_load_popup_meta_task(path_buf.clone(), move |p| {
+                crate::ui::preview::video::read_video_with_metadata(&p, &ctx_clone).map(|content| {
+                    match content {
+                        PreviewContent::Video(video_meta) => video_meta,
+                        _ => panic!("Unexpected content type, expected Video"),
+                    }
+                })
+            });
+            app.show_popup = Some(PopupType::Video(Box::new(PopupApp::loading(
+                path_buf,
+                rx,
+                cancel_sender,
+            ))));
         }
         v => {
             if let Some(syntax) = crate::ui::preview::text::find_syntax_from_path(path) {
@@ -131,7 +161,6 @@ pub fn handle_show_file_preview(app: &mut Kiorg, _ctx: &egui::Context) {
                     }
                 }
             } else {
-                // send notification for unsupported file types
                 app.toasts
                     .error(format!("Preview not implemented for file type: {v}."));
             }
@@ -140,24 +169,12 @@ pub fn handle_show_file_preview(app: &mut Kiorg, _ctx: &egui::Context) {
 }
 
 pub fn close_popup(app: &mut Kiorg) {
-    if let Some(PreviewContent::PluginPreview { .. }) = app.preview_content {
-        // For plugins, we need to clear the content/cache because the popup loads
-        // specific content via `preview_popup` that might differ from the
-        // standard right panel preview.
-        //
-        // TODO: In the long run, separate storage of popup preview content and
-        // right panel preview content.
-        app.preview_content = None;
-        app.cached_preview_path = None;
-        // Force preview update in the main loop since we cleared the content
-        app.selection_changed = true;
-    }
     app.show_popup = None;
 }
 
 /// Shows the preview popup for the currently selected file
 pub fn draw(ctx: &Context, app: &mut Kiorg) {
-    if app.show_popup != Some(PopupType::Preview) {
+    if !matches!(app.show_popup, Some(PopupType::Preview)) {
         return;
     }
 
@@ -177,114 +194,141 @@ pub fn draw(ctx: &Context, app: &mut Kiorg) {
         .min_size(popup_size)
         .open(&mut keep_open)
         .show(ctx, |ui| {
-            let content = if let Some(content) = &mut app.preview_content {
-                content
-            } else {
-                ui.vertical_centered(|ui| {
-                    ui.label("No preview content available");
-                });
-                return;
-            };
-
             // Calculate available space in the popup
             let available_width = ui.available_width();
             let available_height = ui.available_height();
 
-            // Display the preview content based on its type
-            match content {
-                PreviewContent::Text(text) => {
-                    // Display text with syntax highlighting if it's source code
-                    egui::ScrollArea::both()
-                        .auto_shrink([false; 2])
-                        .show(ui, |ui| {
-                            let mut text_str = text.as_str();
-                            ui.add(
-                                egui::TextEdit::multiline(&mut text_str)
-                                    .desired_width(f32::INFINITY)
-                                    .desired_rows(0)
-                                    .font(egui::TextStyle::Monospace)
-                                    .text_color(app.colors.fg)
-                                    .interactive(false),
-                            );
-                        });
-                }
-                PreviewContent::HighlightedCode { content, language } => {
-                    // Display syntax highlighted code with both horizontal and vertical scrolling
-                    egui::ScrollArea::both()
-                        .auto_shrink([false; 2])
-                        .show(ui, |ui| {
-                            crate::ui::preview::text::render_highlighted(ui, content, language);
-                        });
-                }
-                PreviewContent::Image(image_meta) => {
-                    image::render_popup(ui, image_meta, available_width, available_height);
-                }
-                PreviewContent::Video(video_meta) => {
-                    video::render_popup(ui, video_meta, available_width, available_height);
-                }
-                PreviewContent::Pdf(pdf_meta) => {
-                    doc::render_pdf_popup(
-                        ui,
-                        pdf_meta,
-                        &app.colors,
-                        available_width,
-                        available_height,
-                    );
-                }
-                PreviewContent::Epub(epub_meta) => {
-                    doc::render_epub_popup(
-                        ui,
-                        epub_meta,
-                        &app.colors,
-                        available_width,
-                        available_height,
-                    );
-                }
-                PreviewContent::Zip(zip_entries) => {
-                    egui::ScrollArea::vertical()
-                        .id_salt("zip_popup_scroll")
-                        .show(ui, |ui| {
-                            crate::ui::preview::zip::render(ui, zip_entries, &app.colors);
-                        });
-                }
-                PreviewContent::Tar(tar_entries) => {
-                    egui::ScrollArea::vertical()
-                        .id_salt("tar_popup_scroll")
-                        .show(ui, |ui| {
-                            crate::ui::preview::tar::render(ui, tar_entries, &app.colors);
-                        });
-                }
-                PreviewContent::PluginPreview { components } => {
-                    crate::ui::preview::plugin::render(
-                        ui,
-                        components,
-                        &app.colors,
-                        available_width,
-                        available_height,
-                    );
-                }
-                PreviewContent::Loading(path, _, _) => {
-                    ui.vertical_centered(|ui| {
-                        ui.add_space(20.0);
-                        ui.spinner();
-                        ui.add_space(10.0);
-                        ui.label(egui::RichText::new(format!(
-                            "Loading preview contents for {}",
-                            path.file_name().unwrap_or_default().to_string_lossy()
-                        )));
-                        ui.add_space(20.0);
-                    });
-                }
-                // For other file types
-                _ => {
-                    ui.vertical_centered(|ui| {
-                        ui.label("Preview not implemented for this file type yet.");
-                    });
-                }
+            if let Some(content) = &mut app.preview_content {
+                render_content(ui, content, &app.colors, available_width, available_height);
+            } else {
+                ui.vertical_centered(|ui| {
+                    ui.label("No preview content available");
+                });
             }
         });
 
     if !keep_open {
         close_popup(app);
     }
+}
+
+fn render_content(
+    ui: &mut egui::Ui,
+    content: &mut PreviewContent,
+    colors: &AppColors,
+    available_width: f32,
+    available_height: f32,
+) {
+    // Display the preview content based on its type
+    match content {
+        PreviewContent::Text(text) => {
+            // Display text with syntax highlighting if it's source code
+            egui::ScrollArea::both()
+                .auto_shrink([false; 2])
+                .show(ui, |ui| {
+                    let mut text_str = text.as_str();
+                    ui.add(
+                        egui::TextEdit::multiline(&mut text_str)
+                            .desired_width(f32::INFINITY)
+                            .desired_rows(0)
+                            .font(egui::TextStyle::Monospace)
+                            .text_color(colors.fg)
+                            .interactive(false),
+                    );
+                });
+        }
+        PreviewContent::HighlightedCode { content, language } => {
+            // Display syntax highlighted code with both horizontal and vertical scrolling
+            egui::ScrollArea::both()
+                .auto_shrink([false; 2])
+                .show(ui, |ui| {
+                    crate::ui::preview::text::render_highlighted(ui, content, language);
+                });
+        }
+        PreviewContent::Image(image_meta) => {
+            crate::ui::popup::image_viewer::render_popup(
+                ui,
+                image_meta,
+                available_width,
+                available_height,
+            );
+        }
+        PreviewContent::Video(video_meta) => {
+            video::render_popup(ui, video_meta, available_width, available_height);
+        }
+        PreviewContent::Pdf(pdf_meta) => {
+            crate::ui::popup::pdf_viewer::render_popup(
+                ui,
+                pdf_meta,
+                colors,
+                available_width,
+                available_height,
+            );
+        }
+        PreviewContent::Ebook(ebook_meta) => {
+            crate::ui::popup::ebook_viewer::render_popup(
+                ui,
+                ebook_meta,
+                colors,
+                available_width,
+                available_height,
+            );
+        }
+        PreviewContent::Zip(zip_entries) => {
+            egui::ScrollArea::vertical()
+                .id_salt("zip_popup_scroll")
+                .show(ui, |ui| {
+                    crate::ui::preview::zip::render(ui, zip_entries, colors);
+                });
+        }
+        PreviewContent::Tar(tar_entries) => {
+            egui::ScrollArea::vertical()
+                .id_salt("tar_popup_scroll")
+                .show(ui, |ui| {
+                    crate::ui::preview::tar::render(ui, tar_entries, colors);
+                });
+        }
+        PreviewContent::PluginPreview { components } => {
+            crate::ui::preview::plugin::render(
+                ui,
+                components,
+                colors,
+                available_width,
+                available_height,
+            );
+        }
+        PreviewContent::Loading(path, _, _) => {
+            render_loading(ui, path, colors);
+        }
+        // For other file types
+        _ => {
+            ui.vertical_centered(|ui| {
+                ui.label("Preview not implemented for this file type yet.");
+            });
+        }
+    }
+}
+
+pub fn render_loading(ui: &mut egui::Ui, path: &std::path::Path, colors: &AppColors) {
+    ui.vertical_centered(|ui| {
+        ui.add_space(20.0);
+        ui.spinner();
+        ui.add_space(10.0);
+        ui.label(
+            egui::RichText::new(format!(
+                "Loading preview contents for {}",
+                path.file_name().unwrap_or_default().to_string_lossy()
+            ))
+            .color(colors.fg),
+        );
+        ui.add_space(20.0);
+    });
+}
+
+pub fn render_error(ui: &mut egui::Ui, error: &str, _colors: &AppColors) {
+    ui.vertical_centered(|ui| {
+        ui.add_space(20.0);
+        ui.label(egui::RichText::new(format!("Error: {error}")).color(egui::Color32::RED));
+        ui.add_space(20.0);
+    });
 }

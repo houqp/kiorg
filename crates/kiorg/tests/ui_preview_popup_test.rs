@@ -43,10 +43,10 @@ fn test_image_preview_popup_shortcut() {
     harness.key_press_modifiers(shift_modifiers(), Key::K);
     harness.step();
 
-    // Verify the preview popup is shown
+    // Verify the image viewer popup is shown
     match &harness.state().show_popup {
-        Some(PopupType::Preview) => {}
-        other => panic!("Preview popup should be shown after pressing Shift+K, got {other:?}"),
+        Some(PopupType::Image(_)) => {}
+        other => panic!("Image viewer popup should be shown after pressing Shift+K, got {other:?}"),
     }
 
     // Close the popup with Escape
@@ -54,9 +54,8 @@ fn test_image_preview_popup_shortcut() {
     harness.step();
 
     // Verify the popup is closed
-    assert_eq!(
-        harness.state().show_popup,
-        None,
+    assert!(
+        harness.state().show_popup.is_none(),
         "Preview popup should be closed after pressing Escape"
     );
 }
@@ -77,10 +76,10 @@ fn test_pdf_preview_popup_error_handling() {
     harness.key_press_modifiers(shift_modifiers(), Key::K);
     harness.step();
 
-    // Verify the preview popup is NOT shown (it should have closed due to the error)
+    // Verify the PDF viewer popup is opened (even with error, it should be opened)
     assert!(
-        matches!(harness.state().show_popup, Some(PopupType::Preview)),
-        "Preview popup should be opened to display the error"
+        matches!(harness.state().show_popup, Some(PopupType::Pdf(_))),
+        "PDF viewer popup should be opened to display the error"
     );
 
     let success = wait_for_condition(|| {
@@ -144,39 +143,39 @@ fn test_doc_preview_popup_page_count_metadata() {
         harness.step();
         matches!(
             harness.state().preview_content.as_ref(),
-            Some(PreviewContent::Epub(_))
+            Some(PreviewContent::Ebook(_))
         )
     });
 
     // Verify document preview is loaded
     match harness.state().preview_content.as_ref() {
-        Some(PreviewContent::Epub(_)) => {}
-        other => panic!("Preview content should be EPUB, got {other:?}"),
+        Some(PreviewContent::Ebook(_)) => {}
+        other => panic!("Preview content should be Ebook, got {other:?}"),
     }
 
     // Open preview popup with Shift+K
     harness.key_press_modifiers(shift_modifiers(), Key::K);
     harness.step();
 
-    // Verify the preview popup is shown with correct page count metadata
+    // Verify the ebook viewer popup is shown with correct metadata
     match &harness.state().show_popup {
-        Some(PopupType::Preview) => {
-            // Check that the preview content has Page Count metadata set correctly
+        Some(PopupType::Ebook(_)) => {
+            // Check that the preview content has metadata set correctly
             match &harness.state().preview_content {
-                Some(PreviewContent::Epub(epub_meta)) => {
-                    // For EPUB files, we don't expect page count since EPUBs are reflowable
+                Some(PreviewContent::Ebook(ebook_meta)) => {
+                    // For ebook files, we don't expect page count since ebooks are reflowable
                     // Just verify that the metadata is not empty
                     assert!(
-                        !epub_meta.metadata.is_empty(),
-                        "Metadata should not be empty for document preview popup"
+                        !ebook_meta.metadata.is_empty(),
+                        "Metadata should not be empty for ebook viewer popup"
                     );
                 }
                 other => {
-                    panic!("Preview content should be EPUB type for document file, got {other:?}");
+                    panic!("Preview content should be Ebook type for document file, got {other:?}");
                 }
             }
         }
-        other => panic!("Preview popup should be shown after pressing Shift+K, got {other:?}"),
+        other => panic!("Ebook viewer popup should be shown after pressing Shift+K, got {other:?}"),
     }
 
     // Close the popup
@@ -184,9 +183,8 @@ fn test_doc_preview_popup_page_count_metadata() {
     harness.step();
 
     // Verify the popup is closed
-    assert_eq!(
-        harness.state().show_popup,
-        None,
+    assert!(
+        harness.state().show_popup.is_none(),
         "Preview popup should be closed after pressing Escape"
     );
 }

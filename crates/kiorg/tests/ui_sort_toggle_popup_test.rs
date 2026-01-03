@@ -21,16 +21,15 @@ fn test_sort_toggle_popup_open_and_close() {
     let mut harness = create_harness(&temp_dir);
 
     // Initially, no popup should be shown
-    assert_eq!(harness.state().show_popup, None);
+    assert!(harness.state().show_popup.is_none());
 
     // Press comma to open sort toggle popup
     harness.key_press(Key::Comma);
     harness.step();
 
     // Verify the popup is open
-    assert_eq!(
-        harness.state().show_popup,
-        Some(PopupType::SortToggle),
+    assert!(
+        matches!(harness.state().show_popup, Some(PopupType::SortToggle)),
         "Sort toggle popup should be open after pressing comma"
     );
 
@@ -38,9 +37,8 @@ fn test_sort_toggle_popup_open_and_close() {
     harness.key_press(Key::Escape);
     harness.step();
 
-    assert_eq!(
-        harness.state().show_popup,
-        None,
+    assert!(
+        harness.state().show_popup.is_none(),
         "Sort toggle popup should close with Escape"
     );
 }
@@ -83,7 +81,7 @@ fn test_sort_toggle_popup_name_sorting() {
         let state = harness.state();
         assert_eq!(state.tab_manager.sort_column, SortColumn::None);
         // Popup should still be open after sorting
-        assert_eq!(state.show_popup, Some(PopupType::SortToggle));
+        assert!(matches!(state.show_popup, Some(PopupType::SortToggle)));
     }
 
     // Press 'n' again to toggle back to Name sorting (should be Descending)
@@ -122,7 +120,7 @@ fn test_sort_toggle_popup_name_sorting() {
     harness.key_press(Key::Escape);
     harness.step();
 
-    assert_eq!(harness.state().show_popup, None);
+    assert!(harness.state().show_popup.is_none());
 }
 
 #[test]
@@ -272,13 +270,16 @@ fn test_sort_toggle_popup_multiple_column_switching() {
     assert_eq!(harness.state().tab_manager.sort_column, SortColumn::Name);
 
     // All these operations should keep the popup open
-    assert_eq!(harness.state().show_popup, Some(PopupType::SortToggle));
+    assert!(matches!(
+        harness.state().show_popup,
+        Some(PopupType::SortToggle)
+    ));
 
     // Close the popup
     harness.key_press(Key::Escape);
     harness.step();
 
-    assert_eq!(harness.state().show_popup, None);
+    assert!(harness.state().show_popup.is_none());
 }
 
 #[test]
@@ -312,14 +313,14 @@ fn test_sort_toggle_popup_invalid_keys_ignored() {
         let state = harness.state();
         assert_eq!(state.tab_manager.sort_column, initial_sort_column);
         assert_eq!(state.tab_manager.sort_order, initial_sort_order);
-        assert_eq!(state.show_popup, Some(PopupType::SortToggle));
+        assert!(matches!(state.show_popup, Some(PopupType::SortToggle)));
     }
 
     // Only valid close keys should work
     harness.key_press(Key::Escape);
     harness.step();
 
-    assert_eq!(harness.state().show_popup, None);
+    assert!(harness.state().show_popup.is_none());
 }
 
 #[test]

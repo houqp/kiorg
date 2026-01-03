@@ -96,9 +96,8 @@ fn test_crash_reproduction_filtered_deletion() {
     });
 
     // Verify popup is closed
-    assert_eq!(
-        harness.state().show_popup,
-        None,
+    assert!(
+        harness.state().show_popup.is_none(),
         "Delete popup should be closed after second confirmation"
     );
 }

@@ -9,7 +9,7 @@ use egui::{Align2, Color32, Key, RichText};
 /// Show the sort toggle popup
 pub fn show_sort_toggle_popup(app: &mut Kiorg, ctx: &egui::Context) {
     // Check if the popup should be shown based on the show_popup field
-    if app.show_popup != Some(PopupType::SortToggle) {
+    if !matches!(app.show_popup, Some(PopupType::SortToggle)) {
         return;
     }
 

@@ -436,8 +436,8 @@ fn test_pdf_page_count_in_preview_content() {
         Some(PreviewContent::Pdf(pdf_meta)) => {
             assert_eq!(pdf_meta.page_count, page_count);
         }
-        Some(PreviewContent::Epub(_)) => {
-            panic!("Expected PDF preview content, got EPUB");
+        Some(PreviewContent::Ebook(_)) => {
+            panic!("Expected PDF preview content, got Ebook");
         }
         Some(PreviewContent::Text(_)) => {
             panic!("PDF should not be treated as an text");

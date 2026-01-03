@@ -21,9 +21,8 @@ fn test_help_menu_close_behavior() {
         harness.key_press_modifiers(shift_modifiers(), Key::Questionmark);
         harness.step();
     }
-    assert_eq!(
-        harness.state().show_popup,
-        Some(PopupType::Help),
+    assert!(
+        matches!(harness.state().show_popup, Some(PopupType::Help)),
         "Help menu should be open"
     );
     #[cfg(feature = "snapshot")]
@@ -37,9 +36,8 @@ fn test_help_menu_close_behavior() {
     // Test closing with Escape
     harness.key_press(Key::Escape);
     harness.step();
-    assert_eq!(
-        harness.state().show_popup,
-        None,
+    assert!(
+        harness.state().show_popup.is_none(),
         "Help menu should close with Escape"
     );
 
@@ -52,9 +50,8 @@ fn test_help_menu_close_behavior() {
     // Test closing with Q
     harness.key_press(Key::Q);
     harness.step();
-    assert_eq!(
-        harness.state().show_popup,
-        None,
+    assert!(
+        harness.state().show_popup.is_none(),
         "Help menu should close with Q"
     );
 
@@ -67,9 +64,8 @@ fn test_help_menu_close_behavior() {
     // Test closing with Enter
     harness.key_press(Key::Enter);
     harness.step();
-    assert_eq!(
-        harness.state().show_popup,
-        None,
+    assert!(
+        harness.state().show_popup.is_none(),
         "Help menu should close with Enter"
     );
 
@@ -82,9 +78,8 @@ fn test_help_menu_close_behavior() {
     // Test closing with ? (Questionmark)
     harness.key_press(Key::Questionmark);
     harness.step();
-    assert_eq!(
-        harness.state().show_popup,
-        None,
+    assert!(
+        harness.state().show_popup.is_none(),
         "Help menu should close with ?"
     );
 }
