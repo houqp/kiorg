@@ -121,6 +121,7 @@ fn image_path_to_uri(path: &Path) -> String {
 pub fn read_image_with_metadata(
     path: &Path,
     ctx: &egui::Context,
+    available_width: Option<f32>,
 ) -> Result<crate::models::preview_content::ImageMeta, String> {
     // Get the filename for the title
     let title = path
@@ -147,6 +148,18 @@ pub fn read_image_with_metadata(
         Ok(img) => img,
         Err(e) => return Err(format!("Failed to decode image: {e}")),
     };
+
+    if let Some(w) = available_width {
+        let (width, height) = img.dimensions();
+        // Only resize if the image is larger than the available width
+        // Cast w to u32 for comparison and resizing
+        let w_u32 = w as u32;
+        if width > w_u32 {
+            let ratio = height as f64 / width as f64;
+            let new_height = (w as f64 * ratio) as u32;
+            img = img.resize(w_u32, new_height, image::imageops::FilterType::Triangle);
+        }
+    }
 
     img.apply_orientation(orientation);
 

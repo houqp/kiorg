@@ -13,6 +13,12 @@ use crate::ui::preview::loading::create_load_popup_meta_task;
 
 pub mod video;
 
+fn available_screen_width(ctx: &Context) -> f32 {
+    let screen_width = ctx.content_rect().width();
+    let pixels_per_point = ctx.pixels_per_point();
+    screen_width * pixels_per_point
+}
+
 /// Handle the `ShowFilePreview` shortcut action
 /// This function was extracted from input.rs to reduce complexity
 pub fn handle_show_file_popup(app: &mut Kiorg, ctx: &egui::Context) {
@@ -51,8 +57,10 @@ pub fn handle_show_file_popup(app: &mut Kiorg, ctx: &egui::Context) {
             .map(|n| n.to_string_lossy().into_owned())
             .unwrap_or_else(|| "Plugin".to_string());
         let ctx_clone = ctx.clone();
+
+        let available_width = available_screen_width(ctx);
         let (rx, cancel_sender) = create_load_popup_meta_task(path_buf.clone(), move |path| {
-            let result = plugin.preview_popup(&path.to_string_lossy());
+            let result = plugin.preview_popup(&path.to_string_lossy(), available_width);
             match result {
                 Ok(plugin_content) => {
                     let content =
@@ -120,8 +128,13 @@ pub fn handle_show_file_popup(app: &mut Kiorg, ctx: &egui::Context) {
         crate::ui::preview::image_extensions!() => {
             let path_buf = path.to_path_buf();
             let ctx_clone = ctx.clone();
+            let available_width = available_screen_width(ctx);
             let (rx, cancel_sender) = create_load_popup_meta_task(path_buf.clone(), move |p| {
-                crate::ui::preview::image::read_image_with_metadata(&p, &ctx_clone)
+                crate::ui::preview::image::read_image_with_metadata(
+                    &p,
+                    &ctx_clone,
+                    Some(available_width),
+                )
             });
             app.show_popup = Some(PopupType::Image(Box::new(PopupApp::loading(
                 path_buf,
@@ -135,13 +148,13 @@ pub fn handle_show_file_popup(app: &mut Kiorg, ctx: &egui::Context) {
         crate::ui::preview::video_extensions!() => {
             let path_buf = path.to_path_buf();
             let ctx_clone = ctx.clone();
+            let available_width = available_screen_width(ctx);
             let (rx, cancel_sender) = create_load_popup_meta_task(path_buf.clone(), move |p| {
-                crate::ui::preview::video::read_video_with_metadata(&p, &ctx_clone).map(|content| {
-                    match content {
-                        PreviewContent::Video(video_meta) => video_meta,
-                        _ => panic!("Unexpected content type, expected Video"),
-                    }
-                })
+                crate::ui::preview::video::read_video_with_metadata(
+                    &p,
+                    &ctx_clone,
+                    Some(available_width),
+                )
             });
             app.show_popup = Some(PopupType::Video(Box::new(PopupApp::loading(
                 path_buf,
