@@ -82,10 +82,15 @@ impl Drop for LoadedPlugin {
 
 impl LoadedPlugin {
     /// Execute preview command on the plugin for the given file path
-    pub fn preview(&self, file_path: &str) -> Result<Vec<kiorg_plugin::Component>, PluginError> {
+    pub fn preview(
+        &self,
+        file_path: &str,
+        available_width: f32,
+    ) -> Result<Vec<kiorg_plugin::Component>, PluginError> {
         self.call_preview_internal(
             EngineCommand::Preview {
                 path: file_path.to_string(),
+                available_width,
             },
             file_path,
         )
@@ -95,10 +100,12 @@ impl LoadedPlugin {
     pub fn preview_popup(
         &self,
         file_path: &str,
+        available_width: f32,
     ) -> Result<Vec<kiorg_plugin::Component>, PluginError> {
         self.call_preview_internal(
             EngineCommand::PreviewPopup {
                 path: file_path.to_string(),
+                available_width,
             },
             file_path,
         )

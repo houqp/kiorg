@@ -173,8 +173,9 @@ pub fn update_cache(app: &mut Kiorg, ctx: &egui::Context) {
     };
     if let Some(plugin) = plugin_result {
         let ctx_clone = ctx.clone();
+        let available_width = app.calculate_right_panel_width(ctx);
         loading::load_preview_async(app, entry.path, move |path| {
-            let result = plugin.preview(&path.to_string_lossy());
+            let result = plugin.preview(&path.to_string_lossy(), available_width);
             match result {
                 Ok(plugin_content) => Ok(PreviewContent::plugin_preview_from_components(
                     plugin_content,
@@ -190,14 +191,18 @@ pub fn update_cache(app: &mut Kiorg, ctx: &egui::Context) {
     match ext.as_str() {
         image_extensions!() => {
             let ctx_clone = ctx.clone();
+            let available_width = app.calculate_right_panel_width(ctx);
             loading::load_preview_async(app, entry.path, move |path| {
-                image::read_image_with_metadata(&path, &ctx_clone).map(PreviewContent::Image)
+                image::read_image_with_metadata(&path, &ctx_clone, Some(available_width))
+                    .map(PreviewContent::Image)
             });
         }
         video_extensions!() => {
             let ctx_clone = ctx.clone();
+            let available_width = app.calculate_right_panel_width(ctx);
             loading::load_preview_async(app, entry.path, move |path| {
-                video::read_video_with_metadata(&path, &ctx_clone)
+                video::read_video_with_metadata(&path, &ctx_clone, Some(available_width))
+                    .map(PreviewContent::Video)
             });
         }
         zip_extensions!() => {

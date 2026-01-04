@@ -8,7 +8,7 @@ use std::path::Path;
 
 use crate::config::colors::AppColors;
 use crate::models::preview_content::{
-    FfmpegMeta, InputMeta, PreviewContent, StreamMeta, StreamTypeMeta, VideoMeta, metadata,
+    FfmpegMeta, InputMeta, StreamMeta, StreamTypeMeta, VideoMeta, metadata,
 };
 use tracing::{debug, warn};
 
@@ -41,12 +41,19 @@ mod ffmpeg {
     pub(super) fn get_frame_extraction_iter(
         path_str: &str,
         seek_time: f64,
+        available_width: Option<f32>,
     ) -> Option<impl Iterator<Item = ffmpeg_sidecar::event::OutputVideoFrame>> {
         let start = Instant::now();
-        let mut cmd = FfmpegCommand::new()
-            // Fast seek: -ss before -i
-            .args(["-ss", &seek_time.to_string()])
-            .input(path_str)
+        let mut cmd = FfmpegCommand::new();
+
+        // Fast seek: -ss before -i
+        cmd.args(["-ss", &seek_time.to_string()]).input(path_str);
+
+        if let Some(w) = available_width {
+            cmd.args(["-vf", &format!("scale={}:-1", w as u32)]);
+        }
+
+        let mut cmd = cmd
             .args(["-vframes", "1", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"])
             .spawn()
             .ok()?;
@@ -117,6 +124,7 @@ mod ffmpeg {
     pub(super) fn get_frame_extraction_iter(
         _path_str: &str,
         _seek_time: f64,
+        _available_width: Option<f32>,
     ) -> Option<impl Iterator<Item = OutputVideoFrame>> {
         // Create a fake frame with some variation to pass quality check
         let width = 100;
@@ -279,7 +287,8 @@ fn render_metadata_row(ui: &mut egui::Ui, key: &str, value: &str, colors: &AppCo
 pub fn read_video_with_metadata(
     path: &Path,
     ctx: &egui::Context,
-) -> Result<PreviewContent, String> {
+    available_width: Option<f32>,
+) -> Result<VideoMeta, String> {
     ffmpeg::init()?;
 
     let title = path
@@ -292,20 +301,17 @@ pub fn read_video_with_metadata(
     let mut ffmpeg_meta = FfmpegMeta::default();
 
     // Try to extract a real thumbnail from the video
-    let thumbnail_texture = match extract_video_thumbnail(ctx, path, &mut ffmpeg_meta) {
-        Ok(texture) => texture,
-        Err(_) => {
-            // Fall back to placeholder thumbnail
-            generate_placeholder_thumbnail(ctx, path)
-                .map_err(|e| format!("Failed to generate thumbnail: {e}"))?
-        }
-    };
+    let thumbnail_texture =
+        match extract_video_thumbnail(ctx, path, &mut ffmpeg_meta, available_width) {
+            Ok(texture) => texture,
+            Err(_) => {
+                // Fall back to placeholder thumbnail
+                generate_placeholder_thumbnail(ctx, path)
+                    .map_err(|e| format!("Failed to generate thumbnail: {e}"))?
+            }
+        };
 
-    Ok(PreviewContent::Video(VideoMeta::new(
-        title,
-        ffmpeg_meta,
-        thumbnail_texture,
-    )))
+    Ok(VideoMeta::new(title, ffmpeg_meta, thumbnail_texture))
 }
 
 /// Extract a thumbnail from the video file using ffmpeg-sidecar
@@ -313,6 +319,7 @@ fn extract_video_thumbnail(
     ctx: &egui::Context,
     path: &Path,
     ffmpeg_meta: &mut FfmpegMeta,
+    available_width: Option<f32>,
 ) -> Result<egui::TextureHandle, String> {
     let start = std::time::Instant::now();
     let path_str = path.to_str().ok_or("Invalid path encoding")?;
@@ -320,7 +327,7 @@ fn extract_video_thumbnail(
     // 1. Probe metadata and extract the first sample frame concurrently
     let (probe_res, first_sample_res) = rayon::join(
         || probe_metadata(path_str, ffmpeg_meta),
-        || extract_and_score_frame(path_str, 0.0),
+        || extract_and_score_frame(path_str, 0.0, available_width),
     );
     probe_res.map_err(|e| format!("Failed to probe metadata: {e}"))?;
 
@@ -343,16 +350,16 @@ fn extract_video_thumbnail(
     {
         let mut remaining_samples: Vec<_> = THUMBNAIL_SAMPLE_RATIOS
             .par_iter()
-            .filter_map(
-                |&ratio| match extract_and_score_frame(path_str, duration_secs * ratio) {
+            .filter_map(|&ratio| {
+                match extract_and_score_frame(path_str, duration_secs * ratio, available_width) {
                     Some(Ok(frame)) => Some(frame),
                     Some(Err(e)) => {
                         warn!("Failed to extract frame at ratio {}: {}", ratio, e);
                         None
                     }
                     None => None,
-                },
-            )
+                }
+            })
             .collect();
         samples.append(&mut remaining_samples);
     }
@@ -447,8 +454,9 @@ fn probe_metadata(path_str: &str, meta: &mut FfmpegMeta) -> Result<(), String> {
 fn extract_and_score_frame(
     path_str: &str,
     seek_time: f64,
+    available_width: Option<f32>,
 ) -> Option<Result<(f64, OutputVideoFrame), String>> {
-    let mut iter = ffmpeg::get_frame_extraction_iter(path_str, seek_time)?;
+    let mut iter = ffmpeg::get_frame_extraction_iter(path_str, seek_time, available_width)?;
     let frame = iter.next()?;
 
     let score = {
@@ -464,8 +472,11 @@ fn extract_and_score_frame(
         };
         // Use grayscale version for faster scoring
         const CLIP_WIDTH: u32 = 320;
-        let gray = if frame.width > CLIP_WIDTH {
-            let n_width = CLIP_WIDTH;
+        let clip_width = available_width
+            .map(|w| (w as u32).min(CLIP_WIDTH))
+            .unwrap_or(CLIP_WIDTH);
+        let gray = if frame.width > clip_width {
+            let n_width = clip_width;
             let n_height = (frame.height as f64 * (n_width as f64 / frame.width as f64)) as u32;
             let resized = image::imageops::resize(
                 &rgb_img,

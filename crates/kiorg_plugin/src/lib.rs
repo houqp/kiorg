@@ -83,10 +83,10 @@ pub struct PreviewCapability {
 pub enum EngineCommand {
     /// Initial handshake message
     Hello { protocol_version: String },
-    /// Preview command - takes a file path
-    Preview { path: String },
-    /// Preview popup command - takes a file path
-    PreviewPopup { path: String },
+    /// Preview command - takes a file path and available width
+    Preview { path: String, available_width: f32 },
+    /// Preview popup command - takes a file path and available width
+    PreviewPopup { path: String, available_width: f32 },
 }
 
 /// Message sent from engine to plugin
@@ -206,9 +206,9 @@ pub trait PluginHandler {
         }
         PluginResponse::Hello(self.metadata())
     }
-    fn on_preview(&mut self, path: &str) -> PluginResponse;
-    fn on_preview_popup(&mut self, path: &str) -> PluginResponse {
-        self.on_preview(path)
+    fn on_preview(&mut self, path: &str, available_width: f32) -> PluginResponse;
+    fn on_preview_popup(&mut self, path: &str, available_width: f32) -> PluginResponse {
+        self.on_preview(path, available_width)
     }
     fn metadata(&self) -> PluginMetadata;
 
@@ -236,8 +236,14 @@ pub trait PluginHandler {
                         EngineCommand::Hello { protocol_version } => {
                             self.on_hello(&protocol_version)
                         }
-                        EngineCommand::Preview { path } => self.on_preview(&path),
-                        EngineCommand::PreviewPopup { path } => self.on_preview_popup(&path),
+                        EngineCommand::Preview {
+                            path,
+                            available_width,
+                        } => self.on_preview(&path, available_width),
+                        EngineCommand::PreviewPopup {
+                            path,
+                            available_width,
+                        } => self.on_preview_popup(&path, available_width),
                     };
 
                     if send_message(&response).is_err() {

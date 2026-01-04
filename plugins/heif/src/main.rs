@@ -20,8 +20,8 @@ struct HeifData {
 }
 
 impl PluginHandler for HeifPlugin {
-    fn on_preview(&mut self, path: &str) -> PluginResponse {
-        match self.process_heif(path) {
+    fn on_preview(&mut self, path: &str, available_width: f32) -> PluginResponse {
+        match self.process_heif(path, Some(available_width)) {
             Ok(data) => PluginResponse::Preview {
                 components: vec![
                     Component::Title(TitleComponent {
@@ -47,8 +47,8 @@ impl PluginHandler for HeifPlugin {
         }
     }
 
-    fn on_preview_popup(&mut self, path: &str) -> PluginResponse {
-        match self.process_heif(path) {
+    fn on_preview_popup(&mut self, path: &str, _available_width: f32) -> PluginResponse {
+        match self.process_heif(path, None) {
             Ok(data) => PluginResponse::Preview {
                 components: vec![Component::Image(ImageComponent {
                     source: ImageSource::Bytes {
@@ -71,7 +71,11 @@ impl PluginHandler for HeifPlugin {
 }
 
 impl HeifPlugin {
-    fn process_heif(&self, path: &str) -> Result<HeifData, Box<dyn std::error::Error>> {
+    fn process_heif(
+        &self,
+        path: &str,
+        available_width: Option<f32>,
+    ) -> Result<HeifData, Box<dyn std::error::Error>> {
         let lib_heif = LibHeif::new();
         let ctx = HeifContext::read_from_file(path)?;
         let handle = ctx.primary_image_handle()?;
@@ -103,11 +107,25 @@ impl HeifPlugin {
         // Create image buffer from raw data
         let buffer = image::RgbImage::from_raw(width, height, packed_data)
             .ok_or("Failed to create image buffer")?;
+        let mut dynamic_image = image::DynamicImage::ImageRgb8(buffer);
+
+        // Resize if the image is wider than available width
+        if let Some(available_width) = available_width {
+            let available_width_u32 = available_width as u32;
+            if width > available_width_u32 {
+                let new_height = (height as f64 * (available_width as f64 / width as f64)) as u32;
+                dynamic_image = dynamic_image.resize(
+                    available_width_u32,
+                    new_height,
+                    image::imageops::FilterType::Triangle,
+                );
+            }
+        }
 
         // Encode to PNG
         let mut png_data = Vec::new();
         let mut cursor = Cursor::new(&mut png_data);
-        buffer.write_to(&mut cursor, image::ImageFormat::Png)?;
+        dynamic_image.write_to(&mut cursor, image::ImageFormat::Png)?;
 
         // Get some metadata for the table
         let mut metadata_rows = vec![

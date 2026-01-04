@@ -858,7 +858,7 @@ impl Kiorg {
         input::process_input_events(self, ctx);
     }
 
-    fn calculate_panel_widths(&self, available_width: f32) -> (f32, f32, f32) {
+    pub fn calculate_panel_widths(&self, available_width: f32) -> (f32, f32, f32) {
         let total_spacing = (PANEL_SPACING * 2.0) +                    // Space between panels
                           (SEPARATOR_PADDING * 4.0) +                  // Padding around two separators
                           PANEL_SPACING +                             // Right margin
@@ -876,6 +876,13 @@ impl Kiorg {
         let center_width = usable_width - left_width - right_width;
 
         (left_width, center_width, right_width)
+    }
+
+    pub fn calculate_right_panel_width(&self, ctx: &egui::Context) -> f32 {
+        let screen_width = ctx.content_rect().width();
+        let (_, _, right_panel_width) = self.calculate_panel_widths(screen_width);
+        let pixels_per_point = ctx.pixels_per_point();
+        right_panel_width * pixels_per_point
     }
 
     fn handle_delete_confirmation(&mut self, ctx: &egui::Context) {
