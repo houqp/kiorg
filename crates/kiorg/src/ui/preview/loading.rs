@@ -91,7 +91,7 @@ where
     // Spawn a thread to process the file
     std::thread::spawn(move || {
         // Wait for debounce treshold
-        match cancel_receiver.recv_timeout(Duration::from_millis(200)) {
+        match cancel_receiver.recv_timeout(Duration::from_millis(100)) {
             Ok(_) | Err(mpsc::RecvTimeoutError::Disconnected) => {
                 // Cancel signal received or dropped, terminate early
                 return;

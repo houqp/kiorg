@@ -14,7 +14,7 @@ struct DemoPlugin {
 }
 
 impl PluginHandler for DemoPlugin {
-    fn on_preview(&mut self, path: &str) -> PluginResponse {
+    fn on_preview(&mut self, path: &str, _available_width: f32) -> PluginResponse {
         // Return preview content that includes the file path
         PluginResponse::Preview {
             components: vec![
