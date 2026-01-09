@@ -42,26 +42,44 @@ mod ffmpeg {
         path_str: &str,
         seek_time: f64,
         available_width: Option<f32>,
+        mapping: Option<&str>,
     ) -> Option<impl Iterator<Item = ffmpeg_sidecar::event::OutputVideoFrame>> {
         let start = Instant::now();
         let mut cmd = FfmpegCommand::new();
 
         // Fast seek: -ss before -i
-        cmd.args(["-ss", &seek_time.to_string()]).input(path_str);
+        cmd.args(["-ss", &seek_time.to_string()]);
+
+        cmd.input(path_str);
+
+        if let Some(m) = mapping {
+            // Map specific stream (e.g. attached pic) if requested
+            cmd.args(["-map", m]);
+        }
 
         if let Some(w) = available_width {
-            cmd.args(["-vf", &format!("scale={}:-1", w as u32)]);
+            cmd.args([
+                "-vf",
+                // flags=fast_bilinear: Faster scaling algorithm for thumbnails
+                &format!("scale={}:-1:flags=fast_bilinear", w as u32),
+            ]);
         }
 
         let mut cmd = cmd
-            .args(["-vframes", "1", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"])
+            .args([
+                "-an", // Disable audio processing
+                "-sn", // Disable subtitle processing
+                "-dn", // Disable data stream processing
+                "-vframes", "1", "-f", "rawvideo", "-pix_fmt", "rgb24", "-",
+            ])
             .spawn()
             .ok()?;
 
         debug!(
-            "ffmpeg frame extraction spawn took {:?} for {}",
+            "ffmpeg frame extraction spawn took {:?} for {} (map: {:?})",
             start.elapsed(),
-            seek_time
+            seek_time,
+            mapping
         );
 
         let iter = cmd.iter().ok()?;
@@ -125,6 +143,7 @@ mod ffmpeg {
         _path_str: &str,
         _seek_time: f64,
         _available_width: Option<f32>,
+        _mapping: Option<&str>,
     ) -> Option<impl Iterator<Item = OutputVideoFrame>> {
         // Create a fake frame with some variation to pass quality check
         let width = 100;
@@ -325,11 +344,19 @@ fn extract_video_thumbnail(
     let path_str = path.to_str().ok_or("Invalid path encoding")?;
 
     // 1. Probe metadata and extract the first sample frame concurrently
+    // Note: we can't use disp:attached_pic here yet because we don't know if it exists until probe finishes.
+    // However, for most videos, the first frame (0.0) is what we want anyway.
     let (probe_res, first_sample_res) = rayon::join(
         || probe_metadata(path_str, ffmpeg_meta),
-        || extract_and_score_frame(path_str, 0.0, available_width),
+        || extract_and_score_frame(path_str, 0.0, available_width, None),
     );
+
     probe_res.map_err(|e| format!("Failed to probe metadata: {e}"))?;
+
+    let has_attached_pic = ffmpeg_meta
+        .inputs
+        .iter()
+        .any(|i| i.streams.iter().any(|s| s.is_attached_pic));
 
     // Collect all samples
     let mut samples = Vec::new();
@@ -343,6 +370,16 @@ fn extract_video_thumbnail(
         samples.push(first);
     }
 
+    // Use provided cover if already exists
+    if !skip_remaining && has_attached_pic {
+        if let Some(Ok(pic_frame)) =
+            extract_and_score_frame(path_str, 0.0, available_width, Some("disp:attached_pic"))
+        {
+            samples.push(pic_frame);
+            skip_remaining = true;
+        }
+    }
+
     // 2. Sample remaining positions in parallel if duration is known
     if !skip_remaining
         && let Some(duration_secs) = ffmpeg_meta.duration_secs
@@ -351,7 +388,12 @@ fn extract_video_thumbnail(
         let mut remaining_samples: Vec<_> = THUMBNAIL_SAMPLE_RATIOS
             .par_iter()
             .filter_map(|&ratio| {
-                match extract_and_score_frame(path_str, duration_secs * ratio, available_width) {
+                match extract_and_score_frame(
+                    path_str,
+                    duration_secs * ratio,
+                    available_width,
+                    None,
+                ) {
                     Some(Ok(frame)) => Some(frame),
                     Some(Err(e)) => {
                         warn!("Failed to extract frame at ratio {}: {}", ratio, e);
@@ -438,11 +480,13 @@ fn probe_metadata(path_str: &str, meta: &mut FfmpegMeta) -> Result<(), String> {
                 }
 
                 // Add stream to input
+                let is_attached_pic = stream.raw_log_message.contains("(attached pic)");
                 meta.inputs[parent_idx].streams.push(StreamMeta {
                     index: stream.stream_index as usize,
                     format: stream.format,
                     language: stream.language,
                     kind,
+                    is_attached_pic,
                 });
             }
             _ => {}
@@ -455,8 +499,10 @@ fn extract_and_score_frame(
     path_str: &str,
     seek_time: f64,
     available_width: Option<f32>,
+    mapping: Option<&str>,
 ) -> Option<Result<(f64, OutputVideoFrame), String>> {
-    let mut iter = ffmpeg::get_frame_extraction_iter(path_str, seek_time, available_width)?;
+    let mut iter =
+        ffmpeg::get_frame_extraction_iter(path_str, seek_time, available_width, mapping)?;
     let frame = iter.next()?;
 
     let score = {
