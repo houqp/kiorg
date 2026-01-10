@@ -205,6 +205,7 @@ pub struct StreamMeta {
     pub format: String,
     pub language: String,
     pub kind: StreamTypeMeta,
+    pub is_attached_pic: bool,
 }
 
 /// Metadata for a single input
