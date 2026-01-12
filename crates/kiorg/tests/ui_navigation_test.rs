@@ -128,7 +128,7 @@ fn test_ui_navigation_parent_directory_selection() {
     // Verify that dir2 is still selected
     let tab = harness.state().tab_manager.current_tab_ref();
     assert_eq!(
-        tab.entries[tab.selected_index].path, test_files[1],
+        tab.entries[tab.selected_index].meta.path, test_files[1],
         "dir2 should be selected after navigating to parent directory"
     );
 }
@@ -171,7 +171,7 @@ fn test_ui_navigation_parent_directory_with_minus_key() {
     // Verify that dir2 is still selected
     let tab = harness.state().tab_manager.current_tab_ref();
     assert_eq!(
-        tab.entries[tab.selected_index].path, test_files[1],
+        tab.entries[tab.selected_index].meta.path, test_files[1],
         "dir2 should be selected after navigating to parent directory with minus key"
     );
 }
@@ -250,7 +250,7 @@ fn test_ui_navigation_prev_path_selection_with_sort() {
     // Check selected index based on prev_path (bbb)
     assert_eq!(tab.selected_index, 0, "Selected index should point to ccc");
     assert_eq!(
-        tab.entries[tab.selected_index].path, test_dirs[2],
+        tab.entries[tab.selected_index].meta.path, test_dirs[2],
         "Selected entry should be ccc"
     );
 }
@@ -313,7 +313,7 @@ fn test_ui_navigation_mouse_click_selects_and_previews() {
         "Selected index should be 1 after clicking the second entry"
     );
     assert_eq!(
-        tab.entries[tab.selected_index].path, test_files[1],
+        tab.entries[tab.selected_index].meta.path, test_files[1],
         "Selected entry should be b.txt"
     );
 
@@ -459,7 +459,7 @@ fn test_ui_navigation_image_preview() {
                 "Image metadata should not be empty"
             );
         }
-        Some(PreviewContent::Loading(..)) => {
+        Some(PreviewContent::Loading { .. }) => {
             // Wait for loading to complete
             wait_for_condition(|| {
                 harness.step();
@@ -570,7 +570,7 @@ fn test_ui_navigation_open_with_functionality() {
     let txt_index = tab
         .entries
         .iter()
-        .position(|entry| entry.path == test_files[0])
+        .position(|entry| entry.meta.path == test_files[0])
         .expect("test.txt should exist in entries");
 
     // Select the text file

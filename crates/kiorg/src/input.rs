@@ -34,7 +34,7 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: &Shortcu
         ShortcutAction::OpenDirectory => {
             let tab = app.tab_manager.current_tab_ref();
             if let Some(selected_entry) = tab.entries.get(tab.selected_index) {
-                let path = selected_entry.path.clone();
+                let path = selected_entry.meta.path.clone();
                 if path.is_dir() {
                     app.navigate_to_dir(path);
                 }
@@ -43,7 +43,7 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: &Shortcu
         ShortcutAction::OpenDirectoryOrFile => {
             let tab = app.tab_manager.current_tab_ref();
             if let Some(selected_entry) = tab.entries.get(tab.selected_index) {
-                let path = selected_entry.path.clone();
+                let path = selected_entry.meta.path.clone();
                 if path.is_dir() {
                     app.navigate_to_dir(path);
                 } else if path.is_file() {
@@ -94,7 +94,7 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: &Shortcu
             }
 
             if let Some(entry) = tab.entries.get(tab.selected_index) {
-                let path = &entry.path;
+                let path = &entry.meta.path;
                 if tab.marked_entries.contains(path) {
                     // Unmark the entry
                     tab.marked_entries.remove(path);
@@ -275,7 +275,7 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: &Shortcu
         ShortcutAction::CopyPath => {
             let tab = app.tab_manager.current_tab_ref();
             if let Some(selected_entry) = tab.entries.get(tab.selected_index) {
-                let path_str = selected_entry.path.to_string_lossy().to_string();
+                let path_str = selected_entry.meta.path.to_string_lossy().to_string();
                 ctx.output_mut(|o| o.commands.push(egui::OutputCommand::CopyText(path_str)));
                 app.toasts.info("Path copied to system clipboard");
             }

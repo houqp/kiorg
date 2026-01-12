@@ -54,7 +54,7 @@ fn test_cut_file_highlight() {
 
         // Check if this entry is in the clipboard as a cut operation
         let is_in_cut_clipboard = match &app.clipboard {
-            Some(kiorg::app::Clipboard::Cut(paths)) => paths.contains(&entry.path),
+            Some(kiorg::app::Clipboard::Cut(paths)) => paths.contains(&entry.meta.path),
             _ => false,
         };
 

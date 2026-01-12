@@ -74,7 +74,7 @@ fn test_copy_directory() {
     {
         let tab = harness.state().tab_manager.current_tab_ref();
         assert_eq!(
-            tab.entries[tab.selected_index].path, *target_dir,
+            tab.entries[tab.selected_index].meta.path, *target_dir,
             "Should have selected target_dir"
         );
     }

@@ -38,7 +38,7 @@ fn test_select_entry_shortcut() {
             "First entry should be selected after pressing Space"
         );
         assert_eq!(
-            tab.entries[0].path, test_files[0],
+            tab.entries[0].meta.path, test_files[0],
             "Selected entry should be file1.txt"
         );
     }
@@ -148,7 +148,7 @@ fn test_select_entry_with_operations() {
         assert!(
             tab.entries
                 .iter()
-                .all(|e| tab.marked_entries.contains(&e.path)),
+                .all(|e| tab.marked_entries.contains(&e.meta.path)),
             "All entries should be selected"
         );
     }
@@ -170,7 +170,7 @@ fn test_select_entry_with_operations() {
         let subdir_index = tab
             .entries
             .iter()
-            .position(|e| e.path == subdir_path)
+            .position(|e| e.meta.path == subdir_path)
             .expect("Subdirectory should be in the entries");
 
         // Select the subdirectory

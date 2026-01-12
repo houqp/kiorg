@@ -365,7 +365,7 @@ impl Kiorg {
     pub fn poll_preview_content(&mut self, ctx: &egui::Context) {
         // Handle preview content loading
         let receiver = match &self.preview_content {
-            Some(PreviewContent::Loading(_path, receiver, _cancel_sender)) => receiver.clone(),
+            Some(PreviewContent::Loading { receiver, .. }) => receiver.clone(),
             _ => {
                 return;
             }
@@ -376,15 +376,10 @@ impl Kiorg {
             return;
         };
         if let Ok(result) = receiver_lock.try_recv() {
-            match result {
-                Ok(content) => {
-                    self.preview_content = Some(content);
-                }
-                Err(e) => {
-                    self.preview_content =
-                        Some(PreviewContent::text(format!("Error loading file: {e}")));
-                }
-            }
+            self.preview_content = Some(match result {
+                Ok(content) => content,
+                Err(e) => PreviewContent::text(format!("Error loading file: {e}")),
+            });
             ctx.request_repaint();
         }
     }
@@ -529,7 +524,7 @@ impl Kiorg {
             tab.marked_entries.iter().cloned().collect()
         } else if let Some(entry) = tab.selected_entry() {
             // Fall back to the currently selected entry if no entries are marked
-            vec![entry.path.clone()]
+            vec![entry.meta.path.clone()]
         } else {
             // No entries to delete
             return;
@@ -562,7 +557,7 @@ impl Kiorg {
         // Check if we're operating on a single unmarked file while other files are marked
         // In such case, we should reset the marked state
         let should_clear_marked = if let Some(entry) = tab.selected_entry() {
-            let selected_path = &entry.path;
+            let selected_path = &entry.meta.path;
             // If the selected file is not marked but there are other marked files
             !tab.marked_entries.contains(selected_path) && !tab.marked_entries.is_empty()
         } else {
@@ -571,14 +566,14 @@ impl Kiorg {
 
         if should_clear_marked {
             // Get the selected entry path before clearing marked entries
-            let selected_path = tab.selected_entry().unwrap().path.clone();
+            let selected_path = tab.selected_entry().unwrap().meta.path.clone();
             tab.marked_entries.clear();
             vec![selected_path]
         } else {
             // Otherwise, proceed with marked entries
             if tab.marked_entries.is_empty() {
                 if let Some(entry) = tab.selected_entry() {
-                    vec![entry.path.clone()]
+                    vec![entry.meta.path.clone()]
                 } else {
                     vec![]
                 }
@@ -606,8 +601,8 @@ impl Kiorg {
         let tab = self.tab_manager.current_tab_mut();
         tab.marked_entries.clear();
         let filtered_entries = tab.get_cached_filtered_entries().clone();
-        for (entry, _original_index) in filtered_entries {
-            tab.marked_entries.insert(entry.path);
+        for (entry, _original_index) in filtered_entries.into_iter() {
+            tab.marked_entries.insert(entry.meta.path);
         }
     }
 
@@ -1012,7 +1007,7 @@ impl eframe::App for Kiorg {
             // Store the currently selected file path in prev_path for refresh_entries to handle
             self.prev_path = {
                 let tab = self.tab_manager.current_tab_ref();
-                tab.selected_entry().map(|entry| entry.path.clone())
+                tab.selected_entry().map(|entry| entry.meta.path.clone())
             };
 
             self.refresh_entries();

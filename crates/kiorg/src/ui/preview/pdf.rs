@@ -1,11 +1,10 @@
 //! PDF preview module
 
 use crate::config::colors::AppColors;
-use crate::models::preview_content::{PdfMeta, metadata};
+use crate::models::dir_entry::DirEntryMeta;
+use crate::models::preview_content::{CachedPdfMeta, CachedPreviewContent, PdfMeta, metadata};
 use egui::{ColorImage, RichText, TextureOptions, widgets::ImageSource};
 use pdfium_bind::PdfDocument;
-use std::path::Path;
-use std::sync::{Arc, Mutex};
 
 fn format_pdf_date(pdf_date: &str) -> String {
     // PDF date format: D:YYYYMMDDHHmmSSOHH'mm'
@@ -131,6 +130,14 @@ fn format_metadata_key(key: &str) -> String {
     capitalized.join(" ")
 }
 
+pub struct RenderedPdfPage {
+    pub img_source: egui::widgets::ImageSource<'static>,
+    pub texture_handle: egui::TextureHandle,
+    pub pixel_data: Vec<u8>,
+    pub width: i32,
+    pub height: i32,
+}
+
 /// Render a specific PDF page as an egui `ImageSource`
 #[inline]
 pub fn render_pdf_page_low_dpi(
@@ -138,7 +145,7 @@ pub fn render_pdf_page_low_dpi(
     page_number: isize,
     file_id: Option<&str>,
     ctx: &egui::Context,
-) -> Result<(egui::widgets::ImageSource<'static>, egui::TextureHandle), String> {
+) -> Result<RenderedPdfPage, String> {
     render_pdf_page_with_dpi(doc, page_number, file_id, 150.0, ctx) // Use 150 DPI for regular preview
 }
 
@@ -149,7 +156,7 @@ pub fn render_pdf_page_high_dpi(
     page_number: isize,
     file_id: Option<&str>,
     ctx: &egui::Context,
-) -> Result<(egui::widgets::ImageSource<'static>, egui::TextureHandle), String> {
+) -> Result<RenderedPdfPage, String> {
     render_pdf_page_with_dpi(doc, page_number, file_id, 300.0, ctx) // Use 300 DPI for popup
 }
 
@@ -160,7 +167,7 @@ fn render_pdf_page_with_dpi(
     file_id: Option<&str>,
     dpi: f32,
     ctx: &egui::Context,
-) -> Result<(egui::widgets::ImageSource<'static>, egui::TextureHandle), String> {
+) -> Result<RenderedPdfPage, String> {
     let (pixel_data, width, height) = doc.render_page(page_number, dpi)?;
 
     let color_image =
@@ -179,17 +186,24 @@ fn render_pdf_page_with_dpi(
     let texture_handle = ctx.load_texture(texture_id_str, color_image, TextureOptions::LINEAR);
     let img_source = ImageSource::from(&texture_handle);
 
-    Ok((img_source, texture_handle))
+    Ok(RenderedPdfPage {
+        img_source,
+        texture_handle,
+        pixel_data,
+        width,
+        height,
+    })
 }
 
 /// Render a PDF page and extract metadata
 pub fn extract_pdf_metadata(
-    path: &Path,
+    entry: DirEntryMeta,
     ctx: &egui::Context,
-) -> Result<crate::models::preview_content::PdfMeta, String> {
+) -> Result<(PdfMeta, PdfDocument), String> {
+    let path = &entry.path;
     let doc = PdfDocument::open(path)?;
     let file_id = path.to_string_lossy();
-    let (cover_image, texture_handle) = render_pdf_page_low_dpi(&doc, 0, Some(&file_id), ctx)?;
+    let rendered = render_pdf_page_low_dpi(&doc, 0, Some(&file_id), ctx)?;
 
     // Extract metadata
     let mut metadata = std::collections::HashMap::new();
@@ -219,13 +233,49 @@ pub fn extract_pdf_metadata(
     let title = metadata.get(metadata::PDF_TITLE).cloned();
     let page_count = doc.page_count();
 
-    Ok(crate::models::preview_content::PdfMeta::new(
-        cover_image,
-        Some(texture_handle),
-        metadata,
-        title,
+    // Create cache bytes first
+    let mut cache_bytes = Vec::new();
+    let img = image::RgbaImage::from_raw(
+        rendered.width as u32,
+        rendered.height as u32,
+        rendered.pixel_data,
+    )
+    .ok_or_else(|| "Failed to create RgbaImage from raw pixel data".to_string())?;
+    image::DynamicImage::ImageRgba8(img)
+        .write_to(
+            &mut std::io::Cursor::new(&mut cache_bytes),
+            image::ImageFormat::Png,
+        )
+        .map_err(|e| format!("Failed to encode PDF cover as PNG: {e}"))?;
+
+    let meta = crate::models::preview_content::PdfMeta::new(
+        rendered.img_source,
+        Some(rendered.texture_handle),
+        metadata.clone(),
+        title.clone(),
         page_count,
-        Arc::new(Mutex::new(doc)),
         path,
-    ))
+    );
+    let file_id_clone = meta.file_id.clone();
+    let title_clone = meta.title.clone();
+    let current_page_clone = meta.current_page;
+    let page_count_clone = meta.page_count;
+
+    // Spawn background task to save cache
+    std::thread::spawn(move || {
+        let cached = CachedPreviewContent::Pdf(CachedPdfMeta {
+            file_id: file_id_clone,
+            title: title_clone,
+            metadata,
+            current_page: current_page_clone,
+            page_count: page_count_clone,
+            cache_bytes,
+        });
+        let cache_key = crate::utils::cache::calculate_cache_key(&entry);
+        if let Err(e) = crate::utils::cache::save_preview(&cache_key, &cached) {
+            tracing::warn!("Failed to save PDF preview cache: {}", e);
+        }
+    });
+
+    Ok((meta, doc))
 }

@@ -32,7 +32,7 @@ fn wait_for_condition<F>(
     let max_iterations = 300;
     let sleep_duration = Duration::from_millis(10);
 
-    for _ in 0..max_iterations {
+    for _i in 0..max_iterations {
         harness.step();
         if condition(harness) {
             return;
@@ -74,7 +74,7 @@ fn test_external_file_addition() {
         .expect("External file should appear in the UI after creation");
     let entry = &harness.state().tab_manager.current_tab_ref().entries[file_index];
     assert_eq!(entry.name, file_name);
-    assert_eq!(entry.path, file_path);
+    assert_eq!(entry.meta.path, file_path);
     assert!(!entry.is_dir);
 }
 
@@ -103,7 +103,7 @@ fn test_external_directory_addition() {
         .expect("External directory should appear in the UI after creation");
     let entry = &harness.state().tab_manager.current_tab_ref().entries[dir_index];
     assert_eq!(entry.name, dir_name);
-    assert_eq!(entry.path, dir_path);
+    assert_eq!(entry.meta.path, dir_path);
     assert!(entry.is_dir);
 }
 
@@ -147,7 +147,7 @@ fn test_external_file_modification() {
     let updated_entry = &harness.state().tab_manager.current_tab_ref().entries[updated_entry_index];
 
     assert_eq!(updated_entry.name, mod_file_name);
-    assert_eq!(updated_entry.path, mod_file_path);
+    assert_eq!(updated_entry.meta.path, mod_file_path);
     assert_ne!(
         updated_entry.size, initial_entry.size,
         "File size should have changed in UI"
@@ -158,8 +158,10 @@ fn test_external_file_modification() {
         "File size should match content length"
     );
     assert!(
-        updated_entry.modified > initial_entry.modified,
-        "Modified time should have increased"
+        updated_entry.meta.modified > initial_entry.meta.modified,
+        "File modification time should have increased: new {:?} > old {:?}",
+        updated_entry.meta.modified,
+        initial_entry.meta.modified
     );
 }
 

@@ -47,8 +47,7 @@ pub fn render(ui: &mut egui::Ui, entries: &[DirectoryEntry], colors: &AppColors)
         });
 }
 
-/// Read entries from a directory and return them as a vector of `DirectoryEntry`
-/// Reuses `DirectoryEntry` for simplicity, as it has the required fields (name, is_dir).
+/// Reuses `DirectoryEntry` for simplicity, as it has the required fields (name, is_dir)
 pub fn read_dir_entries(path: &Path) -> Result<Vec<DirectoryEntry>, String> {
     let mut entries = Vec::new();
     let read_dir = fs::read_dir(path).map_err(|e| format!("Failed to read directory: {e}"))?;

@@ -1,10 +1,10 @@
 //! Loading state module for preview content
-
 use crate::app::Kiorg;
 use crate::config::colors::AppColors;
+use crate::models::dir_entry::DirEntryMeta;
 use crate::models::preview_content::{PreviewContent, PreviewReceiver};
 use egui::RichText;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::{Arc, Mutex, mpsc};
 use std::time::Duration;
 
@@ -38,50 +38,45 @@ pub fn render(
         // Request a repaint to update the UI with the result
         ctx.request_repaint();
         // Update the preview content with the result
-        match result {
-            Ok(content) => {
-                // Set the preview content directly with the received content
-                app.preview_content = Some(content);
-            }
-            Err(e) => {
-                app.preview_content =
-                    Some(PreviewContent::text(format!("Error loading file: {e}")));
-            }
-        }
+        app.preview_content = Some(match result {
+            Ok(content) => content,
+            Err(e) => PreviewContent::text(format!("Error loading file: {e}")),
+        });
     }
 }
 
 /// Helper function to load preview content asynchronously
-///
-/// This function handles the common pattern of:
-/// - Creating a channel for communication
-/// - Setting up the loading state with receiver
-/// - Spawning a thread to process the file
-/// - Sending the result back through the channel
-///
-/// # Arguments
-/// * `app` - The application state
-/// * `path` - The path to the file to load
-/// * `processor` - A closure that processes the file and returns a Result<`PreviewContent`, String>
-pub fn load_preview_async<F>(app: &mut Kiorg, path: PathBuf, processor: F)
+pub fn load_preview_async<F>(app: &mut Kiorg, entry: DirEntryMeta, processor: F)
 where
-    F: FnOnce(PathBuf) -> Result<PreviewContent, String> + Send + 'static,
+    F: FnOnce(DirEntryMeta) -> Result<PreviewContent, String> + Send + 'static,
 {
     // Check for existing loading content and trigger cancel signal
-    if let Some(PreviewContent::Loading(_, _, existing_cancel_sender)) = &app.preview_content {
+    if let Some(PreviewContent::Loading {
+        cancel: existing_cancel_sender,
+        ..
+    }) = &app.preview_content
+    {
         let _ = existing_cancel_sender.send(());
     }
 
-    let (receiver, cancel_sender) = create_preview_task(path.clone(), processor);
+    let path = entry.path.clone();
+    let (receiver, cancel_sender) = create_preview_task(entry, processor);
 
     // Set the initial loading state with the receiver
-    app.preview_content = Some(PreviewContent::Loading(path, receiver, cancel_sender));
+    app.preview_content = Some(PreviewContent::Loading {
+        path,
+        receiver,
+        cancel: cancel_sender,
+    });
 }
 
 /// Create an async preview content loading task
-pub fn create_preview_task<F>(path: PathBuf, processor: F) -> (PreviewReceiver, mpsc::Sender<()>)
+pub fn create_preview_task<F>(
+    entry: DirEntryMeta,
+    processor: F,
+) -> (PreviewReceiver, mpsc::Sender<()>)
 where
-    F: FnOnce(PathBuf) -> Result<PreviewContent, String> + Send + 'static,
+    F: FnOnce(DirEntryMeta) -> Result<PreviewContent, String> + Send + 'static,
 {
     // Create a channel for process result communication
     let (sender, receiver) = std::sync::mpsc::channel();
@@ -100,7 +95,7 @@ where
                 // Timeout reached, proceed with processing
             }
         }
-        let preview_result = processor(path);
+        let preview_result = processor(entry);
         let _ = sender.send(preview_result);
     });
 
@@ -115,10 +110,10 @@ pub type PopupLoadTask<T> = (
 
 /// Generic function to create an async loading task for popup viewers
 /// No debouncing since popups are explicitly triggered by user action
-pub fn create_load_popup_meta_task<T, F>(path: PathBuf, processor: F) -> PopupLoadTask<T>
+pub fn create_load_popup_meta_task<T, F>(entry: DirEntryMeta, processor: F) -> PopupLoadTask<T>
 where
     T: Send + 'static,
-    F: FnOnce(PathBuf) -> Result<T, String> + Send + 'static,
+    F: FnOnce(DirEntryMeta) -> Result<T, String> + Send + 'static,
 {
     let (sender, receiver) = std::sync::mpsc::channel();
     let (cancel_sender, cancel_receiver) = mpsc::channel();
@@ -128,7 +123,7 @@ where
         if cancel_receiver.try_recv().is_ok() {
             return;
         }
-        let _ = sender.send(processor(path));
+        let _ = sender.send(processor(entry));
     });
 
     (Arc::new(Mutex::new(receiver)), cancel_sender)

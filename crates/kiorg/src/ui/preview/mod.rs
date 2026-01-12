@@ -135,7 +135,10 @@ pub fn prefix_dir_name(name: &str) -> String {
 /// Update the preview cache based on the selected file
 pub fn update_cache(app: &mut Kiorg, ctx: &egui::Context) {
     let tab = app.tab_manager.current_tab_ref();
-    let selected_path = tab.entries.get(tab.selected_index).map(|e| e.path.clone());
+    let selected_path = tab
+        .entries
+        .get(tab.selected_index)
+        .map(|e| e.meta.path.clone());
 
     // Check if the selected file is the same as the cached one in app
     if selected_path.as_ref() == app.cached_preview_path.as_ref() {
@@ -144,7 +147,10 @@ pub fn update_cache(app: &mut Kiorg, ctx: &egui::Context) {
 
     // Cache miss, update the preview content in app
     let maybe_entry = selected_path.as_ref().and_then(|p| {
-        tab.entries.iter().find(|entry| &entry.path == p).cloned() // Clone the entry data if found
+        tab.entries
+            .iter()
+            .find(|entry| &entry.meta.path == p)
+            .cloned() // Clone the entry data if found
     });
     app.cached_preview_path = selected_path; // Update the cached path in app regardless
 
@@ -157,25 +163,44 @@ pub fn update_cache(app: &mut Kiorg, ctx: &egui::Context) {
         } // No entry selected, clear the preview content
     };
 
+    // do not cache directory list preview
     if entry.is_dir {
-        loading::load_preview_async(app, entry.path, |path| {
-            let result = directory::read_dir_entries(&path);
-            result.map(PreviewContent::directory)
+        loading::load_preview_async(app, entry.meta.clone(), |entry| {
+            directory::read_dir_entries(&entry.path).map(PreviewContent::Directory)
         });
         return;
     }
 
+    let cache_key = crate::utils::cache::calculate_cache_key(&entry.meta);
+    if let Some(cached) = crate::utils::cache::load_preview(&cache_key) {
+        match cached.try_into_preview_content(ctx) {
+            Ok(content) => {
+                app.preview_content = Some(content);
+                return;
+            }
+            Err(e) => {
+                tracing::warn!(
+                    "Failed to load cached preview for {:?}: {}",
+                    entry.meta.path,
+                    e
+                );
+                crate::utils::cache::delete_preview(&cache_key);
+            }
+        }
+    }
+
     // First check if any plugins can handle this file
-    let plugin_result = if let Some(file_name) = entry.path.file_name().and_then(|n| n.to_str()) {
-        app.plugin_manager.get_preview_plugin_for_file(file_name)
-    } else {
-        None
-    };
+    let plugin_result =
+        if let Some(file_name) = entry.meta.path.file_name().and_then(|n| n.to_str()) {
+            app.plugin_manager.get_preview_plugin_for_file(file_name)
+        } else {
+            None
+        };
     if let Some(plugin) = plugin_result {
         let ctx_clone = ctx.clone();
         let available_width = app.calculate_right_panel_width(ctx);
-        loading::load_preview_async(app, entry.path, move |path| {
-            let result = plugin.preview(&path.to_string_lossy(), available_width);
+        loading::load_preview_async(app, entry.meta.clone(), move |entry| {
+            let result = plugin.preview(&entry.path.to_string_lossy(), available_width);
             match result {
                 Ok(plugin_content) => Ok(PreviewContent::plugin_preview_from_components(
                     plugin_content,
@@ -187,45 +212,44 @@ pub fn update_cache(app: &mut Kiorg, ctx: &egui::Context) {
         return;
     }
 
-    let ext = path_to_ext_info(&entry.path);
+    let ext = path_to_ext_info(&entry.meta.path);
     match ext.as_str() {
         image_extensions!() => {
             let ctx_clone = ctx.clone();
             let available_width = app.calculate_right_panel_width(ctx);
-            loading::load_preview_async(app, entry.path, move |path| {
-                image::read_image_with_metadata(&path, &ctx_clone, Some(available_width))
+            loading::load_preview_async(app, entry.meta.clone(), move |entry| {
+                image::read_image_with_metadata(entry, &ctx_clone, Some(available_width))
                     .map(PreviewContent::Image)
             });
         }
         video_extensions!() => {
             let ctx_clone = ctx.clone();
             let available_width = app.calculate_right_panel_width(ctx);
-            loading::load_preview_async(app, entry.path, move |path| {
-                video::read_video_with_metadata(&path, &ctx_clone, Some(available_width))
+            loading::load_preview_async(app, entry.meta.clone(), move |entry| {
+                video::read_video_with_metadata(entry, &ctx_clone, Some(available_width))
                     .map(PreviewContent::Video)
             });
         }
         zip_extensions!() => {
-            loading::load_preview_async(app, entry.path, |path| {
-                let result = zip::read_zip_entries(&path);
-                result.map(PreviewContent::zip)
+            loading::load_preview_async(app, entry.meta.clone(), move |entry| {
+                zip::read_zip_entries(entry).map(PreviewContent::Zip)
             });
         }
         tar_extensions!() => {
-            loading::load_preview_async(app, entry.path, |path| {
-                let result = tar::read_tar_entries(&path);
-                result.map(PreviewContent::tar)
+            loading::load_preview_async(app, entry.meta.clone(), move |entry| {
+                tar::read_tar_entries(entry).map(PreviewContent::Tar)
             });
         }
         epub_extensions!() => {
-            loading::load_preview_async(app, entry.path, |path| {
-                ebook::extract_ebook_metadata(&path).map(PreviewContent::Ebook)
+            loading::load_preview_async(app, entry.meta.clone(), move |entry| {
+                ebook::extract_ebook_metadata(entry).map(PreviewContent::Ebook)
             });
         }
         pdf_extensions!() => {
             let ctx_clone = ctx.clone();
-            loading::load_preview_async(app, entry.path, move |path| {
-                pdf::extract_pdf_metadata(&path, &ctx_clone).map(PreviewContent::Pdf)
+            loading::load_preview_async(app, entry.meta.clone(), move |entry| {
+                pdf::extract_pdf_metadata(entry, &ctx_clone)
+                    .map(|(meta, _)| PreviewContent::Pdf(meta))
             });
         }
         // All other files
@@ -235,7 +259,7 @@ pub fn update_cache(app: &mut Kiorg, ctx: &egui::Context) {
                 app.preview_content = Some(PreviewContent::text("Empty file".to_string()));
                 return;
             }
-            text::load_async(app, entry.path, size);
+            text::load_async(app, entry.meta.clone(), size);
         }
     }
 }

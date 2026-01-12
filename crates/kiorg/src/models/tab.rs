@@ -52,7 +52,7 @@ pub struct Tab {
 fn sort_entries_by(entries: &mut [DirEntry], sort_column: SortColumn, sort_order: SortOrder) {
     let primary_order_fn = match sort_column {
         SortColumn::Name => |a: &DirEntry, b: &DirEntry| a.name.cmp(&b.name),
-        SortColumn::Modified => |a: &DirEntry, b: &DirEntry| a.modified.cmp(&b.modified),
+        SortColumn::Modified => |a: &DirEntry, b: &DirEntry| a.meta.modified.cmp(&b.meta.modified),
         SortColumn::Size => |a: &DirEntry, b: &DirEntry| a.size.cmp(&b.size),
         SortColumn::None => {
             return;
@@ -88,7 +88,7 @@ fn sort_entries_by(entries: &mut [DirEntry], sort_column: SortColumn, sort_order
 fn refresh_path_to_index(tab: &mut Tab) {
     tab.path_to_index.clear();
     for (index, entry) in tab.entries.iter().enumerate() {
-        tab.path_to_index.insert(entry.path.clone(), index);
+        tab.path_to_index.insert(entry.meta.path.clone(), index);
     }
 }
 
@@ -256,7 +256,8 @@ impl Tab {
             // Add all entries in the visual selection range to marked entries
             for i in start..=end {
                 if i < self.entries.len() {
-                    self.marked_entries.insert(self.entries[i].path.clone());
+                    self.marked_entries
+                        .insert(self.entries[i].meta.path.clone());
                 }
             }
         }
@@ -433,10 +434,9 @@ fn read_dir_entries(path: &PathBuf, show_hidden: bool) -> Vec<DirEntry> {
 
                 Some(DirEntry {
                     name,
-                    path,
+                    meta: crate::models::dir_entry::DirEntryMeta { path, modified },
                     is_dir,
                     is_symlink,
-                    modified,
                     size,
                     formatted_modified,
                     formatted_size,
@@ -583,7 +583,7 @@ impl TabManager {
     pub fn select_child(&mut self, child: &PathBuf) -> bool {
         let tab = self.current_tab_mut();
         if child.parent().is_some_and(|p| p == tab.current_path)
-            && let Some(pos) = tab.entries.iter().position(|e| &e.path == child)
+            && let Some(pos) = tab.entries.iter().position(|e| &e.meta.path == child)
         {
             tab.update_selection(pos);
             return true;
@@ -643,7 +643,7 @@ impl TabManager {
             if let Some(pos) = tab
                 .parent_entries
                 .iter()
-                .position(|e| e.path == current_path)
+                .position(|e| e.meta.path == current_path)
             {
                 tab.parent_selected_index = pos;
             }
@@ -685,11 +685,13 @@ mod tests {
             format_size(actual_size, BINARY)
         };
         DirEntry {
-            path: PathBuf::from(name),
             name: name.to_string(),
+            meta: crate::models::dir_entry::DirEntryMeta {
+                path: PathBuf::from(name),
+                modified,
+            },
             is_dir,
             is_symlink: false, // Default to false for test entries
-            modified,          // Use the calculated SystemTime directly
             size: actual_size, // Use 0 for dirs, provided size for files
             formatted_modified,
             formatted_size,

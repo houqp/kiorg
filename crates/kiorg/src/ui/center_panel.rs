@@ -343,7 +343,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                         // Find the position of the selected entry in the filtered list
                         if let Some(filtered_index) = filtered_entries
                             .iter()
-                            .position(|(entry, _)| entry.path == selected_entry.path)
+                            .position(|(entry, _)| entry.meta.path == selected_entry.meta.path)
                         {
                             scroll_area = scroll_by_filtered_index(
                                 scroll_area,
@@ -384,16 +384,16 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                         } else {
                             false
                         };
-                        let is_marked =
-                            tab_ref.marked_entries.contains(&entry.path) || is_in_range_selection;
+                        let is_marked = tab_ref.marked_entries.contains(&entry.meta.path)
+                            || is_in_range_selection;
 
-                        let being_opened = match app.files_being_opened.get(&entry.path) {
+                        let being_opened = match app.files_being_opened.get(&entry.meta.path) {
                             Some(signal) => {
                                 if signal.load(std::sync::atomic::Ordering::Relaxed) {
                                     true
                                 } else {
                                     // trim hashmap to keep it lean
-                                    app.files_being_opened.remove(&entry.path);
+                                    app.files_being_opened.remove(&entry.meta.path);
                                     false
                                 }
                             }
@@ -403,14 +403,14 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                         // Check if this entry is in the clipboard as a cut or copy operation
                         let (is_in_cut_clipboard, is_in_copy_clipboard) = match &app.clipboard {
                             Some(Clipboard::Cut(paths)) => {
-                                if paths.contains(&entry.path) {
+                                if paths.contains(&entry.meta.path) {
                                     (true, false)
                                 } else {
                                     (false, false)
                                 }
                             }
                             Some(Clipboard::Copy(paths)) => {
-                                if paths.contains(&entry.path) {
+                                if paths.contains(&entry.meta.path) {
                                     (false, true)
                                 } else {
                                     (false, false)
@@ -423,7 +423,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                         let is_drag_source = is_drag_active
                             && current_dragged_file
                                 .as_ref()
-                                .map(|dragged| dragged == &entry.path)
+                                .map(|dragged| dragged == &entry.meta.path)
                                 .unwrap_or(false);
 
                         // Draw the row and get its response
@@ -434,7 +434,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                                 is_selected,
                                 colors: &app.colors,
                                 is_marked,
-                                is_bookmarked: app.bookmarks.contains(&entry.path),
+                                is_bookmarked: app.bookmarks.contains(&entry.meta.path),
                                 is_being_opened: being_opened,
                                 is_in_cut_clipboard,
                                 is_in_copy_clipboard,
@@ -450,10 +450,10 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                         // double_clicked() and clicked() return true at the same time
                         if row_response.double_clicked() {
                             // Check for double-clicks to navigate or open files
-                            double_clicked_path = Some(entry.path.clone());
+                            double_clicked_path = Some(entry.meta.path.clone());
                         } else if row_response.drag_started() {
                             // Start dragging files or directories
-                            drag_started_source = Some(entry.path.clone());
+                            drag_started_source = Some(entry.meta.path.clone());
                         } else if is_drag_active
                             && !is_drag_source
                             && entry.is_dir
@@ -461,7 +461,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                             // Handle drop onto folders - check if mouse was released over this entry
                             && row_response.hovered()
                         {
-                            drop_target_folder = Some(entry.path.clone());
+                            drop_target_folder = Some(entry.meta.path.clone());
                         }
 
                         // --- Add Context Menu for Rows ---

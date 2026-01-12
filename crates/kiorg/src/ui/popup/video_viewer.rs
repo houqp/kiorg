@@ -86,9 +86,9 @@ pub fn render_popup(
     available_width: f32,
     available_height: f32,
 ) {
-    crate::ui::popup::preview::video::render_popup(
+    crate::ui::preview::image::render_interactive(
         ui,
-        video_meta,
+        &video_meta.thumbnail_image,
         available_width,
         available_height,
     );

@@ -48,7 +48,7 @@ fn test_undo_redo_create_file() {
     {
         let tab = harness.state().tab_manager.current_tab_ref();
         assert!(
-            tab.entries.iter().any(|e| e.path == test_file),
+            tab.entries.iter().any(|e| e.meta.path == test_file),
             "File should appear in UI entries"
         );
     }
@@ -64,7 +64,7 @@ fn test_undo_redo_create_file() {
     {
         let tab = harness.state().tab_manager.current_tab_ref();
         assert!(
-            !tab.entries.iter().any(|e| e.path == test_file),
+            !tab.entries.iter().any(|e| e.meta.path == test_file),
             "File should be removed from UI entries after undo"
         );
     }
@@ -88,7 +88,7 @@ fn test_undo_redo_create_file() {
     wait_for_condition(|| {
         harness.step();
         let tab = harness.state().tab_manager.current_tab_ref();
-        tab.entries.iter().any(|e| e.path == test_file)
+        tab.entries.iter().any(|e| e.meta.path == test_file)
     });
 
     // Verify file was recreated
@@ -98,7 +98,7 @@ fn test_undo_redo_create_file() {
     {
         let tab = harness.state().tab_manager.current_tab_ref();
         assert!(
-            tab.entries.iter().any(|e| e.path == test_file),
+            tab.entries.iter().any(|e| e.meta.path == test_file),
             "File should appear in UI entries after redo"
         );
     }
@@ -159,7 +159,7 @@ fn test_undo_redo_create_directory() {
     {
         let tab = harness.state().tab_manager.current_tab_ref();
         assert!(
-            tab.entries.iter().any(|e| e.path == test_dir),
+            tab.entries.iter().any(|e| e.meta.path == test_dir),
             "Directory should appear in UI entries"
         );
     }
@@ -175,7 +175,7 @@ fn test_undo_redo_create_directory() {
     {
         let tab = harness.state().tab_manager.current_tab_ref();
         assert!(
-            !tab.entries.iter().any(|e| e.path == test_dir),
+            !tab.entries.iter().any(|e| e.meta.path == test_dir),
             "Directory should be removed from UI entries after undo"
         );
     }
@@ -186,7 +186,7 @@ fn test_undo_redo_create_directory() {
     wait_for_condition(|| {
         harness.step();
         let tab = harness.state().tab_manager.current_tab_ref();
-        tab.entries.iter().any(|e| e.path == test_dir)
+        tab.entries.iter().any(|e| e.meta.path == test_dir)
     });
 
     // Verify directory was recreated
@@ -199,7 +199,7 @@ fn test_undo_redo_create_directory() {
     {
         let tab = harness.state().tab_manager.current_tab_ref();
         assert!(
-            tab.entries.iter().any(|e| e.path == test_dir),
+            tab.entries.iter().any(|e| e.meta.path == test_dir),
             "Directory should appear in UI entries after redo"
         );
     }
@@ -263,11 +263,11 @@ fn test_undo_redo_rename_file() {
     {
         let tab = harness.state().tab_manager.current_tab_ref();
         assert!(
-            !tab.entries.iter().any(|e| e.path == original_file),
+            !tab.entries.iter().any(|e| e.meta.path == original_file),
             "Original file should not appear in UI"
         );
         assert!(
-            tab.entries.iter().any(|e| e.path == renamed_file),
+            tab.entries.iter().any(|e| e.meta.path == renamed_file),
             "Renamed file should appear in UI"
         );
     }
@@ -290,11 +290,11 @@ fn test_undo_redo_rename_file() {
     {
         let tab = harness.state().tab_manager.current_tab_ref();
         assert!(
-            tab.entries.iter().any(|e| e.path == original_file),
+            tab.entries.iter().any(|e| e.meta.path == original_file),
             "Original file should appear in UI after undo"
         );
         assert!(
-            !tab.entries.iter().any(|e| e.path == renamed_file),
+            !tab.entries.iter().any(|e| e.meta.path == renamed_file),
             "Renamed file should not appear in UI after undo"
         );
     }
@@ -305,7 +305,7 @@ fn test_undo_redo_rename_file() {
     wait_for_condition(|| {
         harness.step();
         let tab = harness.state().tab_manager.current_tab_ref();
-        tab.entries.iter().any(|e| e.path == renamed_file)
+        tab.entries.iter().any(|e| e.meta.path == renamed_file)
     });
 
     // Verify rename was redone
@@ -322,11 +322,11 @@ fn test_undo_redo_rename_file() {
     {
         let tab = harness.state().tab_manager.current_tab_ref();
         assert!(
-            !tab.entries.iter().any(|e| e.path == original_file),
+            !tab.entries.iter().any(|e| e.meta.path == original_file),
             "Original file should not appear in UI after redo"
         );
         assert!(
-            tab.entries.iter().any(|e| e.path == renamed_file),
+            tab.entries.iter().any(|e| e.meta.path == renamed_file),
             "Renamed file should appear in UI after redo"
         );
     }
@@ -377,11 +377,11 @@ fn test_undo_redo_copy_file() {
     {
         let tab = harness.state().tab_manager.current_tab_ref();
         assert!(
-            tab.entries.iter().any(|e| e.path == source_file),
+            tab.entries.iter().any(|e| e.meta.path == source_file),
             "Source file should appear in UI"
         );
         assert!(
-            tab.entries.iter().any(|e| e.path == copied_file),
+            tab.entries.iter().any(|e| e.meta.path == copied_file),
             "Copied file should appear in UI"
         );
     }
@@ -404,11 +404,11 @@ fn test_undo_redo_copy_file() {
     {
         let tab = harness.state().tab_manager.current_tab_ref();
         assert!(
-            tab.entries.iter().any(|e| e.path == source_file),
+            tab.entries.iter().any(|e| e.meta.path == source_file),
             "Source file should still appear in UI after undo"
         );
         assert!(
-            !tab.entries.iter().any(|e| e.path == copied_file),
+            !tab.entries.iter().any(|e| e.meta.path == copied_file),
             "Copied file should not appear in UI after undo"
         );
     }
@@ -419,7 +419,7 @@ fn test_undo_redo_copy_file() {
     wait_for_condition(|| {
         harness.step();
         let tab = harness.state().tab_manager.current_tab_ref();
-        tab.entries.iter().any(|e| e.path == copied_file)
+        tab.entries.iter().any(|e| e.meta.path == copied_file)
     });
 
     // Verify copy was redone
@@ -440,11 +440,11 @@ fn test_undo_redo_copy_file() {
     {
         let tab = harness.state().tab_manager.current_tab_ref();
         assert!(
-            tab.entries.iter().any(|e| e.path == source_file),
+            tab.entries.iter().any(|e| e.meta.path == source_file),
             "Source file should appear in UI after redo"
         );
         assert!(
-            tab.entries.iter().any(|e| e.path == copied_file),
+            tab.entries.iter().any(|e| e.meta.path == copied_file),
             "Copied file should appear in UI after redo"
         );
     }

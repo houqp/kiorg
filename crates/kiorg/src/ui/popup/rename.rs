@@ -30,14 +30,14 @@ pub fn handle_rename_confirmation(app: &mut Kiorg, ctx: &Context) {
     if let Some(PopupType::Rename(new_name)) = &app.show_popup {
         let tab = app.tab_manager.current_tab_mut();
         if let Some(entry) = tab.entries.get(tab.selected_index) {
-            let parent = entry.path.parent().unwrap_or(&tab.current_path);
+            let parent = entry.meta.path.parent().unwrap_or(&tab.current_path);
             let new_path = parent.join(new_name);
 
-            if let Err(e) = std::fs::rename(&entry.path, &new_path) {
+            if let Err(e) = std::fs::rename(&entry.meta.path, &new_path) {
                 app.notify_error(format!("Failed to rename: {e}"));
             } else {
                 // Record rename action in history
-                let old_path = entry.path.clone();
+                let old_path = entry.meta.path.clone();
                 tab.action_history.add_action(ActionType::Rename {
                     operations: vec![RenameOperation { old_path, new_path }],
                 });

@@ -1,12 +1,14 @@
 //! Tar archive preview module
 
-use crate::config::colors::AppColors;
-use crate::models::preview_content::TarEntry;
-use crate::ui::preview::{prefix_dir_name, prefix_file_name};
 use egui::RichText;
 use std::fs::File;
 use std::io::BufReader;
 use tar::Archive;
+
+use crate::config::colors::AppColors;
+use crate::models::dir_entry::DirEntryMeta;
+use crate::models::preview_content::{CachedPreviewContent, TarEntry};
+use crate::ui::preview::{prefix_dir_name, prefix_file_name};
 
 /// Render tar archive content
 pub fn render(ui: &mut egui::Ui, entries: &[TarEntry], colors: &AppColors) {
@@ -72,7 +74,8 @@ pub fn render(ui: &mut egui::Ui, entries: &[TarEntry], colors: &AppColors) {
 }
 
 /// Read entries from a tar file and return them as a vector of `TarEntry`
-pub fn read_tar_entries(path: &std::path::Path) -> Result<Vec<TarEntry>, String> {
+pub fn read_tar_entries(entry: DirEntryMeta) -> Result<Vec<TarEntry>, String> {
+    let path = &entry.path;
     let file = File::open(path).map_err(|e| format!("Failed to open tar file: {e}"))?;
 
     // Try to determine if it's compressed by the file extension
@@ -82,21 +85,18 @@ pub fn read_tar_entries(path: &std::path::Path) -> Result<Vec<TarEntry>, String>
     if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
         match ext.to_lowercase().as_str() {
             "gz" | "tgz" => {
-                // Re-open file for gzip decompression
                 let file =
                     File::open(path).map_err(|e| format!("Failed to reopen tar.gz file: {e}"))?;
                 let gz = flate2::read::GzDecoder::new(BufReader::new(file));
                 archive = Box::new(gz);
             }
             "bz2" | "tbz" | "tbz2" => {
-                // Re-open file for bzip2 decompression
                 let file =
                     File::open(path).map_err(|e| format!("Failed to reopen tar.bz2 file: {e}"))?;
                 let bz2 = bzip2::read::BzDecoder::new(BufReader::new(file));
                 archive = Box::new(bz2);
             }
             _ => {
-                // Uncompressed tar or unknown compression
                 let file =
                     File::open(path).map_err(|e| format!("Failed to reopen tar file: {e}"))?;
                 archive = Box::new(BufReader::new(file));
@@ -115,19 +115,13 @@ pub fn read_tar_entries(path: &std::path::Path) -> Result<Vec<TarEntry>, String>
         let entry = entry_result.map_err(|e| format!("Failed to read tar entry: {e}"))?;
         let header = entry.header();
 
-        // Get the path
         let path = entry
             .path()
             .map_err(|e| format!("Failed to get entry path: {e}"))?;
         let name = path.to_string_lossy().to_string();
 
-        // Check if it's a directory
         let is_dir = header.entry_type() == tar::EntryType::Directory;
-
-        // Get size
         let size = header.size().unwrap_or(0);
-
-        // Get permissions
         let mode = header.mode().unwrap_or(0);
         let permissions = format!("{:o}", mode & 0o777);
 
@@ -138,6 +132,15 @@ pub fn read_tar_entries(path: &std::path::Path) -> Result<Vec<TarEntry>, String>
             permissions,
         });
     }
+
+    // Spawn background task to save cache
+    let cached = CachedPreviewContent::Tar(entries.clone());
+    std::thread::spawn(move || {
+        let cache_key = crate::utils::cache::calculate_cache_key(&entry);
+        if let Err(e) = crate::utils::cache::save_preview(&cache_key, &cached) {
+            tracing::warn!("Failed to save tar preview cache: {}", e);
+        }
+    });
 
     Ok(entries)
 }
