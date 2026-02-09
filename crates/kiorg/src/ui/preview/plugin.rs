@@ -23,19 +23,18 @@ pub fn render(
                     preview::text::render(ui, &text.text, colors);
                 }
                 RenderedComponent::Image(image) => {
+                    let img = &image.image;
                     if image.interactive {
                         crate::ui::preview::image::render_interactive(
                             ui,
-                            &image.image,
+                            img,
                             available_width,
                             available_height,
                         );
                     } else {
                         ui.vertical_centered(|ui| {
                             ui.add(
-                                image
-                                    .image
-                                    .clone()
+                                img.clone()
                                     .max_size(egui::vec2(available_width, available_height * 0.6))
                                     .maintain_aspect_ratio(true),
                             );
@@ -44,7 +43,7 @@ pub fn render(
                 }
                 RenderedComponent::Table(table) => {
                     use egui_extras::{Column, TableBuilder};
-                    let num_columns = if let Some(headers) = &table.headers {
+                    let num_columns: usize = if let Some(headers) = &table.headers {
                         headers.len()
                     } else if let Some(first_row) = table.rows.first() {
                         first_row.len()

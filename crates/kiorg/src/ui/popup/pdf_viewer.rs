@@ -2,24 +2,62 @@ use crate::config::colors::AppColors;
 use crate::models::preview_content::PdfMeta;
 use crate::ui::file_list::truncate_text;
 use crate::ui::popup::window_utils::new_center_popup_window;
-use egui::{Button, Image, Key, Modifiers, RichText};
+use egui::{Button, Key, Modifiers, RichText};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, mpsc};
 use tracing::error;
 
 /// Type alias for PDF meta receiver
-pub type PdfMetaReceiver = Arc<Mutex<mpsc::Receiver<Result<PdfMeta, String>>>>;
+pub type PdfMetaReceiver = Arc<Mutex<mpsc::Receiver<Result<PdfViewerContent, String>>>>;
+
+/// Content for the PDF viewer, owning the document handle
+pub struct PdfViewerContent {
+    pub meta: PdfMeta,
+    pub doc: Arc<Mutex<pdfium_bind::PdfDocument>>,
+}
+
+impl std::fmt::Debug for PdfViewerContent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PdfViewerContent")
+            .field("meta", &self.meta)
+            .field("doc", &"<PdfDocument>")
+            .finish()
+    }
+}
+
+impl PdfViewerContent {
+    pub fn render_page(&mut self, ctx: &egui::Context) -> Result<(), String> {
+        let doc_lock = self.doc.lock().map_err(|_| "Failed to lock PDF doc")?;
+        let rendered = crate::ui::preview::pdf::render_pdf_page_high_dpi(
+            &doc_lock,
+            self.meta.current_page,
+            Some(&self.meta.file_id),
+            ctx,
+        )?;
+
+        self.meta.cover = rendered.img_source;
+        self.meta._texture_handle = Some(rendered.texture_handle);
+        Ok(())
+    }
+
+    pub fn update_page_num_text(&self, ctx: &egui::Context) {
+        let input_id = self.meta.page_input_id();
+        // in the UI, we display the first page as 1 instead of 0
+        let new_text = (self.meta.current_page + 1).to_string();
+        ctx.data_mut(|d| d.insert_temp(input_id, new_text));
+    }
+}
 
 /// Dedicated state for the PDF viewer app
 #[derive(Debug)]
 pub enum PdfViewer {
     Loading(PathBuf, PdfMetaReceiver, std::sync::mpsc::Sender<()>),
-    Loaded(PdfMeta),
+    Loaded(PdfViewerContent),
     Error(String),
 }
 
 impl crate::ui::popup::PopupApp for PdfViewer {
-    type Content = PdfMeta;
+    type Content = PdfViewerContent;
 
     fn loading(
         path: PathBuf,
@@ -84,14 +122,14 @@ impl PdfViewer {
 /// Render PDF in popup with page navigation
 pub fn render_popup(
     ui: &mut egui::Ui,
-    pdf_meta: &mut PdfMeta,
+    viewer_content: &mut PdfViewerContent,
     colors: &AppColors,
     available_width: f32,
     available_height: f32,
 ) {
     // Get current page and total pages
-    let current_page = pdf_meta.current_page;
-    let total_pages = pdf_meta.page_count;
+    let current_page = viewer_content.meta.current_page;
+    let total_pages = viewer_content.meta.page_count;
 
     ui.vertical_centered(|ui| {
         // Create a constrained horizontal container that only takes the space it needs
@@ -109,13 +147,13 @@ pub fn render_popup(
                     .clicked()
                     && current_page > 0
                 {
-                    navigate_to_previous_page(pdf_meta, ui.ctx());
+                    navigate_to_previous_page(viewer_content, ui.ctx());
                 }
 
                 // Editable page input
                 ui.horizontal(|ui| {
                     // Use egui's memory to store the page input text per PDF
-                    let input_id = pdf_meta.page_input_id();
+                    let input_id = viewer_content.meta.page_input_id();
 
                     // Get or initialize the input text
                     let mut page_input_text = ui.ctx().data(|d| {
@@ -147,8 +185,8 @@ pub fn render_popup(
                     if response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
                         if let Ok(new_page) = page_input_text.parse::<isize>() {
                             if new_page >= 1 && new_page <= total_pages {
-                                pdf_meta.current_page = new_page - 1; // Convert to 0-based
-                                if let Err(e) = render_pdf_page_for_popup(ui, pdf_meta) {
+                                viewer_content.meta.current_page = new_page - 1; // Convert to 0-based
+                                if let Err(e) = render_pdf_page_for_popup(ui, viewer_content) {
                                     error!("Error rendering PDF page: {}", e);
                                 }
                             } else {
@@ -181,7 +219,7 @@ pub fn render_popup(
                     .clicked()
                     && current_page < total_pages - 1
                 {
-                    navigate_to_next_page(pdf_meta, ui.ctx());
+                    navigate_to_next_page(viewer_content, ui.ctx());
                 }
             },
         );
@@ -199,22 +237,22 @@ pub fn render_popup(
     // Add the PDF preview with maximum possible size
     ui.add_sized(
         egui::vec2(max_width, max_height),
-        Image::new(pdf_meta.cover.clone())
+        egui::Image::new(viewer_content.meta.cover.clone())
             .max_size(egui::vec2(max_width, max_height))
             .maintain_aspect_ratio(true),
     );
 }
 
 /// Helper function to navigate to the next page in PDF
-pub fn navigate_to_next_page(pdf_meta: &mut PdfMeta, ctx: &egui::Context) {
-    let current_page = pdf_meta.current_page;
-    let total_pages = pdf_meta.page_count;
+pub fn navigate_to_next_page(viewer_content: &mut PdfViewerContent, ctx: &egui::Context) {
+    let current_page = viewer_content.meta.current_page;
+    let total_pages = viewer_content.meta.page_count;
     if current_page >= total_pages - 1 {
         return;
     }
-    pdf_meta.current_page += 1;
-    pdf_meta.update_page_num_text(ctx);
-    if let Err(e) = pdf_meta.render_page(ctx) {
+    viewer_content.meta.current_page += 1;
+    viewer_content.update_page_num_text(ctx);
+    if let Err(e) = viewer_content.render_page(ctx) {
         error!("Error rendering PDF page: {}", e);
         return;
     }
@@ -222,14 +260,14 @@ pub fn navigate_to_next_page(pdf_meta: &mut PdfMeta, ctx: &egui::Context) {
 }
 
 /// Helper function to navigate to the previous page in PDF
-pub fn navigate_to_previous_page(pdf_meta: &mut PdfMeta, ctx: &egui::Context) {
-    let current_page = pdf_meta.current_page;
+pub fn navigate_to_previous_page(viewer_content: &mut PdfViewerContent, ctx: &egui::Context) {
+    let current_page = viewer_content.meta.current_page;
     if current_page <= 0 {
         return;
     }
-    pdf_meta.current_page = (current_page - 1).max(0);
-    pdf_meta.update_page_num_text(ctx);
-    if let Err(e) = pdf_meta.render_page(ctx) {
+    viewer_content.meta.current_page = (current_page - 1).max(0);
+    viewer_content.update_page_num_text(ctx);
+    if let Err(e) = viewer_content.render_page(ctx) {
         error!("Error rendering PDF page: {}", e);
         return;
     }
@@ -237,9 +275,12 @@ pub fn navigate_to_previous_page(pdf_meta: &mut PdfMeta, ctx: &egui::Context) {
 }
 
 /// Helper function to render PDF page when navigation buttons are clicked
-fn render_pdf_page_for_popup(ui: &mut egui::Ui, pdf_meta: &mut PdfMeta) -> Result<(), String> {
+fn render_pdf_page_for_popup(
+    ui: &mut egui::Ui,
+    viewer_content: &mut PdfViewerContent,
+) -> Result<(), String> {
     let ctx = ui.ctx();
-    pdf_meta.render_page(ctx)?;
+    viewer_content.render_page(ctx)?;
     ctx.request_repaint();
     Ok(())
 }
@@ -247,7 +288,7 @@ fn render_pdf_page_for_popup(ui: &mut egui::Ui, pdf_meta: &mut PdfMeta) -> Resul
 /// Handle key input events for the PDF preview popup
 /// Returns true if the key was handled, false otherwise
 pub fn handle_preview_popup_input_pdf(
-    pdf_meta: &mut PdfMeta,
+    viewer_content: &mut PdfViewerContent,
     key: Key,
     modifiers: Modifiers,
     ctx: &egui::Context,
@@ -259,10 +300,10 @@ pub fn handle_preview_popup_input_pdf(
     if let TraverseResult::Action(action) = shortcuts.traverse_tree(&[shortcut_key]) {
         match action {
             ShortcutAction::PageUp => {
-                navigate_to_previous_page(pdf_meta, ctx);
+                navigate_to_previous_page(viewer_content, ctx);
             }
             ShortcutAction::PageDown => {
-                navigate_to_next_page(pdf_meta, ctx);
+                navigate_to_next_page(viewer_content, ctx);
             }
             _ => {
                 // Other actions are not handled in preview popup

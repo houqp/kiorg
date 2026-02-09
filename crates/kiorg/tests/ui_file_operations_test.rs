@@ -62,7 +62,7 @@ fn test_delete_shortcut() {
     {
         let tab = harness.state().tab_manager.current_tab_ref();
         assert!(
-            !tab.entries.iter().any(|e| e.path == test_files[2]),
+            !tab.entries.iter().any(|e| e.meta.path == test_files[2]),
             "UI entry list should not contain test1.txt after deletion"
         );
     }
@@ -99,7 +99,7 @@ fn test_delete_shortcut() {
     {
         let tab = harness.state().tab_manager.current_tab_ref();
         assert!(
-            !tab.entries.iter().any(|e| e.path == test_files[0]),
+            !tab.entries.iter().any(|e| e.meta.path == test_files[0]),
             "UI entry list should not contain dir1 after deletion"
         );
     }
@@ -330,7 +330,7 @@ fn test_cut_paste_shortcuts() {
     {
         let tab = harness.state().tab_manager.current_tab_ref();
         assert!(
-            !tab.entries.iter().any(|e| e.path == test_files[2]),
+            !tab.entries.iter().any(|e| e.meta.path == test_files[2]),
             "UI entry list in parent dir should not contain test1.txt after cut/paste"
         );
     }

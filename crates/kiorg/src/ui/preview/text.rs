@@ -16,6 +16,7 @@ use syntect::{
 
 use crate::app::Kiorg;
 use crate::config::colors::AppColors;
+use crate::models::dir_entry::DirEntryMeta;
 use crate::models::preview_content::PreviewContent;
 use crate::ui::preview::loading::load_preview_async;
 
@@ -85,7 +86,7 @@ pub fn render_highlighted(ui: &mut egui::Ui, text: &str, language: &'static str)
     let spacing = ui.spacing().item_spacing;
     // Wrap the label in a container with dark background for consistency across all themes
     egui::Frame::new()
-        .fill(egui::Color32::from_rgb(40, 44, 52)) // Dark background color
+        .fill(egui::Color32::from_rgb(40, 44, 52))
         .inner_margin(egui::Margin::same(8))
         .show(ui, |ui| {
             // Make the frame take up all available width
@@ -100,25 +101,27 @@ pub fn render_empty(ui: &mut egui::Ui, colors: &AppColors) {
 }
 
 /// Load text content asynchronously
-pub fn load_async(app: &mut Kiorg, path: PathBuf, file_size: u64) {
-    load_preview_async(app, path, move |path| {
+pub fn load_async(app: &mut Kiorg, entry: DirEntryMeta, file_size: u64) {
+    load_preview_async(app, entry, move |entry| {
         // Check if file size is larger than 1MB (1,048,576 bytes)
         const MAX_PREVIEW_SIZE: u64 = 1_048_576;
         if file_size > MAX_PREVIEW_SIZE {
-            return Ok(PreviewContent::text(format!(
+            let info = format!(
                 "Preview disabled for files larger than {}\n\nFile size: {}",
                 format_size(MAX_PREVIEW_SIZE, BINARY),
                 format_size(file_size, BINARY),
-            )));
+            );
+            return Ok(PreviewContent::text(info));
         }
 
-        // Check if this is a source code file that should be syntax highlighted
-        if let Some(syntax) = find_syntax_from_path(&path) {
+        let path = &entry.path;
+
+        if let Some(syntax) = find_syntax_from_path(path) {
             // For supported languages, load the full file for syntax highlighting
-            load_full_text(&path, Some(syntax.name.as_str()))
+            load_full_text(path, Some(syntax.name.as_str()))
         } else {
             // For other files, use the truncated preview
-            try_load_utf8_str(path, file_size)
+            try_load_utf8_str(path.clone(), file_size)
         }
     });
 }
@@ -158,7 +161,7 @@ pub fn try_load_utf8_str(path: PathBuf, file_size: u64) -> Result<PreviewContent
     }
 }
 
-/// Detect file type and return a `PreviewContent` with generic file information
+/// Detect file type and return `PreviewContent` with generic file information
 pub fn render_generic_file(path: PathBuf, size: u64) -> Result<PreviewContent, String> {
     // Try to detect the file type using file_type crate
     let file_type_info = match FileType::try_from_file(&path) {
@@ -189,9 +192,9 @@ pub fn render_generic_file(path: PathBuf, size: u64) -> Result<PreviewContent, S
     )))
 }
 
-/// Load full text content (not limited to first 1000 bytes like the regular preview)
+/// Load full text content
 pub fn load_full_text(
-    path: &PathBuf,
+    path: &std::path::Path,
     lang: Option<&'static str>,
 ) -> Result<PreviewContent, String> {
     match std::fs::read_to_string(path) {

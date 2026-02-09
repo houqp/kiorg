@@ -1,9 +1,10 @@
 //! Ebook preview module
 
-use crate::config::colors::AppColors;
-use crate::models::preview_content::{EbookMeta, metadata};
 use egui::{RichText, TextureId, Vec2, load::SizedTexture, widgets::ImageSource};
-use std::path::Path;
+
+use crate::config::colors::AppColors;
+use crate::models::dir_entry::DirEntryMeta;
+use crate::models::preview_content::{CachedEbookMeta, CachedPreviewContent, EbookMeta, metadata};
 
 /// Render Ebook content
 pub fn render(
@@ -108,11 +109,10 @@ fn format_metadata_key(key: &str) -> String {
 }
 
 /// Extract metadata and cover image from an ebook file and return as `PreviewContent`
-pub fn extract_ebook_metadata(
-    path: &Path,
-) -> Result<crate::models::preview_content::EbookMeta, String> {
+pub fn extract_ebook_metadata(entry: DirEntryMeta) -> Result<EbookMeta, String> {
     use rbook::prelude::*;
 
+    let path = &entry.path;
     let epub = rbook::Epub::options()
         .strict(false)
         .open(path)
@@ -183,35 +183,6 @@ pub fn extract_ebook_metadata(
     let page_count = epub.spine().len() as isize;
 
     // Try to extract cover image
-    let cover_image = try_extract_rbook_cover(&epub).unwrap_or_else(|| {
-        // Create a default "no cover" image if extraction fails
-        let sized_texture = SizedTexture::new(TextureId::Managed(0), Vec2::ZERO);
-        ImageSource::Texture(sized_texture)
-    });
-
-    Ok(crate::models::preview_content::EbookMeta::new(
-        metadata,
-        cover_image,
-        page_count,
-        path,
-    ))
-}
-
-/// Helper function to create cover image source from image data and href
-fn create_cover_image_source(
-    cover_data: Vec<u8>,
-    href: &str,
-    identifier: &str,
-) -> egui::widgets::ImageSource<'static> {
-    let extension = href.split('.').next_back().unwrap_or("jpg");
-    let texture_id = format!("bytes://epub_cover_{identifier}.{extension}");
-    egui::widgets::ImageSource::from((texture_id, cover_data))
-}
-
-/// Try to extract cover image from an ebook document using rbook
-fn try_extract_rbook_cover(epub: &rbook::Epub) -> Option<egui::widgets::ImageSource<'static>> {
-    use rbook::prelude::*;
-
     let identifier = epub.metadata().identifiers().next().map_or_else(
         || {
             let now = std::time::SystemTime::now();
@@ -221,10 +192,66 @@ fn try_extract_rbook_cover(epub: &rbook::Epub) -> Option<egui::widgets::ImageSou
         |id| id.value().to_string(),
     );
 
+    let (cover_image, cover_data) = try_extract_rbook_cover(&epub)
+        .map(|(img, raw_bytes, _href)| {
+            let texture_id = format!("bytes://epub_cover_{identifier}");
+            let source = egui::widgets::ImageSource::from((texture_id, raw_bytes.clone()));
+            (source, Some((img, raw_bytes)))
+        })
+        .unwrap_or_else(|| {
+            // Create a default "no cover" image if extraction fails
+            let sized_texture = SizedTexture::new(TextureId::Managed(0), Vec2::ZERO);
+            (ImageSource::Texture(sized_texture), None)
+        });
+
+    let meta = crate::models::preview_content::EbookMeta::new(
+        metadata.clone(),
+        cover_image,
+        None,
+        page_count,
+        path,
+    );
+
+    // Spawn background task to encode and save cache after metadata is resolved
+    if let Some((img, _raw_bytes)) = cover_data {
+        let title_clone = meta.title.clone();
+
+        std::thread::spawn(move || {
+            let mut png_bytes = Vec::new();
+            if img
+                .write_to(
+                    &mut std::io::Cursor::new(&mut png_bytes),
+                    image::ImageFormat::Png,
+                )
+                .is_ok()
+            {
+                let cached_content = CachedPreviewContent::Ebook(CachedEbookMeta {
+                    title: title_clone,
+                    metadata,
+                    page_count,
+                    cache_bytes: png_bytes,
+                });
+                let cache_key = crate::utils::cache::calculate_cache_key(&entry);
+                if let Err(e) = crate::utils::cache::save_preview(&cache_key, &cached_content) {
+                    tracing::warn!("Failed to save ebook preview cache: {}", e);
+                }
+            }
+        });
+    }
+
+    Ok(meta)
+}
+
+/// Try to extract cover image from an ebook document using rbook
+fn try_extract_rbook_cover(epub: &rbook::Epub) -> Option<(image::DynamicImage, Vec<u8>, String)> {
+    use rbook::prelude::*;
+
     epub.manifest().cover_image().and_then(|cover_image| {
-        cover_image.read_bytes().ok().map(|cover_data| {
-            let href = cover_image.href().name().decode();
-            create_cover_image_source(cover_data, &href, &identifier)
+        cover_image.read_bytes().ok().and_then(|cover_data| {
+            let href = cover_image.href().name().decode().to_string();
+            image::load_from_memory(&cover_data)
+                .ok()
+                .map(|img| (img, cover_data, href))
         })
     })
 }

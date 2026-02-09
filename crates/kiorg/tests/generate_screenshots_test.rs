@@ -239,7 +239,7 @@ impl Point {
                 // Check if preview content is no longer loading
                 !matches!(
                     &harness.state().preview_content,
-                    Some(PreviewContent::Loading(..))
+                    Some(PreviewContent::Loading { .. })
                 )
             });
             harness.step();

@@ -442,7 +442,7 @@ fn test_pdf_page_count_in_preview_content() {
         Some(PreviewContent::Text(_)) => {
             panic!("PDF should not be treated as an text");
         }
-        Some(PreviewContent::Loading(..)) => {
+        Some(PreviewContent::Loading { .. }) => {
             panic!("PDF still loading");
         }
         Some(PreviewContent::Image(_)) => {

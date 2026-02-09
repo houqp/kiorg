@@ -25,7 +25,7 @@ fn test_paste_copy_clears_marked_entries() {
         let app = harness.state();
         let tab = app.tab_manager.current_tab_ref();
         assert_eq!(
-            tab.entries[tab.selected_index].path, test_files[1],
+            tab.entries[tab.selected_index].meta.path, test_files[1],
             "file1.txt should be selected"
         );
     }
@@ -178,7 +178,7 @@ fn test_paste_cut_clears_marked_entries() {
         let app = harness.state();
         let tab = app.tab_manager.current_tab_ref();
         assert_eq!(
-            tab.entries[tab.selected_index].path, test_files[3],
+            tab.entries[tab.selected_index].meta.path, test_files[3],
             "target_dir should be selected"
         );
     }

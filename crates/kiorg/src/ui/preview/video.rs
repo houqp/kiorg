@@ -4,11 +4,12 @@ use egui::RichText;
 use ffmpeg_sidecar::event::{FfmpegEvent, OutputVideoFrame, StreamTypeSpecificData};
 use image::EncodableLayout;
 use rayon::prelude::*;
-use std::path::Path;
 
 use crate::config::colors::AppColors;
+use crate::models::dir_entry::DirEntryMeta;
 use crate::models::preview_content::{
-    FfmpegMeta, InputMeta, StreamMeta, StreamTypeMeta, VideoMeta, metadata,
+    CachedPreviewContent, CachedVideoMeta, FfmpegMeta, InputMeta, StreamMeta, StreamTypeMeta,
+    VideoMeta, metadata,
 };
 use tracing::{debug, warn};
 
@@ -239,8 +240,8 @@ pub fn render(
         for stream in &input.streams {
             ui.add_space(5.0);
             let stream_type_label = match stream.kind {
-                StreamTypeMeta::Video(_) => "Video",
-                StreamTypeMeta::Audio(_) => "Audio",
+                StreamTypeMeta::Video { .. } => "Video",
+                StreamTypeMeta::Audio { .. } => "Audio",
                 StreamTypeMeta::Subtitle => "Subtitle",
                 StreamTypeMeta::Unknown => "Unknown",
             };
@@ -302,15 +303,15 @@ fn render_metadata_row(ui: &mut egui::Ui, key: &str, value: &str, colors: &AppCo
     ui.end_row();
 }
 
-/// Read video file, extract metadata and generate thumbnail, and create a `PreviewContent`
 pub fn read_video_with_metadata(
-    path: &Path,
+    entry: DirEntryMeta,
     ctx: &egui::Context,
     available_width: Option<f32>,
 ) -> Result<VideoMeta, String> {
     ffmpeg::init()?;
 
-    let title = path
+    let title = entry
+        .path
         .file_name()
         .unwrap_or_default()
         .to_string_lossy()
@@ -321,25 +322,28 @@ pub fn read_video_with_metadata(
 
     // Try to extract a real thumbnail from the video
     let thumbnail_texture =
-        match extract_video_thumbnail(ctx, path, &mut ffmpeg_meta, available_width) {
+        match extract_video_thumbnail(ctx, entry, &mut ffmpeg_meta, available_width) {
             Ok(texture) => texture,
             Err(_) => {
                 // Fall back to placeholder thumbnail
-                generate_placeholder_thumbnail(ctx, path)
+                generate_placeholder_thumbnail(ctx)
                     .map_err(|e| format!("Failed to generate thumbnail: {e}"))?
             }
         };
 
-    Ok(VideoMeta::new(title, ffmpeg_meta, thumbnail_texture))
+    let meta = VideoMeta::new(title, ffmpeg_meta.clone(), thumbnail_texture);
+
+    Ok(meta)
 }
 
 /// Extract a thumbnail from the video file using ffmpeg-sidecar
 fn extract_video_thumbnail(
     ctx: &egui::Context,
-    path: &Path,
+    entry: DirEntryMeta,
     ffmpeg_meta: &mut FfmpegMeta,
     available_width: Option<f32>,
 ) -> Result<egui::TextureHandle, String> {
+    let path = &entry.path;
     let start = std::time::Instant::now();
     let path_str = path.to_str().ok_or("Invalid path encoding")?;
 
@@ -423,11 +427,46 @@ fn extract_video_thumbnail(
         skip_remaining
     );
 
-    // Create texture
+    // Creates the image buffer once from the raw frame data
+    let img = image::RgbImage::from_raw(frame.width, frame.height, frame.data)
+        .ok_or("Failed to create image from raw frame data")?;
+
+    // Create texture from the image buffer
     let color_image =
-        egui::ColorImage::from_rgb([frame.width as usize, frame.height as usize], &frame.data);
+        egui::ColorImage::from_rgb([frame.width as usize, frame.height as usize], &img);
     let texture_id = format!("video_thumbnail_{}", path.display());
     let texture = ctx.load_texture(texture_id, color_image, egui::TextureOptions::default());
+
+    // Spawn background task to encode and save cache
+    let title_clone = path
+        .file_name()
+        .unwrap_or_default()
+        .to_string_lossy()
+        .to_string();
+    let ffmpeg_meta_clone = ffmpeg_meta.clone();
+    let img_dyn = image::DynamicImage::ImageRgb8(img);
+    let img_clone = img_dyn.clone();
+
+    std::thread::spawn(move || {
+        let mut png_bytes = Vec::new();
+        if img_clone
+            .write_to(
+                &mut std::io::Cursor::new(&mut png_bytes),
+                image::ImageFormat::Png,
+            )
+            .is_ok()
+        {
+            let cached_content = CachedPreviewContent::Video(CachedVideoMeta {
+                title: title_clone,
+                ffmpeg: ffmpeg_meta_clone.into(),
+                cache_bytes: png_bytes,
+            });
+            let cache_key = crate::utils::cache::calculate_cache_key(&entry);
+            if let Err(e) = crate::utils::cache::save_preview(&cache_key, &cached_content) {
+                tracing::warn!("Failed to save video preview cache: {}", e);
+            }
+        }
+    });
 
     Ok(texture)
 }
@@ -466,20 +505,17 @@ fn probe_metadata(path_str: &str, meta: &mut FfmpegMeta) -> Result<(), String> {
                     .insert(metadata::VID_DURATION.to_string(), duration_str);
             }
             FfmpegEvent::ParsedInputStream(stream) => {
-                // Determine kind
                 let kind = match stream.type_specific_data {
                     StreamTypeSpecificData::Video(v) => StreamTypeMeta::Video(v),
                     StreamTypeSpecificData::Audio(a) => StreamTypeMeta::Audio(a),
                     _ => StreamTypeMeta::Unknown,
                 };
 
-                // Ensure input exists
                 let parent_idx = stream.parent_index as usize;
                 if meta.inputs.len() <= parent_idx {
                     meta.inputs.resize(parent_idx + 1, InputMeta::default());
                 }
 
-                // Add stream to input
                 let is_attached_pic = stream.raw_log_message.contains("(attached pic)");
                 meta.inputs[parent_idx].streams.push(StreamMeta {
                     index: stream.stream_index as usize,
@@ -616,59 +652,70 @@ fn calculate_frame_quality(dynamic_img: &image::DynamicImage) -> f64 {
 }
 
 /// Generate a placeholder thumbnail for video files if extraction fails
-fn generate_placeholder_thumbnail(
-    ctx: &egui::Context,
-    path: &Path,
-) -> Result<egui::TextureHandle, String> {
-    let width = 320;
-    let height = 240;
+const PLACEHOLDER_WIDTH: usize = 320;
+const PLACEHOLDER_HEIGHT: usize = 240;
+const PLACEHOLDER_SIZE: usize = PLACEHOLDER_WIDTH * PLACEHOLDER_HEIGHT * 3;
 
-    let mut rgb_data = Vec::with_capacity(width * height * 3);
-
-    // Create a dark background with a play button symbol
-    for y in 0..height {
-        for x in 0..width {
-            // Create a dark gray background
+static PLACEHOLDER_THUMBNAIL: [u8; PLACEHOLDER_SIZE] = {
+    let mut data = [0u8; PLACEHOLDER_SIZE];
+    let mut y = 0;
+    while y < PLACEHOLDER_HEIGHT {
+        let mut x = 0;
+        while x < PLACEHOLDER_WIDTH {
+            let idx = (y * PLACEHOLDER_WIDTH + x) * 3;
             let mut r = 40u8;
             let mut g = 40u8;
             let mut b = 40u8;
 
-            // Add a border
-            if x < 2 || x >= width - 2 || y < 2 || y >= height - 2 {
+            if x < 2 || x >= PLACEHOLDER_WIDTH - 2 || y < 2 || y >= PLACEHOLDER_HEIGHT - 2 {
                 r = 80;
                 g = 80;
                 b = 80;
             }
 
-            // Add a triangular play button in the center
-            let center_x = width / 2;
-            let center_y = height / 2;
-            let rel_x = x as i32 - center_x as i32;
-            let rel_y = y as i32 - center_y as i32;
+            let center_x = (PLACEHOLDER_WIDTH / 2) as i32;
+            let center_y = (PLACEHOLDER_HEIGHT / 2) as i32;
+            let rel_x = x as i32 - center_x;
+            let rel_y = y as i32 - center_y;
 
-            if (-15..=15).contains(&rel_x) && rel_y.abs() <= 15 {
+            let abs_rel_y = if rel_y < 0 { -rel_y } else { rel_y };
+
+            if rel_x >= -15 && rel_x <= 15 && abs_rel_y <= 15 {
                 let max_y = if rel_x <= 0 {
                     15
                 } else {
                     15 - (rel_x * 15) / 15
                 };
 
-                if rel_y.abs() <= max_y {
+                if abs_rel_y <= max_y {
                     r = 220;
                     g = 220;
                     b = 220;
                 }
             }
 
-            rgb_data.push(r);
-            rgb_data.push(g);
-            rgb_data.push(b);
-        }
-    }
+            data[idx] = r;
+            data[idx + 1] = g;
+            data[idx + 2] = b;
 
-    let color_image = egui::ColorImage::from_rgb([width, height], &rgb_data);
-    let texture_id = format!("video_placeholder_{}", path.display());
-    let texture = ctx.load_texture(texture_id, color_image, egui::TextureOptions::default());
+            x += 1;
+        }
+        y += 1;
+    }
+    data
+};
+
+/// Generate a placeholder thumbnail for video files if extraction fails
+fn generate_placeholder_thumbnail(ctx: &egui::Context) -> Result<egui::TextureHandle, String> {
+    let color_image = egui::ColorImage::from_rgb(
+        [PLACEHOLDER_WIDTH, PLACEHOLDER_HEIGHT],
+        &PLACEHOLDER_THUMBNAIL,
+    );
+    let texture = ctx.load_texture(
+        "video_placeholder",
+        color_image,
+        egui::TextureOptions::default(),
+    );
 
     Ok(texture)
 }
@@ -682,7 +729,7 @@ mod tests {
     fn test_calculate_frame_quality_black_image() {
         let width = 100;
         let height = 100;
-        let img = GrayImage::new(width, height); // Initializes to black (0)
+        let img = GrayImage::new(width, height);
         let dynamic_img = DynamicImage::ImageLuma8(img);
 
         let score = calculate_frame_quality(&dynamic_img);

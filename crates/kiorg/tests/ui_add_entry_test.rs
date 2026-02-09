@@ -68,7 +68,7 @@ fn test_add_file_and_directory() {
             "Newly created file should be selected"
         );
         assert_eq!(
-            tab.entries[entry_index].path, expected_file_path,
+            tab.entries[entry_index].meta.path, expected_file_path,
             "UI entry path should match expected path"
         );
         assert!(
@@ -141,7 +141,7 @@ fn test_add_file_and_directory() {
             "Newly created directory should be selected"
         );
         assert_eq!(
-            tab.entries[entry_index].path, expected_dir_path,
+            tab.entries[entry_index].meta.path, expected_dir_path,
             "UI entry path should match expected path"
         );
         assert!(

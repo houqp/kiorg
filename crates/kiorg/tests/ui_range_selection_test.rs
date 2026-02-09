@@ -86,15 +86,15 @@ fn test_range_selection_toggle() {
             "Should have 3 entries in range selection"
         );
         assert_eq!(
-            selected_entries[0].path, test_files[0],
+            selected_entries[0].meta.path, test_files[0],
             "First entry should be file1.txt"
         );
         assert_eq!(
-            selected_entries[1].path, test_files[1],
+            selected_entries[1].meta.path, test_files[1],
             "Second entry should be file2.txt"
         );
         assert_eq!(
-            selected_entries[2].path, test_files[2],
+            selected_entries[2].meta.path, test_files[2],
             "Third entry should be file3.txt"
         );
     }
@@ -254,11 +254,11 @@ fn test_range_selection_backwards() {
             "Should have 2 entries in range selection"
         );
         assert_eq!(
-            selected_entries[0].path, test_files[1],
+            selected_entries[0].meta.path, test_files[1],
             "First entry should be file2.txt"
         );
         assert_eq!(
-            selected_entries[1].path, test_files[2],
+            selected_entries[1].meta.path, test_files[2],
             "Second entry should be file3.txt"
         );
     }
@@ -346,7 +346,7 @@ fn test_range_selection_with_goto_last_entry() {
         // Verify all files are included in order
         for (i, entry) in selected_entries.iter().enumerate() {
             assert_eq!(
-                entry.path, test_files[i],
+                entry.meta.path, test_files[i],
                 "Entry at index {i} should match expected file"
             );
         }

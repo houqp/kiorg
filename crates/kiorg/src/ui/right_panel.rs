@@ -42,7 +42,7 @@ pub fn draw(app: &mut Kiorg, _ctx: &egui::Context, ui: &mut Ui, width: f32, heig
 
                 // Draw preview content based on the enum variant
                 match &app.preview_content {
-                    Some(PreviewContent::Loading(path, _, _)) => {
+                    Some(PreviewContent::Loading { path, .. }) => {
                         // Display loading indicator
                         ui.vertical_centered(|ui| {
                             ui.add_space(20.0);

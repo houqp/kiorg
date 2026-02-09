@@ -1,7 +1,8 @@
 //! Image preview module
 
 use crate::config::colors::AppColors;
-use crate::models::preview_content::{ImageMeta, metadata};
+use crate::models::dir_entry::DirEntryMeta;
+use crate::models::preview_content::{CachedImageMeta, CachedPreviewContent, ImageMeta, metadata};
 use egui::{Rect, RichText};
 use image::{GenericImageView, ImageDecoder, ImageFormat};
 use std::collections::HashMap;
@@ -83,7 +84,7 @@ pub fn render(
             .striped(true)
             .show(ui, |ui| {
                 // Sort keys for consistent display
-                let mut sorted_keys: Vec<&String> = exif_data.keys().collect();
+                let mut sorted_keys: Vec<&String> = exif_data.keys().collect::<Vec<&String>>();
                 sorted_keys.sort();
 
                 // Display each EXIF field in a table row
@@ -108,23 +109,15 @@ fn image_path_to_uri(path: &Path) -> String {
     format!("file://{}", path.display())
 }
 
-/// Read image file, extract metadata, and create a `PreviewContent`
-///
-/// This function:
-/// 1. Reads the image file and extracts metadata
-/// 2. Creates a texture from the image data
-/// 3. Returns a `PreviewContent::Image` with the texture
-///
-/// # Arguments
-/// * `path` - The path to the image file
-/// * `ctx` - The egui context for creating textures
+/// Read image file, extract metadata, and create `PreviewContent`
 pub fn read_image_with_metadata(
-    path: &Path,
+    entry: DirEntryMeta,
     ctx: &egui::Context,
     available_width: Option<f32>,
-) -> Result<crate::models::preview_content::ImageMeta, String> {
+) -> Result<ImageMeta, String> {
     // Get the filename for the title
-    let title = path
+    let title = entry
+        .path
         .file_name()
         .unwrap_or_default()
         .to_string_lossy()
@@ -134,8 +127,10 @@ pub fn read_image_with_metadata(
     let mut metadata = HashMap::new();
 
     // Open the image file
-    let mut decoder = image::ImageReader::open(path)
-        .map_err(|e| format!("failed to open image: {e}"))?
+    let reader =
+        image::ImageReader::open(&entry.path).map_err(|e| format!("failed to open image: {e}"))?;
+    let img_format = reader.format();
+    let mut decoder = reader
         .into_decoder()
         .map_err(|e| format!("failed to create decoder for image: {e}"))?;
     let exif_bytes = decoder
@@ -144,24 +139,6 @@ pub fn read_image_with_metadata(
     let orientation = decoder
         .orientation()
         .map_err(|e| format!("failed to get image orientation: {e}"))?;
-    let mut img = match image::DynamicImage::from_decoder(decoder) {
-        Ok(img) => img,
-        Err(e) => return Err(format!("Failed to decode image: {e}")),
-    };
-
-    if let Some(w) = available_width {
-        let (width, height) = img.dimensions();
-        // Only resize if the image is larger than the available width
-        // Cast w to u32 for comparison and resizing
-        let w_u32 = w as u32;
-        if width > w_u32 {
-            let ratio = height as f64 / width as f64;
-            let new_height = (w as f64 * ratio) as u32;
-            img = img.resize(w_u32, new_height, image::imageops::FilterType::Triangle);
-        }
-    }
-
-    img.apply_orientation(orientation);
 
     // Create a separate HashMap for EXIF data
     let mut exif_data = None;
@@ -183,12 +160,136 @@ pub fn read_image_with_metadata(
         }
     }
 
+    if let Ok(metadata_os) = std::fs::metadata(&entry.path) {
+        let size = metadata_os.len();
+        metadata.insert(
+            metadata::IMG_FILE_SIZE.to_string(),
+            humansize::format_size(size, humansize::BINARY),
+        );
+    }
+
+    // Try to get format-specific information
+    let skip_cache = if let Some(format) = img_format {
+        let name = match format {
+            ImageFormat::Jpeg => "JPEG".to_string(),
+            ImageFormat::Png => "PNG".to_string(),
+            ImageFormat::Gif => "GIF".to_string(),
+            ImageFormat::WebP => "WebP".to_string(),
+            ImageFormat::Tiff => "TIFF".to_string(),
+            ImageFormat::Bmp => "BMP".to_string(),
+            ImageFormat::Ico => "ICO".to_string(),
+            ImageFormat::Tga => "TGA".to_string(),
+            ImageFormat::Dds => "DDS".to_string(),
+            ImageFormat::Farbfeld => "Farbfeld".to_string(),
+            ImageFormat::Avif => "AVIF".to_string(),
+            ImageFormat::Qoi => "QOI".to_string(),
+            _ => {
+                // Handle additional formats from image_extras
+                let format_str = format!("{format:?}");
+                match format_str.as_str() {
+                    "Ora" => "OpenRaster".to_string(),
+                    "Otb" => "OTA Bitmap".to_string(),
+                    "Pcx" => "PCX".to_string(),
+                    "Sgi" => "SGI".to_string(),
+                    "Wbmp" => "Wireless Bitmap".to_string(),
+                    "Xbm" => "X BitMap".to_string(),
+                    "Xpm" => "X PixMap".to_string(),
+                    "Pnm" => "PNM".to_string(),
+                    _ => format_str,
+                }
+            }
+        };
+        metadata.insert(metadata::IMG_FORMAT.to_string(), name);
+
+        // Add format-specific metadata
+        if format == ImageFormat::Gif {
+            // For GIF files, use URI source to enable animation
+            let uri = image_path_to_uri(&entry.path);
+            // need to manually clear cache to reload the gif if there is a
+            // change in content.
+            //
+            // ctx.forget_image(&uri) won't work because internal egui animation
+            // code creates one uri per gif animation frame.
+            for loader in ctx.loaders().image.lock().iter() {
+                loader.forget_all();
+            }
+            let meta = crate::models::preview_content::ImageMeta::from_uri(
+                title, metadata, uri, exif_data,
+            );
+
+            // Skip cache saving for GIF as requested
+            return Ok(meta);
+        }
+
+        // Create cache bytes from ORIGINAL image ONLY if it's not already an
+        // optimized format
+        match format {
+            image::ImageFormat::Png | image::ImageFormat::WebP => Some(true),
+            _ => Some(false),
+        }
+    } else {
+        None
+    }
+    .unwrap_or(false);
+
+    let mut img = match image::DynamicImage::from_decoder(decoder) {
+        Ok(img) => img,
+        Err(e) => return Err(format!("Failed to decode image: {e}")),
+    };
+
+    img.apply_orientation(orientation);
+
     // Extract basic image information
     let dimensions = img.dimensions();
     metadata.insert(
         metadata::IMG_DIMENSIONS.to_string(),
         format!("{}x{} pixels", dimensions.0, dimensions.1),
     );
+
+    let texture_id = format!("image_{}", entry.path.display());
+
+    if !skip_cache {
+        let title_clone = title.clone();
+        let metadata_clone = metadata.clone();
+        let exif_data_clone = exif_data.clone();
+        let img_clone = img.clone();
+
+        std::thread::spawn(move || {
+            let mut png_bytes = Vec::new();
+            if img_clone
+                .write_to(
+                    &mut std::io::Cursor::new(&mut png_bytes),
+                    image::ImageFormat::Png,
+                )
+                .is_ok()
+            {
+                let cached_content = CachedPreviewContent::Image(CachedImageMeta {
+                    title: title_clone,
+                    metadata: metadata_clone,
+                    exif_data: exif_data_clone,
+                    cache_bytes: Some(png_bytes),
+                    uri: None,
+                });
+                let cache_key = crate::utils::cache::calculate_cache_key(&entry);
+                if let Err(e) = crate::utils::cache::save_preview(&cache_key, &cached_content) {
+                    tracing::warn!("Failed to save image preview cache: {}", e);
+                }
+            }
+        });
+    }
+
+    // Resize for UI texture to save GPU memory
+    if let Some(w) = available_width {
+        let (width, height) = img.dimensions();
+        // Only resize if the image is larger than the available width
+        // Cast w to u32 for comparison and resizing
+        let w_u32 = w as u32;
+        if width > w_u32 {
+            let ratio = height as f64 / width as f64;
+            let new_height = (w as f64 * ratio) as u32;
+            img = img.resize(w_u32, new_height, image::imageops::FilterType::Triangle);
+        }
+    }
 
     // Get color type
     metadata.insert(
@@ -222,86 +323,20 @@ pub fn read_image_with_metadata(
                 "16 bits (grayscale)".to_string(),
             );
         }
-        _ => {
-            // Other color types
-        }
-    }
-
-    // Add file size
-    if let Ok(metadata_os) = std::fs::metadata(path) {
-        let size = metadata_os.len();
-        metadata.insert(
-            metadata::IMG_FILE_SIZE.to_string(),
-            humansize::format_size(size, humansize::BINARY),
-        );
-    }
-
-    // Try to get format-specific information
-    if let Ok(format) = image::ImageFormat::from_path(path) {
-        // Format the image format in a more readable way
-        let format_name = match format {
-            ImageFormat::Jpeg => "JPEG".to_string(),
-            ImageFormat::Png => "PNG".to_string(),
-            ImageFormat::Gif => "GIF".to_string(),
-            ImageFormat::WebP => "WebP".to_string(),
-            ImageFormat::Tiff => "TIFF".to_string(),
-            ImageFormat::Bmp => "BMP".to_string(),
-            ImageFormat::Ico => "ICO".to_string(),
-            ImageFormat::Tga => "TGA".to_string(),
-            ImageFormat::Dds => "DDS".to_string(),
-            ImageFormat::Farbfeld => "Farbfeld".to_string(),
-            ImageFormat::Avif => "AVIF".to_string(),
-            ImageFormat::Qoi => "QOI".to_string(),
-            _ => {
-                // Handle additional formats from image_extras
-                let format_str = format!("{format:?}");
-                match format_str.as_str() {
-                    "Ora" => "OpenRaster".to_string(),
-                    "Otb" => "OTA Bitmap".to_string(),
-                    "Pcx" => "PCX".to_string(),
-                    "Sgi" => "SGI".to_string(),
-                    "Wbmp" => "Wireless Bitmap".to_string(),
-                    "Xbm" => "X BitMap".to_string(),
-                    "Xpm" => "X PixMap".to_string(),
-                    _ => format_str,
-                }
-            }
-        };
-        metadata.insert(metadata::IMG_FORMAT.to_string(), format_name);
-
-        // Add format-specific metadata
-        if format == ImageFormat::Gif {
-            // For GIF files, use URI source to enable animation
-            let uri = image_path_to_uri(path);
-            // need to manually clear cache to reload the gif if there is a
-            // change in content.
-            //
-            // ctx.forget_image(&uri) won't work because internal egui animation
-            // code creates one uri per gif animation frame.
-            for loader in ctx.loaders().image.lock().iter() {
-                loader.forget_all();
-            }
-            return Ok(crate::models::preview_content::ImageMeta::from_uri(
-                title, metadata, uri, exif_data,
-            ));
-        }
+        _ => {}
     }
 
     // Convert the image to RGBA8 format for egui
     let rgba8_img = img.to_rgba8();
     let dimensions = rgba8_img.dimensions();
-
-    // Create egui::ColorImage from the image data
     let size = [dimensions.0 as _, dimensions.1 as _];
     let pixels = rgba8_img.as_flat_samples();
     let color_image = egui::ColorImage::from_rgba_unmultiplied(size, pixels.as_slice());
-
-    // Create a unique texture ID based on the path
-    let texture_id = format!("image_{}", path.display());
     let texture = ctx.load_texture(texture_id, color_image, egui::TextureOptions::default());
-    Ok(crate::models::preview_content::ImageMeta::new(
-        title, metadata, texture, exif_data,
-    ))
+
+    let meta = crate::models::preview_content::ImageMeta::new(title, metadata, texture, exif_data);
+
+    Ok(meta)
 }
 
 /// Render an interactive image with pan and zoom support
@@ -311,7 +346,6 @@ pub fn render_interactive(
     available_width: f32,
     available_height: f32,
 ) {
-    // Use a layout that maximizes image space and supports pan/zoom
     ui.vertical_centered(|ui| {
         let default_init_height = available_height * 0.90;
         let default_init_width = available_width * 0.90;

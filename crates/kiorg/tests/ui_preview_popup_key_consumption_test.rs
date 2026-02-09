@@ -68,7 +68,7 @@ fn test_preview_popup_consumes_number_keys() {
     // Wait for the text preview to load
     wait_for_condition(|| match harness.state().preview_content.as_ref() {
         Some(PreviewContent::HighlightedCode { .. }) => true,
-        Some(PreviewContent::Loading(..)) => {
+        Some(PreviewContent::Loading { .. }) => {
             harness.step();
             false
         }
@@ -182,7 +182,7 @@ fn test_preview_popup_consumes_other_keys() {
     // Wait for the text preview to load
     wait_for_condition(|| match harness.state().preview_content.as_ref() {
         Some(PreviewContent::HighlightedCode { .. }) => true,
-        Some(PreviewContent::Loading(..)) => {
+        Some(PreviewContent::Loading { .. }) => {
             harness.step();
             false
         }

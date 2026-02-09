@@ -144,7 +144,9 @@ fn test_search_cleared_on_directory_change() {
         0
     );
     assert_eq!(
-        harness.state().tab_manager.current_tab_ref().entries[0].path,
+        harness.state().tab_manager.current_tab_ref().entries[0]
+            .meta
+            .path,
         test_files[0]
     );
 

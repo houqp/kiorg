@@ -3,6 +3,8 @@
 //! This module defines the communication protocol between the host application
 //! and plugins using MessagePack serialization.
 
+use bytecheck::CheckBytes;
+use rkyv::{bytecheck, Archive, Deserialize as RkyvDeserialize, Serialize as RkyvSerialize};
 use serde::{Deserialize, Serialize};
 use std::io::{self, Read, Write};
 pub use uuid;
@@ -125,12 +127,18 @@ pub enum Component {
     Table(TableComponent),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Serialize, Deserialize, Archive, RkyvSerialize, RkyvDeserialize, CheckBytes,
+)]
+
 pub struct TitleComponent {
     pub text: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Serialize, Deserialize, Archive, RkyvSerialize, RkyvDeserialize, CheckBytes,
+)]
+
 pub struct TextComponent {
     pub text: String,
 }
@@ -174,7 +182,10 @@ pub enum ImageSource {
     },
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Serialize, Deserialize, Archive, RkyvSerialize, RkyvDeserialize, CheckBytes,
+)]
+
 pub struct TableComponent {
     pub headers: Option<Vec<String>>,
     pub rows: Vec<Vec<String>>,

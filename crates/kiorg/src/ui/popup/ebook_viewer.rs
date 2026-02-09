@@ -2,7 +2,6 @@ use crate::config::colors::AppColors;
 use crate::models::preview_content::EbookMeta;
 use crate::ui::file_list::truncate_text;
 use crate::ui::popup::window_utils::new_center_popup_window;
-use egui::Image;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, mpsc};
 
@@ -100,7 +99,7 @@ pub fn render_popup(
         // Add the ebook preview with maximum possible size
         ui.add_sized(
             egui::vec2(max_width, max_height),
-            Image::new(ebook_meta.cover.clone()).maintain_aspect_ratio(true),
+            egui::Image::new(ebook_meta.cover.clone()).maintain_aspect_ratio(true),
         );
     });
 }

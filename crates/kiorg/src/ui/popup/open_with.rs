@@ -53,7 +53,7 @@ impl OpenWithUiState {
         if !self.apps_loaded
             && let Some(entry) = app.tab_manager.current_tab_ref().selected_entry()
         {
-            self.apps = get_apps_for_file(&entry.path);
+            self.apps = get_apps_for_file(&entry.meta.path);
             self.apps_loaded = true;
         }
     }
@@ -177,7 +177,7 @@ pub fn confirm_open_with(app: &mut Kiorg, command: String) {
 
     let path_to_open = {
         let tab = app.tab_manager.current_tab_ref();
-        tab.selected_entry().map(|entry| entry.path.clone())
+        tab.selected_entry().map(|entry| entry.meta.path.clone())
     };
 
     if let Some(path) = path_to_open {

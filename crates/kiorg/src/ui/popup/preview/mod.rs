@@ -1,6 +1,9 @@
 //! Preview popup module for displaying file previews in a popup window
 
 use egui::Context;
+use std::sync::{Arc, Mutex};
+
+use tracing::error;
 
 use crate::app::Kiorg;
 use crate::config::colors::AppColors;
@@ -10,8 +13,6 @@ use crate::ui::popup::PopupApp;
 use crate::ui::popup::PopupType;
 use crate::ui::popup::window_utils::new_center_popup_window;
 use crate::ui::preview::loading::create_load_popup_meta_task;
-
-pub mod video;
 
 fn available_screen_width(ctx: &Context) -> f32 {
     let screen_width = ctx.content_rect().width();
@@ -23,19 +24,20 @@ fn available_screen_width(ctx: &Context) -> f32 {
 /// This function was extracted from input.rs to reduce complexity
 pub fn handle_show_file_popup(app: &mut Kiorg, ctx: &egui::Context) {
     // Store path and extension information before borrowing app mutably
-    let (is_dir, path, extension) = {
+    let (is_dir, entry, extension) = {
         let tab = app.tab_manager.current_tab_ref();
         if let Some(selected_entry) = tab.selected_entry() {
             (
                 selected_entry.is_dir,
-                &selected_entry.path,
-                crate::ui::preview::path_to_ext_info(&selected_entry.path),
+                selected_entry.clone(),
+                crate::ui::preview::path_to_ext_info(&selected_entry.meta.path),
             )
         } else {
             // No entry selected
             return;
         }
     };
+    let path = &entry.meta.path;
 
     if is_dir {
         // Show preview popup for directories
@@ -59,8 +61,8 @@ pub fn handle_show_file_popup(app: &mut Kiorg, ctx: &egui::Context) {
         let ctx_clone = ctx.clone();
 
         let available_width = available_screen_width(ctx);
-        let (rx, cancel_sender) = create_load_popup_meta_task(path_buf.clone(), move |path| {
-            let result = plugin.preview_popup(&path.to_string_lossy(), available_width);
+        let (rx, cancel_sender) = create_load_popup_meta_task(entry.meta.clone(), move |entry| {
+            let result = plugin.preview_popup(&entry.path.to_string_lossy(), available_width);
             match result {
                 Ok(plugin_content) => {
                     let content =
@@ -92,32 +94,36 @@ pub fn handle_show_file_popup(app: &mut Kiorg, ctx: &egui::Context) {
         crate::ui::preview::pdf_extensions!() => {
             // Not loaded or different type, start a new high-DPI load for PdfViewer
             let ctx_clone = ctx.clone();
-            let (rx, cancel_sender) = create_load_popup_meta_task(path.clone(), move |p| {
-                let mut meta = crate::ui::preview::pdf::extract_pdf_metadata(&p, &ctx_clone)?;
-                // Upgrade to high DPI for the popup
-                {
-                    let doc_lock = meta.pdf_file.lock().map_err(|_| "Failed to lock PDF doc")?;
-                    let (img, handle) = crate::ui::preview::pdf::render_pdf_page_high_dpi(
-                        &doc_lock,
-                        0,
-                        Some(&meta.file_id),
-                        &ctx_clone,
-                    )?;
-                    meta.cover = img;
-                    meta._texture_handle = Some(handle);
-                }
-                Ok(meta)
-            });
+            let path_buf = path.to_path_buf();
+            let (rx, cancel_sender) =
+                create_load_popup_meta_task(entry.meta.clone(), move |entry| {
+                    let (mut meta, doc) =
+                        crate::ui::preview::pdf::extract_pdf_metadata(entry, &ctx_clone)?;
+                    let doc_arc = Arc::new(Mutex::new(doc));
+                    // Upgrade to high DPI for the popup
+                    {
+                        let doc_lock = doc_arc.lock().map_err(|_| "Failed to lock PDF doc")?;
+                        let rendered = crate::ui::preview::pdf::render_pdf_page_high_dpi(
+                            &doc_lock,
+                            0,
+                            Some(&meta.file_id),
+                            &ctx_clone,
+                        )?;
+                        meta.cover = rendered.img_source;
+                        meta._texture_handle = Some(rendered.texture_handle);
+                    }
+                    Ok(crate::ui::popup::pdf_viewer::PdfViewerContent { meta, doc: doc_arc })
+                });
             app.show_popup = Some(PopupType::Pdf(Box::new(PopupApp::loading(
-                path.to_path_buf(),
+                path_buf,
                 rx,
                 cancel_sender,
             ))));
         }
         crate::ui::preview::epub_extensions!() => {
             let path_buf = path.to_path_buf();
-            let (rx, cancel_sender) = create_load_popup_meta_task(path_buf.clone(), |p| {
-                crate::ui::preview::ebook::extract_ebook_metadata(&p)
+            let (rx, cancel_sender) = create_load_popup_meta_task(entry.meta.clone(), |entry| {
+                crate::ui::preview::ebook::extract_ebook_metadata(entry)
             });
             app.show_popup = Some(PopupType::Ebook(Box::new(PopupApp::loading(
                 path_buf,
@@ -129,13 +135,14 @@ pub fn handle_show_file_popup(app: &mut Kiorg, ctx: &egui::Context) {
             let path_buf = path.to_path_buf();
             let ctx_clone = ctx.clone();
             let available_width = available_screen_width(ctx);
-            let (rx, cancel_sender) = create_load_popup_meta_task(path_buf.clone(), move |p| {
-                crate::ui::preview::image::read_image_with_metadata(
-                    &p,
-                    &ctx_clone,
-                    Some(available_width),
-                )
-            });
+            let (rx, cancel_sender) =
+                create_load_popup_meta_task(entry.meta.clone(), move |entry| {
+                    crate::ui::preview::image::read_image_with_metadata(
+                        entry,
+                        &ctx_clone,
+                        Some(available_width),
+                    )
+                });
             app.show_popup = Some(PopupType::Image(Box::new(PopupApp::loading(
                 path_buf,
                 rx,
@@ -149,13 +156,14 @@ pub fn handle_show_file_popup(app: &mut Kiorg, ctx: &egui::Context) {
             let path_buf = path.to_path_buf();
             let ctx_clone = ctx.clone();
             let available_width = available_screen_width(ctx);
-            let (rx, cancel_sender) = create_load_popup_meta_task(path_buf.clone(), move |p| {
-                crate::ui::preview::video::read_video_with_metadata(
-                    &p,
-                    &ctx_clone,
-                    Some(available_width),
-                )
-            });
+            let (rx, cancel_sender) =
+                create_load_popup_meta_task(entry.meta.clone(), move |entry| {
+                    crate::ui::preview::video::read_video_with_metadata(
+                        entry,
+                        &ctx_clone,
+                        Some(available_width),
+                    )
+                });
             app.show_popup = Some(PopupType::Video(Box::new(PopupApp::loading(
                 path_buf,
                 rx,
@@ -165,8 +173,8 @@ pub fn handle_show_file_popup(app: &mut Kiorg, ctx: &egui::Context) {
         v => {
             if let Some(syntax) = crate::ui::preview::text::find_syntax_from_path(path) {
                 match crate::ui::preview::text::load_full_text(path, Some(syntax.name.as_str())) {
-                    Ok(preview_content) => {
-                        app.preview_content = Some(preview_content);
+                    Ok(content) => {
+                        app.preview_content = Some(content);
                         app.show_popup = Some(PopupType::Preview);
                     }
                     Err(_) => {
@@ -185,7 +193,7 @@ pub fn close_popup(app: &mut Kiorg) {
     app.show_popup = None;
 }
 
-/// Shows the preview popup for the currently selected file
+/// Shows the generic preview popup for the currently selected file
 pub fn draw(ctx: &Context, app: &mut Kiorg) {
     if !matches!(app.show_popup, Some(PopupType::Preview)) {
         return;
@@ -266,17 +274,8 @@ fn render_content(
                 available_height,
             );
         }
-        PreviewContent::Video(video_meta) => {
-            video::render_popup(ui, video_meta, available_width, available_height);
-        }
-        PreviewContent::Pdf(pdf_meta) => {
-            crate::ui::popup::pdf_viewer::render_popup(
-                ui,
-                pdf_meta,
-                colors,
-                available_width,
-                available_height,
-            );
+        PreviewContent::Video(_) | PreviewContent::Pdf(_) => {
+            error!("Video and PDF should be rendered through their respective viewers");
         }
         PreviewContent::Ebook(ebook_meta) => {
             crate::ui::popup::ebook_viewer::render_popup(
@@ -310,7 +309,7 @@ fn render_content(
                 available_height,
             );
         }
-        PreviewContent::Loading(path, _, _) => {
+        PreviewContent::Loading { path, .. } => {
             render_loading(ui, path, colors);
         }
         // For other file types

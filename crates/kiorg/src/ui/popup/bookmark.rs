@@ -272,7 +272,7 @@ pub fn toggle_bookmark(app: &mut Kiorg) {
 
     // Only allow bookmarking directories, not files
     if selected_entry.is_dir {
-        let path = selected_entry.path.clone();
+        let path = selected_entry.meta.path.clone();
 
         // Toggle bookmark status
         if bookmarks.contains(&path) {

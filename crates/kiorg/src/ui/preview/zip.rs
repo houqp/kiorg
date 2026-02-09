@@ -1,12 +1,13 @@
 //! Zip archive preview module
 
-use crate::config::colors::AppColors;
-use crate::models::preview_content::ZipEntry;
-use crate::ui::preview::{prefix_dir_name, prefix_file_name};
 use egui::RichText;
 use std::fs::File;
-use std::path::Path;
 use zip::ZipArchive;
+
+use crate::config::colors::AppColors;
+use crate::models::dir_entry::DirEntryMeta;
+use crate::models::preview_content::{CachedPreviewContent, ZipEntry};
+use crate::ui::preview::{prefix_dir_name, prefix_file_name};
 
 /// Render zip archive content
 pub fn render(ui: &mut egui::Ui, entries: &[ZipEntry], colors: &AppColors) {
@@ -18,7 +19,6 @@ pub fn render(ui: &mut egui::Ui, entries: &[ZipEntry], colors: &AppColors) {
     );
     ui.add_space(5.0);
 
-    // Constants for the list
     // TODO: calculate the correct row height
     const ROW_HEIGHT: f32 = 10.0;
 
@@ -49,7 +49,8 @@ pub fn render(ui: &mut egui::Ui, entries: &[ZipEntry], colors: &AppColors) {
 }
 
 /// Read entries from a zip file and return them as a vector of `ZipEntry`
-pub fn read_zip_entries(path: &Path) -> Result<Vec<ZipEntry>, String> {
+pub fn read_zip_entries(entry: DirEntryMeta) -> Result<Vec<ZipEntry>, String> {
+    let path = &entry.path;
     // Open the zip file
     let file = File::open(path).map_err(|e| format!("Failed to open zip file: {e}"))?;
 
@@ -81,6 +82,15 @@ pub fn read_zip_entries(path: &Path) -> Result<Vec<ZipEntry>, String> {
         (true, false) => std::cmp::Ordering::Less,
         (false, true) => std::cmp::Ordering::Greater,
         _ => a.name.cmp(&b.name),
+    });
+
+    // Spawn background task to save cache
+    let cached = CachedPreviewContent::Zip(entries.clone());
+    std::thread::spawn(move || {
+        let cache_key = crate::utils::cache::calculate_cache_key(&entry);
+        if let Err(e) = crate::utils::cache::save_preview(&cache_key, &cached) {
+            tracing::warn!("Failed to save zip preview cache: {}", e);
+        }
     });
 
     Ok(entries)

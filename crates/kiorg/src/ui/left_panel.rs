@@ -41,18 +41,18 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) -> Option<Pat
 
                 // Draw all rows
                 for (i, entry) in parent_entries.iter().enumerate() {
-                    let is_bookmarked = bookmarks.contains(&entry.path);
+                    let is_bookmarked = bookmarks.contains(&entry.meta.path);
                     // Check if this entry is in the clipboard as a cut or copy operation
                     let (is_in_cut_clipboard, is_in_copy_clipboard) = match &app.clipboard {
                         Some(crate::app::Clipboard::Cut(paths)) => {
-                            if paths.contains(&entry.path) {
+                            if paths.contains(&entry.meta.path) {
                                 (true, false)
                             } else {
                                 (false, false)
                             }
                         }
                         Some(crate::app::Clipboard::Copy(paths)) => {
-                            if paths.contains(&entry.path) {
+                            if paths.contains(&entry.meta.path) {
                                 (false, true)
                             } else {
                                 (false, false)
@@ -70,12 +70,12 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) -> Option<Pat
                         is_in_copy_clipboard,
                     );
                     if response.clicked() {
-                        path_to_navigate = Some(entry.path.clone());
+                        path_to_navigate = Some(entry.meta.path.clone());
                     }
 
                     // Also navigate on double-click
                     if response.double_clicked() {
-                        path_to_navigate = Some(entry.path.clone());
+                        path_to_navigate = Some(entry.meta.path.clone());
                     }
                 }
 
