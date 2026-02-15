@@ -1,8 +1,6 @@
 use crate::config::Config as AppConfig;
 use crate::models::action_history::TabActionHistory;
 use crate::models::dir_entry::DirEntry;
-use chrono::{DateTime, Local};
-use humansize::{BINARY, format_size};
 use nucleo::{Config as NucleoConfig, Matcher, Utf32Str};
 use std::path::PathBuf;
 
@@ -45,7 +43,7 @@ pub struct Tab {
     // Reverse index mapping DirEntry path to index in entries (private)
     path_to_index: std::collections::HashMap<PathBuf, usize>,
     // Cached filtered entries to avoid re-filtering on every draw
-    cached_filtered_entries: Vec<(DirEntry, usize)>,
+    cached_filtered_entries: Vec<usize>,
 }
 
 // Private helper function for sorting DirEntry slices
@@ -308,7 +306,7 @@ impl Tab {
         fuzzy: bool,
     ) {
         // Inline the filtering logic instead of calling get_filtered_entries_with_indices_and_case
-        let filtered_iter = match query.as_ref() {
+        let filtered_indices = match query.as_ref() {
             Some(q) if fuzzy => {
                 let mut config = NucleoConfig::DEFAULT;
                 config.ignore_case = case_insensitive;
@@ -329,7 +327,7 @@ impl Tab {
 
                     // TODO: rank result by score
                     if let Some(_score) = matcher.fuzzy_match(haystack_utf32, needle_utf32) {
-                        matches.push((entry.clone(), index));
+                        matches.push(index);
                     }
                 }
 
@@ -341,7 +339,7 @@ impl Tab {
                     .iter()
                     .enumerate()
                     .filter(move |(_, entry)| entry.name.to_lowercase().contains(&lower_query))
-                    .map(|(i, e)| (e.clone(), i))
+                    .map(|(i, _)| i)
                     .collect()
             }
             Some(q) => self
@@ -349,22 +347,17 @@ impl Tab {
                 .iter()
                 .enumerate()
                 .filter(move |(_, entry)| entry.name.contains(q))
-                .map(|(i, e)| (e.clone(), i))
+                .map(|(i, _)| i)
                 .collect(),
-            None => self
-                .entries
-                .iter()
-                .enumerate()
-                .map(|(i, e)| (e.clone(), i))
-                .collect(),
+            None => (0..self.entries.len()).collect(),
         };
 
-        self.cached_filtered_entries = filtered_iter;
+        self.cached_filtered_entries = filtered_indices;
     }
 
     // Returns cached filtered entries as references to avoid allocation
     #[must_use]
-    pub fn get_cached_filtered_entries(&self) -> &Vec<(DirEntry, usize)> {
+    pub fn get_cached_filtered_entries(&self) -> &Vec<usize> {
         &self.cached_filtered_entries
     }
 }
@@ -420,27 +413,13 @@ fn read_dir_entries(path: &PathBuf, show_hidden: bool) -> Vec<DirEntry> {
                     .unwrap_or(std::time::SystemTime::UNIX_EPOCH);
                 let size = if is_dir { 0 } else { metadata.len() };
 
-                // Format the modification date once during creation
-                let formatted_modified = DateTime::<Local>::from(modified)
-                    .format("%Y-%m-%d %H:%M:%S")
-                    .to_string();
-
-                // Format the size once during creation
-                let formatted_size = if is_dir {
-                    String::new()
-                } else {
-                    format_size(size, BINARY)
-                };
-
-                Some(DirEntry {
+                Some(DirEntry::new(
                     name,
-                    meta: crate::models::dir_entry::DirEntryMeta { path, modified },
+                    crate::models::dir_entry::DirEntryMeta { path, modified },
                     is_dir,
                     is_symlink,
                     size,
-                    formatted_modified,
-                    formatted_size,
-                })
+                ))
             })
             .collect()
     } else {
@@ -672,30 +651,19 @@ mod tests {
     use std::path::PathBuf;
     use std::time::{Duration, SystemTime};
 
-    // Helper to create DirEntry instances for testing
     fn create_entry(name: &str, is_dir: bool, modified_secs_ago: u64, size: u64) -> DirEntry {
         let modified = SystemTime::now() - Duration::from_secs(modified_secs_ago);
-        let formatted_modified = DateTime::<Local>::from(modified)
-            .format("%Y-%m-%d %H:%M:%S")
-            .to_string();
         let actual_size = if is_dir { 0 } else { size };
-        let formatted_size = if is_dir {
-            String::new()
-        } else {
-            format_size(actual_size, BINARY)
-        };
-        DirEntry {
-            name: name.to_string(),
-            meta: crate::models::dir_entry::DirEntryMeta {
+        DirEntry::new(
+            name.to_string(),
+            crate::models::dir_entry::DirEntryMeta {
                 path: PathBuf::from(name),
                 modified,
             },
             is_dir,
-            is_symlink: false, // Default to false for test entries
-            size: actual_size, // Use 0 for dirs, provided size for files
-            formatted_modified,
-            formatted_size,
-        }
+            false, // is_symlink
+            actual_size,
+        )
     }
 
     // Helper to extract names for assertion
@@ -983,7 +951,7 @@ mod tests {
         let fuzzy_rs_results: Vec<String> = tab
             .get_cached_filtered_entries()
             .iter()
-            .map(|(entry, _)| entry.name.clone())
+            .map(|&i| tab.entries[i].name.clone())
             .collect();
         assert_eq!(fuzzy_rs_results.len(), 2);
         assert!(fuzzy_rs_results.contains(&"main.rs".to_string()));
@@ -994,7 +962,7 @@ mod tests {
         let exact_rt_results: Vec<String> = tab
             .get_cached_filtered_entries()
             .iter()
-            .map(|(entry, _)| entry.name.clone())
+            .map(|&i| tab.entries[i].name.clone())
             .collect();
         assert_eq!(exact_rt_results.len(), 0);
 
@@ -1003,7 +971,7 @@ mod tests {
         let fuzzy_cfg_results: Vec<String> = tab
             .get_cached_filtered_entries()
             .iter()
-            .map(|(entry, _)| entry.name.clone())
+            .map(|&i| tab.entries[i].name.clone())
             .collect();
         assert_eq!(fuzzy_cfg_results.len(), 1);
         assert!(fuzzy_cfg_results.contains(&"config.toml".to_string()));
@@ -1013,7 +981,7 @@ mod tests {
         let fuzzy_rt_results: Vec<String> = tab
             .get_cached_filtered_entries()
             .iter()
-            .map(|(entry, _)| entry.name.clone())
+            .map(|&i| tab.entries[i].name.clone())
             .collect();
         assert_eq!(fuzzy_rt_results.len(), 2); // "readme.txt" and "rust-project.json" both match "rt"
         assert!(fuzzy_rt_results.contains(&"rust-project.json".to_string()));
@@ -1025,7 +993,7 @@ mod tests {
         let case_sensitive_results: Vec<String> = tab
             .get_cached_filtered_entries()
             .iter()
-            .map(|(entry, _)| entry.name.clone())
+            .map(|&i| tab.entries[i].name.clone())
             .collect();
         assert_eq!(case_sensitive_results.len(), 1);
         assert!(case_sensitive_results.contains(&"config.toml".to_string()));
@@ -1035,7 +1003,7 @@ mod tests {
         let case_sensitive_upper_results: Vec<String> = tab
             .get_cached_filtered_entries()
             .iter()
-            .map(|(entry, _)| entry.name.clone())
+            .map(|&i| tab.entries[i].name.clone())
             .collect();
         assert_eq!(case_sensitive_upper_results.len(), 0); // Should not match "config.toml"
 
@@ -1044,7 +1012,7 @@ mod tests {
         let case_insensitive_results: Vec<String> = tab
             .get_cached_filtered_entries()
             .iter()
-            .map(|(entry, _)| entry.name.clone())
+            .map(|&i| tab.entries[i].name.clone())
             .collect();
         assert_eq!(case_insensitive_results.len(), 1);
         assert!(case_insensitive_results.contains(&"config.toml".to_string()));
@@ -1054,12 +1022,13 @@ mod tests {
         let results_with_indices = tab.get_cached_filtered_entries();
 
         // Find the original indices for our matched files
-        for (entry, original_index) in results_with_indices {
+        for &original_index in results_with_indices {
+            let entry = &tab.entries[original_index];
             if entry.name == "main.rs" {
-                assert_eq!(*original_index, 4); // main.rs was the 5th entry (index 4)
+                assert_eq!(original_index, 4); // main.rs was the 5th entry (index 4)
             }
             if entry.name == "rust-project.json" {
-                assert_eq!(*original_index, 3); // rust-project.json was the 4th entry (index 3)
+                assert_eq!(original_index, 3); // rust-project.json was the 4th entry (index 3)
             }
         }
 

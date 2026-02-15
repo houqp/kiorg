@@ -8,6 +8,8 @@ pub struct DirEntryMeta {
     pub modified: SystemTime,
 }
 
+use std::sync::OnceLock;
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DirEntry {
     pub name: String,
@@ -15,22 +17,59 @@ pub struct DirEntry {
     pub is_dir: bool,
     pub is_symlink: bool,
     pub size: u64,
-    pub formatted_modified: String,
-    pub formatted_size: String,
+    #[serde(skip)]
+    pub(crate) formatted_size: OnceLock<String>,
+    #[serde(skip)]
+    pub(crate) formatted_modified: OnceLock<String>,
 }
 
 impl DirEntry {
+    pub fn new(
+        name: String,
+        meta: DirEntryMeta,
+        is_dir: bool,
+        is_symlink: bool,
+        size: u64,
+    ) -> Self {
+        Self {
+            name,
+            meta,
+            is_dir,
+            is_symlink,
+            size,
+            formatted_size: OnceLock::new(),
+            formatted_modified: OnceLock::new(),
+        }
+    }
+
+    pub fn formatted_size(&self) -> &str {
+        self.formatted_size
+            .get_or_init(|| crate::utils::format::format_size(self.size, self.is_dir))
+    }
+
+    pub fn formatted_modified(&self) -> &str {
+        self.formatted_modified
+            .get_or_init(|| crate::utils::format::format_modified(self.meta.modified))
+    }
+
     pub fn accessibility_text(&self) -> String {
         let file_type = if self.is_dir { "folder" } else { "file" };
+
         if self.is_symlink {
             format!(
                 "{} {}, symbolic link, modified {}, size {}",
-                file_type, self.name, self.formatted_modified, self.formatted_size
+                file_type,
+                self.name,
+                self.formatted_modified(),
+                self.formatted_size()
             )
         } else {
             format!(
                 "{} {}, modified {}, size {}",
-                file_type, self.name, self.formatted_modified, self.formatted_size
+                file_type,
+                self.name,
+                self.formatted_modified(),
+                self.formatted_size()
             )
         }
     }
@@ -54,14 +93,13 @@ mod tests {
             is_dir: false,
             is_symlink: false,
             size: 100,
-            formatted_modified: "1970-01-01 00:00:00".to_string(),
-            formatted_size: "100 B".to_string(),
+            formatted_size: OnceLock::new(),
+            formatted_modified: OnceLock::new(),
         };
 
         assert_eq!(entry.name, "test.txt");
         assert_eq!(entry.meta.path, PathBuf::from("/tmp/test.txt"));
         assert!(!entry.is_dir);
         assert_eq!(entry.size, 100);
-        assert_eq!(entry.formatted_size, "100 B");
     }
 }

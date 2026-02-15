@@ -600,9 +600,10 @@ impl Kiorg {
     pub fn select_all_entries(&mut self) {
         let tab = self.tab_manager.current_tab_mut();
         tab.marked_entries.clear();
-        let filtered_entries = tab.get_cached_filtered_entries().clone();
-        for (entry, _original_index) in filtered_entries.into_iter() {
-            tab.marked_entries.insert(entry.meta.path);
+        let filtered_indices = tab.get_cached_filtered_entries().clone();
+        for idx in filtered_indices.into_iter() {
+            tab.marked_entries
+                .insert(tab.entries[idx].meta.path.clone());
         }
     }
 
@@ -665,7 +666,7 @@ impl Kiorg {
         // Find the current position in the *filtered* list
         let current_filtered_index = entries
             .iter()
-            .position(|(_, original_index)| *original_index == tab.selected_index);
+            .position(|original_index| *original_index == tab.selected_index);
 
         if let Some(current_idx) = current_filtered_index {
             let new_filtered_index = current_idx as isize + delta;
@@ -673,7 +674,7 @@ impl Kiorg {
             // Clamp the new index to the bounds of the filtered list
             if new_filtered_index >= 0 && new_filtered_index < entries.len() as isize {
                 // Get the original index from the new position in the filtered list
-                let new_original_index = entries[new_filtered_index as usize].1;
+                let new_original_index = entries[new_filtered_index as usize];
                 tab.update_selection(new_original_index);
                 self.ensure_selected_visible = true;
                 self.selection_changed = true;
@@ -681,8 +682,8 @@ impl Kiorg {
         } else {
             // If the current selection is not in the filtered list (e.g., after filter change),
             // select the first item in the filtered list.
-            if let Some((_, first_original_index)) = entries.first() {
-                tab.update_selection(*first_original_index);
+            if let Some(&first_original_index) = entries.first() {
+                tab.update_selection(first_original_index);
                 self.ensure_selected_visible = true;
                 self.selection_changed = true;
             }
@@ -709,7 +710,7 @@ impl Kiorg {
         // Find current position in filtered list
         let current_filtered_index = entries
             .iter()
-            .position(|(_, original_index)| *original_index == tab.selected_index);
+            .position(|original_index| *original_index == tab.selected_index);
 
         if let Some(current_idx) = current_filtered_index {
             let new_filtered_index = if direction > 0 {
@@ -929,6 +930,9 @@ impl Kiorg {
         }
 
         pdfium_bind::cleanup_cache();
+
+        #[cfg(any(test, feature = "testing"))]
+        crate::utils::cache::purge_cache_dir();
     }
 
     fn save_app_state(&self) -> Result<(), Box<dyn std::error::Error>> {

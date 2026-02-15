@@ -323,7 +323,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                 // Get cached filtered entries or compute them if cache is empty
                 // Get the current tab reference for reading
                 let tab_ref = app.tab_manager.current_tab_ref();
-                let filtered_entries = tab_ref.get_cached_filtered_entries();
+                let filtered_indices = tab_ref.get_cached_filtered_entries();
 
                 ui.set_min_height(available_height);
                 ui.set_max_height(available_height); // Constrain the inner vertical area
@@ -333,7 +333,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                     .auto_shrink([false; 2])
                     .max_height(available_height); // Use available_height
 
-                let total_rows = filtered_entries.len();
+                let total_rows = filtered_indices.len();
 
                 let ui_spacing = ui.spacing().item_spacing.y;
                 let spaced_row_height = ROW_HEIGHT + ui_spacing;
@@ -341,9 +341,11 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                 if app.ensure_selected_visible {
                     if let Some(selected_entry) = tab_ref.selected_entry() {
                         // Find the position of the selected entry in the filtered list
-                        if let Some(filtered_index) = filtered_entries
-                            .iter()
-                            .position(|(entry, _)| entry.meta.path == selected_entry.meta.path)
+                        if let Some(filtered_index) =
+                            filtered_indices.iter().position(|&original_index| {
+                                tab_ref.entries[original_index].meta.path
+                                    == selected_entry.meta.path
+                            })
                         {
                             scroll_area = scroll_by_filtered_index(
                                 scroll_area,
@@ -365,7 +367,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                     let available_width = scroll_ui.available_width();
                     scroll_ui.set_min_width(available_width);
 
-                    if filtered_entries.is_empty() {
+                    if filtered_indices.is_empty() {
                         scroll_ui.label("No matching entries found.");
                         return;
                     }
@@ -374,13 +376,14 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
 
                     for row_index in row_range {
                         // Get the entry and original index for the current visible row from the filtered list
-                        let (entry, original_index) = &filtered_entries[row_index];
+                        let original_index = filtered_indices[row_index];
+                        let entry = &tab_ref.entries[original_index];
 
-                        let is_selected = *original_index == tab_ref.selected_index;
+                        let is_selected = original_index == tab_ref.selected_index;
 
                         // Check if this entry is in the range selection range
                         let is_in_range_selection = if let Some((start, end)) = selection_range {
-                            *original_index >= start && *original_index <= end
+                            original_index >= start && original_index <= end
                         } else {
                             false
                         };
@@ -445,7 +448,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
 
                         // Check for clicks to update selection state (captured outside)
                         if row_response.clicked() {
-                            new_selected_index = Some(*original_index);
+                            new_selected_index = Some(original_index);
                         }
                         // double_clicked() and clicked() return true at the same time
                         if row_response.double_clicked() {
@@ -466,7 +469,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
 
                         // --- Add Context Menu for Rows ---
                         row_response.context_menu(|menu_ui| {
-                            new_selected_index = Some(*original_index);
+                            new_selected_index = Some(original_index);
                             // Capture the action, don't perform it yet
                             // Pass only the necessary booleans, not the whole app
                             let has_marked_entries = !tab_ref.marked_entries.is_empty();

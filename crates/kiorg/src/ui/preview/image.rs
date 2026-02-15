@@ -164,7 +164,7 @@ pub fn read_image_with_metadata(
         let size = metadata_os.len();
         metadata.insert(
             metadata::IMG_FILE_SIZE.to_string(),
-            humansize::format_size(size, humansize::BINARY),
+            crate::utils::format::format_size(size, false),
         );
     }
 
