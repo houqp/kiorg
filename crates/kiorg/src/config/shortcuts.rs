@@ -1008,7 +1008,7 @@ pub mod shortcuts_helpers {
                 }
 
                 if shortcut.shift {
-                    parts.push("⇧".to_string()); // Shift symbol on all platforms
+                    parts.push("Shift".to_string());
                 }
 
                 #[cfg(target_os = "macos")]

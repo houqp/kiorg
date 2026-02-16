@@ -197,8 +197,8 @@ fn test_shortcut_with_modifiers() {
     let shift_question_display =
         shortcuts_helpers::get_shortcut_display(&shortcuts, ShortcutAction::ShowHelp);
     assert_eq!(
-        shift_question_display[0], "⇧+?",
-        "Shift+? should be displayed as '⇧+?', got: {:?}",
+        shift_question_display[0], "Shift+?",
+        "Shift+? should be displayed as 'Shift+?', got: {:?}",
         shift_question_display
     );
 
@@ -206,8 +206,8 @@ fn test_shortcut_with_modifiers() {
     let shift_t_display =
         shortcuts_helpers::get_shortcut_display(&shortcuts, ShortcutAction::OpenTerminal);
     assert_eq!(
-        shift_t_display[0], "⇧+t",
-        "Shift+T should be displayed as '⇧+t', got: {:?}",
+        shift_t_display[0], "Shift+t",
+        "Shift+T should be displayed as 'Shift+t', got: {:?}",
         shift_t_display
     );
 
@@ -216,14 +216,14 @@ fn test_shortcut_with_modifiers() {
         shortcuts_helpers::get_shortcut_display(&shortcuts, ShortcutAction::Exit);
     #[cfg(target_os = "macos")]
     assert_eq!(
-        ctrl_shift_q_display[0], "⌃+⇧+q",
-        "Ctrl+Shift+Q should be displayed as '⌃+⇧+q' on macOS, got: {:?}",
+        ctrl_shift_q_display[0], "⌃+Shift+q",
+        "Ctrl+Shift+Q should be displayed as '⌃+Shift+q' on macOS, got: {:?}",
         ctrl_shift_q_display
     );
     #[cfg(not(target_os = "macos"))]
     assert_eq!(
-        ctrl_shift_q_display[0], "Ctrl+⇧+q",
-        "Ctrl+Shift+Q should be displayed as 'Ctrl+⇧+q' on non-macOS, got: {:?}",
+        ctrl_shift_q_display[0], "Ctrl+Shift+q",
+        "Ctrl+Shift+Q should be displayed as 'Ctrl+Shift+q' on non-macOS, got: {:?}",
         ctrl_shift_q_display
     );
 }
