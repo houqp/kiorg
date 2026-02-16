@@ -9,6 +9,7 @@ use crate::config::colors::AppColors;
 use crate::models::dir_entry::DirEntryMeta;
 use crate::models::preview_content::{CachedPreviewContent, TarEntry};
 use crate::ui::preview::{prefix_dir_name, prefix_file_name};
+use crate::utils::preview_cache;
 
 /// Render tar archive content
 pub fn render(ui: &mut egui::Ui, entries: &[TarEntry], colors: &AppColors) {
@@ -136,8 +137,8 @@ pub fn read_tar_entries(entry: DirEntryMeta) -> Result<Vec<TarEntry>, String> {
     // Spawn background task to save cache
     let cached = CachedPreviewContent::Tar(entries.clone());
     std::thread::spawn(move || {
-        let cache_key = crate::utils::cache::calculate_cache_key(&entry);
-        if let Err(e) = crate::utils::cache::save_preview(&cache_key, &cached) {
+        let cache_key = preview_cache::calculate_cache_key(&entry);
+        if let Err(e) = preview_cache::save_preview(&cache_key, &cached) {
             tracing::warn!("Failed to save tar preview cache: {}", e);
         }
     });

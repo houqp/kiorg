@@ -3,6 +3,7 @@
 use crate::config::colors::AppColors;
 use crate::models::dir_entry::DirEntryMeta;
 use crate::models::preview_content::{CachedPdfMeta, CachedPreviewContent, PdfMeta, metadata};
+use crate::utils::preview_cache;
 use egui::{ColorImage, RichText, TextureOptions, widgets::ImageSource};
 use pdfium_bind::PdfDocument;
 
@@ -271,8 +272,8 @@ pub fn extract_pdf_metadata(
             page_count: page_count_clone,
             cache_bytes,
         });
-        let cache_key = crate::utils::cache::calculate_cache_key(&entry);
-        if let Err(e) = crate::utils::cache::save_preview(&cache_key, &cached) {
+        let cache_key = preview_cache::calculate_cache_key(&entry);
+        if let Err(e) = preview_cache::save_preview(&cache_key, &cached) {
             tracing::warn!("Failed to save PDF preview cache: {}", e);
         }
     });

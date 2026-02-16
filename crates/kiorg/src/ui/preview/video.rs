@@ -11,6 +11,7 @@ use crate::models::preview_content::{
     CachedPreviewContent, CachedVideoMeta, FfmpegMeta, InputMeta, StreamMeta, StreamTypeMeta,
     VideoMeta, metadata,
 };
+use crate::utils::preview_cache;
 use tracing::{debug, warn};
 
 const MIN_SUFFICIENT_QUALITY_SCORE: f64 = 0.5;
@@ -461,8 +462,8 @@ fn extract_video_thumbnail(
                 ffmpeg: ffmpeg_meta_clone.into(),
                 cache_bytes: png_bytes,
             });
-            let cache_key = crate::utils::cache::calculate_cache_key(&entry);
-            if let Err(e) = crate::utils::cache::save_preview(&cache_key, &cached_content) {
+            let cache_key = preview_cache::calculate_cache_key(&entry);
+            if let Err(e) = preview_cache::save_preview(&cache_key, &cached_content) {
                 tracing::warn!("Failed to save video preview cache: {}", e);
             }
         }

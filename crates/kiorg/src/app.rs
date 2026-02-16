@@ -932,7 +932,7 @@ impl Kiorg {
         pdfium_bind::cleanup_cache();
 
         #[cfg(any(test, feature = "testing"))]
-        crate::utils::cache::purge_cache_dir();
+        crate::utils::preview_cache::purge_cache_dir();
     }
 
     fn save_app_state(&self) -> Result<(), Box<dyn std::error::Error>> {
@@ -1022,7 +1022,7 @@ impl eframe::App for Kiorg {
 
         // Update preview cache only if selection changed
         if self.selection_changed {
-            preview::update_cache(self, ctx);
+            preview::update_selected_cache(self, ctx);
             self.selection_changed = false; // Reset flag after update
         }
 

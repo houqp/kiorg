@@ -15,6 +15,7 @@ pub mod zip;
 
 use crate::app::Kiorg;
 use crate::models::preview_content::PreviewContent;
+use crate::utils::preview_cache;
 
 // return extension if available, otherwise return file name
 // returned values are always lowercased
@@ -133,7 +134,7 @@ pub fn prefix_dir_name(name: &str) -> String {
 }
 
 /// Update the preview cache based on the selected file
-pub fn update_cache(app: &mut Kiorg, ctx: &egui::Context) {
+pub fn update_selected_cache(app: &mut Kiorg, ctx: &egui::Context) {
     let tab = app.tab_manager.current_tab_ref();
     let selected_path = tab
         .entries
@@ -171,8 +172,8 @@ pub fn update_cache(app: &mut Kiorg, ctx: &egui::Context) {
         return;
     }
 
-    let cache_key = crate::utils::cache::calculate_cache_key(&entry.meta);
-    if let Some(cached) = crate::utils::cache::load_preview(&cache_key) {
+    let cache_key = preview_cache::calculate_cache_key(&entry.meta);
+    if let Some(cached) = preview_cache::load_preview(&cache_key) {
         match cached.try_into_preview_content(ctx) {
             Ok(content) => {
                 app.preview_content = Some(content);
@@ -184,7 +185,7 @@ pub fn update_cache(app: &mut Kiorg, ctx: &egui::Context) {
                     entry.meta.path,
                     e
                 );
-                crate::utils::cache::delete_preview(&cache_key);
+                preview_cache::delete_preview(&cache_key);
             }
         }
     }

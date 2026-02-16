@@ -5,6 +5,7 @@ use egui::{RichText, TextureId, Vec2, load::SizedTexture, widgets::ImageSource};
 use crate::config::colors::AppColors;
 use crate::models::dir_entry::DirEntryMeta;
 use crate::models::preview_content::{CachedEbookMeta, CachedPreviewContent, EbookMeta, metadata};
+use crate::utils::preview_cache;
 
 /// Render Ebook content
 pub fn render(
@@ -231,8 +232,8 @@ pub fn extract_ebook_metadata(entry: DirEntryMeta) -> Result<EbookMeta, String> 
                     page_count,
                     cache_bytes: png_bytes,
                 });
-                let cache_key = crate::utils::cache::calculate_cache_key(&entry);
-                if let Err(e) = crate::utils::cache::save_preview(&cache_key, &cached_content) {
+                let cache_key = preview_cache::calculate_cache_key(&entry);
+                if let Err(e) = preview_cache::save_preview(&cache_key, &cached_content) {
                     tracing::warn!("Failed to save ebook preview cache: {}", e);
                 }
             }
