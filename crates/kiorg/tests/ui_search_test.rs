@@ -278,7 +278,7 @@ fn test_search_filters_realtime_without_enter() {
     // Verify the filtered entries are correct
     let filtered_names: Vec<&str> = filtered_entries
         .iter()
-        .map(|(entry, _)| entry.name.as_str())
+        .map(|&index| tab.entries[index].name.as_str())
         .collect();
     assert!(
         filtered_names.contains(&"apple.txt"),
@@ -305,7 +305,7 @@ fn test_search_filters_realtime_without_enter() {
         "Should have 1 filtered entry after typing 'app'"
     );
     assert_eq!(
-        filtered_entries[0].0.name, "apple.txt",
+        tab.entries[filtered_entries[0]].name, "apple.txt",
         "Should only match apple.txt"
     );
 
@@ -390,7 +390,7 @@ fn test_search_escape_clears_query_and_resets_file_list() {
         "Should have 1 filtered entry after typing 'apple'"
     );
     assert_eq!(
-        filtered_entries[0].0.name, "apple.txt",
+        tab.entries[filtered_entries[0]].name, "apple.txt",
         "Should only match apple.txt"
     );
 
@@ -416,7 +416,7 @@ fn test_search_escape_clears_query_and_resets_file_list() {
     // Verify all files are visible again
     let filtered_names: Vec<&str> = filtered_entries
         .iter()
-        .map(|(entry, _)| entry.name.as_str())
+        .map(|&index| tab.entries[index].name.as_str())
         .collect();
     assert!(
         filtered_names.contains(&"apple.txt"),
@@ -566,7 +566,8 @@ fn test_fs_notify_preserves_search_query() {
 
     // The filtered results should still only show files containing "test"
     // (newfile.txt should NOT appear since it doesn't contain "test")
-    for (entry, _) in filtered_entries_after.iter() {
+    for &index in filtered_entries_after.iter() {
+        let entry = &tab.entries[index];
         assert!(
             entry.name.contains("test"),
             "BUG: After filesystem notification, search filtering should still work. File '{}' should not appear in filtered results for query 'test'",
@@ -577,7 +578,7 @@ fn test_fs_notify_preserves_search_query() {
     // Verify the new file is not in the filtered results (since it doesn't match "test")
     let new_file_in_filtered = filtered_entries_after
         .iter()
-        .any(|(entry, _)| entry.name == "newfile.txt");
+        .any(|&index| tab.entries[index].name == "newfile.txt");
     assert!(
         !new_file_in_filtered,
         "BUG: New file 'newfile.txt' should not appear in filtered results for query 'test'"

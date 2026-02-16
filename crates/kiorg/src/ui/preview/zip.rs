@@ -43,7 +43,20 @@ pub fn render(ui: &mut egui::Ui, entries: &[ZipEntry], colors: &AppColors) {
                     RichText::new(prefix_file_name(&entry.name))
                 };
 
-                ui.label(entry_text.color(colors.fg));
+                ui.horizontal(|ui| {
+                    ui.label(entry_text.color(colors.fg));
+                    if !entry.is_dir {
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            ui.label(
+                                RichText::new(crate::utils::format::format_size(
+                                    entry.size,
+                                    entry.is_dir,
+                                ))
+                                .color(colors.fg_light),
+                            );
+                        });
+                    }
+                });
             }
         });
 }
@@ -67,11 +80,13 @@ pub fn read_zip_entries(entry: DirEntryMeta) -> Result<Vec<ZipEntry>, String> {
             .by_index(i)
             .map_err(|e| format!("Failed to read zip entry: {e}"))?;
 
+        let size = file.size();
+        let is_dir = file.is_dir();
         // Create a ZipEntry from the file
         let entry = ZipEntry {
             name: file.name().to_string(),
-            size: file.size(),
-            is_dir: file.is_dir(),
+            size,
+            is_dir,
         };
 
         entries.push(entry);

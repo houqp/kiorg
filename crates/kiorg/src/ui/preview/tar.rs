@@ -60,9 +60,9 @@ pub fn render(ui: &mut egui::Ui, entries: &[TarEntry], colors: &AppColors) {
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         if !entry.is_dir {
                             ui.label(
-                                RichText::new(humansize::format_size(
+                                RichText::new(crate::utils::format::format_size(
                                     entry.size,
-                                    humansize::BINARY,
+                                    entry.is_dir,
                                 ))
                                 .color(colors.fg_light),
                             );

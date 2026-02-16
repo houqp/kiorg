@@ -327,7 +327,7 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
     ui.painter().text(
         cursor + egui::vec2(0.0, ROW_HEIGHT / 2.0),
         Align2::LEFT_CENTER,
-        &entry.formatted_modified,
+        entry.formatted_modified(),
         egui::FontId::proportional(SECONDARY_COLUMN_FONT_SIZE),
         secondary_font_color,
     );
@@ -337,7 +337,7 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
     ui.painter().text(
         cursor + egui::vec2(FILE_SIZE_WIDTH - HORIZONTAL_PADDING, ROW_HEIGHT / 2.0),
         Align2::RIGHT_CENTER,
-        &entry.formatted_size,
+        entry.formatted_size(),
         egui::FontId::proportional(SECONDARY_COLUMN_FONT_SIZE),
         secondary_font_color,
     );

@@ -59,7 +59,7 @@ fn test_goto_first_entry_with_filter() {
     let filtered_entries: Vec<&DirEntry> = tab
         .get_cached_filtered_entries()
         .iter()
-        .map(|(entry, _)| entry)
+        .map(|&index| &tab.entries[index])
         .collect();
 
     // Get the selected entry
@@ -125,7 +125,7 @@ fn test_goto_last_entry_with_filter() {
     let filtered_entries: Vec<&DirEntry> = tab
         .get_cached_filtered_entries()
         .iter()
-        .map(|(entry, _)| entry)
+        .map(|&index| &tab.entries[index])
         .collect();
 
     // Get the selected entry

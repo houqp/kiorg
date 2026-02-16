@@ -47,12 +47,7 @@ fn apply_new_query(app: &mut Kiorg) {
         app.search_bar.fuzzy,
     );
 
-    let first_filtered_index = tab
-        .get_cached_filtered_entries()
-        .first()
-        .map(|(_, index)| *index);
-
-    if let Some(index) = first_filtered_index {
+    if let Some(&index) = tab.get_cached_filtered_entries().first() {
         tab.update_selection(index);
         app.ensure_selected_visible = true;
         app.selection_changed = true;

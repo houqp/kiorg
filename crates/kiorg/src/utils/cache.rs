@@ -8,15 +8,48 @@ use std::path::PathBuf;
 use crate::models::dir_entry::DirEntryMeta;
 use crate::models::preview_content::CachedPreviewContent;
 
-pub fn get_cache_dir() -> Option<PathBuf> {
-    if cfg!(test) || cfg!(feature = "testing") {
-        return Some(std::env::temp_dir().join("kiorg_test"));
+#[cfg(any(test, feature = "testing"))]
+mod imp {
+    use super::*;
+    use std::sync::Mutex;
+
+    static TEST_CACHE_DIR: Mutex<Option<tempfile::TempDir>> = Mutex::new(None);
+
+    pub fn get_cache_dir() -> Option<PathBuf> {
+        let mut guard = TEST_CACHE_DIR.lock().unwrap();
+        if guard.is_none() {
+            *guard = Some(
+                tempfile::Builder::new()
+                    .prefix("kiorg_test_")
+                    .tempdir()
+                    .expect("failed to create temp test cache dir"),
+            );
+        }
+        Some(guard.as_ref().unwrap().path().to_path_buf())
     }
-    dirs::cache_dir().map(|mut d| {
-        d.push("kiorg");
-        d
-    })
+
+    pub fn purge_cache_dir() {
+        if let Ok(mut guard) = TEST_CACHE_DIR.lock() {
+            let _ = guard.take();
+        }
+    }
 }
+
+#[cfg(not(any(test, feature = "testing")))]
+mod imp {
+    use super::*;
+
+    pub fn get_cache_dir() -> Option<PathBuf> {
+        dirs::cache_dir().map(|mut d| {
+            d.push("kiorg");
+            d
+        })
+    }
+
+    pub fn purge_cache_dir() {}
+}
+
+pub use imp::{get_cache_dir, purge_cache_dir};
 
 pub fn calculate_cache_key(entry: &DirEntryMeta) -> String {
     let path_str = entry.path.to_string_lossy();
