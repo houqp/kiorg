@@ -1,6 +1,8 @@
 //! Ebook preview module
 
 use egui::{RichText, TextureId, Vec2, load::SizedTexture, widgets::ImageSource};
+use std::borrow::Cow;
+use std::collections::HashMap;
 
 use crate::config::colors::AppColors;
 use crate::models::dir_entry::DirEntryMeta;
@@ -111,80 +113,125 @@ fn format_metadata_key(key: &str) -> String {
 
 /// Extract metadata and cover image from an ebook file and return as `PreviewContent`
 pub fn extract_ebook_metadata(entry: DirEntryMeta) -> Result<EbookMeta, String> {
-    use rbook::prelude::*;
-
     let path = &entry.path;
     let epub = rbook::Epub::options()
-        .strict(false)
+        // Skip parsing the table of contents; not required here
+        .skip_toc(true)
         .open(path)
         .map_err(|e| format!("Failed to open EPUB file: {e}"))?;
 
-    let epub_metadata = epub.metadata();
-    let mut metadata = std::collections::HashMap::new();
+    // Extract epub metadata
+    let metadata = create_metadata_map(&epub);
+    // Get page count (count readable content items in spine)
+    let page_count = epub.spine().len() as isize;
+    // Try to extract the cover image
+    let cover_data = try_extract_cover_data(&epub)
+        // Create a default "no cover" image if extraction fails
+        .unwrap_or_else(|| {
+            ImageSource::Texture(SizedTexture::new(TextureId::Managed(0), Vec2::ZERO))
+        });
 
-    if let Some(title) = epub_metadata.title() {
+    let meta = EbookMeta::new(metadata.clone(), cover_data, None, page_count, path);
+
+    // Spawn background task to encode and save cache after metadata is resolved
+    if let ImageSource::Bytes { bytes, .. } = &meta.cover {
+        let title_clone = meta.title.clone();
+        let raw_bytes = bytes.to_vec();
+
+        std::thread::spawn(move || {
+            let mut png_bytes = Vec::new();
+
+            // Convert the cover image to PNG for consistency
+            if let Err(error) = cover_image_to_png(&raw_bytes, &mut png_bytes) {
+                tracing::warn!("Failed to convert cover image to PNG for cache: {}", error);
+                return;
+            }
+
+            let cache_key = preview_cache::calculate_cache_key(&entry);
+            let cached_content = CachedPreviewContent::Ebook(CachedEbookMeta {
+                title: title_clone,
+                metadata,
+                page_count,
+                cache_bytes: png_bytes,
+            });
+
+            // Save to cache
+            if let Err(e) = preview_cache::save_preview(&cache_key, &cached_content) {
+                tracing::warn!("Failed to save ebook preview cache: {}", e);
+            }
+        });
+    }
+
+    Ok(meta)
+}
+
+fn create_metadata_map(epub: &rbook::Epub) -> HashMap<String, String> {
+    /// Utility to group multiple metadata entries with a single join.
+    #[inline]
+    fn insert_joined<'a, I, S>(key: &str, metadata: &mut HashMap<String, String>, iter: I)
+    where
+        I: Iterator<Item = S>,
+        // This avoids intermediate allocations (all strings are joined using `Vec::join`)
+        S: Into<Cow<'a, str>>,
+    {
+        let values: Vec<_> = iter.map(Into::into).collect();
+
+        // Avoid inserting if there are no metadata entries
+        if !values.is_empty() {
+            metadata.insert(key.to_string(), values.join(", "));
+        }
+    }
+
+    let source = epub.metadata();
+    let mut metadata = HashMap::new();
+
+    // Insert ungrouped metadata entries
+    if let Some(title) = source.title() {
         metadata.insert("title".to_string(), title.value().to_string());
     }
-
-    let creators: Vec<String> = epub_metadata
-        .creators()
-        .map(|c| c.value().to_string())
-        .collect();
-    if !creators.is_empty() {
-        metadata.insert("creator".to_string(), creators.join(", "));
-    }
-
-    let contributors: Vec<String> = epub_metadata
-        .contributors()
-        .map(|c| c.value().to_string())
-        .collect();
-    if !contributors.is_empty() {
-        metadata.insert("contributor".to_string(), contributors.join(", "));
-    }
-
-    if let Some(publisher) = epub_metadata.publishers().next() {
+    if let Some(publisher) = source.publishers().next() {
         metadata.insert("publisher".to_string(), publisher.value().to_string());
     }
-
-    if let Some(description) = epub_metadata.descriptions().next() {
+    if let Some(description) = source.descriptions().next() {
         metadata.insert("description".to_string(), description.value().to_string());
     }
 
-    let languages: Vec<String> = epub_metadata
-        .languages()
-        .map(|l| l.scheme().code().to_string())
-        .collect();
-    if !languages.is_empty() {
-        metadata.insert("language".to_string(), languages.join(", "));
-    }
+    // Insert grouped metadata entries
+    insert_joined(
+        "creator",
+        &mut metadata,
+        source.creators().map(|creator| creator.value()),
+    );
+    insert_joined(
+        "contributor",
+        &mut metadata,
+        source.contributors().map(|contributor| contributor.value()),
+    );
+    insert_joined(
+        "language",
+        &mut metadata,
+        source.languages().map(|language| language.value()),
+    );
+    insert_joined(
+        "identifier",
+        &mut metadata,
+        source.identifiers().map(|id| match id.scheme() {
+            Some(scheme) => Cow::Owned(format!("{scheme:?}: {}", id.value())),
+            None => Cow::Borrowed(id.value()),
+        }),
+    );
+    insert_joined("tags", &mut metadata, source.tags().map(|tag| tag.value()));
 
-    let identifiers: Vec<String> = epub_metadata
-        .identifiers()
-        .map(|i| {
-            if let Some(scheme) = i.scheme() {
-                format!("{:?}: {}", scheme, i.value())
-            } else {
-                i.value().to_string()
-            }
-        })
-        .collect();
-    if !identifiers.is_empty() {
-        metadata.insert("identifier".to_string(), identifiers.join(", "));
-    }
+    metadata
+}
 
-    let tags: Vec<String> = epub_metadata
-        .tags()
-        .map(|s| s.value().to_string())
-        .collect();
-    if !tags.is_empty() {
-        metadata.insert("tags".to_string(), tags.join(", "));
-    }
+/// Try to extract cover image from an ebook document using rbook
+fn try_extract_cover_data(epub: &rbook::Epub) -> Option<ImageSource<'static>> {
+    let cover_entry = epub.manifest().cover_image()?;
+    let raw_bytes = cover_entry.read_bytes().ok()?;
 
-    // Get page count - count readable content items in spine
-    let page_count = epub.spine().len() as isize;
-
-    // Try to extract cover image
-    let identifier = epub.metadata().identifiers().next().map_or_else(
+    // Generate a unique id for the ImageSource URI
+    let cover_texture_id = epub.metadata().identifiers().next().map_or_else(
         || {
             let now = std::time::SystemTime::now();
             let datetime: chrono::DateTime<chrono::Utc> = now.into();
@@ -193,66 +240,15 @@ pub fn extract_ebook_metadata(entry: DirEntryMeta) -> Result<EbookMeta, String> 
         |id| id.value().to_string(),
     );
 
-    let (cover_image, cover_data) = try_extract_rbook_cover(&epub)
-        .map(|(img, raw_bytes, _href)| {
-            let texture_id = format!("bytes://epub_cover_{identifier}");
-            let source = egui::widgets::ImageSource::from((texture_id, raw_bytes.clone()));
-            (source, Some((img, raw_bytes)))
-        })
-        .unwrap_or_else(|| {
-            // Create a default "no cover" image if extraction fails
-            let sized_texture = SizedTexture::new(TextureId::Managed(0), Vec2::ZERO);
-            (ImageSource::Texture(sized_texture), None)
-        });
-
-    let meta = crate::models::preview_content::EbookMeta::new(
-        metadata.clone(),
-        cover_image,
-        None,
-        page_count,
-        path,
-    );
-
-    // Spawn background task to encode and save cache after metadata is resolved
-    if let Some((img, _raw_bytes)) = cover_data {
-        let title_clone = meta.title.clone();
-
-        std::thread::spawn(move || {
-            let mut png_bytes = Vec::new();
-            if img
-                .write_to(
-                    &mut std::io::Cursor::new(&mut png_bytes),
-                    image::ImageFormat::Png,
-                )
-                .is_ok()
-            {
-                let cached_content = CachedPreviewContent::Ebook(CachedEbookMeta {
-                    title: title_clone,
-                    metadata,
-                    page_count,
-                    cache_bytes: png_bytes,
-                });
-                let cache_key = preview_cache::calculate_cache_key(&entry);
-                if let Err(e) = preview_cache::save_preview(&cache_key, &cached_content) {
-                    tracing::warn!("Failed to save ebook preview cache: {}", e);
-                }
-            }
-        });
-    }
-
-    Ok(meta)
+    Some(ImageSource::Bytes {
+        uri: format!("bytes://epub_cover_{cover_texture_id}").into(),
+        bytes: raw_bytes.into(),
+    })
 }
 
-/// Try to extract cover image from an ebook document using rbook
-fn try_extract_rbook_cover(epub: &rbook::Epub) -> Option<(image::DynamicImage, Vec<u8>, String)> {
-    use rbook::prelude::*;
+fn cover_image_to_png(raw_cover_image: &[u8], png_buffer: &mut Vec<u8>) -> image::ImageResult<()> {
+    let image = image::load_from_memory(raw_cover_image)?;
+    let mut cursor = std::io::Cursor::new(png_buffer);
 
-    epub.manifest().cover_image().and_then(|cover_image| {
-        cover_image.read_bytes().ok().and_then(|cover_data| {
-            let href = cover_image.href().name().decode().to_string();
-            image::load_from_memory(&cover_data)
-                .ok()
-                .map(|img| (img, cover_data, href))
-        })
-    })
+    image.write_to(&mut cursor, image::ImageFormat::Png)
 }

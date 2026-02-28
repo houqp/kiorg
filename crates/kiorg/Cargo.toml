@@ -45,7 +45,7 @@ egui_extras = { version = "0.33", features = ["all_loaders", "syntect"] }
 rkyv = { version = "0.8.13", features = ["bytecheck", "std"] }
 bytecheck = "0.8.0"
 
-rbook = { git = "https://github.com/houqp/rbook", rev = "d5b7e92c86f98cb130ff7d146cd36f15a3f4a459" }
+rbook = { version = "0.7.1", default-features = false }
 file_type = "0"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
