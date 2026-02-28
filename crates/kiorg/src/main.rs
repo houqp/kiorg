@@ -34,6 +34,7 @@ fn init_tracing() {
 fn main() -> Result<(), eframe::Error> {
     init_tracing();
     image_extras::register();
+    kiorg::ui::terminal::init();
 
     let args = Args::parse();
 
@@ -78,6 +79,7 @@ fn main() -> Result<(), eframe::Error> {
     let icon_data = kiorg::utils::icon::load_app_icon();
 
     let options = eframe::NativeOptions {
+        renderer: eframe::Renderer::Wgpu,
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([1280.0, 800.0])
             .with_min_inner_size([800.0, 600.0])

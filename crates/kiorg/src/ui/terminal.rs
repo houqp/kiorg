@@ -20,13 +20,6 @@ mod implementation {
             let system_shell = std::env::var("SHELL")
                 .map_err(|e| format!("SHELL variable is not defined: {e}"))?;
 
-            // Sometimes, TERM is not set properly on app start, e.g. launching from MacOS Dock
-            if std::env::var("TERM").is_err() {
-                unsafe {
-                    std::env::set_var("TERM", "xterm-256color");
-                }
-            }
-
             let (pty_proxy_sender, pty_proxy_receiver) = std::sync::mpsc::channel();
 
             let terminal_backend = egui_term::TerminalBackend::new(
@@ -45,6 +38,16 @@ mod implementation {
                 terminal_backend,
                 pty_proxy_receiver,
             })
+        }
+    }
+
+    pub fn init() {
+        // Sometimes, TERM is not set properly on app start, e.g. launching from MacOS Dock
+        // Setting it early before spawning any threads to ensure thread safety.
+        if std::env::var("TERM").is_err() {
+            unsafe {
+                std::env::set_var("TERM", "xterm-256color");
+            }
         }
     }
 
@@ -105,6 +108,8 @@ mod implementation {
         }
     }
 
+    pub fn init() {}
+
     pub fn draw(_ctx: &egui::Context, app: &mut Kiorg) {
         if app.terminal_ctx.is_some() {
             // Show the feature disabled popup
@@ -117,4 +122,4 @@ mod implementation {
     }
 }
 
-pub use implementation::{TerminalContext, draw};
+pub use implementation::{TerminalContext, draw, init};

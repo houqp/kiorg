@@ -27,7 +27,7 @@ path = "src/main.rs"
 kiorg_plugin = { path = "../kiorg_plugin" }
 mimeapps = { path = "../mimeapps" }
 
-eframe = "0.33"
+eframe = { version = "0.33", features = ["wgpu"] }
 egui = { version = "0.33", features = ["accesskit", "rayon", "color-hex"] }
 font-kit = "0"
 chrono = "0"
