@@ -1,5 +1,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-use clap::Parser;
+use clap::{CommandFactory, FromArgMatches, Parser};
 use eframe::egui;
 use std::fs;
 use std::path::PathBuf;
@@ -16,6 +16,10 @@ struct Args {
     /// Override the configuration directory
     #[arg(short, long, env = "KIORG_CONFIG_DIR")]
     config_dir: Option<PathBuf>,
+
+    /// Clear the preview cache before starting
+    #[arg(long)]
+    clear_cache: bool,
 }
 
 fn init_tracing() {
@@ -36,7 +40,22 @@ fn main() -> Result<(), eframe::Error> {
     image_extras::register();
     kiorg::ui::terminal::init();
 
-    let args = Args::parse();
+    let mut cmd = Args::command();
+    let config_dir = kiorg::config::get_kiorg_config_dir(None);
+    let cache_dir = kiorg::utils::preview_cache::get_cache_dir().unwrap_or_default();
+    let help_extra = format!(
+        "\nDirectories:\n  Config: {}\n  Cache:  {}",
+        config_dir.display(),
+        cache_dir.display()
+    );
+    cmd = cmd.after_help(help_extra);
+
+    let matches = cmd.get_matches();
+    let args = Args::from_arg_matches(&matches).unwrap_or_else(|e| e.exit());
+
+    if args.clear_cache {
+        kiorg::utils::preview_cache::purge_cache_dir();
+    }
 
     // If a directory is provided, validate and canonicalize it
     let initial_dir = if let Some(dir) = args.directory {
