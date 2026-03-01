@@ -1,6 +1,6 @@
 [package]
 name = "kiorg"
-version = "1.4.5"
+version = "1.5.0"
 edition = "2024"
 rust-version = "1.87"
 authors = ["houqp"]
