@@ -46,7 +46,13 @@ mod imp {
         })
     }
 
-    pub fn purge_cache_dir() {}
+    pub fn purge_cache_dir() {
+        if let Some(dir) = get_cache_dir() {
+            if dir.exists() {
+                let _ = fs::remove_dir_all(dir);
+            }
+        }
+    }
 }
 
 pub use imp::{get_cache_dir, purge_cache_dir};
@@ -67,6 +73,9 @@ pub fn calculate_cache_key(entry: &DirEntryMeta) -> String {
 
 pub fn get_cache_path(key: &str) -> Option<PathBuf> {
     get_cache_dir().map(|mut d| {
+        if key.len() >= 2 {
+            d.push(&key[0..2]);
+        }
         d.push(key);
         d
     })
@@ -76,8 +85,12 @@ pub fn save_preview(
     key: &str,
     cached: &CachedPreviewContent,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    ensure_cache_dir()?;
     if let Some(path) = get_cache_path(key) {
+        if let Some(parent) = path.parent() {
+            if !parent.exists() {
+                fs::create_dir_all(parent)?;
+            }
+        }
         let bytes = rkyv::to_bytes::<Error>(cached)?;
         atomic_write(&path, &bytes)?;
     }
@@ -114,16 +127,6 @@ pub fn atomic_write(path: &std::path::Path, bytes: &[u8]) -> std::io::Result<()>
     }
 
     fs::rename(temp_path, path)?;
-    Ok(())
-}
-
-// FIXME: initialize it once globally, and return the dir in O(1)
-pub fn ensure_cache_dir() -> std::io::Result<()> {
-    if let Some(dir) = get_cache_dir() {
-        if !dir.exists() {
-            fs::create_dir_all(dir)?;
-        }
-    }
     Ok(())
 }
 
