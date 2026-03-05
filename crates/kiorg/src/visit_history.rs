@@ -39,7 +39,8 @@ impl HistorySaver {
             while let Ok(message) = receiver.recv() {
                 match message {
                     HistorySaveMessage::Save(history, config_dir_override) => {
-                        if let Err(e) = save_visit_history(&history, config_dir_override.as_ref()) {
+                        if let Err(e) = save_visit_history(&history, config_dir_override.as_deref())
+                        {
                             tracing::error!(err = ?e, "Failed to save visit history in background thread");
                         }
                     }
@@ -61,9 +62,12 @@ impl HistorySaver {
     pub fn save_async(
         &self,
         history: &HashMap<PathBuf, VisitHistoryEntry>,
-        config_dir_override: Option<&PathBuf>,
+        config_dir_override: Option<&std::path::Path>,
     ) {
-        let message = HistorySaveMessage::Save(history.clone(), config_dir_override.cloned());
+        let message = HistorySaveMessage::Save(
+            history.clone(),
+            config_dir_override.map(|p| p.to_path_buf()),
+        );
 
         if let Err(e) = self.sender.send(message) {
             tracing::error!(err = ?e, "Failed to send save message to history saver thread");
@@ -84,7 +88,7 @@ impl Default for HistorySaver {
 
 /// Load visit history from CSV file
 pub fn load_visit_history(
-    config_dir_override: Option<&PathBuf>,
+    config_dir_override: Option<&std::path::Path>,
 ) -> Result<HashMap<PathBuf, VisitHistoryEntry>, Box<dyn std::error::Error>> {
     let config_dir = config::get_kiorg_config_dir(config_dir_override);
     let history_path = config_dir.join(HISTORY_FILE_NAME);
@@ -151,7 +155,7 @@ pub fn load_visit_history(
 /// Save visit history to CSV file
 pub fn save_visit_history(
     history: &HashMap<PathBuf, VisitHistoryEntry>,
-    config_dir_override: Option<&PathBuf>,
+    config_dir_override: Option<&std::path::Path>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let config_dir = config::get_kiorg_config_dir(config_dir_override);
 
@@ -188,12 +192,13 @@ pub fn update_visit_history(history: &mut HashMap<PathBuf, VisitHistoryEntry>, p
             entry.count += 1;
         }
         None => {
+            let path_buf = path.to_path_buf();
             let entry = VisitHistoryEntry {
-                path: path.to_path_buf(),
+                path: path_buf.clone(),
                 accessed_ts: current_time,
                 count: 1,
             };
-            history.insert(path.to_path_buf(), entry);
+            history.insert(path_buf, entry);
         }
     }
 }

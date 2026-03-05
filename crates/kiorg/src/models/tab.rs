@@ -263,7 +263,7 @@ impl Tab {
 
     // Get the index of an entry by its path using the reverse index
     #[must_use]
-    pub fn get_index_by_path(&self, path: &PathBuf) -> Option<usize> {
+    pub fn get_index_by_path(&self, path: &std::path::Path) -> Option<usize> {
         self.path_to_index.get(path).copied()
     }
 
@@ -362,7 +362,7 @@ impl Tab {
     }
 }
 
-fn read_dir_entries(path: &PathBuf, show_hidden: bool) -> Vec<DirEntry> {
+fn read_dir_entries(path: &std::path::Path, show_hidden: bool) -> Vec<DirEntry> {
     if let Ok(read_dir) = std::fs::read_dir(path) {
         read_dir
             .filter_map(|entry| {
@@ -550,7 +550,7 @@ impl TabManager {
 
     // Get the index of an entry by its path in the current tab
     #[must_use]
-    pub fn get_entry_index_by_path(&self, path: &PathBuf) -> Option<usize> {
+    pub fn get_entry_index_by_path(&self, path: &std::path::Path) -> Option<usize> {
         self.current_tab_ref().get_index_by_path(path)
     }
 
@@ -559,10 +559,10 @@ impl TabManager {
         tab.selected_index = 0;
     }
 
-    pub fn select_child(&mut self, child: &PathBuf) -> bool {
+    pub fn select_child(&mut self, child: &std::path::Path) -> bool {
         let tab = self.current_tab_mut();
         if child.parent().is_some_and(|p| p == tab.current_path)
-            && let Some(pos) = tab.entries.iter().position(|e| &e.meta.path == child)
+            && let Some(pos) = tab.entries.iter().position(|e| e.meta.path == child)
         {
             tab.update_selection(pos);
             return true;
@@ -614,7 +614,7 @@ impl TabManager {
         tab.parent_selected_index = 0; // Default selection
 
         if let Some(parent) = current_path.parent() {
-            tab.parent_entries = read_dir_entries(&parent.to_path_buf(), show_hidden);
+            tab.parent_entries = read_dir_entries(parent, show_hidden);
             // Sort parent entries using the global sort settings
             sort_entries_by(&mut tab.parent_entries, sort_column, sort_order);
 

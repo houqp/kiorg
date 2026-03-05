@@ -196,7 +196,7 @@ impl Kiorg {
         initial_dir: Option<PathBuf>,
         config_dir_override: Option<PathBuf>,
     ) -> Result<Self, KiorgError> {
-        let config = config::load_config_with_override(config_dir_override.as_ref())?;
+        let config = config::load_config_with_override(config_dir_override.as_deref())?;
 
         // Create merged shortcuts: start with defaults and apply user overrides
         let mut merged_shortcuts = config::shortcuts::default_shortcuts();
@@ -247,7 +247,7 @@ impl Kiorg {
             }
             // If no initial directory is provided, try to load from saved state
             None => {
-                if let Some(tab_manager) = Self::load_app_state(config_dir_override.as_ref()) {
+                if let Some(tab_manager) = Self::load_app_state(config_dir_override.as_deref()) {
                     // Use the saved state's path
                     let path = tab_manager.current_tab_ref().current_path.clone();
 
@@ -279,10 +279,10 @@ impl Kiorg {
             Err(e) => return Err(KiorgError::WatcherError(e.to_string())),
         };
 
-        let bookmarks = bookmark::load_bookmarks(config_dir_override.as_ref());
+        let bookmarks = bookmark::load_bookmarks(config_dir_override.as_deref());
 
         // Load visit history
-        let visit_history = visit_history::load_visit_history(config_dir_override.as_ref())
+        let visit_history = visit_history::load_visit_history(config_dir_override.as_deref())
             .unwrap_or_else(|e| {
                 tracing::error!(err =? e, "Failed to load visit history");
                 HashMap::new()
@@ -295,7 +295,7 @@ impl Kiorg {
         let history_saver = visit_history::HistorySaver::new();
 
         // Initialize plugin system
-        let mut plugin_manager = crate::plugins::PluginManager::new(config_dir_override.as_ref());
+        let mut plugin_manager = crate::plugins::PluginManager::new(config_dir_override.as_deref());
         match plugin_manager.load_plugins() {
             Ok(()) => {
                 let loaded_plugins = plugin_manager.list_loaded();
@@ -619,8 +619,8 @@ impl Kiorg {
         self.dragged_file.is_some()
     }
 
-    pub fn get_dragged_file(&self) -> Option<&PathBuf> {
-        self.dragged_file.as_ref()
+    pub fn get_dragged_file(&self) -> Option<&std::path::Path> {
+        self.dragged_file.as_deref()
     }
 
     /// Move dragged item (file or directory) to target folder
@@ -761,7 +761,7 @@ impl Kiorg {
             if self.visit_history.remove(&path).is_some() {
                 // Save updated visit history asynchronously
                 self.history_saver
-                    .save_async(&self.visit_history, self.config_dir_override.as_ref());
+                    .save_async(&self.visit_history, self.config_dir_override.as_deref());
             }
             self.notify_error(format!(
                 "Cannot navigate to '{}': Path is not a directory or doesn't exist",
@@ -775,7 +775,7 @@ impl Kiorg {
         visit_history::update_visit_history(&mut self.visit_history, &path);
         // Save visit history asynchronously (non-blocking)
         self.history_saver
-            .save_async(&self.visit_history, self.config_dir_override.as_ref());
+            .save_async(&self.visit_history, self.config_dir_override.as_deref());
 
         self.tab_manager.current_tab_mut().add_to_history(path);
     }
@@ -936,7 +936,7 @@ impl Kiorg {
     }
 
     fn save_app_state(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let config_dir = config::get_kiorg_config_dir(self.config_dir_override.as_ref());
+        let config_dir = config::get_kiorg_config_dir(self.config_dir_override.as_deref());
 
         if !config_dir.exists() {
             std::fs::create_dir_all(&config_dir)?;
@@ -954,7 +954,7 @@ impl Kiorg {
         Ok(())
     }
 
-    fn load_app_state(config_dir_override: Option<&PathBuf>) -> Option<TabManager> {
+    fn load_app_state(config_dir_override: Option<&std::path::Path>) -> Option<TabManager> {
         let config_dir = config::get_kiorg_config_dir(config_dir_override);
         let state_path = config_dir.join(STATE_FILE_NAME);
 
@@ -1077,7 +1077,7 @@ impl eframe::App for Kiorg {
                         // Save bookmarks when the popup signals a change (e.g., deletion)
                         if let Err(e) = bookmark::save_bookmarks(
                             &self.bookmarks,
-                            self.config_dir_override.as_ref(),
+                            self.config_dir_override.as_deref(),
                         ) {
                             self.notify_error(format!("Failed to save bookmarks: {e}"));
                         }
