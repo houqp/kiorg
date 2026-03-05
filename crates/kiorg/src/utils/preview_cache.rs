@@ -57,10 +57,14 @@ mod imp {
 
 pub use imp::{get_cache_dir, purge_cache_dir};
 
-pub fn calculate_cache_key(entry: &DirEntryMeta) -> String {
-    let path_str = entry.path.to_string_lossy();
+pub fn calculate_path_hash(path: &std::path::Path) -> u64 {
+    let path_str = path.to_string_lossy();
     let hasher = RandomState::with_seeds(0, 0, 0, 0);
-    let path_hash = hasher.hash_one(path_str.as_bytes());
+    hasher.hash_one(path_str.as_bytes())
+}
+
+pub fn calculate_cache_key(entry: &DirEntryMeta) -> String {
+    let path_hash = calculate_path_hash(&entry.path);
 
     let mtime = entry
         .modified
@@ -69,6 +73,29 @@ pub fn calculate_cache_key(entry: &DirEntryMeta) -> String {
         .map(|d| d.as_nanos())
         .unwrap_or(0);
     format!("{path_hash:x}.{mtime}")
+}
+
+pub fn delete_previews_for_path(path: &std::path::Path) {
+    let path_hash = calculate_path_hash(path);
+    let hash_hex = format!("{path_hash:x}");
+    let prefix = format!("{hash_hex}.");
+
+    if let Some(mut d) = get_cache_dir() {
+        if hash_hex.len() >= 2 {
+            d.push(&hash_hex[0..2]);
+        }
+        if d.exists() && d.is_dir() {
+            if let Ok(entries) = fs::read_dir(d) {
+                for entry in entries.flatten() {
+                    if let Some(file_name) = entry.file_name().to_str() {
+                        if file_name.starts_with(&prefix) {
+                            let _ = fs::remove_file(entry.path());
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 pub fn get_cache_path(key: &str) -> Option<PathBuf> {
@@ -169,5 +196,53 @@ mod tests {
         if let Some(path) = get_cache_path(key) {
             let _ = fs::remove_file(path);
         }
+    }
+
+    #[test]
+    fn test_delete_previews_for_path() {
+        let path = PathBuf::from("/tmp/test_delete.txt");
+        let cached = CachedPreviewContent::Zip(vec![]);
+
+        // Create multiple cache entries for the same path with different mtimes
+        let mut keys = Vec::new();
+        for i in 0..3 {
+            let entry = DirEntryMeta {
+                path: path.clone(),
+                modified: std::time::SystemTime::UNIX_EPOCH + std::time::Duration::from_secs(i),
+            };
+            let key = calculate_cache_key(&entry);
+            save_preview(&key, &cached).expect("Failed to save");
+            assert!(get_cache_path(&key).unwrap().exists());
+            keys.push(key);
+        }
+
+        // Verify another path's cache is NOT deleted
+        let other_path = PathBuf::from("/tmp/other_file.txt");
+        let other_entry = DirEntryMeta {
+            path: other_path.clone(),
+            modified: std::time::SystemTime::now(),
+        };
+        let other_key = calculate_cache_key(&other_entry);
+        save_preview(&other_key, &cached).expect("Failed to save");
+        assert!(get_cache_path(&other_key).unwrap().exists());
+
+        delete_previews_for_path(&path);
+
+        // All keys for the target path should be gone
+        for key in keys {
+            assert!(
+                !get_cache_path(&key).unwrap().exists(),
+                "Cache key {key} should have been deleted"
+            );
+        }
+
+        // The other path's cache should still exist
+        assert!(
+            get_cache_path(&other_key).unwrap().exists(),
+            "Other path's cache should not have been deleted"
+        );
+
+        // Clean up other path's cache
+        let _ = fs::remove_file(get_cache_path(&other_key).unwrap());
     }
 }

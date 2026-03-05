@@ -440,6 +440,8 @@ fn delete_async(app: &mut crate::app::Kiorg, entries_to_delete: Vec<PathBuf>) {
         let mut current_file = 0;
 
         for path in entries_to_delete {
+            crate::utils::preview_cache::delete_previews_for_path(&path);
+
             let result = if path.is_dir() {
                 delete_dir_with_progress(&path, &tx, &mut current_file, total_files)
             } else {
