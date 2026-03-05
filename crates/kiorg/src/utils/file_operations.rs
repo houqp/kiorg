@@ -26,6 +26,25 @@ pub fn copy_dir_recursively(src: &Path, dst: &Path) -> std::io::Result<()> {
     Ok(())
 }
 
+/// Move a file or directory from src to dst, handling cross-device links by falling back to copy and delete.
+pub fn omni_rename(src: &Path, dst: &Path) -> std::io::Result<()> {
+    match std::fs::rename(src, dst) {
+        Ok(()) => Ok(()),
+        Err(e) if e.raw_os_error() == Some(18) => {
+            // Error 18 is "Invalid cross-device link"
+            if src.is_dir() {
+                copy_dir_recursively(src, dst)?;
+                std::fs::remove_dir_all(src)?;
+            } else {
+                std::fs::copy(src, dst)?;
+                std::fs::remove_file(src)?;
+            }
+            Ok(())
+        }
+        Err(e) => Err(e),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
