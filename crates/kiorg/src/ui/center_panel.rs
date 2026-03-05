@@ -100,7 +100,7 @@ pub fn handle_clipboard_operations(
 
             paths.iter().for_each(|path| {
                 let new_path = new_unique_path_name_for_paste(path, current_path);
-                if let Err(e) = std::fs::rename(path, &new_path) {
+                if let Err(e) = file_operations::omni_rename(path, &new_path) {
                     toasts.error(format!(
                         "Failed to move {} to {}: {e}",
                         path.to_string_lossy(),

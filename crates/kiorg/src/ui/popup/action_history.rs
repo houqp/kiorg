@@ -234,7 +234,7 @@ pub fn redo_last_action(app: &mut Kiorg) {
                     std::fs::create_dir_all(parent).ok();
                 }
 
-                match std::fs::rename(&op.old_path, &op.new_path) {
+                match crate::utils::file_operations::omni_rename(&op.old_path, &op.new_path) {
                     Ok(_) => {
                         app.toasts.success(format!(
                             "Redone: Renamed '{}' to '{}'",
@@ -289,7 +289,7 @@ pub fn redo_last_action(app: &mut Kiorg) {
                     std::fs::create_dir_all(parent).ok();
                 }
 
-                match std::fs::rename(&op.source_path, &op.target_path) {
+                match crate::utils::file_operations::omni_rename(&op.source_path, &op.target_path) {
                     Ok(_) => {
                         app.toasts.success(format!(
                             "Redone: Moved '{}' to '{}'",

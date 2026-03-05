@@ -33,7 +33,8 @@ pub fn handle_rename_confirmation(app: &mut Kiorg, ctx: &Context) {
             let parent = entry.meta.path.parent().unwrap_or(&tab.current_path);
             let new_path = parent.join(new_name);
 
-            if let Err(e) = std::fs::rename(&entry.meta.path, &new_path) {
+            if let Err(e) = crate::utils::file_operations::omni_rename(&entry.meta.path, &new_path)
+            {
                 app.notify_error(format!("Failed to rename: {e}"));
             } else {
                 // Record rename action in history

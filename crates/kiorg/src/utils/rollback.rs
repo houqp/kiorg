@@ -177,7 +177,7 @@ impl RollbackManager {
             ));
         }
 
-        match std::fs::rename(current_path, original_path) {
+        match crate::utils::file_operations::omni_rename(current_path, original_path) {
             Ok(()) => RollbackResult::Success(format!(
                 "Renamed '{}' back to '{}'",
                 current_path.display(),
@@ -263,7 +263,7 @@ mod tests {
 
         // Create and rename a file
         std::fs::write(&old_file, "test content").unwrap();
-        std::fs::rename(&old_file, &new_file).unwrap();
+        crate::utils::file_operations::omni_rename(&old_file, &new_file).unwrap();
         assert!(!old_file.exists());
         assert!(new_file.exists());
 
