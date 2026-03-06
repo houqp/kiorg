@@ -359,7 +359,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                     app.ensure_selected_visible = false;
                 }
 
-                let current_dragged_file = app.get_dragged_file().cloned();
+                let current_dragged_file = app.get_dragged_file().map(|p| p.to_path_buf());
                 // Draw the rows within the scroll area
                 scroll_area.show_rows(ui, ROW_HEIGHT, total_rows, |scroll_ui, row_range| {
                     // Calculate width considering potential scrollbar
@@ -595,7 +595,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
         });
         // Re-borrow immutably for save path
         if let Err(e) =
-            config::save_config_with_override(&app.config, app.config_dir_override.as_ref())
+            config::save_config_with_override(&app.config, app.config_dir_override.as_deref())
         {
             app.toasts
                 .error(format!("Failed to save sort preferences: {e}"));

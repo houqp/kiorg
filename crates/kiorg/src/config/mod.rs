@@ -98,11 +98,11 @@ impl Error for ConfigError {
 
 impl ConfigError {
     #[must_use]
-    pub const fn config_path(&self) -> &PathBuf {
+    pub fn config_path(&self) -> &std::path::Path {
         match self {
-            Self::TomlError(_, path) => path,
-            Self::ShortcutConflict(_, path) => path,
-            Self::ValueError(_, path) => path,
+            Self::TomlError(_, path) => path.as_path(),
+            Self::ShortcutConflict(_, path) => path.as_path(),
+            Self::ValueError(_, path) => path.as_path(),
         }
     }
 }
@@ -124,7 +124,7 @@ impl From<ShortcutConflictError> for ConfigError {
 }
 
 pub fn load_config_with_override(
-    config_dir_override: Option<&PathBuf>,
+    config_dir_override: Option<&std::path::Path>,
 ) -> Result<Config, ConfigError> {
     let config_dir = get_kiorg_config_dir(config_dir_override);
     if !config_dir.exists() {
@@ -176,7 +176,7 @@ pub fn save_config(config: &Config) -> Result<(), std::io::Error> {
 
 pub fn save_config_with_override(
     config: &Config,
-    config_dir_override: Option<&PathBuf>,
+    config_dir_override: Option<&std::path::Path>,
 ) -> Result<(), std::io::Error> {
     let config_dir = get_kiorg_config_dir(config_dir_override);
 
@@ -190,15 +190,15 @@ pub fn save_config_with_override(
 }
 
 #[must_use]
-pub fn get_config_path_with_override(config_dir_override: Option<&PathBuf>) -> PathBuf {
+pub fn get_config_path_with_override(config_dir_override: Option<&std::path::Path>) -> PathBuf {
     let config_dir = get_kiorg_config_dir(config_dir_override);
     config_dir.join("config.toml")
 }
 
 #[must_use]
-pub fn get_kiorg_config_dir(override_path: Option<&PathBuf>) -> PathBuf {
+pub fn get_kiorg_config_dir(override_path: Option<&std::path::Path>) -> PathBuf {
     if let Some(dir) = override_path {
-        dir.clone()
+        dir.to_path_buf()
     } else {
         // For macOS, prioritize ~/.config/kiorg for easier config management and terminal access
         #[cfg(target_os = "macos")]

@@ -274,7 +274,7 @@ pub struct PluginManager {
 
 impl PluginManager {
     /// Create a new plugin manager with config directory override
-    pub fn new(config_dir_override: Option<&PathBuf>) -> Self {
+    pub fn new(config_dir_override: Option<&std::path::Path>) -> Self {
         let config_dir = crate::config::get_kiorg_config_dir(config_dir_override);
         let plugin_dir = config_dir.join("plugins");
 
@@ -353,7 +353,7 @@ impl PluginManager {
                         // Remove existing failure for this path to avoid duplicates
                         self.failed.retain(|p| p.path != path);
                         self.failed.push(FailedPlugin {
-                            path: path.clone(),
+                            path,
                             error: e.to_string(),
                         });
                     }
@@ -368,7 +368,7 @@ impl PluginManager {
     }
 
     /// Load a single plugin from the given path
-    fn load_single_plugin(path: &PathBuf) -> Result<LoadedPlugin, PluginError> {
+    fn load_single_plugin(path: &std::path::Path) -> Result<LoadedPlugin, PluginError> {
         // Start the plugin process
         let mut cmd = Command::new(path);
         cmd.stdin(Stdio::piped())
@@ -422,7 +422,7 @@ impl PluginManager {
 
         Ok(LoadedPlugin {
             metadata,
-            path: path.clone(),
+            path: path.to_path_buf(),
             state: Mutex::new(PluginState {
                 process: child,
                 error,

@@ -20,7 +20,8 @@ fn apply_and_save_theme(app: &mut Kiorg, theme: &Theme, ctx: &egui::Context) {
     app.config.theme = Some(theme.theme_key().to_string());
 
     // Save the configuration
-    if let Err(e) = config::save_config_with_override(&app.config, app.config_dir_override.as_ref())
+    if let Err(e) =
+        config::save_config_with_override(&app.config, app.config_dir_override.as_deref())
     {
         app.notify_error(format!("Failed to save theme: {e}"));
     }

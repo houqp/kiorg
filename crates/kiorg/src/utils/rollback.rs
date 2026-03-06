@@ -1,5 +1,4 @@
 use crate::models::action_history::ActionType;
-use std::path::PathBuf;
 
 /// Result of a rollback operation
 #[derive(Debug, Clone)]
@@ -138,7 +137,7 @@ impl RollbackManager {
     }
 
     /// Rollback a create operation by deleting the created file/directory
-    fn rollback_create(path: &PathBuf, is_directory: bool) -> RollbackResult {
+    fn rollback_create(path: &std::path::Path, is_directory: bool) -> RollbackResult {
         if !path.exists() {
             return RollbackResult::Error(format!(
                 "Cannot rollback create: {} no longer exists",
@@ -162,7 +161,10 @@ impl RollbackManager {
     }
 
     /// Rollback a rename operation by renaming back to original name
-    fn rollback_rename(original_path: &PathBuf, current_path: &PathBuf) -> RollbackResult {
+    fn rollback_rename(
+        original_path: &std::path::Path,
+        current_path: &std::path::Path,
+    ) -> RollbackResult {
         if !current_path.exists() {
             return RollbackResult::Error(format!(
                 "Cannot rollback rename: {} no longer exists",
@@ -193,12 +195,15 @@ impl RollbackManager {
     }
 
     /// Rollback a copy operation by deleting the copied file/directory
-    fn rollback_copy(target_path: &PathBuf, is_directory: bool) -> RollbackResult {
+    fn rollback_copy(target_path: &std::path::Path, is_directory: bool) -> RollbackResult {
         Self::rollback_create(target_path, is_directory)
     }
 
     /// Rollback a move operation by moving back to original location
-    fn rollback_move(original_path: &PathBuf, current_path: &PathBuf) -> RollbackResult {
+    fn rollback_move(
+        original_path: &std::path::Path,
+        current_path: &std::path::Path,
+    ) -> RollbackResult {
         Self::rollback_rename(original_path, current_path)
     }
 }

@@ -11,7 +11,7 @@ use crate::config::get_kiorg_config_dir;
 use crate::config::shortcuts::ShortcutAction;
 
 // Get the full path to the bookmarks file
-fn get_bookmarks_file_path(config_dir_override: Option<&PathBuf>) -> PathBuf {
+fn get_bookmarks_file_path(config_dir_override: Option<&std::path::Path>) -> PathBuf {
     let mut config_dir = get_kiorg_config_dir(config_dir_override);
 
     if !config_dir.exists() {
@@ -25,7 +25,7 @@ fn get_bookmarks_file_path(config_dir_override: Option<&PathBuf>) -> PathBuf {
 // Save bookmarks to the config file
 pub fn save_bookmarks(
     bookmarks: &[PathBuf],
-    config_dir_override: Option<&PathBuf>,
+    config_dir_override: Option<&std::path::Path>,
 ) -> Result<(), Box<dyn Error>> {
     let bookmarks_file = get_bookmarks_file_path(config_dir_override);
     // Ensure the directory exists before creating the file
@@ -44,7 +44,7 @@ pub fn save_bookmarks(
 }
 
 // Load bookmarks from the config file
-pub fn load_bookmarks(config_dir_override: Option<&PathBuf>) -> Vec<PathBuf> {
+pub fn load_bookmarks(config_dir_override: Option<&std::path::Path>) -> Vec<PathBuf> {
     let bookmarks_file = get_bookmarks_file_path(config_dir_override);
     if !bookmarks_file.exists() {
         return Vec::new();
@@ -282,7 +282,7 @@ pub fn toggle_bookmark(app: &mut Kiorg) {
         }
 
         // Save bookmarks to config file
-        if let Err(e) = save_bookmarks(bookmarks, app.config_dir_override.as_ref()) {
+        if let Err(e) = save_bookmarks(bookmarks, app.config_dir_override.as_deref()) {
             app.notify_error(format!("Failed to save bookmarks: {e}"));
         }
     } else {
