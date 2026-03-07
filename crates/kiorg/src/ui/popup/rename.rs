@@ -37,6 +37,9 @@ pub fn handle_rename_confirmation(app: &mut Kiorg, ctx: &Context) {
             {
                 app.notify_error(format!("Failed to rename: {e}"));
             } else {
+                // Delete preview cache for the old path (all associated versions)
+                crate::utils::preview_cache::delete_previews_for_path(&entry.meta.path);
+
                 // Record rename action in history
                 let old_path = entry.meta.path.clone();
                 tab.action_history.add_action(ActionType::Rename {
