@@ -141,6 +141,6 @@ You can try asking LLM to generate these custom theme configs for you based on t
 
 * Composition over inheritance.
 * Simple modular design and avoid unnecessary abstractions.
-* Leverage async operations for long-running tasks to prevent blockign UI rendering.
+* Leverage async operations for long-running tasks to prevent blocking UI rendering.
 * Implementing user preference persistence for improved user experience.
 * Clean layout with compact spacing and alignment, functionality over flashy visuals.
