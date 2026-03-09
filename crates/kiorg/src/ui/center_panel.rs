@@ -296,8 +296,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
     // Extract inline rename state to avoid borrow conflicts in the closure
     let mut inline_rename_name: Option<String> =
         app.inline_rename.as_ref().map(|r| r.new_name.clone());
-    let inline_rename_index: Option<usize> =
-        app.inline_rename.as_ref().map(|r| r.original_index);
+    let inline_rename_index: Option<usize> = app.inline_rename.as_ref().map(|r| r.original_index);
     let mut inline_rename_confirm = false;
     let mut inline_rename_cancel = false;
 
@@ -459,15 +458,16 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                             if let Some(ref mut rename_name) = inline_rename_name {
                                 let (name_rect, name_width) =
                                     file_list::name_column_rect(row_response.rect);
-                                scroll_ui
-                                    .painter()
-                                    .rect_filled(name_rect, 0.0, app.colors.bg_selected);
+                                scroll_ui.painter().rect_filled(
+                                    name_rect,
+                                    0.0,
+                                    app.colors.bg_selected,
+                                );
 
-                                let mut child_ui = scroll_ui
-                                    .new_child(egui::UiBuilder::new().max_rect(name_rect));
+                                let mut child_ui =
+                                    scroll_ui.new_child(egui::UiBuilder::new().max_rect(name_rect));
                                 child_ui.spacing_mut().item_spacing = egui::vec2(0.0, 0.0);
-                                child_ui.style_mut().spacing.button_padding =
-                                    egui::vec2(0.0, 0.0);
+                                child_ui.style_mut().spacing.button_padding = egui::vec2(0.0, 0.0);
 
                                 let font_id = egui::FontId::proportional(14.0);
                                 let te_id = egui::Id::new("inline_rename_textedit");
@@ -501,9 +501,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                                 let te_response = child_ui.add(te);
 
                                 if te_response.lost_focus() {
-                                    if scroll_ui
-                                        .input(|i| i.key_pressed(egui::Key::Enter))
-                                    {
+                                    if scroll_ui.input(|i| i.key_pressed(egui::Key::Enter)) {
                                         inline_rename_confirm = true;
                                     } else {
                                         inline_rename_cancel = true;

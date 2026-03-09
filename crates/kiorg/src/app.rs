@@ -566,23 +566,19 @@ impl Kiorg {
             let parent = entry.meta.path.parent().unwrap_or(&tab.current_path);
             let new_path = parent.join(new_name);
 
-            if let Err(e) =
-                crate::utils::file_operations::omni_rename(&entry.meta.path, &new_path)
+            if let Err(e) = crate::utils::file_operations::omni_rename(&entry.meta.path, &new_path)
             {
                 self.notify_error(format!("Failed to rename: {e}"));
             } else {
                 crate::utils::preview_cache::delete_previews_for_path(&entry.meta.path);
                 let old_path = entry.meta.path.clone();
-                tab.action_history.add_action(
-                    crate::models::action_history::ActionType::Rename {
-                        operations: vec![
-                            crate::models::action_history::RenameOperation {
-                                old_path,
-                                new_path,
-                            },
-                        ],
-                    },
-                );
+                tab.action_history
+                    .add_action(crate::models::action_history::ActionType::Rename {
+                        operations: vec![crate::models::action_history::RenameOperation {
+                            old_path,
+                            new_path,
+                        }],
+                    });
                 self.refresh_entries();
             }
         }
