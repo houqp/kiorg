@@ -37,7 +37,11 @@ fn test_rename_popup() {
 
     // Verify inline rename is active with the correct filename
     {
-        let rename = harness.state().inline_rename.as_ref().expect("Inline rename should be active");
+        let rename = harness
+            .state()
+            .inline_rename
+            .as_ref()
+            .expect("Inline rename should be active");
         assert_eq!(
             rename.new_name, "file2.txt",
             "Rename should contain the current filename"
@@ -93,7 +97,11 @@ fn test_rename_popup() {
 
     // Verify inline rename is active with the correct filename
     {
-        let rename = harness.state().inline_rename.as_ref().expect("Inline rename should be active");
+        let rename = harness
+            .state()
+            .inline_rename
+            .as_ref()
+            .expect("Inline rename should be active");
         assert_eq!(
             rename.new_name, "file3.txt",
             "Rename should contain the current filename"

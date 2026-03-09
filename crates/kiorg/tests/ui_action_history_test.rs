@@ -226,7 +226,11 @@ fn test_undo_redo_rename_file() {
 
     // Verify inline rename is active
     {
-        let rename = harness.state().inline_rename.as_ref().expect("Inline rename should be active");
+        let rename = harness
+            .state()
+            .inline_rename
+            .as_ref()
+            .expect("Inline rename should be active");
         assert_eq!(
             rename.new_name, "original.txt",
             "Rename should contain the current filename"
