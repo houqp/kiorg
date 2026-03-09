@@ -293,21 +293,9 @@ fn process_key(
         return;
     }
 
-    if let Some(mut inline_rename) = app.inline_rename.take() {
-        match key {
-            Key::Enter => {
-                inline_rename.confirm(app);
-                return;
-            }
-            Key::Escape => {
-                inline_rename.clear(app);
-                return;
-            }
-            _ => {
-                app.inline_rename = Some(inline_rename);
-                return;
-            }
-        }
+    // TextEdit handles all keys during inline rename
+    if app.inline_rename.is_some() {
+        return;
     }
 
     // Handle special modal states first based on the show_popup field

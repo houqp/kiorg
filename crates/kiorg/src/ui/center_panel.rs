@@ -5,7 +5,7 @@ use crate::app::Clipboard;
 use crate::app::Kiorg;
 use crate::config;
 use crate::config::SortPreference;
-use crate::ui::file_list::{self, ROW_HEIGHT, RenameAction, TableHeaderParams};
+use crate::ui::file_list::{self, ROW_HEIGHT, TableHeaderParams};
 use crate::ui::popup::PopupType;
 use crate::utils::file_operations;
 
@@ -294,12 +294,12 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
     let mut drop_target_folder: Option<PathBuf> = None; // To store the folder where a file was dropped
 
     // Extract inline rename state to avoid borrow conflicts in the closure
-    let mut inline_rename_name: Option<String> = app
-        .inline_rename
-        .as_ref()
-        .map(|r| r.new_name().to_string());
-    let inline_rename_index: Option<usize> = app.inline_rename.as_ref().map(|r| r.original_index());
-    let mut inline_rename_action: Option<RenameAction> = None;
+    let mut inline_rename_name: Option<String> =
+        app.inline_rename.as_ref().map(|r| r.new_name.clone());
+    let inline_rename_index: Option<usize> =
+        app.inline_rename.as_ref().map(|r| r.original_index);
+    let mut inline_rename_confirm = false;
+    let mut inline_rename_cancel = false;
 
     // prepare drag and drop state
     let is_drag_active = app.is_dragging();
@@ -437,16 +437,8 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                                 .map(|dragged| dragged == &entry.meta.path)
                                 .unwrap_or(false);
 
-                        // Determine if this row is being renamed
-                        let row_rename_name =
-                            if inline_rename_index == Some(original_index) {
-                                inline_rename_name.as_mut()
-                            } else {
-                                None
-                            };
-
                         // Draw the row and get its response
-                        let row_result = file_list::draw_entry_row(
+                        let row_response = file_list::draw_entry_row(
                             scroll_ui,
                             file_list::EntryRowParams {
                                 entry,
@@ -459,14 +451,85 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                                 is_in_copy_clipboard,
                                 is_drag_source,
                                 is_drag_active,
-                                rename_name: row_rename_name,
                             },
                         );
-                        let row_response = row_result.response;
 
-                        // Capture rename action if any
-                        if !matches!(row_result.rename_action, RenameAction::None) {
-                            inline_rename_action = Some(row_result.rename_action);
+                        // Draw inline rename TextEdit overlay if this row is being renamed
+                        if inline_rename_index == Some(original_index) {
+                            if let Some(ref mut rename_name) = inline_rename_name {
+                                let (name_rect, name_width) =
+                                    file_list::name_column_rect(row_response.rect);
+                                scroll_ui
+                                    .painter()
+                                    .rect_filled(name_rect, 0.0, app.colors.bg_selected);
+
+                                let mut child_ui = scroll_ui
+                                    .new_child(egui::UiBuilder::new().max_rect(name_rect));
+                                child_ui.spacing_mut().item_spacing = egui::vec2(0.0, 0.0);
+                                child_ui.style_mut().spacing.button_padding =
+                                    egui::vec2(0.0, 0.0);
+
+                                let font_id = egui::FontId::proportional(14.0);
+                                let te_id = egui::Id::new("inline_rename_textedit");
+
+                                let name_color = if is_in_cut_clipboard {
+                                    app.colors.error
+                                } else if is_in_copy_clipboard {
+                                    app.colors.success
+                                } else if entry.is_dir {
+                                    app.colors.fg_folder
+                                } else {
+                                    app.colors.fg
+                                };
+
+                                let te = egui::TextEdit::singleline(rename_name)
+                                    .id(te_id)
+                                    .frame(false)
+                                    .margin(egui::Margin {
+                                        left: 0,
+                                        right: 0,
+                                        top: 2,
+                                        bottom: 2,
+                                    })
+                                    .desired_width(name_width)
+                                    .font(font_id)
+                                    .text_color(name_color);
+
+                                child_ui.visuals_mut().selection.bg_fill =
+                                    app.colors.highlight.gamma_multiply(0.4);
+
+                                let te_response = child_ui.add(te);
+
+                                if te_response.lost_focus() {
+                                    if scroll_ui
+                                        .input(|i| i.key_pressed(egui::Key::Enter))
+                                    {
+                                        inline_rename_confirm = true;
+                                    } else {
+                                        inline_rename_cancel = true;
+                                    }
+                                } else if !te_response.has_focus() {
+                                    te_response.request_focus();
+                                    let stem_len = entry
+                                        .meta
+                                        .path
+                                        .file_stem()
+                                        .and_then(|s| s.to_str())
+                                        .map(|s| s.chars().count())
+                                        .unwrap_or_else(|| rename_name.chars().count());
+                                    if let Some(mut state) =
+                                        egui::TextEdit::load_state(scroll_ui.ctx(), te_id)
+                                    {
+                                        state.cursor.set_char_range(Some(
+                                            egui::text_selection::CCursorRange::two(
+                                                egui::text::CCursor::new(0),
+                                                egui::text::CCursor::new(stem_len),
+                                            ),
+                                        ));
+                                        state.store(scroll_ui.ctx(), te_id);
+                                    }
+                                }
+                            }
                         }
 
                         // Check for clicks to update selection state (captured outside)
@@ -515,21 +578,13 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
     // Write back inline rename state
     if let Some(ref mut rename) = app.inline_rename {
         if let Some(name) = inline_rename_name {
-            *rename.new_name_mut() = name;
+            rename.new_name = name;
         }
     }
-    match inline_rename_action {
-        Some(RenameAction::Confirm) => {
-            if let Some(mut rename) = app.inline_rename.take() {
-                rename.confirm(app);
-            }
-        }
-        Some(RenameAction::Cancel) => {
-            if let Some(mut rename) = app.inline_rename.take() {
-                rename.clear(app);
-            }
-        }
-        _ => {}
+    if inline_rename_confirm {
+        app.confirm_rename();
+    } else if inline_rename_cancel {
+        app.cancel_rename();
     }
 
     // --- Context Menu Logic for Background Area (using the stored response) ---
