@@ -19,9 +19,10 @@ use crate::ui::egui_notify::Toasts;
 use crate::ui::popup::delete::DeleteConfirmResult;
 use crate::ui::popup::{
     PopupType, about, action_history, add_entry, bookmark, delete, exit, file_drop,
-    generic_message, open_with as open_with_popup, plugin, preview as popup_preview, rename,
-    sort_toggle, teleport, theme,
+    generic_message, open_with as open_with_popup, plugin, preview as popup_preview, sort_toggle,
+    teleport, theme,
 };
+use crate::ui::rename::Rename;
 use crate::ui::search_bar::{self, SearchBar};
 use crate::ui::separator;
 use crate::ui::separator::SEPARATOR_PADDING;
@@ -188,6 +189,8 @@ pub struct Kiorg {
     pub dragged_file: Option<PathBuf>,
     // Plugin manager for external functionality
     pub plugin_manager: crate::plugins::PluginManager,
+    // Inline rename
+    pub inline_rename: Option<Rename>,
 }
 
 impl Kiorg {
@@ -336,6 +339,7 @@ impl Kiorg {
             history_saver,
             dragged_file: None,
             plugin_manager,
+            inline_rename: None,
         };
 
         app.refresh_entries();
@@ -539,8 +543,49 @@ impl Kiorg {
     pub fn rename_selected_entry(&mut self) {
         let tab = self.tab_manager.current_tab_mut();
         if let Some(entry) = tab.selected_entry() {
-            self.show_popup = Some(PopupType::Rename(entry.name.clone()));
+            self.inline_rename = Some(Rename {
+                original_index: tab.selected_index,
+                original_name: entry.name.clone(),
+                new_name: entry.name.clone(),
+            });
         }
+    }
+
+    pub fn confirm_rename(&mut self) {
+        let Some(rename) = self.inline_rename.take() else {
+            return;
+        };
+        let new_name = rename.new_name.trim().to_string();
+
+        if new_name.is_empty() || new_name == rename.original_name {
+            return;
+        }
+
+        let tab = self.tab_manager.current_tab_mut();
+        if let Some(entry) = tab.entries.get(tab.selected_index) {
+            let parent = entry.meta.path.parent().unwrap_or(&tab.current_path);
+            let new_path = parent.join(new_name);
+
+            if let Err(e) = crate::utils::file_operations::omni_rename(&entry.meta.path, &new_path)
+            {
+                self.notify_error(format!("Failed to rename: {e}"));
+            } else {
+                crate::utils::preview_cache::delete_previews_for_path(&entry.meta.path);
+                let old_path = entry.meta.path.clone();
+                tab.action_history
+                    .add_action(crate::models::action_history::ActionType::Rename {
+                        operations: vec![crate::models::action_history::RenameOperation {
+                            old_path,
+                            new_path,
+                        }],
+                    });
+                self.refresh_entries();
+            }
+        }
+    }
+
+    pub fn cancel_rename(&mut self) {
+        self.inline_rename = None;
     }
 
     /// Common logic for copy/cut operations
@@ -1057,9 +1102,6 @@ impl eframe::App for Kiorg {
             }
             Some(PopupType::DeleteProgress(_)) => {
                 delete::handle_delete_progress(ctx, self);
-            }
-            Some(PopupType::Rename(_)) => {
-                rename::draw(ctx, self);
             }
             Some(PopupType::OpenWith) => {
                 open_with_popup::draw(ctx, self);

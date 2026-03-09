@@ -293,6 +293,11 @@ fn process_key(
         return;
     }
 
+    // TextEdit handles all keys during inline rename
+    if app.inline_rename.is_some() {
+        return;
+    }
+
     // Handle special modal states first based on the show_popup field
     match &app.show_popup {
         Some(PopupType::Preview) | Some(PopupType::Pdf(_)) | Some(PopupType::Ebook(_)) => {
@@ -321,14 +326,6 @@ fn process_key(
                 crate::ui::popup::delete::confirm_delete(app);
             } else if is_cancel_keys(key) {
                 crate::ui::popup::delete::cancel_delete(app);
-            }
-            return;
-        }
-        Some(PopupType::Rename(_)) => {
-            if key == Key::Enter {
-                crate::ui::popup::rename::handle_rename_confirmation(app, ctx);
-            } else if key == Key::Escape {
-                crate::ui::popup::rename::close_rename_popup(app, ctx);
             }
             return;
         }

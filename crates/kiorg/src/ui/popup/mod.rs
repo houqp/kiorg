@@ -47,7 +47,6 @@ pub mod pdf_viewer;
 pub mod plugin;
 pub mod plugin_viewer;
 pub mod preview;
-pub mod rename;
 pub mod sort_toggle;
 pub mod teleport;
 pub mod text_input_popup;
@@ -69,7 +68,6 @@ pub enum PopupType {
     GenericMessage(String, String), // Title and message for generic popup
     Delete(crate::ui::popup::delete::DeleteConfirmState, Vec<PathBuf>),
     DeleteProgress(crate::ui::popup::delete::DeleteProgressData),
-    Rename(String),   // New name for the file/directory being renamed
     OpenWith,         // Open file with custom command popup
     AddEntry(String), // Name for the new file/directory being added
     Bookmarks(usize), // Selected index in the bookmarks list

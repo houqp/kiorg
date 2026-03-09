@@ -14,6 +14,23 @@ const FILE_SIZE_WIDTH: f32 = 60.0;
 const SECONDARY_COLUMN_FONT_SIZE: f32 = 12.0;
 pub const ROW_HEIGHT: f32 = 20.0;
 
+/// Returns the name column rect and its width for a given row rect.
+pub fn name_column_rect(row_rect: egui::Rect) -> (egui::Rect, f32) {
+    let name_x = row_rect.left() + ICON_WIDTH + HORIZONTAL_PADDING;
+    let fixed_width_total = ICON_WIDTH
+        + HORIZONTAL_PADDING
+        + MODIFIED_DATE_WIDTH
+        + INTER_COLUMN_PADDING
+        + FILE_SIZE_WIDTH
+        + HORIZONTAL_PADDING;
+    let name_width = (row_rect.width() - fixed_width_total).max(0.0);
+    let rect = egui::Rect::from_min_size(
+        egui::pos2(name_x, row_rect.top()),
+        egui::vec2(name_width, ROW_HEIGHT),
+    );
+    (rect, name_width)
+}
+
 pub struct TableHeaderParams<'a> {
     pub colors: &'a AppColors,
     pub sort_column: &'a SortColumn,
@@ -121,7 +138,6 @@ fn draw_header_column(
     }
 }
 
-#[derive(Debug)]
 pub struct EntryRowParams<'a> {
     pub entry: &'a DirEntry,
     pub is_selected: bool,
@@ -281,7 +297,6 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
 
     // --- Draw Name Column ---
     let name_clip_rect = egui::Rect::from_min_size(cursor, egui::vec2(name_width, ROW_HEIGHT));
-    let name_text = truncate_text(&entry.name, name_width);
     let name_color = if is_in_cut_clipboard {
         // Use error color (red) for cut files
         colors.error
@@ -294,12 +309,14 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
         colors.fg
     };
 
+    // --- Static name text ---
+    let name_text = truncate_text(&entry.name, name_width);
+
     let mut job = egui::text::LayoutJob {
         text: name_text.clone(),
         ..Default::default()
     };
 
-    // Just add the whole text with normal color (no highlighting)
     job.append(
         &name_text,
         0.0,
@@ -310,7 +327,7 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
     );
 
     let galley = ui.fonts_mut(|f| f.layout_job(job));
-    let galley_pos = cursor + egui::vec2(0.0, ROW_HEIGHT / 2.0 - galley.size().y / 2.0); // Center vertically
+    let galley_pos = cursor + egui::vec2(0.0, ROW_HEIGHT / 2.0 - galley.size().y / 2.0);
 
     ui.painter()
         .with_clip_rect(name_clip_rect)
