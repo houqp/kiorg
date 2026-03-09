@@ -295,9 +295,18 @@ fn process_key(
 
     if let Some(mut inline_rename) = app.inline_rename.take() {
         match key {
-            Key::Enter => inline_rename.confirm(app),
-            Key::Escape => inline_rename.clear(app),
-            _ => {}
+            Key::Enter => {
+                inline_rename.confirm(app);
+                return;
+            }
+            Key::Escape => {
+                inline_rename.clear(app);
+                return;
+            }
+            _ => {
+                app.inline_rename = Some(inline_rename);
+                return;
+            }
         }
     }
 

@@ -5,7 +5,7 @@ use crate::app::Clipboard;
 use crate::app::Kiorg;
 use crate::config;
 use crate::config::SortPreference;
-use crate::ui::file_list::{self, ROW_HEIGHT, TableHeaderParams};
+use crate::ui::file_list::{self, ROW_HEIGHT, RenameAction, TableHeaderParams};
 use crate::ui::popup::PopupType;
 use crate::utils::file_operations;
 
@@ -293,6 +293,14 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
     let mut drag_started_source: Option<PathBuf> = None; // To store an item (file or directory) that started being dragged
     let mut drop_target_folder: Option<PathBuf> = None; // To store the folder where a file was dropped
 
+    // Extract inline rename state to avoid borrow conflicts in the closure
+    let mut inline_rename_name: Option<String> = app
+        .inline_rename
+        .as_ref()
+        .map(|r| r.new_name().to_string());
+    let inline_rename_index: Option<usize> = app.inline_rename.as_ref().map(|r| r.original_index());
+    let mut inline_rename_action: Option<RenameAction> = None;
+
     // prepare drag and drop state
     let is_drag_active = app.is_dragging();
     let primary_pointer_released = ui.ctx().input(|i| i.pointer.primary_released());
@@ -429,8 +437,16 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                                 .map(|dragged| dragged == &entry.meta.path)
                                 .unwrap_or(false);
 
+                        // Determine if this row is being renamed
+                        let row_rename_name =
+                            if inline_rename_index == Some(original_index) {
+                                inline_rename_name.as_mut()
+                            } else {
+                                None
+                            };
+
                         // Draw the row and get its response
-                        let row_response = file_list::draw_entry_row(
+                        let row_result = file_list::draw_entry_row(
                             scroll_ui,
                             file_list::EntryRowParams {
                                 entry,
@@ -443,8 +459,15 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
                                 is_in_copy_clipboard,
                                 is_drag_source,
                                 is_drag_active,
+                                rename_name: row_rename_name,
                             },
                         );
+                        let row_response = row_result.response;
+
+                        // Capture rename action if any
+                        if !matches!(row_result.rename_action, RenameAction::None) {
+                            inline_rename_action = Some(row_result.rename_action);
+                        }
 
                         // Check for clicks to update selection state (captured outside)
                         if row_response.clicked() {
@@ -488,6 +511,26 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
         // Store the response of the inner container for context menu handling outside
         file_list_response = Some(inner_response);
     }); // End of main ui.vertical closure. All borrows of `app` inside are released here.
+
+    // Write back inline rename state
+    if let Some(ref mut rename) = app.inline_rename {
+        if let Some(name) = inline_rename_name {
+            *rename.new_name_mut() = name;
+        }
+    }
+    match inline_rename_action {
+        Some(RenameAction::Confirm) => {
+            if let Some(mut rename) = app.inline_rename.take() {
+                rename.confirm(app);
+            }
+        }
+        Some(RenameAction::Cancel) => {
+            if let Some(mut rename) = app.inline_rename.take() {
+                rename.clear(app);
+            }
+        }
+        _ => {}
+    }
 
     // --- Context Menu Logic for Background Area (using the stored response) ---
     if let Some(response) = file_list_response {

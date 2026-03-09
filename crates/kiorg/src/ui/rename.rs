@@ -19,6 +19,18 @@ impl Rename {
         }
     }
 
+    pub fn original_index(&self) -> usize {
+        self.original_index
+    }
+
+    pub fn new_name(&self) -> &str {
+        &self.new_name
+    }
+
+    pub fn new_name_mut(&mut self) -> &mut String {
+        &mut self.new_name
+    }
+
     pub fn confirm(&mut self, app: &mut Kiorg) {
         let new_name = self.new_name.trim().to_string();
 

@@ -548,7 +548,6 @@ impl Kiorg {
                 entry.name.clone(),
                 entry.name.clone(),
             ));
-            // self.show_popup = Some(PopupType::Rename(entry.name.clone()));
         }
     }
 
@@ -1038,10 +1037,6 @@ impl eframe::App for Kiorg {
         terminal::draw(ctx, self);
 
         self.process_input(ctx);
-
-        if self.inline_rename.is_some() {
-            rename::draw(ctx, self);
-        }
 
         match &mut self.show_popup {
             Some(PopupType::Help) => {

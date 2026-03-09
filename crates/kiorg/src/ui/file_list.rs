@@ -1,9 +1,17 @@
-use egui::{Align2, Ui};
+use egui::{Align2, Id, Ui};
 
 use crate::config::colors::AppColors;
 use crate::models::dir_entry::DirEntry;
 use crate::models::tab::{SortColumn, SortOrder};
 use crate::ui::style::{HEADER_FONT_SIZE, HEADER_ROW_HEIGHT};
+
+#[derive(Default)]
+pub enum RenameAction {
+    #[default]
+    None,
+    Confirm,
+    Cancel,
+}
 
 const ICON_SIZE: f32 = 14.0;
 const ICON_WIDTH: f32 = 22.0;
@@ -121,7 +129,6 @@ fn draw_header_column(
     }
 }
 
-#[derive(Debug)]
 pub struct EntryRowParams<'a> {
     pub entry: &'a DirEntry,
     pub is_selected: bool,
@@ -133,6 +140,12 @@ pub struct EntryRowParams<'a> {
     pub is_in_copy_clipboard: bool,
     pub is_drag_active: bool,
     pub is_drag_source: bool,
+    pub rename_name: Option<&'a mut String>,
+}
+
+pub struct EntryRowResult {
+    pub response: egui::Response,
+    pub rename_action: RenameAction,
 }
 
 fn draw_icon(
@@ -186,7 +199,7 @@ fn draw_icon(
     ICON_WIDTH + HORIZONTAL_PADDING
 }
 
-pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response {
+pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> EntryRowResult {
     let EntryRowParams {
         entry,
         is_selected,
@@ -198,6 +211,7 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
         is_in_copy_clipboard,
         is_drag_active,
         is_drag_source,
+        rename_name,
     } = params;
 
     let (rect, response) = ui.allocate_exact_size(
@@ -281,7 +295,6 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
 
     // --- Draw Name Column ---
     let name_clip_rect = egui::Rect::from_min_size(cursor, egui::vec2(name_width, ROW_HEIGHT));
-    let name_text = truncate_text(&entry.name, name_width);
     let name_color = if is_in_cut_clipboard {
         // Use error color (red) for cut files
         colors.error
@@ -294,27 +307,94 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
         colors.fg
     };
 
-    let mut job = egui::text::LayoutJob {
-        text: name_text.clone(),
-        ..Default::default()
-    };
+    let mut rename_action = RenameAction::None;
 
-    // Just add the whole text with normal color (no highlighting)
-    job.append(
-        &name_text,
-        0.0,
-        egui::TextFormat {
-            color: name_color,
+    if let Some(rename_name) = rename_name {
+        // --- Inline rename TextEdit ---
+        ui.painter()
+            .rect_filled(name_clip_rect, 0.0, colors.bg_selected);
+
+        let mut child_ui = ui.new_child(egui::UiBuilder::new().max_rect(name_clip_rect));
+        // Remove spacing/padding so TextEdit aligns exactly with the static text
+        child_ui.spacing_mut().item_spacing = egui::vec2(0.0, 0.0);
+        child_ui.style_mut().spacing.button_padding = egui::vec2(0.0, 0.0);
+
+        // Use the same font as the static name text (default proportional)
+        let font_id = egui::FontId::proportional(14.0);
+
+        let te_id = Id::new("inline_rename_textedit");
+        let te = egui::TextEdit::singleline(rename_name)
+            .id(te_id)
+            .frame(false)
+            .margin(egui::Margin {
+                left: 0,
+                right: 0,
+                top: 2,
+                bottom: 2,
+            })
+            .desired_width(name_width)
+            .font(font_id)
+            .text_color(name_color);
+
+        // Set selection color so highlighted text is visible
+        child_ui.visuals_mut().selection.bg_fill = colors.highlight.gamma_multiply(0.4);
+
+        let te_response = child_ui.add(te);
+
+        if te_response.lost_focus() {
+            let enter_pressed = ui.input(|i| i.key_pressed(egui::Key::Enter));
+            if enter_pressed {
+                rename_action = RenameAction::Confirm;
+            } else {
+                rename_action = RenameAction::Cancel;
+            }
+        } else if !te_response.has_focus() {
+            // No focus yet and didn't lose it — first frame
+            te_response.request_focus();
+
+            // Select filename stem (before extension)
+            let stem_len = entry
+                .meta
+                .path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .map(|s| s.chars().count())
+                .unwrap_or_else(|| rename_name.chars().count());
+
+            if let Some(mut state) = egui::TextEdit::load_state(ui.ctx(), te_id) {
+                let ccursor_range = egui::text_selection::CCursorRange::two(
+                    egui::text::CCursor::new(0),
+                    egui::text::CCursor::new(stem_len),
+                );
+                state.cursor.set_char_range(Some(ccursor_range));
+                state.store(ui.ctx(), te_id);
+            }
+        }
+    } else {
+        // --- Static name text ---
+        let name_text = truncate_text(&entry.name, name_width);
+
+        let mut job = egui::text::LayoutJob {
+            text: name_text.clone(),
             ..Default::default()
-        },
-    );
+        };
 
-    let galley = ui.fonts_mut(|f| f.layout_job(job));
-    let galley_pos = cursor + egui::vec2(0.0, ROW_HEIGHT / 2.0 - galley.size().y / 2.0); // Center vertically
+        job.append(
+            &name_text,
+            0.0,
+            egui::TextFormat {
+                color: name_color,
+                ..Default::default()
+            },
+        );
 
-    ui.painter()
-        .with_clip_rect(name_clip_rect)
-        .galley(galley_pos, galley, name_color);
+        let galley = ui.fonts_mut(|f| f.layout_job(job));
+        let galley_pos = cursor + egui::vec2(0.0, ROW_HEIGHT / 2.0 - galley.size().y / 2.0);
+
+        ui.painter()
+            .with_clip_rect(name_clip_rect)
+            .galley(galley_pos, galley, name_color);
+    }
     cursor.x += name_width + INTER_COLUMN_PADDING; // Advance cursor including padding
 
     let secondary_font_color = if is_selected {
@@ -343,7 +423,10 @@ pub fn draw_entry_row(ui: &mut Ui, params: EntryRowParams<'_>) -> egui::Response
     );
     // No cursor advance needed after the last column
 
-    response
+    EntryRowResult {
+        response,
+        rename_action,
+    }
 }
 
 pub fn draw_parent_entry_row(
