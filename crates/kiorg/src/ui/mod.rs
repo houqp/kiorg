@@ -7,6 +7,7 @@ pub mod notification;
 pub mod path_nav;
 pub mod popup;
 pub mod preview;
+pub mod rename;
 pub mod right_panel;
 pub mod search_bar;
 pub mod separator;

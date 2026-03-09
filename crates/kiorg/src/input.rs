@@ -293,6 +293,14 @@ fn process_key(
         return;
     }
 
+    if let Some(mut inline_rename) = app.inline_rename.take() {
+        match key {
+            Key::Enter => inline_rename.confirm(app),
+            Key::Escape => inline_rename.clear(app),
+            _ => {}
+        }
+    }
+
     // Handle special modal states first based on the show_popup field
     match &app.show_popup {
         Some(PopupType::Preview) | Some(PopupType::Pdf(_)) | Some(PopupType::Ebook(_)) => {

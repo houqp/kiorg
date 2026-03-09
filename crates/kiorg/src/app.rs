@@ -22,6 +22,7 @@ use crate::ui::popup::{
     generic_message, open_with as open_with_popup, plugin, preview as popup_preview, rename,
     sort_toggle, teleport, theme,
 };
+use crate::ui::rename::Rename;
 use crate::ui::search_bar::{self, SearchBar};
 use crate::ui::separator;
 use crate::ui::separator::SEPARATOR_PADDING;
@@ -188,6 +189,8 @@ pub struct Kiorg {
     pub dragged_file: Option<PathBuf>,
     // Plugin manager for external functionality
     pub plugin_manager: crate::plugins::PluginManager,
+    // Inline rename
+    pub inline_rename: Option<Rename>,
 }
 
 impl Kiorg {
@@ -336,6 +339,7 @@ impl Kiorg {
             history_saver,
             dragged_file: None,
             plugin_manager,
+            inline_rename: None,
         };
 
         app.refresh_entries();
@@ -539,7 +543,12 @@ impl Kiorg {
     pub fn rename_selected_entry(&mut self) {
         let tab = self.tab_manager.current_tab_mut();
         if let Some(entry) = tab.selected_entry() {
-            self.show_popup = Some(PopupType::Rename(entry.name.clone()));
+            self.inline_rename = Some(Rename::new(
+                tab.selected_index,
+                entry.name.clone(),
+                entry.name.clone(),
+            ));
+            // self.show_popup = Some(PopupType::Rename(entry.name.clone()));
         }
     }
 
@@ -1029,6 +1038,10 @@ impl eframe::App for Kiorg {
         terminal::draw(ctx, self);
 
         self.process_input(ctx);
+
+        if self.inline_rename.is_some() {
+            rename::draw(ctx, self);
+        }
 
         match &mut self.show_popup {
             Some(PopupType::Help) => {
