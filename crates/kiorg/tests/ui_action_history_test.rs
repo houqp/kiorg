@@ -224,14 +224,13 @@ fn test_undo_redo_rename_file() {
     harness.key_press(Key::R);
     harness.step();
 
-    // Verify the rename popup is shown
-    if let Some(PopupType::Rename(name)) = &harness.state().show_popup {
+    // Verify inline rename is active
+    {
+        let rename = harness.state().inline_rename.as_ref().expect("Inline rename should be active");
         assert_eq!(
-            name, "original.txt",
-            "Rename popup should contain the current filename"
+            rename.new_name, "original.txt",
+            "Rename should contain the current filename"
         );
-    } else {
-        panic!("Rename mode should be active");
     }
 
     // Clear existing text and type new name

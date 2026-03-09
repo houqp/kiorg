@@ -2,7 +2,6 @@
 mod ui_test_helpers;
 
 use egui::Key;
-use kiorg::ui::popup::PopupType;
 use tempfile::tempdir;
 use ui_test_helpers::{create_harness, create_test_files, wait_for_condition};
 
@@ -127,11 +126,10 @@ fn test_rename_shortcut() {
     harness.step();
 
     // verify we are in rename mode
-    if let Some(PopupType::Rename(_)) = &harness.state().show_popup {
-        // Rename popup is open, which is what we want
-    } else {
-        panic!("Rename popup should be open");
-    }
+    assert!(
+        harness.state().inline_rename.is_some(),
+        "Inline rename should be active"
+    );
 
     // Clear any existing text and simulate text input for the new name
     harness

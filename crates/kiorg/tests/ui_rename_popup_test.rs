@@ -2,7 +2,6 @@
 mod ui_test_helpers;
 
 use egui::Key;
-use kiorg::ui::popup::PopupType;
 use tempfile::tempdir;
 use ui_test_helpers::{create_harness, create_test_files};
 
@@ -36,17 +35,16 @@ fn test_rename_popup() {
     harness.key_press(Key::R);
     harness.step();
 
-    // Verify the rename popup is shown with the correct filename
-    if let Some(PopupType::Rename(name)) = &harness.state().show_popup {
+    // Verify inline rename is active with the correct filename
+    {
+        let rename = harness.state().inline_rename.as_ref().expect("Inline rename should be active");
         assert_eq!(
-            name, "file2.txt",
-            "Rename popup should contain the current filename"
+            rename.new_name, "file2.txt",
+            "Rename should contain the current filename"
         );
-    } else {
-        panic!("Rename popup should be open with the filename");
     }
 
-    // Simulate text input for the new name
+    // Simulate text input for the new name (replaces stem selection)
     harness
         .input_mut()
         .events
@@ -57,10 +55,10 @@ fn test_rename_popup() {
     harness.key_press(Key::Enter);
     harness.step();
 
-    // Verify the popup is closed
+    // Verify inline rename is cleared
     assert!(
-        harness.state().show_popup.is_none(),
-        "Rename popup should be closed after confirming"
+        harness.state().inline_rename.is_none(),
+        "Inline rename should be cleared after confirming"
     );
 
     // Verify the file was renamed
@@ -93,14 +91,13 @@ fn test_rename_popup() {
     harness.key_press(Key::R);
     harness.step();
 
-    // Verify the rename popup is shown with the correct filename
-    if let Some(PopupType::Rename(name)) = &harness.state().show_popup {
+    // Verify inline rename is active with the correct filename
+    {
+        let rename = harness.state().inline_rename.as_ref().expect("Inline rename should be active");
         assert_eq!(
-            name, "file3.txt",
-            "Rename popup should contain the current filename"
+            rename.new_name, "file3.txt",
+            "Rename should contain the current filename"
         );
-    } else {
-        panic!("Rename popup should be open with the filename");
     }
 
     // Simulate text input for the new name
@@ -114,10 +111,10 @@ fn test_rename_popup() {
     harness.key_press(Key::Escape);
     harness.step();
 
-    // Verify the popup is closed
+    // Verify inline rename is cleared
     assert!(
-        harness.state().show_popup.is_none(),
-        "Rename popup should be closed after canceling"
+        harness.state().inline_rename.is_none(),
+        "Inline rename should be cleared after canceling"
     );
 
     // Verify the file was NOT renamed
