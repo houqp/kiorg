@@ -31,10 +31,14 @@ impl Rename {
         &mut self.new_name
     }
 
+    pub fn original_name(&self) -> &str {
+        &self.original_name
+    }
+
     pub fn confirm(&mut self, app: &mut Kiorg) {
         let new_name = self.new_name.trim().to_string();
 
-        if new_name.is_empty() || new_name == self.original_name {
+        if new_name.is_empty() || new_name == self.original_name() {
             return;
         }
 
