@@ -341,14 +341,6 @@ fn process_key(
             }
             return;
         }
-        Some(PopupType::Rename(_)) => {
-            if key == Key::Enter {
-                crate::ui::popup::rename::handle_rename_confirmation(app, ctx);
-            } else if key == Key::Escape {
-                crate::ui::popup::rename::close_rename_popup(app, ctx);
-            }
-            return;
-        }
         Some(PopupType::OpenWith) => {
             if key == Key::Enter {
                 crate::ui::popup::open_with::handle_confirm(app, ctx);

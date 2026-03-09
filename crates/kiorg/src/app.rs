@@ -19,8 +19,8 @@ use crate::ui::egui_notify::Toasts;
 use crate::ui::popup::delete::DeleteConfirmResult;
 use crate::ui::popup::{
     PopupType, about, action_history, add_entry, bookmark, delete, exit, file_drop,
-    generic_message, open_with as open_with_popup, plugin, preview as popup_preview, rename,
-    sort_toggle, teleport, theme,
+    generic_message, open_with as open_with_popup, plugin, preview as popup_preview, sort_toggle,
+    teleport, theme,
 };
 use crate::ui::rename::Rename;
 use crate::ui::search_bar::{self, SearchBar};
@@ -1065,9 +1065,6 @@ impl eframe::App for Kiorg {
             }
             Some(PopupType::DeleteProgress(_)) => {
                 delete::handle_delete_progress(ctx, self);
-            }
-            Some(PopupType::Rename(_)) => {
-                rename::draw(ctx, self);
             }
             Some(PopupType::OpenWith) => {
                 open_with_popup::draw(ctx, self);
