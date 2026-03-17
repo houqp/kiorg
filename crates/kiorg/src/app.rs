@@ -975,7 +975,7 @@ impl Kiorg {
 
                 // Verify that the saved path still exists
                 if path.exists() && path.is_dir() {
-                    return (tab_manager, path)
+                    return (tab_manager, path);
                 }
 
                 // If saved path doesn't exist, fall back to default directory
@@ -985,24 +985,27 @@ impl Kiorg {
                 );
             }
         }
-        
+
         // Use default directory if set
         if let Some(ref default_dir) = config.default_directory {
             let default_path = PathBuf::from(default_dir);
 
             // Verify that the path still exists
             if default_path.exists() && default_path.is_dir() {
-                let tab_manager = TabManager::new_with_config(default_path.clone(), Some(&config));
-                return (tab_manager, default_path)
+                let tab_manager = TabManager::new_with_config(default_path.clone(), Some(config));
+                return (tab_manager, default_path);
             }
-            
+
             // If default directory fails, use fallback directory
-            tracing::warn!("default_directory '{}' is invalid, falling back", default_dir);
+            tracing::warn!(
+                "default_directory '{}' is invalid, falling back",
+                default_dir
+            );
         }
 
         // Use fallback directory
         let fallback_path = fallback_initial_dir();
-        let tab_manager = TabManager::new_with_config(fallback_path.clone(), Some(&config));
+        let tab_manager = TabManager::new_with_config(fallback_path.clone(), Some(config));
         (tab_manager, fallback_path)
     }
 

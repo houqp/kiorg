@@ -157,8 +157,7 @@ fn test_restore_session_flag_reset_to_false_after_load() {
     let cc = eframe::CreationContext::_new_kittest(ctx);
 
     // Create the app, load state and then reset the flag
-    let _app =
-        Kiorg::new(&cc, None, Some(config_dir.clone())).expect("Failed to create Kiorg app");
+    let _app = Kiorg::new(&cc, None, Some(config_dir.clone())).expect("Failed to create Kiorg app");
 
     // After loading, the state file should have restore_session reset to false
     let updated_json = std::fs::read_to_string(config_dir.join("state.json")).unwrap();
