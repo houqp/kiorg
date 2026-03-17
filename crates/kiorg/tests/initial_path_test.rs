@@ -4,12 +4,14 @@ use tempfile::tempdir;
 
 /// Helper to build a state.json string with a given path and restore_session value
 fn make_state_json(path: &str, restore_session: bool) -> String {
+    // Escape backslashes for JSON (Windows paths contain backslashes)
+    let escaped_path = path.replace('\\', "\\\\");
     format!(
         r#"{{
         "tab_manager": {{
             "tab_states": [
                 {{
-                    "current_path": "{path}"
+                    "current_path": "{escaped_path}"
                 }}
             ],
             "current_tab_index": 0,
@@ -183,7 +185,8 @@ fn test_no_restore_session_uses_default_directory() {
     std::fs::create_dir_all(&config_dir).unwrap();
 
     // Create a config.toml with default_directory set
-    let config_toml = format!("default_directory = \"{}\"", default_dir.to_str().unwrap());
+    let default_dir_str = default_dir.to_str().unwrap().replace('\\', "/");
+    let config_toml = format!("default_directory = \"{default_dir_str}\"");
     std::fs::write(config_dir.join("config.toml"), config_toml).unwrap();
 
     // Create a new egui context
