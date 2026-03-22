@@ -49,6 +49,7 @@ pub struct Layout {
 #[derive(Deserialize, Serialize, Default, Debug)]
 pub struct Config {
     pub theme: Option<String>,
+    pub default_directory: Option<String>,
     pub sort_preference: Option<SortPreference>,
     pub shortcuts: Option<shortcuts::Shortcuts>,
     pub custom_themes: Option<Vec<Theme>>,
@@ -59,6 +60,7 @@ impl Config {
     fn default() -> Self {
         Self {
             theme: None,
+            default_directory: None,
             sort_preference: None,
             shortcuts: None,
             custom_themes: None,

@@ -139,7 +139,9 @@ fn fallback_initial_dir() -> PathBuf {
 #[derive(Serialize, Deserialize)]
 pub struct AppState {
     pub tab_manager: TabManagerState,
-    // Add more fields here in the future
+    // Whether to restore previous session
+    #[serde(default)]
+    pub restore_session: bool,
 }
 
 pub struct Kiorg {
@@ -179,6 +181,8 @@ pub struct Kiorg {
     // Key buffer for tracking unprocessed key presses
     pub key_buffer: Vec<crate::config::shortcuts::ShortcutKey>,
     pub shutdown_requested: bool,
+    // Tracks whether to restore previous session
+    pub restore_session: bool,
     // Signal whether to scroll to display current directory in the left panel
     pub scroll_left_panel: bool,
     // Global visit history tracking
@@ -249,32 +253,7 @@ impl Kiorg {
                 (tab_manager, path)
             }
             // If no initial directory is provided, try to load from saved state
-            None => {
-                if let Some(tab_manager) = Self::load_app_state(config_dir_override.as_deref()) {
-                    // Use the saved state's path
-                    let path = tab_manager.current_tab_ref().current_path.clone();
-
-                    // Verify that the saved path still exists
-                    if !path.exists() || !path.is_dir() {
-                        // If saved path doesn't exist, fall back to home directory
-                        tracing::error!(
-                            "Saved path in state '{}' is invalid, falling back to home directory",
-                            path.display()
-                        );
-                        let fallback_path = fallback_initial_dir();
-                        let fallback_tab_manager =
-                            TabManager::new_with_config(fallback_path.clone(), Some(&config));
-                        (fallback_tab_manager, fallback_path)
-                    } else {
-                        (tab_manager, path)
-                    }
-                } else {
-                    // No saved state, use fallback directory
-                    let path = fallback_initial_dir();
-                    let tab_manager = TabManager::new_with_config(path.clone(), Some(&config));
-                    (tab_manager, path)
-                }
-            }
+            None => Self::load_initial_state(config_dir_override.as_deref(), &config),
         };
 
         let (fs_watcher, notify_fs_change) = match create_fs_watcher(initial_path.as_path()) {
@@ -332,6 +311,7 @@ impl Kiorg {
             key_buffer: Vec::new(),
             terminal_ctx: None,
             shutdown_requested: false,
+            restore_session: false,
             notify_fs_change,
             scroll_left_panel: false,
             fs_watcher,
@@ -961,6 +941,7 @@ impl Kiorg {
     }
 
     pub fn graceful_shutdown(&mut self) {
+        self.restore_session = true;
         self.history_saver.shutdown();
 
         // Shutdown plugins
@@ -980,6 +961,67 @@ impl Kiorg {
         crate::utils::preview_cache::purge_cache_dir();
     }
 
+    fn load_initial_state(
+        config_dir_override: Option<&std::path::Path>,
+        config: &config::Config,
+    ) -> (TabManager, PathBuf) {
+        if let Some((tab_manager, restore_session)) = Self::load_app_state(config_dir_override) {
+            // Reset restore session state flag
+            Self::reset_restore_session(config_dir_override);
+
+            if restore_session {
+                // Use the saved state's path
+                let path = tab_manager.current_tab_ref().current_path.clone();
+
+                // Verify that the saved path still exists
+                if path.exists() && path.is_dir() {
+                    return (tab_manager, path);
+                }
+
+                // If saved path doesn't exist, fall back to default directory
+                tracing::error!(
+                    "Saved path in state '{}' is invalid, falling back to default or home directory",
+                    path.display()
+                );
+            }
+        }
+
+        // Use default directory if set
+        if let Some(ref default_dir) = config.default_directory {
+            let default_path = PathBuf::from(default_dir);
+
+            // Verify that the path still exists
+            if default_path.exists() && default_path.is_dir() {
+                let tab_manager = TabManager::new_with_config(default_path.clone(), Some(config));
+                return (tab_manager, default_path);
+            }
+
+            // If default directory fails, use fallback directory
+            tracing::warn!(
+                "default_directory '{}' is invalid, falling back",
+                default_dir
+            );
+        }
+
+        // Use fallback directory
+        let fallback_path = fallback_initial_dir();
+        let tab_manager = TabManager::new_with_config(fallback_path.clone(), Some(config));
+        (tab_manager, fallback_path)
+    }
+
+    fn reset_restore_session(config_dir_override: Option<&std::path::Path>) {
+        let config_dir = config::get_kiorg_config_dir(config_dir_override);
+        let state_path = config_dir.join(STATE_FILE_NAME);
+        if let Ok(json_str) = std::fs::read_to_string(&state_path) {
+            if let Ok(mut app_state) = serde_json::from_str::<AppState>(&json_str) {
+                app_state.restore_session = false;
+                if let Ok(updated) = serde_json::to_string_pretty(&app_state) {
+                    let _ = std::fs::write(&state_path, updated);
+                }
+            }
+        }
+    }
+
     fn save_app_state(&self) -> Result<(), Box<dyn std::error::Error>> {
         let config_dir = config::get_kiorg_config_dir(self.config_dir_override.as_deref());
 
@@ -991,7 +1033,7 @@ impl Kiorg {
         let state_path = config_dir.join(STATE_FILE_NAME);
         let app_state = AppState {
             tab_manager: self.tab_manager.to_state(),
-            // Add more fields here in the future
+            restore_session: self.restore_session,
         };
         let state_json = serde_json::to_string_pretty(&app_state)?;
         std::fs::write(&state_path, state_json)?;
@@ -999,7 +1041,7 @@ impl Kiorg {
         Ok(())
     }
 
-    fn load_app_state(config_dir_override: Option<&std::path::Path>) -> Option<TabManager> {
+    fn load_app_state(config_dir_override: Option<&std::path::Path>) -> Option<(TabManager, bool)> {
         let config_dir = config::get_kiorg_config_dir(config_dir_override);
         let state_path = config_dir.join(STATE_FILE_NAME);
 
@@ -1012,9 +1054,11 @@ impl Kiorg {
                 // First try to parse as the new format (AppState)
                 match serde_json::from_str::<AppState>(&json_str) {
                     Ok(app_state) => {
+                        // Retrieve session restore state
+                        let restore_session = app_state.restore_session;
                         // Convert TabManagerState to TabManager
                         let tab_manager = TabManager::from_state(app_state.tab_manager);
-                        Some(tab_manager)
+                        Some((tab_manager, restore_session))
                     }
                     Err(_) => {
                         // If that fails, try the old format (direct TabManagerState)
@@ -1022,7 +1066,7 @@ impl Kiorg {
                             Ok(tab_manager_state) => {
                                 // Convert TabManagerState to TabManager
                                 let tab_manager = TabManager::from_state(tab_manager_state);
-                                Some(tab_manager)
+                                Some((tab_manager, false))
                             }
                             Err(e) => {
                                 eprintln!("Failed to parse app state: {e}");
