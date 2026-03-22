@@ -20,6 +20,10 @@ struct Args {
     /// Clear the preview cache before starting
     #[arg(long)]
     clear_cache: bool,
+
+    /// Print the cache and config directory, then exit
+    #[arg(long)]
+    print_dirs: bool,
 }
 
 fn init_tracing() {
@@ -52,6 +56,14 @@ fn main() -> Result<(), eframe::Error> {
 
     let matches = cmd.get_matches();
     let args = Args::from_arg_matches(&matches).unwrap_or_else(|e| e.exit());
+
+    if args.print_dirs {
+        let config_dir = kiorg::config::get_kiorg_config_dir(args.config_dir.as_deref());
+        let cache_dir = kiorg::utils::preview_cache::get_cache_dir().unwrap_or_default();
+        println!("Config: {}", config_dir.display());
+        println!("Cache:  {}", cache_dir.display());
+        return Ok(());
+    }
 
     if args.clear_cache {
         kiorg::utils::preview_cache::purge_cache_dir();
