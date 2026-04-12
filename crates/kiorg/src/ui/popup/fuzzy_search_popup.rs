@@ -4,7 +4,7 @@
 //! a search bar with fuzzy matching and a scrollable list of selectable items.
 
 use crate::config::colors::AppColors;
-use egui::{Align, Color32, Frame, Key, Layout, Shadow, TextEdit, Vec2};
+use egui::{Align, Color32, Key, Layout, TextEdit, Vec2};
 use nucleo::{Config as NucleoConfig, Matcher, Utf32Str};
 use std::borrow::Cow;
 
@@ -139,24 +139,9 @@ pub fn draw<T: FuzzySearchItem>(
 ) -> FuzzySearchAction<T> {
     let mut action = FuzzySearchAction::KeepOpen;
 
-    let shadow = Shadow {
-        offset: [0, 4],
-        blur: 12,
-        spread: 0,
-        color: Color32::from_black_alpha(60),
-    };
-
-    egui::Window::new(config.title)
-        .title_bar(false)
-        .resizable(false)
-        .anchor(egui::Align2::CENTER_CENTER, Vec2::ZERO)
-        .frame(
-            Frame::default()
-                .fill(colors.bg_extreme)
-                .inner_margin(8.0)
-                .shadow(shadow),
-        )
-        .show(ctx, |ui| {
+    crate::ui::popup::frameless_popup::new_frameless_popup_window(config.title, colors).show(
+        ctx,
+        |ui| {
             let popup_height = ui.available_height() - 60.0;
             ui.set_min_width(600.0);
             ui.set_max_width(ui.available_width() - 100.0);
@@ -198,7 +183,8 @@ pub fn draw<T: FuzzySearchItem>(
             {
                 action = FuzzySearchAction::Selected(selected);
             }
-        });
+        },
+    );
 
     action
 }
