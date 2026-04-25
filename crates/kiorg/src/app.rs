@@ -1073,6 +1073,8 @@ impl eframe::App for Kiorg {
 
         terminal::draw(ctx, self);
 
+        self.process_input(ctx);
+
         match &mut self.show_popup {
             Some(PopupType::Help) => {
                 let mut keep_open = true;
@@ -1206,8 +1208,6 @@ impl eframe::App for Kiorg {
             }
             None => {}
         }
-
-        self.process_input(ctx);
 
         egui::CentralPanel::default().show(ctx, |ui| {
             let total_available_height = ui.available_height();

@@ -4,6 +4,8 @@ use egui::{Align, Color32, Key, Layout, TextEdit, Vec2};
 use nucleo::{Config as NucleoConfig, Matcher, Utf32Str};
 use std::path::{MAIN_SEPARATOR, Path, PathBuf};
 
+const MAX_SUGGESTIONS: usize = 10;
+
 #[derive(Debug, Clone)]
 pub struct GoToPathState {
     pub input: String,
@@ -56,7 +58,7 @@ impl GoToPathState {
                     }
                 }
                 dirs.sort();
-                self.suggestions = dirs.into_iter().take(10).collect();
+                self.suggestions = dirs.into_iter().take(MAX_SUGGESTIONS).collect();
                 self.parent_exists = true;
             }
             #[cfg(windows)]
@@ -114,7 +116,7 @@ impl GoToPathState {
 
         if stem.is_empty() {
             dirs.sort();
-            self.suggestions = dirs.into_iter().take(10).collect();
+            self.suggestions = dirs.into_iter().take(MAX_SUGGESTIONS).collect();
         } else {
             let mut config = NucleoConfig::DEFAULT;
             config.ignore_case = true;
@@ -137,7 +139,7 @@ impl GoToPathState {
                 .collect();
 
             scored_dirs.sort_by(|a, b| b.1.cmp(&a.1));
-            self.suggestions = scored_dirs.into_iter().map(|(p, _)| p).take(10).collect();
+            self.suggestions = scored_dirs.into_iter().map(|(p, _)| p).take(MAX_SUGGESTIONS).collect();
         }
 
         self.selected_index = 0;
@@ -145,8 +147,8 @@ impl GoToPathState {
 }
 
 pub fn draw(ctx: &egui::Context, app: &mut Kiorg) {
-    let mut state = if let Some(PopupType::GoToPath(state)) = &app.show_popup {
-        state.clone()
+    let mut state = if let Some(PopupType::GoToPath(state)) = app.show_popup.take() {
+        state
     } else {
         return;
     };
@@ -207,11 +209,13 @@ pub fn draw(ctx: &egui::Context, app: &mut Kiorg) {
                                 false
                             }
                             Key::Tab => {
-                                if *pressed && !state.suggestions.is_empty() {
-                                    let mut path_str = state.suggestions[state.selected_index]
-                                        .to_string_lossy()
-                                        .to_string();
-                                    if !path_str.ends_with(MAIN_SEPARATOR) {
+                                if *pressed
+                                    && !state.suggestions.is_empty()
+                                    && state.selected_index < state.suggestions.len()
+                                {
+                                    let path = &state.suggestions[state.selected_index];
+                                    let mut path_str = path.to_string_lossy().to_string();
+                                    if path.is_dir() && !path_str.ends_with(MAIN_SEPARATOR) {
                                         path_str.push(MAIN_SEPARATOR);
                                     }
                                     state.input = path_str;
@@ -265,7 +269,7 @@ pub fn draw(ctx: &egui::Context, app: &mut Kiorg) {
                 if response.changed() || state.last_input.is_none() {
                     let prev_input = state.input.clone();
                     state.update_suggestions();
-                    // kepp cursor to the end when we prepend content to user input automatically, e.g. `/`.
+                    // keep cursor to the end when we prepend content to user input automatically, e.g. `/`.
                     if response.changed() && state.input != prev_input {
                         if let Some(mut text_state) = TextEdit::load_state(ui.ctx(), response.id) {
                             let new_len = state.input.chars().count();
