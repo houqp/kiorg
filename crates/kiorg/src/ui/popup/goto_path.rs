@@ -51,7 +51,7 @@ impl GoToPathState {
                 if let Ok(entries) = std::fs::read_dir("/") {
                     for entry in entries.flatten() {
                         if let Ok(file_type) = entry.file_type() {
-                            if file_type.is_dir() {
+                            if file_type.is_dir() || (file_type.is_symlink() && entry.path().is_dir()) {
                                 dirs.push(entry.path());
                             }
                         }
@@ -107,7 +107,7 @@ impl GoToPathState {
         if let Ok(entries) = std::fs::read_dir(parent) {
             for entry in entries.flatten() {
                 if let Ok(file_type) = entry.file_type() {
-                    if file_type.is_dir() {
+                    if file_type.is_dir() || (file_type.is_symlink() && entry.path().is_dir()) {
                         dirs.push(entry.path());
                     }
                 }
@@ -139,7 +139,11 @@ impl GoToPathState {
                 .collect();
 
             scored_dirs.sort_by(|a, b| b.1.cmp(&a.1));
-            self.suggestions = scored_dirs.into_iter().map(|(p, _)| p).take(MAX_SUGGESTIONS).collect();
+            self.suggestions = scored_dirs
+                .into_iter()
+                .map(|(p, _)| p)
+                .take(MAX_SUGGESTIONS)
+                .collect();
         }
 
         self.selected_index = 0;
@@ -180,9 +184,11 @@ pub fn draw(ctx: &egui::Context, app: &mut Kiorg) {
                             }
                             Key::Enter => {
                                 if *pressed {
-                                    if !state.suggestions.is_empty()
-                                        && state.selected_index < state.suggestions.len()
-                                    {
+                                    if !state.suggestions.is_empty() {
+                                        if state.selected_index >= state.suggestions.len() {
+                                            tracing::error!("GoToPath selected_index {} out of bounds (len {}), resetting to 0", state.selected_index, state.suggestions.len());
+                                            state.selected_index = 0;
+                                        }
                                         navigate_to =
                                             Some(state.suggestions[state.selected_index].clone());
                                     } else {
@@ -193,26 +199,37 @@ pub fn draw(ctx: &egui::Context, app: &mut Kiorg) {
                             }
                             Key::ArrowDown => {
                                 if *pressed && !state.suggestions.is_empty() {
-                                    state.selected_index =
-                                        (state.selected_index + 1) % state.suggestions.len();
+                                    if state.selected_index >= state.suggestions.len() {
+                                        tracing::error!("GoToPath selected_index {} out of bounds (len {}), resetting to 0", state.selected_index, state.suggestions.len());
+                                        state.selected_index = 0;
+                                    } else {
+                                        state.selected_index =
+                                            (state.selected_index + 1) % state.suggestions.len();
+                                    }
                                 }
                                 false
                             }
                             Key::ArrowUp => {
                                 if *pressed && !state.suggestions.is_empty() {
-                                    state.selected_index = if state.selected_index == 0 {
-                                        state.suggestions.len() - 1
+                                    if state.selected_index >= state.suggestions.len() {
+                                        tracing::error!("GoToPath selected_index {} out of bounds (len {}), resetting to 0", state.selected_index, state.suggestions.len());
+                                        state.selected_index = 0;
                                     } else {
-                                        state.selected_index - 1
-                                    };
+                                        state.selected_index = if state.selected_index == 0 {
+                                            state.suggestions.len() - 1
+                                        } else {
+                                            state.selected_index - 1
+                                        };
+                                    }
                                 }
                                 false
                             }
                             Key::Tab => {
-                                if *pressed
-                                    && !state.suggestions.is_empty()
-                                    && state.selected_index < state.suggestions.len()
-                                {
+                                if *pressed && !state.suggestions.is_empty() {
+                                    if state.selected_index >= state.suggestions.len() {
+                                        tracing::error!("GoToPath selected_index {} out of bounds (len {}), resetting to 0", state.selected_index, state.suggestions.len());
+                                        state.selected_index = 0;
+                                    }
                                     let path = &state.suggestions[state.selected_index];
                                     let mut path_str = path.to_string_lossy().to_string();
                                     if path.is_dir() && !path_str.ends_with(MAIN_SEPARATOR) {

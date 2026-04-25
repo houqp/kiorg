@@ -364,3 +364,44 @@ fn test_ui_goto_path_tab_focus() {
         panic!("Popup should still be open");
     }
 }
+
+#[test]
+fn test_ui_goto_path_symlink_dir_suggestion() {
+    let temp_dir = tempdir().unwrap();
+    let actual_dir = temp_dir.path().join("actual_dir");
+    let symlink_dir = temp_dir.path().join("symlink_dir");
+    std::fs::create_dir(&actual_dir).unwrap();
+    #[cfg(unix)]
+    std::os::unix::fs::symlink(&actual_dir, &symlink_dir).unwrap();
+    #[cfg(windows)]
+    std::os::windows::fs::symlink_dir(&actual_dir, &symlink_dir).unwrap();
+
+    let mut harness = create_harness(&temp_dir);
+
+    // Open popup
+    harness.key_press(Key::G);
+    harness.step();
+    harness.key_press(Key::L);
+    harness.step();
+
+    // Type "sym"
+    for ch in "sym".chars() {
+        harness
+            .input_mut()
+            .events
+            .push(egui::Event::Text(ch.to_string()));
+    }
+    harness.step();
+
+    // Verify symlink directory is suggested
+    if let Some(PopupType::GoToPath(state)) = &harness.state().show_popup {
+        let has_symlink = state.suggestions.iter().any(|p| p.ends_with("symlink_dir"));
+        assert!(
+            has_symlink,
+            "Suggestions should contain 'symlink_dir' (which is a symlink to a dir), got: {:?}",
+            state.suggestions
+        );
+    } else {
+        panic!("Popup should be GoToPath");
+    }
+}
