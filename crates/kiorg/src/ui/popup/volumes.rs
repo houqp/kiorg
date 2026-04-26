@@ -146,18 +146,16 @@ pub fn show_volumes_popup(ctx: &Context, app: &mut Kiorg) -> VolumeAction {
             // Handle keyboard navigation
             if let Some(action) = action {
                 match action {
-                    ShortcutAction::MoveDown => {
-                        if !volumes.is_empty() {
-                            current_index = (current_index + 1).min(volumes.len() - 1);
-                        }
+                    ShortcutAction::MoveDown if !volumes.is_empty() => {
+                        current_index = (current_index + 1).min(volumes.len() - 1);
                     }
                     ShortcutAction::MoveUp => {
                         current_index = current_index.saturating_sub(1);
                     }
-                    ShortcutAction::OpenDirectoryOrFile | ShortcutAction::OpenDirectory => {
-                        if !volumes.is_empty() {
-                            navigate_to_path = Some(volumes[current_index].clone());
-                        }
+                    ShortcutAction::OpenDirectoryOrFile | ShortcutAction::OpenDirectory
+                        if !volumes.is_empty() =>
+                    {
+                        navigate_to_path = Some(volumes[current_index].clone());
                     }
                     _ => {} // Other actions already handled above
                 }

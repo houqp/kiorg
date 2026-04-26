@@ -177,10 +177,8 @@ pub fn show_bookmark_popup(ctx: &Context, app: &mut Kiorg) -> BookmarkAction {
                 app.show_popup = None;
                 return BookmarkAction::None;
             }
-            ShortcutAction::DeleteEntry => {
-                if !app.bookmarks.is_empty() {
-                    remove_bookmark_path = Some(app.bookmarks[current_index].clone());
-                }
+            ShortcutAction::DeleteEntry if !app.bookmarks.is_empty() => {
+                remove_bookmark_path = Some(app.bookmarks[current_index].clone());
             }
             _ => {} // Other actions will be handled below in the window
         }
@@ -201,18 +199,16 @@ pub fn show_bookmark_popup(ctx: &Context, app: &mut Kiorg) -> BookmarkAction {
         let action = app.get_shortcut_action_from_input(ctx);
         if let Some(action) = action {
             match action {
-                ShortcutAction::MoveDown => {
-                    if !app.bookmarks.is_empty() {
-                        current_index = (current_index + 1).min(app.bookmarks.len() - 1);
-                    }
+                ShortcutAction::MoveDown if !app.bookmarks.is_empty() => {
+                    current_index = (current_index + 1).min(app.bookmarks.len() - 1);
                 }
                 ShortcutAction::MoveUp => {
                     current_index = current_index.saturating_sub(1);
                 }
-                ShortcutAction::OpenDirectoryOrFile | ShortcutAction::OpenDirectory => {
-                    if !app.bookmarks.is_empty() {
-                        navigate_to_path = Some(app.bookmarks[current_index].clone());
-                    }
+                ShortcutAction::OpenDirectoryOrFile | ShortcutAction::OpenDirectory
+                    if !app.bookmarks.is_empty() =>
+                {
+                    navigate_to_path = Some(app.bookmarks[current_index].clone());
                 }
                 _ => {} // Other actions already handled above
             }

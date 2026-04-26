@@ -272,12 +272,11 @@ fn test_ui_navigation_mouse_click_selects_and_previews() {
     // Initially, index 0 ("a.txt") should be selected
     harness.step();
 
-    // Preview cache should be empty or contain preview for a.txt initially
-    // (Depending on initial load behavior, let's ensure it doesn't contain b.txt yet)
-    assert!(
-        harness.state().cached_preview_path != Some(test_files[1].clone()),
-        "Preview path should not be b.txt yet"
-    );
+    // Wait for initial selection (a.txt) to be previewed
+    wait_for_condition(|| {
+        harness.step();
+        harness.state().cached_preview_path == Some(test_files[0].clone())
+    });
 
     // --- Simulate Click on the second entry ("b.txt") ---
     // Calculate the bounding box for the second row (index 1)

@@ -1151,26 +1151,31 @@ impl eframe::App for Kiorg {
             Some(PopupType::Preview) => {
                 popup_preview::draw(ctx, self);
             }
+            #[allow(clippy::collapsible_match)]
             Some(PopupType::Pdf(pdf_viewer)) => {
                 if !pdf_viewer.draw(ctx, &self.colors) {
                     self.show_popup = None;
                 }
             }
+            #[allow(clippy::collapsible_match)]
             Some(PopupType::Ebook(ebook_viewer)) => {
                 if !ebook_viewer.draw(ctx, &self.colors) {
                     self.show_popup = None;
                 }
             }
+            #[allow(clippy::collapsible_match)]
             Some(PopupType::Image(image_viewer)) => {
                 if !image_viewer.draw(ctx, &self.colors) {
                     self.show_popup = None;
                 }
             }
+            #[allow(clippy::collapsible_match)]
             Some(PopupType::Video(video_viewer)) => {
                 if !video_viewer.draw(ctx, &self.colors) {
                     self.show_popup = None;
                 }
             }
+            #[allow(clippy::collapsible_match)]
             Some(PopupType::Plugin(plugin_viewer)) => {
                 if !plugin_viewer.draw(ctx, &self.colors) {
                     self.show_popup = None;
@@ -1202,6 +1207,9 @@ impl eframe::App for Kiorg {
             }
             Some(PopupType::ActionHistory) => {
                 action_history::draw(ctx, self);
+            }
+            Some(PopupType::GoToPath(_)) => {
+                crate::ui::popup::goto_path::draw(ctx, self);
             }
             None => {}
         }

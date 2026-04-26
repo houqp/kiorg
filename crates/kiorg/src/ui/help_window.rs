@@ -46,9 +46,9 @@ pub fn show_help_window(
                             ShortcutAction::GoToParentDirectory,
                             "Go to parent directory",
                         ),
-                        (ShortcutAction::OpenDirectory, "Open directory"),
                         (ShortcutAction::GoToFirstEntry, "Jump to the first entry"),
                         (ShortcutAction::GoToLastEntry, "Jump to the last entry"),
+                        (ShortcutAction::GoToPath, "Go to path"),
                         (ShortcutAction::GoBackInHistory, "Go back in history"),
                         (ShortcutAction::GoForwardInHistory, "Go forward in history"),
                         (ShortcutAction::ToggleHiddenFiles, "Toggle hidden files"),
@@ -71,6 +71,7 @@ pub fn show_help_window(
                             ShortcutAction::ShowTeleport,
                             "Teleport with history fuzzy search",
                         ),
+                        (ShortcutAction::OpenDirectory, "Open directory"),
                         (ShortcutAction::ShowBookmarks, "Show bookmark popup"),
                         #[cfg(target_os = "windows")]
                         (ShortcutAction::ShowWindowsDrives, "Show drives popup"),

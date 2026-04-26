@@ -39,8 +39,10 @@ pub mod delete;
 pub mod ebook_viewer;
 pub mod exit;
 pub mod file_drop;
+pub mod frameless_popup;
 pub mod fuzzy_search_popup;
 pub mod generic_message;
+pub mod goto_path;
 pub mod image_viewer;
 pub mod open_with;
 pub mod pdf_viewer;
@@ -90,4 +92,5 @@ pub enum PopupType {
     UpdateRestart,    // Show restart confirmation with version info
     SortToggle,       // Show sort toggle popup for column sorting
     ActionHistory,    // Show action history with rollback options
+    GoToPath(crate::ui::popup::goto_path::GoToPathState), // Manually enter a path
 }

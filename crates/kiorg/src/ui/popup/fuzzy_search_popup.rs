@@ -4,7 +4,7 @@
 //! a search bar with fuzzy matching and a scrollable list of selectable items.
 
 use crate::config::colors::AppColors;
-use egui::{Align, Color32, Frame, Key, Layout, Shadow, TextEdit, Vec2};
+use egui::{Align, Color32, Key, Layout, TextEdit, Vec2};
 use nucleo::{Config as NucleoConfig, Matcher, Utf32Str};
 use std::borrow::Cow;
 
@@ -105,7 +105,7 @@ pub fn fuzzy_filter<T: FuzzySearchItem>(query: &str, items: &[T]) -> Vec<FuzzyMa
         })
         .collect();
 
-    results.sort_by(|a, b| b.score.cmp(&a.score));
+    results.sort_by_key(|b| std::cmp::Reverse(b.score));
     results
 }
 
@@ -139,24 +139,9 @@ pub fn draw<T: FuzzySearchItem>(
 ) -> FuzzySearchAction<T> {
     let mut action = FuzzySearchAction::KeepOpen;
 
-    let shadow = Shadow {
-        offset: [0, 4],
-        blur: 12,
-        spread: 0,
-        color: Color32::from_black_alpha(60),
-    };
-
-    egui::Window::new(config.title)
-        .title_bar(false)
-        .resizable(false)
-        .anchor(egui::Align2::CENTER_CENTER, Vec2::ZERO)
-        .frame(
-            Frame::default()
-                .fill(colors.bg_extreme)
-                .inner_margin(8.0)
-                .shadow(shadow),
-        )
-        .show(ctx, |ui| {
+    crate::ui::popup::frameless_popup::new_frameless_popup_window(config.title, colors).show(
+        ctx,
+        |ui| {
             let popup_height = ui.available_height() - 60.0;
             ui.set_min_width(600.0);
             ui.set_max_width(ui.available_width() - 100.0);
@@ -198,7 +183,8 @@ pub fn draw<T: FuzzySearchItem>(
             {
                 action = FuzzySearchAction::Selected(selected);
             }
-        });
+        },
+    );
 
     action
 }
@@ -222,23 +208,16 @@ fn handle_keyboard_input<T: FuzzySearchItem>(
                     Key::Escape => {
                         action = FuzzySearchAction::Close;
                     }
-                    Key::Enter => {
-                        if !items.is_empty() && state.selected_index < visible_count {
-                            action = FuzzySearchAction::Selected(
-                                items[state.selected_index].item.clone(),
-                            );
-                        }
+                    Key::Enter if !items.is_empty() && state.selected_index < visible_count => {
+                        action =
+                            FuzzySearchAction::Selected(items[state.selected_index].item.clone());
                     }
-                    Key::ArrowDown => {
-                        if !items.is_empty() {
-                            let max_index = visible_count.saturating_sub(1);
-                            state.selected_index = (state.selected_index + 1).min(max_index);
-                        }
+                    Key::ArrowDown if !items.is_empty() => {
+                        let max_index = visible_count.saturating_sub(1);
+                        state.selected_index = (state.selected_index + 1).min(max_index);
                     }
-                    Key::ArrowUp => {
-                        if state.selected_index > 0 {
-                            state.selected_index -= 1;
-                        }
+                    Key::ArrowUp if state.selected_index > 0 => {
+                        state.selected_index -= 1;
                     }
                     _ => {}
                 }
