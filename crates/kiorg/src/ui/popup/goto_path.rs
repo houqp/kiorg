@@ -51,7 +51,9 @@ impl GoToPathState {
                 if let Ok(entries) = std::fs::read_dir("/") {
                     for entry in entries.flatten() {
                         if let Ok(file_type) = entry.file_type() {
-                            if file_type.is_dir() || (file_type.is_symlink() && entry.path().is_dir()) {
+                            if file_type.is_dir()
+                                || (file_type.is_symlink() && entry.path().is_dir())
+                            {
                                 dirs.push(entry.path());
                             }
                         }
@@ -138,7 +140,7 @@ impl GoToPathState {
                 })
                 .collect();
 
-            scored_dirs.sort_by(|a, b| b.1.cmp(&a.1));
+            scored_dirs.sort_by_key(|b| std::cmp::Reverse(b.1));
             self.suggestions = scored_dirs
                 .into_iter()
                 .map(|(p, _)| p)

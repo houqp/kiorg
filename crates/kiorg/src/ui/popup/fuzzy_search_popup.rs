@@ -105,7 +105,7 @@ pub fn fuzzy_filter<T: FuzzySearchItem>(query: &str, items: &[T]) -> Vec<FuzzyMa
         })
         .collect();
 
-    results.sort_by(|a, b| b.score.cmp(&a.score));
+    results.sort_by_key(|b| std::cmp::Reverse(b.score));
     results
 }
 
@@ -208,23 +208,16 @@ fn handle_keyboard_input<T: FuzzySearchItem>(
                     Key::Escape => {
                         action = FuzzySearchAction::Close;
                     }
-                    Key::Enter => {
-                        if !items.is_empty() && state.selected_index < visible_count {
-                            action = FuzzySearchAction::Selected(
-                                items[state.selected_index].item.clone(),
-                            );
-                        }
+                    Key::Enter if !items.is_empty() && state.selected_index < visible_count => {
+                        action =
+                            FuzzySearchAction::Selected(items[state.selected_index].item.clone());
                     }
-                    Key::ArrowDown => {
-                        if !items.is_empty() {
-                            let max_index = visible_count.saturating_sub(1);
-                            state.selected_index = (state.selected_index + 1).min(max_index);
-                        }
+                    Key::ArrowDown if !items.is_empty() => {
+                        let max_index = visible_count.saturating_sub(1);
+                        state.selected_index = (state.selected_index + 1).min(max_index);
                     }
-                    Key::ArrowUp => {
-                        if state.selected_index > 0 {
-                            state.selected_index -= 1;
-                        }
+                    Key::ArrowUp if state.selected_index > 0 => {
+                        state.selected_index -= 1;
                     }
                     _ => {}
                 }

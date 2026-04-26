@@ -314,6 +314,7 @@ fn process_key(
 
     // Handle special modal states first based on the show_popup field
     match &app.show_popup {
+        #[allow(clippy::collapsible_match)]
         Some(PopupType::Preview) | Some(PopupType::Pdf(_)) | Some(PopupType::Ebook(_)) => {
             if is_cancel_keys(key) {
                 popup_preview::close_popup(app);
@@ -369,11 +370,13 @@ fn process_key(
             }
             return;
         }
+        #[allow(clippy::collapsible_match)]
         Some(PopupType::AddEntry(_)) => {
             if add_entry::handle_key_press(ctx, app) {
                 return;
             }
         }
+        #[allow(clippy::collapsible_match)]
         Some(PopupType::FileDrop(files)) => {
             if file_drop::handle_key_press(ctx, app, files.clone()) {
                 return;

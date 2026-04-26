@@ -129,13 +129,11 @@ pub fn draw(app: &mut Kiorg, ctx: &egui::Context) {
                 app.show_popup = None;
                 return;
             }
-            ShortcutAction::MoveDown => {
-                if !themes.is_empty() {
-                    let new_index = (current_selected_index + 1).min(themes.len() - 1);
-                    if new_index != current_selected_index {
-                        new_selected_theme_key = themes[new_index].theme_key().to_string();
-                        theme_key_changed = true;
-                    }
+            ShortcutAction::MoveDown if !themes.is_empty() => {
+                let new_index = (current_selected_index + 1).min(themes.len() - 1);
+                if new_index != current_selected_index {
+                    new_selected_theme_key = themes[new_index].theme_key().to_string();
+                    theme_key_changed = true;
                 }
             }
             ShortcutAction::MoveUp => {
@@ -145,18 +143,16 @@ pub fn draw(app: &mut Kiorg, ctx: &egui::Context) {
                     theme_key_changed = true;
                 }
             }
-            ShortcutAction::OpenDirectoryOrFile => {
-                if !themes.is_empty() {
-                    // Find the selected theme entry
-                    if let Some(selected_theme) = themes
-                        .iter()
-                        .find(|t| t.theme_key() == new_selected_theme_key)
-                    {
-                        // Apply and save the selected theme
-                        apply_and_save_theme(app, selected_theme, ctx);
-                        app.show_popup = None;
-                        return;
-                    }
+            ShortcutAction::OpenDirectoryOrFile if !themes.is_empty() => {
+                // Find the selected theme entry
+                if let Some(selected_theme) = themes
+                    .iter()
+                    .find(|t| t.theme_key() == new_selected_theme_key)
+                {
+                    // Apply and save the selected theme
+                    apply_and_save_theme(app, selected_theme, ctx);
+                    app.show_popup = None;
+                    return;
                 }
             }
             _ => {} // Ignore other actions

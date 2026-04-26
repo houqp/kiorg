@@ -99,7 +99,7 @@ fn test_ui_goto_path_navigation() {
 fn test_ui_goto_path_tab_completion() {
     let temp_dir = tempdir().unwrap();
     let sub_dir = temp_dir.path().join("sub_dir");
-    create_test_files(&[sub_dir.clone()]);
+    create_test_files(std::slice::from_ref(&sub_dir));
 
     let mut harness = create_harness(&temp_dir);
 
@@ -294,7 +294,7 @@ fn test_ui_goto_path_cursor_preservation() {
 fn test_ui_goto_path_tab_focus() {
     let temp_dir = tempdir().unwrap();
     let sub_dir = temp_dir.path().join("sub_dir");
-    create_test_files(&[sub_dir.clone()]);
+    create_test_files(std::slice::from_ref(&sub_dir));
 
     let mut harness = create_harness(&temp_dir);
 

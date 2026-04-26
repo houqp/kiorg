@@ -412,21 +412,13 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
 
                         // Check if this entry is in the clipboard as a cut or copy operation
                         let (is_in_cut_clipboard, is_in_copy_clipboard) = match &app.clipboard {
-                            Some(Clipboard::Cut(paths)) => {
-                                if paths.contains(&entry.meta.path) {
-                                    (true, false)
-                                } else {
-                                    (false, false)
-                                }
+                            Some(Clipboard::Cut(paths)) if paths.contains(&entry.meta.path) => {
+                                (true, false)
                             }
-                            Some(Clipboard::Copy(paths)) => {
-                                if paths.contains(&entry.meta.path) {
-                                    (false, true)
-                                } else {
-                                    (false, false)
-                                }
+                            Some(Clipboard::Copy(paths)) if paths.contains(&entry.meta.path) => {
+                                (false, true)
                             }
-                            None => (false, false),
+                            _ => (false, false),
                         };
 
                         // Check if this entry is being dragged or is a drag target
