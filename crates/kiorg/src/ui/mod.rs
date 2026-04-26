@@ -15,3 +15,11 @@ pub mod style;
 pub mod terminal;
 pub mod top_banner;
 pub mod update;
+
+#[inline]
+pub fn clamp_height(h: f32) -> f32 {
+    #[cfg(debug_assertions)]
+    return h;
+    #[cfg(not(debug_assertions))]
+    return h.max(0.0);
+}

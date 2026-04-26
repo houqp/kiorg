@@ -199,7 +199,7 @@ impl Toasts {
             *held = false;
         }
 
-        let visuals = ctx.style().visuals.widgets.noninteractive;
+        let visuals = ctx.global_style().visuals.widgets.noninteractive;
         let mut update = false;
 
         toasts.retain_mut(|toast| {
@@ -227,7 +227,7 @@ impl Toasts {
 
             let caption_galley = toast.caption.clone().into_galley_impl(
                 ctx,
-                ctx.style().as_ref(),
+                ctx.global_style().as_ref(),
                 TextWrapping::from_wrap_mode_and_width(TextWrapMode::Extend, f32::INFINITY),
                 FontSelection::Default,
                 Align::LEFT,

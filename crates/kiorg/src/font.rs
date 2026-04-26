@@ -119,7 +119,7 @@ pub fn configure_egui_fonts(ctx: &egui::Context) {
     // Add Nerd Fonts to both Monospace and Proportional families
     fonts.font_data.insert(
         "nerdfonts".into(),
-        egui_nerdfonts::Variant::Regular.font_data().into(),
+        Arc::new(egui_nerdfonts::Variant::Regular.font_data()),
     );
     if let Some(font_keys) = fonts.families.get_mut(&egui::FontFamily::Monospace) {
         font_keys.push("nerdfonts".into());

@@ -100,8 +100,8 @@ fn bench_top_banner_deep_path(c: &mut Criterion) {
                 let ctx = egui::Context::default();
                 let input = egui::RawInput::default();
 
-                let _ = ctx.run(input, |ctx| {
-                    egui::TopBottomPanel::top("top_banner").show(ctx, |ui| {
+                let _ = ctx.run_ui(input, |ui| {
+                    egui::Panel::top("top_banner").show_inside(ui, |ui| {
                         // Call the actual top_banner::draw function with deep path
                         kiorg::ui::top_banner::draw(&mut app, ui);
                     });
@@ -118,8 +118,8 @@ fn bench_top_banner_deep_path(c: &mut Criterion) {
                 let ctx = egui::Context::default();
                 let input = egui::RawInput::default();
 
-                let _ = ctx.run(input, |ctx| {
-                    egui::TopBottomPanel::top("top_banner").show(ctx, |ui| {
+                let _ = ctx.run_ui(input, |ui| {
+                    egui::Panel::top("top_banner").show_inside(ui, |ui| {
                         // Call the actual top_banner::draw function with very deep path
                         kiorg::ui::top_banner::draw(&mut app, ui);
                     });
@@ -136,8 +136,8 @@ fn bench_top_banner_deep_path(c: &mut Criterion) {
                 let ctx = egui::Context::default();
                 let input = egui::RawInput::default();
 
-                let _ = ctx.run(input, |ctx| {
-                    egui::TopBottomPanel::top("top_banner").show(ctx, |ui| {
+                let _ = ctx.run_ui(input, |ui| {
+                    egui::Panel::top("top_banner").show_inside(ui, |ui| {
                         // Call the actual top_banner::draw function
                         kiorg::ui::top_banner::draw(&mut app, ui);
                     });
@@ -175,8 +175,8 @@ fn bench_top_banner_multiple_tabs(c: &mut Criterion) {
                 let ctx = egui::Context::default();
                 let input = egui::RawInput::default();
 
-                let _ = ctx.run(input, |ctx| {
-                    egui::TopBottomPanel::top("top_banner").show(ctx, |ui| {
+                let _ = ctx.run_ui(input, |ui| {
+                    egui::Panel::top("top_banner").show_inside(ui, |ui| {
                         // Call the actual top_banner::draw function with multiple tabs
                         kiorg::ui::top_banner::draw(&mut app, ui);
                     });

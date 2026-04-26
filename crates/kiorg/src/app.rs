@@ -1041,12 +1041,12 @@ impl Kiorg {
 }
 
 impl eframe::App for Kiorg {
-    fn update(&mut self, ctx: &egui::Context, _: &mut eframe::Frame) {
+    fn ui(&mut self, ui: &mut egui::Ui, _: &mut eframe::Frame) {
         #[cfg(feature = "debug")]
-        ctx.set_debug_on_hover(true);
+        ui.set_debug_on_hover(true);
 
-        self.poll_preview_content(ctx);
-        self.poll_popup_viewers(ctx);
+        self.poll_preview_content(ui);
+        self.poll_popup_viewers(ui);
         self.check_notifications();
 
         if self
@@ -1067,19 +1067,19 @@ impl eframe::App for Kiorg {
 
         // Update preview cache only if selection changed
         if self.selection_changed {
-            preview::update_selected_cache(self, ctx);
+            preview::update_selected_cache(self, ui);
             self.selection_changed = false; // Reset flag after update
         }
 
-        terminal::draw(ctx, self);
+        terminal::draw(ui, self);
 
-        self.process_input(ctx);
+        self.process_input(ui);
 
         match &mut self.show_popup {
             Some(PopupType::Help) => {
                 let mut keep_open = true;
                 help_window::show_help_window(
-                    ctx,
+                    ui,
                     self.get_shortcuts(),
                     &mut keep_open,
                     &self.colors,
@@ -1089,29 +1089,29 @@ impl eframe::App for Kiorg {
                 }
             }
             Some(PopupType::About) => {
-                about::show_about_popup(ctx, self);
+                about::show_about_popup(ui, self);
             }
             Some(PopupType::GenericMessage(_, _)) => {
-                generic_message::show_generic_message_popup(ctx, self);
+                generic_message::show_generic_message_popup(ui, self);
             }
             Some(PopupType::Exit) => {
-                exit::draw(ctx, self);
+                exit::draw(ui, self);
             }
             Some(PopupType::Delete(_, _)) => {
-                self.handle_delete_confirmation(ctx);
+                self.handle_delete_confirmation(ui);
             }
             Some(PopupType::DeleteProgress(_)) => {
-                delete::handle_delete_progress(ctx, self);
+                delete::handle_delete_progress(ui, self);
             }
             Some(PopupType::OpenWith) => {
-                open_with_popup::draw(ctx, self);
+                open_with_popup::draw(ui, self);
             }
             Some(PopupType::AddEntry(_)) => {
-                add_entry::draw(ctx, self);
+                add_entry::draw(ui, self);
             }
             Some(PopupType::Bookmarks(_)) => {
                 // Handle bookmark popup
-                let bookmark_action = bookmark::show_bookmark_popup(ctx, self);
+                let bookmark_action = bookmark::show_bookmark_popup(ui, self);
                 // Process the bookmark action
                 match bookmark_action {
                     bookmark::BookmarkAction::Navigate(path) => self.navigate_to_dir(path),
@@ -1132,7 +1132,7 @@ impl eframe::App for Kiorg {
                 use crate::ui::popup::windows_drives;
 
                 // Handle drives popup
-                let drive_action = windows_drives::show_drives_popup(ctx, self);
+                let drive_action = windows_drives::show_drives_popup(ui, self);
                 // Process the drive action
                 match drive_action {
                     windows_drives::DriveAction::Navigate(path) => self.navigate_to_dir(path),
@@ -1142,79 +1142,97 @@ impl eframe::App for Kiorg {
             #[cfg(target_os = "macos")]
             Some(PopupType::Volumes(_)) => {
                 use crate::ui::popup::volumes;
-                let volume_action = volumes::show_volumes_popup(ctx, self);
+                let volume_action = volumes::show_volumes_popup(ui, self);
                 match volume_action {
                     volumes::VolumeAction::Navigate(path) => self.navigate_to_dir(path),
                     volumes::VolumeAction::None => {}
                 };
             }
             Some(PopupType::Preview) => {
-                popup_preview::draw(ctx, self);
+                popup_preview::draw(ui, self);
             }
             #[allow(clippy::collapsible_match)]
             Some(PopupType::Pdf(pdf_viewer)) => {
-                if !pdf_viewer.draw(ctx, &self.colors) {
+                if !pdf_viewer.draw(ui, &self.colors) {
                     self.show_popup = None;
                 }
             }
             #[allow(clippy::collapsible_match)]
             Some(PopupType::Ebook(ebook_viewer)) => {
-                if !ebook_viewer.draw(ctx, &self.colors) {
+                if !ebook_viewer.draw(ui, &self.colors) {
                     self.show_popup = None;
                 }
             }
             #[allow(clippy::collapsible_match)]
             Some(PopupType::Image(image_viewer)) => {
-                if !image_viewer.draw(ctx, &self.colors) {
+                if !image_viewer.draw(ui, &self.colors) {
                     self.show_popup = None;
                 }
             }
             #[allow(clippy::collapsible_match)]
             Some(PopupType::Video(video_viewer)) => {
-                if !video_viewer.draw(ctx, &self.colors) {
+                if !video_viewer.draw(ui, &self.colors) {
                     self.show_popup = None;
                 }
             }
             #[allow(clippy::collapsible_match)]
             Some(PopupType::Plugin(plugin_viewer)) => {
-                if !plugin_viewer.draw(ctx, &self.colors) {
+                if !plugin_viewer.draw(ui, &self.colors) {
                     self.show_popup = None;
                 }
             }
             Some(PopupType::Themes(_)) => {
-                theme::draw(self, ctx);
+                theme::draw(self, ui);
             }
             Some(PopupType::Plugins) => {
-                plugin::draw(self, ctx);
+                plugin::draw(self, ui);
             }
             Some(PopupType::FileDrop(_)) => {
-                file_drop::draw(ctx, self);
+                file_drop::draw(ui, self);
             }
             Some(PopupType::Teleport(_)) => {
-                teleport::draw(ctx, self);
+                teleport::draw(ui, self);
             }
             Some(PopupType::SortToggle) => {
-                sort_toggle::show_sort_toggle_popup(self, ctx);
+                sort_toggle::show_sort_toggle_popup(self, ui);
             }
             Some(PopupType::UpdateConfirm(_)) => {
-                update::show_update_confirm_popup(ctx, self);
+                update::show_update_confirm_popup(ui, self);
             }
             Some(PopupType::UpdateProgress(_)) => {
-                update::show_update_progress(ctx, self);
+                update::show_update_progress(ui, self);
             }
             Some(PopupType::UpdateRestart) => {
-                update::show_update_restart_popup(ctx, self);
+                update::show_update_restart_popup(ui, self);
             }
             Some(PopupType::ActionHistory) => {
-                action_history::draw(ctx, self);
+                action_history::draw(ui, self);
             }
             Some(PopupType::GoToPath(_)) => {
-                crate::ui::popup::goto_path::draw(ctx, self);
+                crate::ui::popup::goto_path::draw(ui, self);
             }
             None => {}
         }
 
-        egui::CentralPanel::default().show(ctx, |ui| {
+        let available_rect = ui.available_rect_before_wrap();
+        let layout = *ui.layout();
+
+        // WORKAROUND: We use `.global_scope(true)` to shield the main file manager UI from ID shifts.
+        // Dynamic elements drawn above (like `terminal::draw`'s bottom panel) consume auto-IDs from the root `ui`,
+        // which advances `ui`'s internal counter. If we drew `CentralPanel` directly on the root `ui`,
+        // its ID would be hashed with that advanced counter, causing the IDs of every single row
+        // in the file manager to completely change whenever the terminal opens or closes.
+        // `.global_scope(true)` creates a child UI with an absolute, completely fresh ID namespace
+        // that completely ignores the parent's auto-ID counter, ensuring perfect ID stability.
+        let mut stable_ui = ui.new_child(
+            egui::UiBuilder::new()
+                .max_rect(available_rect)
+                .layout(layout)
+                .id_salt("stable_main_layout")
+                .global_scope(true),
+        );
+
+        egui::CentralPanel::default().show_inside(&mut stable_ui, |ui| {
             let total_available_height = ui.available_height();
 
             // Draw top banner and measure its height
@@ -1229,12 +1247,14 @@ impl eframe::App for Kiorg {
 
             // Main panels layout
             ui.horizontal(|ui| {
-                let container_height = total_available_height - top_banner_height;
+                let container_height =
+                    crate::ui::clamp_height(total_available_height - top_banner_height);
                 ui.spacing_mut().item_spacing.x = PANEL_SPACING;
                 ui.set_min_height(container_height);
 
-                let content_height =
-                    container_height - ui.spacing().item_spacing.x * 2.0 - PANEL_SPACING;
+                let content_height = crate::ui::clamp_height(
+                    container_height - ui.spacing().item_spacing.x * 2.0 - PANEL_SPACING,
+                );
 
                 if let Some(path) = left_panel::draw(self, ui, left_width, content_height) {
                     self.navigate_to_dir(path);
@@ -1244,20 +1264,21 @@ impl eframe::App for Kiorg {
                 center_panel::draw(self, ui, center_width, content_height);
                 separator::draw_vertical_separator(ui);
 
-                right_panel::draw(self, ctx, ui, right_width, content_height);
+                let ctx = ui.ctx().clone();
+                right_panel::draw(self, &ctx, ui, right_width, content_height);
                 ui.add_space(PANEL_SPACING);
             });
         });
 
-        search_bar::draw(ctx, self);
+        search_bar::draw(ui, self);
 
         if self.shutdown_requested {
             self.graceful_shutdown();
-            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+            ui.send_viewport_cmd(egui::ViewportCommand::Close);
             self.shutdown_requested = false;
         }
 
         // Draw toast notifications
-        self.toasts.show(ctx);
+        self.toasts.show(ui);
     }
 }

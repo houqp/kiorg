@@ -236,7 +236,7 @@ fn render_search_bar(ui: &mut egui::Ui, query: &mut String, hint: &str) -> bool 
         let text_edit = TextEdit::singleline(query)
             .hint_text(hint)
             .desired_width(f32::INFINITY)
-            .frame(false);
+            .frame(egui::Frame::NONE);
 
         let response = ui.add(text_edit);
         response.request_focus();

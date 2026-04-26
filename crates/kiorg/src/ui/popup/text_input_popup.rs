@@ -63,7 +63,7 @@ pub fn draw(
                         let text_edit = TextEdit::singleline(text)
                             .hint_text(config.hint)
                             .desired_width(f32::INFINITY)
-                            .frame(false);
+                            .frame(Frame::NONE);
                         let response = ui.add(text_edit);
 
                         response.request_focus();

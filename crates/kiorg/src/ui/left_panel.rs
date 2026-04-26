@@ -26,7 +26,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) -> Option<Pat
         ui.separator();
 
         // Calculate available height for scroll area
-        let available_height = height - HEADER_ROW_HEIGHT;
+        let available_height = crate::ui::clamp_height(height - HEADER_ROW_HEIGHT);
 
         egui::ScrollArea::vertical()
             .id_salt("parent_list_scroll")
