@@ -321,7 +321,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
         let header_resp = file_list::draw_table_header(ui, &mut header_params);
 
         // --- Draw Scrollable File List within its own container for context menu ---
-        let available_height = height - header_resp.rect.height();
+        let available_height = crate::ui::clamp_height(height - header_resp.rect.height());
         let scroll_area_id = ui.id().with("center_panel_list_scroll");
 
         // Use a containing layout for the scroll area to capture interactions
@@ -476,7 +476,7 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui, width: f32, height: f32) {
 
                                 let te = egui::TextEdit::singleline(rename_name)
                                     .id(te_id)
-                                    .frame(false)
+                                    .frame(egui::Frame::NONE)
                                     .margin(egui::Margin {
                                         left: 0,
                                         right: 0,

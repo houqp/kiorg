@@ -260,7 +260,7 @@ pub fn draw(ctx: &egui::Context, app: &mut Kiorg) {
                     .id(egui::Id::new("goto_path_input"))
                     .hint_text("Enter path...")
                     .desired_width(f32::INFINITY)
-                    .frame(false);
+                    .frame(egui::Frame::NONE);
 
                 let response = ui.add(text_edit);
                 // Always request focus to ensure the input box is ready for typing.

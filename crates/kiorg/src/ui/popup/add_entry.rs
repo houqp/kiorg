@@ -28,7 +28,7 @@ pub fn draw(ctx: &egui::Context, app: &mut Kiorg) {
                             let text_edit = TextEdit::singleline(entry_name)
                                 .hint_text("Enter name (append '/' at the end for directory)...")
                                 .desired_width(f32::INFINITY) // Take available width
-                                .frame(false); // No frame, like search bar
+                                .frame(egui::Frame::NONE); // No frame, like search bar
 
                             let response = ui.add(text_edit);
 

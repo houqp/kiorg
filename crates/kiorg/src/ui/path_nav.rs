@@ -208,8 +208,8 @@ mod tests {
     }
 
     impl App for TestApp {
-        fn update(&mut self, ctx: &egui::Context, _: &mut eframe::Frame) {
-            egui::CentralPanel::default().show(ctx, |ui| {
+        fn ui(&mut self, ui: &mut egui::Ui, _: &mut eframe::Frame) {
+            egui::CentralPanel::default().show_inside(ui, |ui| {
                 self.message = draw_path_navigation(ui, &self.path, &self.colors, 1);
             });
         }

@@ -51,9 +51,9 @@ fn libpdfium() -> &'static Library {
             file.write_all(LIBPDFIUM_DYLIB)
                 .expect("failed to write to temp file");
             let path = file.into_temp_path(); // close file
-            let lib = Library::new(&path).expect("failed to load dynamic libpdfium");
+            let lib = Library::new(&*path).expect("failed to load dynamic libpdfium");
             // On Unix, we can safely delete the file immediately after it's loaded into memory.
-            let _ = fs::remove_file(path);
+            let _ = fs::remove_file(&path);
             lib
         }
     })

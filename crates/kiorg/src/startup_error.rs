@@ -80,12 +80,12 @@ impl StartupErrorApp {
 }
 
 impl eframe::App for StartupErrorApp {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        egui::CentralPanel::default().show(ctx, |ui| {
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        egui::CentralPanel::default().show_inside(ui, |ui| {
             ui.vertical(|ui| {
                 ui.add_space(20.0);
 
-                let visuals = &ctx.style().visuals;
+                let error_fg_color = ui.style().visuals.error_fg_color;
 
                 // Error icon and title
                 ui.horizontal(|ui| {
@@ -96,7 +96,7 @@ impl eframe::App for StartupErrorApp {
                         egui::RichText::new(&self.title)
                             .size(16.0)
                             .strong()
-                            .color(visuals.error_fg_color),
+                            .color(error_fg_color),
                     );
                 });
                 ui.add_space(10.0);
@@ -126,7 +126,7 @@ impl eframe::App for StartupErrorApp {
                 ui.vertical_centered(|ui| {
                     let button = egui::Button::new(egui::RichText::new("OK").size(14.0).strong());
                     if ui.add(button).clicked() {
-                        ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                        ui.send_viewport_cmd(egui::ViewportCommand::Close);
                     }
                 });
             });

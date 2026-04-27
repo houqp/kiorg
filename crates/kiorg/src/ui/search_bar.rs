@@ -126,7 +126,7 @@ pub fn draw(ctx: &Context, app: &mut Kiorg) {
                             egui::TextEdit::singleline(app.search_bar.query.as_mut().unwrap())
                                 .hint_text("Search...")
                                 .desired_width(f32::INFINITY) // Take available width
-                                .frame(false);
+                                .frame(egui::Frame::NONE);
                         let response = ui.add(text_edit);
 
                         // Set focus when search mode is first activated

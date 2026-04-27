@@ -51,7 +51,7 @@ mod implementation {
         }
     }
 
-    pub fn draw(ctx: &egui::Context, app: &mut Kiorg) {
+    pub fn draw(ui: &mut egui::Ui, app: &mut Kiorg) {
         if let Some(terminal_ctx) = &mut app.terminal_ctx {
             if let Ok((_, PtyEvent::Exit)) = terminal_ctx.pty_proxy_receiver.try_recv() {
                 app.terminal_ctx = None;
@@ -61,13 +61,20 @@ mod implementation {
             let mut close_terminal = false;
 
             // Create a panel at the bottom of the screen
-            let screen_height = ctx.content_rect().height();
-            egui::TopBottomPanel::bottom("terminal_panel")
+            let screen_height = ui.ctx().content_rect().height();
+            egui::Panel::bottom("terminal_panel")
                 .resizable(true)
-                .default_height(screen_height * 0.6)
-                .min_height(100.0)
-                .max_height(screen_height * 0.9)
-                .show(ctx, |ui| {
+                .default_size(screen_height * 0.6)
+                .min_size(100.0)
+                // We reserve 120.0 pixels of headroom at the top to prevent negative height panics in the main UI:
+                // - Top Banner (~30px) + Separator (~4px)
+                // - CentralPanel Spacing/Margins (~16px)
+                // - Panel Table Headers (~20px)
+                // - One visible file row minimum (~24px)
+                // - Safety buffer for OS font scaling and window borders (~26px)
+                // Total = ~120px
+                .max_size(crate::ui::clamp_height(screen_height - 120.0))
+                .show_inside(ui, |ui| {
                     // Add a close button in the top right corner
                     ui.horizontal(|ui| {
                         ui.label(section_title_text("Terminal", &app.colors));
@@ -110,7 +117,7 @@ mod implementation {
 
     pub fn init() {}
 
-    pub fn draw(_ctx: &egui::Context, app: &mut Kiorg) {
+    pub fn draw(_ui: &mut egui::Ui, app: &mut Kiorg) {
         if app.terminal_ctx.is_some() {
             // Show the feature disabled popup
             app.show_popup = Some(PopupType::GenericMessage(

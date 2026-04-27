@@ -64,8 +64,8 @@ fn bench_center_panel_draw(c: &mut Criterion) {
                 let ctx = egui::Context::default();
                 let input = egui::RawInput::default();
 
-                let _ = ctx.run(input, |ctx| {
-                    egui::CentralPanel::default().show(ctx, |ui| {
+                let _ = ctx.run_ui(input, |ui| {
+                    egui::CentralPanel::default().show_inside(ui, |ui| {
                         let available_rect = ui.available_rect_before_wrap();
                         let width = available_rect.width();
                         let height = available_rect.height();
@@ -101,8 +101,8 @@ fn bench_center_panel_with_search(c: &mut Criterion) {
                 let ctx = egui::Context::default();
                 let input = egui::RawInput::default();
 
-                let _ = ctx.run(input, |ctx| {
-                    egui::CentralPanel::default().show(ctx, |ui| {
+                let _ = ctx.run_ui(input, |ui| {
+                    egui::CentralPanel::default().show_inside(ui, |ui| {
                         let available_rect = ui.available_rect_before_wrap();
                         let width = available_rect.width();
                         let height = available_rect.height();
