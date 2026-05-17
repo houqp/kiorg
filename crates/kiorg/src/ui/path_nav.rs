@@ -5,6 +5,7 @@ use egui::{RichText, Ui};
 #[derive(Debug)]
 pub enum PathNavMessage {
     Navigate(PathBuf),
+    GoToPath,
 }
 
 pub fn draw_path_navigation(
@@ -26,8 +27,8 @@ pub fn draw_path_navigation(
 
         let available_width = ui.available_width()
             - (
-                // +1 for menu button
-                tab_count + 1
+                // +1 for menu button, +1 for edit icon
+                tab_count + 2
             ) as f32
                 * 24.0
             // for prompt dollar sign and space
@@ -101,6 +102,21 @@ pub fn draw_path_navigation(
                 {
                     message = Some(PathNavMessage::Navigate(path.clone()));
                 }
+            }
+        }
+
+        // Show edit icon at the end of the path when the row is hovered
+        let row_rect = ui.max_rect();
+        let pointer_in_row = ui.ctx().input(|i| {
+            i.pointer
+                .hover_pos()
+                .is_some_and(|pos| row_rect.contains(pos))
+        });
+        if pointer_in_row {
+            let edit_response =
+                ui.link(RichText::new("\u{270E}").color(colors.fg_light).size(14.0));
+            if edit_response.clicked() {
+                message = Some(PathNavMessage::GoToPath);
             }
         }
     });

@@ -206,18 +206,7 @@ fn handle_shortcut_action(app: &mut Kiorg, ctx: &egui::Context, action: &Shortcu
             ));
         }
         ShortcutAction::GoToPath => {
-            let mut path = app
-                .tab_manager
-                .current_tab_ref()
-                .current_path
-                .to_string_lossy()
-                .to_string();
-            if !path.ends_with(std::path::MAIN_SEPARATOR) {
-                path.push(std::path::MAIN_SEPARATOR);
-            }
-            let mut state = crate::ui::popup::goto_path::GoToPathState::new(path);
-            state.update_suggestions();
-            app.show_popup = Some(PopupType::GoToPath(state));
+            app.show_goto_path_popup();
         }
         ShortcutAction::ShowSortToggle => {
             app.show_popup = Some(PopupType::SortToggle);
