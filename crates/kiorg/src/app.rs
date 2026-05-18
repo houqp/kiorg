@@ -825,6 +825,21 @@ impl Kiorg {
         self.tab_manager.current_tab_mut().add_to_history(path);
     }
 
+    pub fn show_goto_path_popup(&mut self) {
+        let mut path = self
+            .tab_manager
+            .current_tab_ref()
+            .current_path
+            .to_string_lossy()
+            .to_string();
+        if !path.ends_with(std::path::MAIN_SEPARATOR) {
+            path.push(std::path::MAIN_SEPARATOR);
+        }
+        let mut state = crate::ui::popup::goto_path::GoToPathState::new(path);
+        state.update_suggestions();
+        self.show_popup = Some(crate::ui::popup::PopupType::GoToPath(state));
+    }
+
     pub fn navigate_history_back(&mut self) {
         let tab = self.tab_manager.current_tab_mut();
         if let Some(path) = tab.history_back() {

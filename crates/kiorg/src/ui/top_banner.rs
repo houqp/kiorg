@@ -20,6 +20,9 @@ pub fn draw(app: &mut Kiorg, ui: &mut Ui) {
                         path_nav::PathNavMessage::Navigate(path) => {
                             app.navigate_to_dir(path);
                         }
+                        path_nav::PathNavMessage::GoToPath => {
+                            app.show_goto_path_popup();
+                        }
                     }
                 }
             });
