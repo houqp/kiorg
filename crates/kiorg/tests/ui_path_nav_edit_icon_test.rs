@@ -42,24 +42,18 @@ fn test_path_nav_edit_icon_triggers_goto_path_popup() {
         .input_mut()
         .events
         .push(egui::Event::PointerMoved(click_pos));
-    harness
-        .input_mut()
-        .events
-        .push(egui::Event::PointerButton {
-            pos: click_pos,
-            button: egui::PointerButton::Primary,
-            pressed: true,
-            modifiers: egui::Modifiers::default(),
-        });
-    harness
-        .input_mut()
-        .events
-        .push(egui::Event::PointerButton {
-            pos: click_pos,
-            button: egui::PointerButton::Primary,
-            pressed: false,
-            modifiers: egui::Modifiers::default(),
-        });
+    harness.input_mut().events.push(egui::Event::PointerButton {
+        pos: click_pos,
+        button: egui::PointerButton::Primary,
+        pressed: true,
+        modifiers: egui::Modifiers::default(),
+    });
+    harness.input_mut().events.push(egui::Event::PointerButton {
+        pos: click_pos,
+        button: egui::PointerButton::Primary,
+        pressed: false,
+        modifiers: egui::Modifiers::default(),
+    });
     harness.step();
 
     // Verify the GoToPath popup is open
