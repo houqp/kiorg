@@ -98,20 +98,15 @@ impl PdfViewer {
             .max_size(popup_size)
             .min_size(popup_size)
             .open(&mut keep_open)
-            .show(ctx, |ui| {
-                let available_width = ui.available_width();
-                let available_height = ui.available_height();
-
-                match self {
-                    Self::Loaded(pdf_meta) => {
-                        render_popup(ui, pdf_meta, colors, available_width, available_height);
-                    }
-                    Self::Loading(path, _, _) => {
-                        crate::ui::popup::preview::render_loading(ui, path, colors);
-                    }
-                    Self::Error(e) => {
-                        crate::ui::popup::preview::render_error(ui, e, colors);
-                    }
+            .show(ctx, |ui| match self {
+                Self::Loaded(pdf_meta) => {
+                    render_popup(ui, pdf_meta, colors);
+                }
+                Self::Loading(path, _, _) => {
+                    crate::ui::popup::preview::render_loading(ui, path, colors);
+                }
+                Self::Error(e) => {
+                    crate::ui::popup::preview::render_error(ui, e, colors);
                 }
             });
 
@@ -120,13 +115,7 @@ impl PdfViewer {
 }
 
 /// Render PDF in popup with page navigation
-pub fn render_popup(
-    ui: &mut egui::Ui,
-    viewer_content: &mut PdfViewerContent,
-    colors: &AppColors,
-    available_width: f32,
-    available_height: f32,
-) {
+pub fn render_popup(ui: &mut egui::Ui, viewer_content: &mut PdfViewerContent, colors: &AppColors) {
     // Get current page and total pages
     let current_page = viewer_content.meta.current_page;
     let total_pages = viewer_content.meta.page_count;
@@ -228,18 +217,16 @@ pub fn render_popup(
     // Add a small space after the navigation bar
     ui.add_space(5.0);
 
-    // Display cover image (using most of the available space)
-    // Calculate available space for the PDF, accounting for the navigation bar
-    let nav_bar_height = 30.0; // Navigation bar + spacing
-    let max_height = available_height - nav_bar_height;
-    let max_width = available_width * 0.95;
-
-    // Add the PDF preview with maximum possible size
-    ui.add_sized(
-        egui::vec2(max_width, max_height),
-        egui::Image::new(viewer_content.meta.cover.clone())
-            .max_size(egui::vec2(max_width, max_height))
-            .maintain_aspect_ratio(true),
+    // Display PDF page with interactive pan/zoom (same as image viewer)
+    // Use actual remaining space after navigation bar has been laid out
+    let remaining_width = ui.available_width();
+    let remaining_height = ui.available_height();
+    let pdf_image = egui::Image::new(viewer_content.meta.cover.clone());
+    crate::ui::preview::image::render_interactive(
+        ui,
+        &pdf_image,
+        remaining_width,
+        remaining_height,
     );
 }
 

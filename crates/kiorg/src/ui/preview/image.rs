@@ -348,8 +348,8 @@ pub fn render_interactive(
     available_height: f32,
 ) {
     ui.vertical_centered(|ui| {
-        let default_init_height = available_height * 0.90;
-        let default_init_width = available_width * 0.90;
+        let default_init_height = available_height * 0.97;
+        let default_init_width = available_width * 0.97;
 
         let (raw_img_w, raw_img_h) = if let Some(size) = image.size() {
             (size[0], size[1])
