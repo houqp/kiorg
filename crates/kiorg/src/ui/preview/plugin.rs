@@ -25,9 +25,11 @@ pub fn render(
                 RenderedComponent::Image(image) => {
                     let img = &image.image;
                     if image.interactive {
+                        let source_id = egui::Id::new(&image.uid);
                         crate::ui::preview::image::render_interactive(
                             ui,
                             img,
+                            source_id,
                             available_width,
                             available_height,
                         );

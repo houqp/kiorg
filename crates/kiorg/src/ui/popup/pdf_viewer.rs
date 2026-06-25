@@ -222,9 +222,11 @@ pub fn render_popup(ui: &mut egui::Ui, viewer_content: &mut PdfViewerContent, co
     let remaining_width = ui.available_width();
     let remaining_height = ui.available_height();
     let pdf_image = egui::Image::new(viewer_content.meta.cover.clone());
+    let page_id = egui::Id::new(&viewer_content.meta.file_id).with(current_page);
     crate::ui::preview::image::render_interactive(
         ui,
         &pdf_image,
+        page_id,
         remaining_width,
         remaining_height,
     );

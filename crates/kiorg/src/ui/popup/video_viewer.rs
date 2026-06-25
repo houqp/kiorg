@@ -58,20 +58,15 @@ impl VideoViewer {
             .max_size(popup_size)
             .min_size(popup_size)
             .open(&mut keep_open)
-            .show(ctx, |ui| {
-                let available_width = ui.available_width();
-                let available_height = ui.available_height();
-
-                match self {
-                    Self::Loaded(video_meta) => {
-                        render_popup(ui, video_meta, available_width, available_height);
-                    }
-                    Self::Loading(path, _, _cancel_sender) => {
-                        crate::ui::popup::preview::render_loading(ui, path, colors);
-                    }
-                    Self::Error(e) => {
-                        crate::ui::popup::preview::render_error(ui, e, colors);
-                    }
+            .show(ctx, |ui| match self {
+                Self::Loaded(video_meta) => {
+                    render_popup(ui, video_meta);
+                }
+                Self::Loading(path, _, _cancel_sender) => {
+                    crate::ui::popup::preview::render_loading(ui, path, colors);
+                }
+                Self::Error(e) => {
+                    crate::ui::popup::preview::render_error(ui, e, colors);
                 }
             });
 
@@ -80,16 +75,13 @@ impl VideoViewer {
 }
 
 /// Render video content optimized for popup view
-pub fn render_popup(
-    ui: &mut egui::Ui,
-    video_meta: &VideoMeta,
-    available_width: f32,
-    available_height: f32,
-) {
+pub fn render_popup(ui: &mut egui::Ui, video_meta: &VideoMeta) {
+    let source_id = egui::Id::new("video").with(&video_meta.title);
     crate::ui::preview::image::render_interactive(
         ui,
         &video_meta.thumbnail_image,
-        available_width,
-        available_height,
+        source_id,
+        ui.available_width(),
+        ui.available_height(),
     );
 }
