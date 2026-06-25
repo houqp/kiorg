@@ -344,6 +344,7 @@ pub fn read_image_with_metadata(
 pub fn render_interactive(
     ui: &mut egui::Ui,
     image: &egui::Image<'static>,
+    source_id: egui::Id,
     available_width: f32,
     available_height: f32,
 ) {
@@ -366,7 +367,7 @@ pub fn render_interactive(
         };
 
         // Unique id for storing pan/zoom state per image
-        let id = ui.id().with("image_pan_zoom");
+        let id = ui.id().with("image_pan_zoom").with(source_id);
         let mut pan = ui.ctx().data(|d| {
             d.get_temp::<egui::Vec2>(id.with("pan"))
                 .unwrap_or(egui::Vec2::ZERO)

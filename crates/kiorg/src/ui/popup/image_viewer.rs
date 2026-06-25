@@ -88,9 +88,11 @@ pub fn render_popup(
     available_width: f32,
     available_height: f32,
 ) {
+    let source_id = egui::Id::new(&image_meta.title);
     crate::ui::preview::image::render_interactive(
         ui,
         &image_meta.image,
+        source_id,
         available_width,
         available_height,
     );
