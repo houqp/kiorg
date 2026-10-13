@@ -717,7 +717,7 @@ pub fn default_shortcuts() -> Shortcuts {
     }
 
     add_shortcut(
-        KeyboardShortcut::new("q").with_ctrl(),
+        KeyboardShortcut::new("t").with_ctrl(),
         ShortcutAction::CloseCurrentTab,
     );
 
